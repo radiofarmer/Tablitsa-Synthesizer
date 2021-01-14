@@ -4,7 +4,7 @@
 
 //#define FFT
 
-#define WT_DIR "C:\\Users\\bramc\\VST-Development\\iPlug2\\Examples\\Tablitsa\\resources\\data\\wavetables\\"
+#define WT_DIR ".\\resources\\data\\wavetables\\"
 #define WT_SIZE 1024
 #define WAV16_MAX 32767
 #define WT_MAX_DEFAULT 16384
