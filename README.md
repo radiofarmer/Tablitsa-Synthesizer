@@ -20,9 +20,9 @@ Features as of January 14, 2021:
   * State-Variable and Moog filters are functional; comb filter has not yet been added
   
 # Compatibility
-The stand-alone app has only been tested on Windows 10, and the VST3 plugin only in Cockos REAPER, but it should work on other platforms. The release version uses the AVX2 instruction set and will only work on new-ish processors. A maximum-compatibility version without vector instructions will eventually be included in the release.
+*built binaries are currently not available*
 
-*As of 01/14/2021:* For the executables to work on other machines, they will need to have the "resources" folder and its contents in the same directory in which they reside, as this is where they expect the wavetable files to be. 
+The stand-alone app has only been tested on Windows 10, and the VST3 plugin only in Cockos REAPER, but it should work on other platforms. The release version uses the AVX2 instruction set and will only work on new-ish processors. A maximum-compatibility version without vector instructions will eventually be included in the release.
 
 # Cloning and Building
 You are free to build upon this project according to the license. (Though fair warning, the code is kind of a mess as this is my first real C++ project.) In order to build the solution, first install IPlug2 and its third-party dependencies per the instructions on the [Wiki](https://github.com/iPlug2/iPlug2/wiki). You will also need to download [Agner Fog's `vectorclass` library](https://github.com/vcoda/vectorclass). You'll probably have to change the include directory for `vectorclass` manually, as the path is currently specific to my computer. I will fix this soon.
