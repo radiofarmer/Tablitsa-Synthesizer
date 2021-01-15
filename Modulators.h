@@ -30,6 +30,13 @@ public:
     mRange = mMax - mMin;
   }
 
+  void SetMinMax(double min, double max)
+  {
+    mMin = min;
+    mMax = max;
+    mRange = mMax - mMin;
+  }
+
   void SetValue(int idx, double value)
   {
     switch (idx) {

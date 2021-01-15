@@ -11,6 +11,8 @@
 #define FILTER_MODE_LIST_MOOG  "Lowpass", "Highpass", "Bandpass"
 #define FILTER_MODE_LIST_COMB  "N/A"
 
+#define COMB_MAX_DELAY 512
+
 
 enum EFilters
 {
@@ -524,8 +526,8 @@ template<typename T>
 class CombFilter : public Filter<T>
 {
 public:
-  CombFilter(double sampleRate = 44100., double feedforward = 0.5, double feedback = 0., bool cutoffIsNormalized = true, double delayLength = 0.5) :
-    Filter<T>(sampleRate, feedforward, feedback, cutoffIsNormalized), mDelayLength(static_cast<int>(delayLength * mMaxDelay))
+  CombFilter(double sampleRate = 44100., double feedforward = 0.5, double feedback = 0., bool cutoffIsNormalized = true, double delayLength = 8.) :
+    Filter<T>(sampleRate, feedforward, feedback, cutoffIsNormalized), mDelayLength(static_cast<int>(delayLength))
   {
     SetDelay(mDelayLength);
   }
@@ -537,7 +539,7 @@ public:
 
   inline virtual void SetDrive(T delayLength)
   {
-    SetDelay(std::max(static_cast<int>(delayLength * mMaxDelay), 1));
+    SetDelay(std::min(static_cast<int>(delayLength), mMaxDelay));
   }
 
   inline void SetDelay(int samples)
@@ -554,10 +556,10 @@ public:
   }
 
 private:
-  const int mMaxDelay{ 512 };
+  const int mMaxDelay{ COMB_MAX_DELAY };
   int mDelayLength;
   T& mFF{ mFc };
   T& mFB{ mQ };
-  DelayLine<T> mDelayIn{ 513 };
-  DelayLine<T> mDelayOut{ 513 };
+  DelayLine<T> mDelayIn{ COMB_MAX_DELAY + 1 };
+  DelayLine<T> mDelayOut{ COMB_MAX_DELAY + 1 };
 };
