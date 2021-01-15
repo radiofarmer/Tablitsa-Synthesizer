@@ -291,6 +291,9 @@ public:
       case kMoog:
         mFilters.at(filter) = new MoogLadder<T>(mOsc1.GetSampleRate());
         break;
+      case kComb:
+        mFilters.at(filter) = new CombFilter<T>(mOsc1.GetSampleRate());
+        break;
       default:
         mFilters.at(filter) = new NullFilter<T>(mOsc1.GetSampleRate());
         break;
@@ -318,7 +321,7 @@ public:
     bool mLFO2Restart{ false };
     int mFilterUpdateFreq{ 2 };
 
-    std::vector<Filter<T>*> mFilters{ new SVF2<T>(), new SVF2<T>() };
+    std::vector<Filter<T>*> mFilters{ new NullFilter<T>(), new NullFilter<T>() };
 
     WDL_PtrList<T> mVModulations;
     WDL_TypedBuf<T> mVModulationsData;
@@ -721,8 +724,8 @@ public:
         break;
       }
       case kParamFilter1Type:
-        mSynth.ForEachVoice([value](SynthVoice& voice) {
-          dynamic_cast<TablitsaDSP::Voice&>(voice).SetFilterType(0, static_cast<int>(value));
+        SendParam([value](Voice* voice) {
+          voice->SetFilterType(0, static_cast<int>(value));
           });
         break;
       case kParamFilter1ModeVSF:
@@ -733,6 +736,7 @@ public:
         break;
       case kParamFilter1Cutoff:
         value /= mSampleRate;
+      case kParamFilter1FF:
         mParamsToSmooth[kModFilter1CutoffSmoother] = value;
         break;
       case kParamFilter1CutoffEnv1:
@@ -757,13 +761,13 @@ public:
       case kParamFilter1ResonanceLFO2:
       {
         const int modIdx = paramIdx - kParamFilter1Resonance;
-        mSynth.ForEachVoice([paramIdx, modIdx, value](SynthVoice& voice) {
-          dynamic_cast<TablitsaDSP::Voice&>(voice).UpdateVoiceParam(kVFilter1Resonance, modIdx, value / 100.);
+        SendParam([paramIdx, modIdx, value](Voice* voice) {
+          voice->UpdateVoiceParam(kVFilter1Resonance, modIdx, value);
           });
         break;
       }
       case kParamFilter1Drive:
-        mParamsToSmooth[kModFilter1DriveSmoother] = value;
+        mParamsToSmooth[kModFilter1DriveSmoother] = value / 100.;
         break;
       case kParamFilter1DriveEnv1:
       case kParamFilter1DriveEnv2:
@@ -773,13 +777,13 @@ public:
       {
         const int modIdx = paramIdx - kParamFilter1Drive;
         mSynth.ForEachVoice([paramIdx, modIdx, value](SynthVoice& voice) {
-          dynamic_cast<TablitsaDSP::Voice&>(voice).UpdateVoiceParam(kVFilter1Drive, modIdx, value / 100.);
+          dynamic_cast<TablitsaDSP::Voice&>(voice).UpdateVoiceParam(kVFilter1Drive, modIdx, value);
           });
         break;
       }
       case kParamFilter2Type:
-        mSynth.ForEachVoice([value](SynthVoice& voice) {
-          dynamic_cast<TablitsaDSP::Voice&>(voice).SetFilterType(1, static_cast<int>(value));
+        SendParam([value](Voice* voice) {
+          voice->SetFilterType(1, static_cast<int>(value));
           });
         break;
       case kParamFilter2ModeVSF:
@@ -820,7 +824,7 @@ public:
         break;
       }
       case kParamFilter2Drive:
-        mParamsToSmooth[kModFilter2DriveSmoother] = value;
+        mParamsToSmooth[kModFilter2DriveSmoother] = value / 100.;
         break;
       case kParamFilter2DriveEnv1:
       case kParamFilter2DriveEnv2:
