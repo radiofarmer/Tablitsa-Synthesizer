@@ -1,14 +1,17 @@
 #pragma once
 
+#include <vector>
 #include <cmath>
+
 #include "vectorclass.h"
-#include "vector3d.h"
 #include "SignalProcessing.h"
 
 #define FILTER_TYPE_LIST "None", "VSF", "Moog Ladder", "Comb"
 #define FILTER_MODE_LIST_VSF  "Lowpass", "Highpass", "Bandpass", "Allpass"
 #define FILTER_MODE_LIST_MOOG  "Lowpass", "Highpass", "Bandpass"
-#define FILTER_MODE_LIST_COMB  "FF", "FB"
+#define FILTER_MODE_LIST_COMB  "N/A"
+
+#define COMB_MAX_DELAY 512
 
 
 enum EFilters
@@ -66,9 +69,9 @@ public:
 protected:
   const double pi{ 3.14159265359 };
   const double twoPi{ 6.28318530718 };
-  double mSampleRate;
-  double mFc;
-  double mQ;
+  T mSampleRate;
+  T mFc;
+  T mQ;
   int mMode{ 0 };
 };
 
@@ -144,7 +147,7 @@ public:
     Vec4d x;
   }
 #else
-  inline double ProcessLowpass(double s)
+  inline T ProcessLowpass(double s)
   {
     T s_out = mA * mZ[0] - mB * mZ[1] + (1 - mA + mB) * s;
     mZ[1] = mZ[0];
@@ -517,4 +520,46 @@ private:
   Vec8d mZ2_Coefs1;
   Vec4d mZ1_Coefs2;
   Vec4d mZ2_Coefs2;
+};
+
+template<typename T>
+class CombFilter : public Filter<T>
+{
+public:
+  CombFilter(double sampleRate = 44100., double feedforward = 0.5, double feedback = 0., bool cutoffIsNormalized = true, double delayLength = 8.) :
+    Filter<T>(sampleRate, feedforward, feedback, cutoffIsNormalized), mDelayLength(static_cast<int>(delayLength))
+  {
+    SetDelay(mDelayLength);
+  }
+
+  inline virtual void SetCutoff(T cutoffNorm)
+  {
+    mFc = cutoffNorm * 2;
+  }
+
+  inline virtual void SetDrive(T delayLength)
+  {
+    SetDelay(std::min(static_cast<int>(delayLength), mMaxDelay));
+  }
+
+  inline void SetDelay(int samples)
+  {
+    mDelayLength = samples;
+  }
+
+  inline T Process(T s)
+  {
+    T out = s + mFF * mDelayIn[mDelayLength] - mFB * mDelayOut[mDelayLength / 2];
+    mDelayIn.push(s);
+    mDelayOut.push(out);
+    return out;
+  }
+
+private:
+  const int mMaxDelay{ COMB_MAX_DELAY };
+  int mDelayLength;
+  T& mFF{ mFc };
+  T& mFB{ mQ };
+  DelayLine<T> mDelayIn{ COMB_MAX_DELAY + 1 };
+  DelayLine<T> mDelayOut{ COMB_MAX_DELAY + 1 };
 };

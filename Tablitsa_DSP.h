@@ -283,20 +283,39 @@ public:
 
     void SetFilterType(int filter, int filterType)
     {
-      
+      // Indices of cutoff/res/drive for the given filter
       switch (filterType) {
       case kVSF:
+      {
+        TablitsaDSP<T>::mCombOn = false;
+        mVoiceModParams[filter ? kVFilter2Cutoff : kVFilter1Cutoff].SetMinMax(0., 0.49);
+        mVoiceModParams[filter ? kVFilter2Resonance : kVFilter1Resonance].SetMinMax(0., 1.);
+        mVoiceModParams[filter ? kVFilter2Drive : kVFilter1Drive].SetMinMax(0., 1);
         mFilters.at(filter) = new SVF2<T>(mOsc1.GetSampleRate());
         break;
+      }
       case kMoog:
+      {
+        TablitsaDSP<T>::mCombOn = false;
+        mVoiceModParams[filter ? kVFilter2Cutoff : kVFilter1Cutoff].SetMinMax(0., 0.49);
+        mVoiceModParams[filter ? kVFilter2Resonance : kVFilter1Resonance].SetMinMax(0., 1.);
+        mVoiceModParams[filter ? kVFilter2Drive : kVFilter1Drive].SetMinMax(0., 1);
         mFilters.at(filter) = new MoogLadder<T>(mOsc1.GetSampleRate());
         break;
+      }
       case kComb:
+      {
+        TablitsaDSP<T>::mCombOn = true;
+        mVoiceModParams[filter ? kVFilter2Cutoff : kVFilter1Cutoff].SetMinMax(0., 1.);
+        mVoiceModParams[filter ? kVFilter2Resonance : kVFilter1Resonance].SetMinMax(0., 1.);
+        mVoiceModParams[filter ? kVFilter2Drive : kVFilter1Drive].SetMinMax(0., (double)COMB_MAX_DELAY);
         mFilters.at(filter) = new CombFilter<T>(mOsc1.GetSampleRate());
         break;
+      }
       default:
         mFilters.at(filter) = new NullFilter<T>(mOsc1.GetSampleRate());
         break;
+
       }
     }
 
@@ -735,10 +754,14 @@ public:
           });
         break;
       case kParamFilter1Cutoff:
-        value /= mSampleRate;
-      case kParamFilter1FF:
-        mParamsToSmooth[kModFilter1CutoffSmoother] = value;
+        mParamsToSmooth[kModFilter1CutoffSmoother] = value / mSampleRate;
         break;
+      case kParamFilter1FF:
+      {
+        if (mCombOn)
+          mParamsToSmooth[kModFilter1CutoffSmoother] = value / 100.;
+        break;
+      }
       case kParamFilter1CutoffEnv1:
       case kParamFilter1CutoffEnv2:
       case kParamFilter1CutoffAmpEnv:
@@ -752,6 +775,7 @@ public:
         break;
       }
       case kParamFilter1Resonance:
+      case kParamFilter1FB:
         mParamsToSmooth[kModFilter1ResonanceSmoother] = value / 100.;
         break;
       case kParamFilter1ResonanceEnv1:
@@ -767,7 +791,9 @@ public:
         break;
       }
       case kParamFilter1Drive:
-        mParamsToSmooth[kModFilter1DriveSmoother] = value / 100.;
+        value /= 100.;
+      case kParamFilter1Delay:
+        mParamsToSmooth[kModFilter1DriveSmoother] = value;
         break;
       case kParamFilter1DriveEnv1:
       case kParamFilter1DriveEnv2:
@@ -793,9 +819,14 @@ public:
           });
         break;
       case kParamFilter2Cutoff:
-        value /= mSampleRate;
-        mParamsToSmooth[kModFilter2CutoffSmoother] = value;
+        mParamsToSmooth[kModFilter2CutoffSmoother] = value / mSampleRate;
         break;
+      case kParamFilter2FF:
+      {
+        if (mCombOn)
+          mParamsToSmooth[kModFilter2CutoffSmoother] = value / 100.;
+        break;
+      }
       case kParamFilter2CutoffEnv1:
       case kParamFilter2CutoffEnv2:
       case kParamFilter2CutoffAmpEnv:
@@ -809,6 +840,7 @@ public:
         break;
       }
       case kParamFilter2Resonance:
+      case kParamFilter2FB:
         mParamsToSmooth[kModFilter2ResonanceSmoother] = value / 100.;
         break;
       case kParamFilter2ResonanceEnv1:
@@ -824,7 +856,9 @@ public:
         break;
       }
       case kParamFilter2Drive:
-        mParamsToSmooth[kModFilter2DriveSmoother] = value / 100.;
+        value /= 100.;
+      case kParamFilter2Delay:
+        mParamsToSmooth[kModFilter2DriveSmoother] = value;
         break;
       case kParamFilter2DriveEnv1:
       case kParamFilter2DriveEnv2:
@@ -948,6 +982,7 @@ public:
   std::vector<Voice*> mSynthVoices;
 
   double mSampleRate{ 44100. };
+  static inline bool mCombOn{ false };
 
   static inline bool tableLoading[2]{ true, true };
 
