@@ -432,7 +432,6 @@
     <ClCompile Include="..\..\..\IPlug\IPlugProcessor.cpp" />
     <ClCompile Include="..\..\..\IPlug\IPlugTimer.cpp" />
     <ClCompile Include="..\..\..\WDL\fft.c" />
-    <ClCompile Include="..\Filter.cpp" />
     <ClCompile Include="..\Tablitsa.cpp" />
   </ItemGroup>
   <ItemGroup>

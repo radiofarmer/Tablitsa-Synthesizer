@@ -101,7 +101,6 @@
     <ClCompile Include="..\..\..\WDL\fft.c">
       <Filter>WDL</Filter>
     </ClCompile>
-    <ClCompile Include="..\Filter.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\Tablitsa.h" />
