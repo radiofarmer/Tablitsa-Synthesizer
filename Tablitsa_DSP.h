@@ -344,6 +344,7 @@ public:
 
     WDL_PtrList<T> mVModulations;
     WDL_TypedBuf<T> mVModulationsData;
+    ParameterModulatorList<T, kNumVoiceModParams> mVParameterModulators;
 
 
   private:
@@ -381,9 +382,7 @@ public:
 
     // noise generator for test
     uint32_t mRandSeed = 0;
-#if MULTITHREAD_TEST
-    boost::mutex mMutex;
-#endif
+
     // return single-precision floating point number on [-1, 1]
     float Rand()
     {
@@ -394,6 +393,7 @@ public:
 
   };
 
+/* end Voice class */
 
 public:
 #pragma mark -
@@ -417,8 +417,8 @@ public:
     {
       memset(outputs[i], 0, nFrames * sizeof(T));
     }
-    
-    mParamSmoother.ProcessBlock(mParamsToSmooth, mModulations.GetList(), nFrames);
+
+    mParamSmoother.ProcessBlock(mParamsToSmooth, mModulations.GetList(), nFrames); // Populate modulations list
     Voice::SetTempoAndBeat(qnPos, transportIsRunning, tempo);
     mSynth.ProcessBlock(mModulations.GetList(), outputs, 0, nOutputs, nFrames);
 
