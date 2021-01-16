@@ -51,11 +51,12 @@ END_IPLUG_NAMESPACE
 class ParameterModulator
 {
 public:
-  ParameterModulator(double min, double max, bool exp=false) : mMin(min), mMax(max), mIsExponential(exp)
+  ParameterModulator(double min, double max, bool exponential=false) : mMin(min), mMax(max), mIsExponential(exponential)
   {
     if (mIsExponential)
     {
-      mRange = std::log(mMax / std::max(mMin, 1.e-6));
+      mMin = std::max(mMin, 1e-6);
+      mRange = std::log(mMax / mMin);
     }
     else
       mRange = mMax - mMin;
@@ -96,6 +97,7 @@ public:
     }
   }
 
+
   inline double GetValue(double env1 = 0., double env2 = 0., double ampEnv = 0., double lfo1 = 0., double lfo2 = 0., double sequencer = 0.)
   {
     return std::max(std::min(mInitialValue +
@@ -120,10 +122,15 @@ public:
     }
   }
 
+  /* TODO: This may be better implemented with virtual functions (see ParameterModulationExp implementation below) */
   inline double AddModulation(double initVal)
   {
-    return std::max(std::min(initVal + mModValues[kEnv1] * mEnv1Depth + mModValues[kEnv2] * mEnv2Depth + mModValues[kAmpEnv] * mAmpEnvDepth +
-      mModValues[kLFO1] * mLFO1Depth + mModValues[kLFO2] * mLFO2Depth + mModValues[kSequencer] * mSequencerDepth, mMax), mMin);
+    if (mIsExponential)
+      return std::max(std::min(initVal * std::exp(mModValues[kEnv1] * mEnv1Depth + mModValues[kEnv2] * mEnv2Depth + mModValues[kAmpEnv] * mAmpEnvDepth +
+        mModValues[kLFO1] * mLFO1Depth + mModValues[kLFO2] * mLFO2Depth + mModValues[kSequencer] * mSequencerDepth), mMax), mMin);
+    else
+      return std::max(std::min(initVal + mModValues[kEnv1] * mEnv1Depth + mModValues[kEnv2] * mEnv2Depth + mModValues[kAmpEnv] * mAmpEnvDepth +
+        mModValues[kLFO1] * mLFO1Depth + mModValues[kLFO2] * mLFO2Depth + mModValues[kSequencer] * mSequencerDepth, mMax), mMin);
   }
 
   inline double AddModulationExp(double initVal)
@@ -174,7 +181,7 @@ protected:
   double mMin{ 0. };
   double mMax{ 1. };
   double mRange{ 1. };
-  bool mIsExponential{ false };
+  const bool mIsExponential{ false };
 };
 
 class ParameterModulatorExp : public ParameterModulator
@@ -213,7 +220,6 @@ public:
 
 private:
   ParameterModulator* mModulations[NParams];
-
 } WDL_FIXALIGN;
 
 BEGIN_IPLUG_NAMESPACE

@@ -346,7 +346,6 @@ public:
     WDL_TypedBuf<T> mVModulationsData;
     ParameterModulatorList<T, kNumVoiceModParams> mVParameterModulators;
 
-
   private:
 //    WDL_TypedBuf<float> mTimbreBuffer;
     ParameterModulator mVoiceModParams[kNumVoiceModParams]{
@@ -360,10 +359,10 @@ public:
       ParameterModulator(-1., 1.), /* Wavetable 2 Bend */
       ParameterModulator(0., 1.), /* Wavetable 2 Sub */
       ParameterModulator(0., 1.), /* Wavetable 2 Amp */
-      ParameterModulator(0.001, 0.5, true), /* Filter 1 Cutoff */
+      ParameterModulator(0.001, 0.5), /* Filter 1 Cutoff */
       ParameterModulator(0., 1.), /* Filter 1 Resonance */
       ParameterModulator(0., 1.), /*Filter 1 Drive */
-      ParameterModulator(0.001, 0.5, true), /* Filter 2 Cutoff */
+      ParameterModulator(0.001, 0.5), /* Filter 2 Cutoff */
       ParameterModulator(0., 1.), /* Filter 2 Resonance */
       ParameterModulator(0., 1.), /*Filter 2 Drive */
       ParameterModulator(-24., 24.), /* Phase Mod Frequency*/
