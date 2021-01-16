@@ -189,11 +189,11 @@ public:
         mOsc2.SetPhaseModulation(inputs[kModPhaseModAmtSmoother][i], phaseModFreqFact);
         mOsc2.SetRingModulation(inputs[kModRingModAmtSmoother][i], ringModFreqFact);
         
-        mFilters.at(0)->SetCutoff(mVoiceModParams[kVFilter1Cutoff].AddModulation(inputs[kModFilter1CutoffSmoother][i])); // Filter 1 Cutoff
+        mFilters.at(0)->SetCutoff(mVoiceModParams[kVFilter1Cutoff].AddModulationExp(inputs[kModFilter1CutoffSmoother][i])); // Filter 1 Cutoff
         mFilters.at(0)->SetQ(mVoiceModParams[kVFilter1Resonance].AddModulation(inputs[kModFilter1ResonanceSmoother][i])); // Filter 1 Resonance
         mFilters.at(0)->SetDrive(mVoiceModParams[kVFilter1Drive].AddModulation(inputs[kModFilter1DriveSmoother][i])); // Filter 1 Drive
 
-        mFilters.at(1)->SetCutoff(mVoiceModParams[kVFilter2Cutoff].AddModulation(inputs[kModFilter2CutoffSmoother][i])); // Filter 2 Cutoff
+        mFilters.at(1)->SetCutoff(mVoiceModParams[kVFilter2Cutoff].AddModulationExp(inputs[kModFilter2CutoffSmoother][i])); // Filter 2 Cutoff
         mFilters.at(1)->SetQ(mVoiceModParams[kVFilter2Resonance].AddModulation(inputs[kModFilter2ResonanceSmoother][i])); // Filter 2 Resonance
         mFilters.at(1)->SetDrive(mVoiceModParams[kVFilter2Drive].AddModulation(inputs[kModFilter2DriveSmoother][i])); // Filter 2 Drive
         
@@ -288,7 +288,7 @@ public:
       case kVSF:
       {
         TablitsaDSP<T>::mCombOn = false;
-        mVoiceModParams[filter ? kVFilter2Cutoff : kVFilter1Cutoff].SetMinMax(0., 0.49);
+        mVoiceModParams[filter ? kVFilter2Cutoff : kVFilter1Cutoff].SetMinMax(0.001, 0.49);
         mVoiceModParams[filter ? kVFilter2Resonance : kVFilter1Resonance].SetMinMax(0., 1.);
         mVoiceModParams[filter ? kVFilter2Drive : kVFilter1Drive].SetMinMax(0., 1);
         mFilters.at(filter) = new SVF2<T>(mOsc1.GetSampleRate());
@@ -297,7 +297,7 @@ public:
       case kMoog:
       {
         TablitsaDSP<T>::mCombOn = false;
-        mVoiceModParams[filter ? kVFilter2Cutoff : kVFilter1Cutoff].SetMinMax(0., 0.49);
+        mVoiceModParams[filter ? kVFilter2Cutoff : kVFilter1Cutoff].SetMinMax(0.001, 0.49);
         mVoiceModParams[filter ? kVFilter2Resonance : kVFilter1Resonance].SetMinMax(0., 1.);
         mVoiceModParams[filter ? kVFilter2Drive : kVFilter1Drive].SetMinMax(0., 1);
         mFilters.at(filter) = new MoogLadder<T>(mOsc1.GetSampleRate());
@@ -359,10 +359,10 @@ public:
       ParameterModulator(-1., 1.), /* Wavetable 2 Bend */
       ParameterModulator(0., 1.), /* Wavetable 2 Sub */
       ParameterModulator(0., 1.), /* Wavetable 2 Amp */
-      ParameterModulator(0.001, 0.5), /* Filter 1 Cutoff */
+      ParameterModulator(0.001, 0.5, true), /* Filter 1 Cutoff */
       ParameterModulator(0., 1.), /* Filter 1 Resonance */
       ParameterModulator(0., 1.), /*Filter 1 Drive */
-      ParameterModulator(0.001, 0.5), /* Filter 2 Cutoff */
+      ParameterModulator(0.001, 0.5, true), /* Filter 2 Cutoff */
       ParameterModulator(0., 1.), /* Filter 2 Resonance */
       ParameterModulator(0., 1.), /*Filter 2 Drive */
       ParameterModulator(-24., 24.), /* Phase Mod Frequency*/

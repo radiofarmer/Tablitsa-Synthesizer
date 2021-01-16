@@ -52,19 +52,29 @@ END_IPLUG_NAMESPACE
 class ParameterModulator
 {
 public:
-  ParameterModulator(double min, double max) : mMin(min), mMax(max)
+  ParameterModulator(double min, double max, bool exp=false) : mMin(min), mMax(max), mIsExponential(exp)
   {
-    mRange = mMax - mMin;
+    if (mIsExponential)
+    {
+      mRange = std::log(mMax / std::max(mMin, 1.e-6));
+    }
+    else
+      mRange = mMax - mMin;
   }
 
   void SetMinMax(double min, double max)
   {
     mMin = min;
     mMax = max;
-    mRange = mMax - mMin;
+    if (mIsExponential)
+    {
+      mRange = std::log(mMax / std::max(mMin, 1.e-6));
+    }
+    else
+      mRange = mMax - mMin;
   }
 
-  void SetValue(int idx, double value)
+  virtual void SetValue(int idx, double value)
   {
     switch (idx) {
     case kInitial:
@@ -105,10 +115,10 @@ public:
       mModValues[kLFO1] * mLFO1Depth + mModValues[kLFO2] * mLFO2Depth + mModValues[kSequencer] * mSequencerDepth, mMax), mMin);
   }
 
-  inline double AddModulation()
+  inline double AddModulationExp(double initVal)
   {
-    return std::max(std::min(mInitialValue + mModValues[kEnv1] * mEnv1Depth + mModValues[kEnv2] * mEnv2Depth + mModValues[kAmpEnv] * mAmpEnvDepth +
-      mModValues[kLFO1] * mLFO1Depth + mModValues[kLFO2] * mLFO2Depth, mMax), mMin);
+    return std::max(std::min(initVal * std::exp(mModValues[kEnv1] * mEnv1Depth + mModValues[kEnv2] * mEnv2Depth + mModValues[kAmpEnv] * mAmpEnvDepth +
+      mModValues[kLFO1] * mLFO1Depth + mModValues[kLFO2] * mLFO2Depth + mModValues[kSequencer] * mSequencerDepth), mMax), mMin);
   }
 
   double operator[](int idx)
@@ -128,7 +138,7 @@ public:
     memcpy(ParameterModulator::mModValues + 1, modPtr, kNumMods * 8);
   }
 
-private:
+protected:
   static inline double mModValues[EModulators::kNumMods];
 
   double mInitialValue{ 0 };
@@ -142,7 +152,9 @@ private:
   double mMin{ 0. };
   double mMax{ 1. };
   double mRange{ 1. };
+  bool mIsExponential{ false };
 };
+
 
 BEGIN_IPLUG_NAMESPACE
 
