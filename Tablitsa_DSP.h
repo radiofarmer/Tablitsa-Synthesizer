@@ -610,6 +610,7 @@ public:
       }
       case kParamWavetable1Amp:
         mParamsToSmooth[kModWavetable1AmpSmoother] = value;
+        break;
       case kParamWavetable1AmpEnv1:
       case kParamWavetable1AmpEnv2:
       case kParamWavetable1AmpLFO1:
@@ -906,6 +907,7 @@ public:
       }
       case kParamPhaseModAmount:
         mParamsToSmooth[kModPhaseModAmtSmoother] = value / 100.;
+        break;
       case kParamPhaseModAmountEnv1:
       case kParamPhaseModAmountEnv2:
       case kParamPhaseModAmountAmpEnv:
@@ -953,6 +955,7 @@ public:
       }
       case kParamRingModAmount:
         mParamsToSmooth[kModRingModAmtSmoother] = value / 100.;
+        break;
       case kParamRingModAmountEnv1:
       case kParamRingModAmountEnv2:
       case kParamRingModAmountAmpEnv:
