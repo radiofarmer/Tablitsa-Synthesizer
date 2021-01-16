@@ -20,14 +20,40 @@ enum EModulators
   kNumMods
 };
 
+/* THIS IS A BODGE. Make a proper map function class/struct at some point. */
+#define MOD_MAP_LINEAR [](double value){ return value; }
+
+struct MapFunction
+{
+  MapFunction() {}
+  virtual MapFunction* Copy() = 0;
+  virtual double Map(double valueNorm) = 0;
+};
+
+struct MapFunctionLinear : public MapFunction
+{
+  MapFunctionLinear() {}
+  virtual MapFunction* Copy() { return new MapFunctionLinear(*this); }
+  virtual double Map(double valueNorm) { return valueNorm; };
+};
+
+struct MapFunctionPower : public MapFunction
+{
+  MapFunctionPower(double exponent=3.) : mExp(exponent) {}
+  virtual MapFunction* Copy() { return new MapFunctionPower(*this); }
+  virtual double Map(double valueNorm) { return std::pow(valueNorm, mExp); }
+  double mExp;
+};
+
 class ParameterModulator
 {
 public:
   ParameterModulator() {}
 
-  ParameterModulator(double min, double max) : mMin(min), mMax(max)
+  ParameterModulator(double min, double max, MapFunction& map=MapFunctionLinear()) : mMin(min), mMax(max)
   {
     mRange = mMax - mMin;
+    mMapFunction = std::unique_ptr<MapFunction>(map.Copy());
   }
 
   void SetMinMax(double min, double max)
@@ -39,27 +65,31 @@ public:
 
   void SetValue(int idx, double value)
   {
-    switch (idx) {
-    case kInitial:
+    if (idx == kInitial)
       mInitialValue = value;
-      break;
-    case kEnv1:
-      mEnv1Depth = value * mRange;
-      break;
-    case kEnv2:
-      mEnv2Depth = value * mRange;
-      break;
-    case kAmpEnv:
-      mAmpEnvDepth = value * mRange;
-      break;
-    case kLFO1:
-      mLFO1Depth = value * mRange;
-      break;
-    case kLFO2:
-      mLFO2Depth = value * mRange;
-      break;
-    default:
-      break;
+    else
+    {
+      // Scale value according to mapping function
+      //...
+      switch (idx) {
+      case kEnv1:
+        mEnv1Depth = value * mRange;
+        break;
+      case kEnv2:
+        mEnv2Depth = value * mRange;
+        break;
+      case kAmpEnv:
+        mAmpEnvDepth = value * mRange;
+        break;
+      case kLFO1:
+        mLFO1Depth = value * mRange;
+        break;
+      case kLFO2:
+        mLFO2Depth = value * mRange;
+        break;
+      default:
+        break;
+      }
     }
   }
 
@@ -116,6 +146,7 @@ private:
   double mMin{ 0. };
   double mMax{ 1. };
   double mRange{ 1. };
+  std::unique_ptr<MapFunction> mMapFunction;
 };
 
 BEGIN_IPLUG_NAMESPACE
