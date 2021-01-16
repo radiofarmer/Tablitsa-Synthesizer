@@ -19,7 +19,7 @@ build-*
 ipch/*
 gui/*
 
-packages*
+packages/*
 
 Icon?
 .DS_Stor*
