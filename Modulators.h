@@ -20,40 +20,41 @@ enum EModulators
   kNumMods
 };
 
-/* THIS IS A BODGE. Make a proper map function class/struct at some point. */
-#define MOD_MAP_LINEAR [](double value){ return value; }
-
-struct MapFunction
+BEGIN_IPLUG_NAMESPACE
+/*
+Shaping object for modulation depth sliders that provides finer control for parameters
+with large ranges, such as filter cutoff frequencies.
+*/
+struct ModShapePowCurve : public IParam::ShapePowCurve
 {
-  MapFunction() {}
-  virtual MapFunction* Copy() = 0;
-  virtual double Map(double valueNorm) = 0;
+  ModShapePowCurve(double shape) : IParam::ShapePowCurve(shape) {}
+
+  Shape* Clone() const override { return new ModShapePowCurve(*this); }
+
+  double NormalizedToValue(double value, const IParam& param) const
+  {
+    double sign = value >= 0.5 ? 1. : -1.;
+    value = std::abs(0.5 - value) * 2.;
+    return std::pow(value, mShape) * sign;
+  }
+
+  double ValueToNormalized(double value, const IParam& param) const
+  {
+    double sign = value >= 0. ? 1. : -1.;
+    value = std::abs(value);
+    return 0.5 + std::pow(value, 1.0 / mShape) / 2. * sign;
+  }
+
 };
 
-struct MapFunctionLinear : public MapFunction
-{
-  MapFunctionLinear() {}
-  virtual MapFunction* Copy() { return new MapFunctionLinear(*this); }
-  virtual double Map(double valueNorm) { return valueNorm; };
-};
-
-struct MapFunctionPower : public MapFunction
-{
-  MapFunctionPower(double exponent=3.) : mExp(exponent) {}
-  virtual MapFunction* Copy() { return new MapFunctionPower(*this); }
-  virtual double Map(double valueNorm) { return std::pow(valueNorm, mExp); }
-  double mExp;
-};
+END_IPLUG_NAMESPACE
 
 class ParameterModulator
 {
 public:
-  ParameterModulator() {}
-
-  ParameterModulator(double min, double max, MapFunction& map=MapFunctionLinear()) : mMin(min), mMax(max)
+  ParameterModulator(double min, double max) : mMin(min), mMax(max)
   {
     mRange = mMax - mMin;
-    mMapFunction = std::unique_ptr<MapFunction>(map.Copy());
   }
 
   void SetMinMax(double min, double max)
@@ -65,31 +66,26 @@ public:
 
   void SetValue(int idx, double value)
   {
-    if (idx == kInitial)
+    switch (idx) {
+    case kInitial:
       mInitialValue = value;
-    else
-    {
-      // Scale value according to mapping function
-      //...
-      switch (idx) {
-      case kEnv1:
-        mEnv1Depth = value * mRange;
-        break;
-      case kEnv2:
-        mEnv2Depth = value * mRange;
-        break;
-      case kAmpEnv:
-        mAmpEnvDepth = value * mRange;
-        break;
-      case kLFO1:
-        mLFO1Depth = value * mRange;
-        break;
-      case kLFO2:
-        mLFO2Depth = value * mRange;
-        break;
-      default:
-        break;
-      }
+    case kEnv1:
+      mEnv1Depth = value * mRange;
+      break;
+    case kEnv2:
+      mEnv2Depth = value * mRange;
+      break;
+    case kAmpEnv:
+      mAmpEnvDepth = value * mRange;
+      break;
+    case kLFO1:
+      mLFO1Depth = value * mRange;
+      break;
+    case kLFO2:
+      mLFO2Depth = value * mRange;
+      break;
+    default:
+      break;
     }
   }
 
@@ -146,7 +142,6 @@ private:
   double mMin{ 0. };
   double mMax{ 1. };
   double mRange{ 1. };
-  std::unique_ptr<MapFunction> mMapFunction;
 };
 
 BEGIN_IPLUG_NAMESPACE
