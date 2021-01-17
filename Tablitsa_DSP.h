@@ -59,6 +59,9 @@ enum EModulations
 /*
 Per-Voice Modulations: These values are calculated based on the current value of the modulator object which each voice owns.
 They are calculated once per sample per voice.
+
+NOTE: These need to be in the same order as the global modulations (the smoothers) after a certain point (e.g. after the envelope sustain smoothers).
+This needs to be fixed eventually so that both sets of modulations operate off the same list.
 */
 enum EVoiceModParams
 {
@@ -174,37 +177,38 @@ public:
       // make sound output for each output channel
       for(auto i = startIdx; i < startIdx + nFrames; i += FRAME_INTERVAL)
       {
+        int bufferIdx = i - startIdx;
 //        float noise = mTimbreBuffer.Get()[i] * Rand();
-        double ampEnvVal{ mModulators.GetList()[2][i - startIdx] }; // Calculated for easy access
-        double modVals[]{ mModulators.GetList()[0][i - startIdx],
-          mModulators.GetList()[1][i - startIdx],
+        double ampEnvVal{ mModulators.GetList()[2][bufferIdx] }; // Calculated for easy access
+        double modVals[]{ mModulators.GetList()[0][bufferIdx],
+          mModulators.GetList()[1][bufferIdx],
           ampEnvVal,
-          mModulators.GetList()[3][i - startIdx],
-          mModulators.GetList()[4][i - startIdx] };
+          mModulators.GetList()[3][bufferIdx],
+          mModulators.GetList()[4][bufferIdx] };
         ParameterModulator::SetModValues(modVals);
 
         // Oscillator Parameters
-        double freqmod = mVModulations.GetList()[kVWavetable1PitchOffset][i - startIdx];
-        double osc1Freq = 440. * pow(2., pitch + freqmod / 12.);
-        mOsc1.SetWtPosition(1 - mVoiceModParams[kVWavetable1Position].AddModulation(inputs[kModWavetable1PosSmoother][i])); // Wavetable 1 Position
-        mOsc1.SetWtBend(mVoiceModParams[kVWavetable1Bend].AddModulation(inputs[kModWavetable1BendSmoother][i])); // Wavetable 1 Bend
-        mOsc1Sub.SetLevel(mVoiceModParams[kVWavetable1Sub].AddModulation(inputs[kModWavetable1SubSmoother][i]));
-        mOsc1.SetPhaseModulation(inputs[kModPhaseModAmtSmoother][i], phaseModFreqFact);
-        mOsc1.SetRingModulation(inputs[kModRingModAmtSmoother][i], ringModFreqFact);
+        double osc1Freq = 440. * pow(2., pitch + mVModulations.GetList()[kVWavetable1PitchOffset][bufferIdx] / 12.);
+        mOsc1.SetWtPosition(1 - mVModulations.GetList()[kVWavetable1Position][bufferIdx]); // Wavetable 1 Position
+        mOsc1.SetWtBend(mVModulations.GetList()[kVWavetable1Bend][bufferIdx]); // Wavetable 1 Bend
+        mOsc1Sub.SetLevel(mVModulations.GetList()[kVWavetable1Sub][bufferIdx]);
+        mOsc1.SetPhaseModulation(mVModulations.GetList()[kVPhaseModAmt][bufferIdx], phaseModFreqFact);
+        mOsc1.SetRingModulation(mVModulations.GetList()[kVRingModFreq][bufferIdx], ringModFreqFact);
 
-        double osc2Freq = 440. * pow(2., pitch + mVoiceModParams[kVWavetable2PitchOffset].AddModulation(inputs[kModWavetable2PitchSmoother][i]) / 12.);
-        mOsc2.SetWtPosition(1 - mVoiceModParams[kVWavetable2Position].AddModulation(inputs[kModWavetable2PosSmoother][i])); // Wavetable 2 Position
-        mOsc2.SetWtBend(mVoiceModParams[kVWavetable2Bend].AddModulation(inputs[kModWavetable2BendSmoother][i])); // Wavetable 2 Bend
-        mOsc2.SetPhaseModulation(inputs[kModPhaseModAmtSmoother][i], phaseModFreqFact);
-        mOsc2.SetRingModulation(inputs[kModRingModAmtSmoother][i], ringModFreqFact);
+        double osc2Freq = 440. * pow(2., pitch + mVModulations.GetList()[kVWavetable2PitchOffset][bufferIdx] / 12.);
+        mOsc2.SetWtPosition(1 - mVModulations.GetList()[kVWavetable2Position][bufferIdx]); // Wavetable 2 Position
+        mOsc2.SetWtBend(mVModulations.GetList()[kVWavetable2Bend][bufferIdx]); // Wavetable 2 Bend
+        mOsc2Sub.SetLevel(mVModulations.GetList()[kVWavetable2Sub][bufferIdx]);
+        mOsc2.SetPhaseModulation(mVModulations.GetList()[kVPhaseModAmt][bufferIdx], phaseModFreqFact);
+        mOsc2.SetRingModulation(mVModulations.GetList()[kVRingModFreq][bufferIdx], ringModFreqFact);
         
-        mFilters.at(0)->SetCutoff(mVoiceModParams[kVFilter1Cutoff].AddModulationExp(inputs[kModFilter1CutoffSmoother][i])); // Filter 1 Cutoff
-        mFilters.at(0)->SetQ(mVoiceModParams[kVFilter1Resonance].AddModulation(inputs[kModFilter1ResonanceSmoother][i])); // Filter 1 Resonance
-        mFilters.at(0)->SetDrive(mVoiceModParams[kVFilter1Drive].AddModulation(inputs[kModFilter1DriveSmoother][i])); // Filter 1 Drive
+        mFilters.at(0)->SetCutoff(mVModulations.GetList()[kVFilter1Cutoff][bufferIdx]); // Filter 1 Cutoff
+        mFilters.at(0)->SetQ(mVModulations.GetList()[kVFilter1Resonance][bufferIdx]); // Filter 1 Resonance
+        mFilters.at(0)->SetDrive(mVModulations.GetList()[kVFilter1Drive][bufferIdx]); // Filter 1 Drive
 
-        mFilters.at(1)->SetCutoff(mVoiceModParams[kVFilter2Cutoff].AddModulationExp(inputs[kModFilter2CutoffSmoother][i])); // Filter 2 Cutoff
-        mFilters.at(1)->SetQ(mVoiceModParams[kVFilter2Resonance].AddModulation(inputs[kModFilter2ResonanceSmoother][i])); // Filter 2 Resonance
-        mFilters.at(1)->SetDrive(mVoiceModParams[kVFilter2Drive].AddModulation(inputs[kModFilter2DriveSmoother][i])); // Filter 2 Drive
+        mFilters.at(1)->SetCutoff(mVModulations.GetList()[kVFilter2Cutoff][bufferIdx]); // Filter 2 Cutoff
+        mFilters.at(1)->SetQ(mVModulations.GetList()[kVFilter2Resonance][bufferIdx]); // Filter 2 Resonance
+        mFilters.at(1)->SetDrive(mVModulations.GetList()[kVFilter2Drive][bufferIdx]); // Filter 2 Drive
         
         // Signal Processing
         std::array<T, OUTPUT_SIZE> osc1Output{ mOsc1.ProcessMultiple(osc1Freq) };
@@ -212,8 +216,8 @@ public:
         
        for (auto j = 0; j < FRAME_INTERVAL; ++j)
        {
-         osc1Output[j] *= mVoiceModParams[kVWavetable1Amp].AddModulation(inputs[kModWavetable1AmpSmoother][i]);
-         osc2Output[j] *= mVoiceModParams[kVWavetable2Amp].AddModulation(inputs[kModWavetable2AmpSmoother][i]);
+         osc1Output[j] *= mVModulations.GetList()[kVWavetable1Amp][bufferIdx];
+         osc2Output[j] *= mVModulations.GetList()[kVWavetable2Amp][bufferIdx];
          osc1Output[j] = mOsc1Sub.Process(osc1Output[j]);
          double filter1Output = mFilters.at(0)->Process(osc1Output[j]);
          double filter2Output = mFilters.at(1)->Process(osc2Output[j]);
@@ -340,6 +344,7 @@ public:
     WavetableOscillator<T> mOsc1;
     WavetableOscillator<T> mOsc2;
     BassBoost<T> mOsc1Sub;
+    BassBoost<T> mOsc2Sub;
 
     ADSREnvelope<T> mEnv1;
     ADSREnvelope<T> mEnv2;
