@@ -125,12 +125,12 @@ public:
   /* TODO: This may be better implemented with virtual functions (see ParameterModulationExp implementation below) */
   inline double AddModulation(double initVal)
   {
-    if (mIsExponential)
-      return std::max(std::min(initVal * std::exp(mModValues[kEnv1] * mEnv1Depth + mModValues[kEnv2] * mEnv2Depth + mModValues[kAmpEnv] * mAmpEnvDepth +
-        mModValues[kLFO1] * mLFO1Depth + mModValues[kLFO2] * mLFO2Depth + mModValues[kSequencer] * mSequencerDepth), mMax), mMin);
-    else
+    if (!mIsExponential)
       return std::max(std::min(initVal + mModValues[kEnv1] * mEnv1Depth + mModValues[kEnv2] * mEnv2Depth + mModValues[kAmpEnv] * mAmpEnvDepth +
         mModValues[kLFO1] * mLFO1Depth + mModValues[kLFO2] * mLFO2Depth + mModValues[kSequencer] * mSequencerDepth, mMax), mMin);
+    else
+      return std::max(std::min(initVal * std::exp(mModValues[kEnv1] * mEnv1Depth + mModValues[kEnv2] * mEnv2Depth + mModValues[kAmpEnv] * mAmpEnvDepth +
+        mModValues[kLFO1] * mLFO1Depth + mModValues[kLFO2] * mLFO2Depth + mModValues[kSequencer] * mSequencerDepth), mMax), mMin);
   }
 
   inline double AddModulationExp(double initVal)
