@@ -56,14 +56,7 @@ enum EModulations
   kNumModulations,
 };
 
-// Per-Voice Modulations (unneeded? delete?)
-enum EVModulations
-{
-  kVModLFO1,
-  kVModLFO2,
-  kNumVModulations
-};
-
+// Per-Voice Modulations
 enum EVoiceModParams
 {
   kVWavetable1PitchOffset = 0,
@@ -86,7 +79,7 @@ enum EVoiceModParams
   kVPhaseModAmt,
   kVRingModFreq,
   kVRingModAmt,
-  kNumVoiceModParams
+  kNumVoiceModulations
 };
 
 template<typename T>
@@ -160,6 +153,8 @@ public:
       // or write the entire control ramp to a buffer, like this, to get sample-accurate ramps:
 //      mInputs[kVoiceControlTimbre].Write(mTimbreBuffer.Get(), startIdx, nFrames);
 
+      mVoiceModParams[kVWavetable1PitchOffset].ProcessBlock(inputs[kModWavetable1PitchSmoother], mVModulations.GetList()[kVWavetable1PitchOffset], nFrames);
+
       const double phaseModFreqFact = pow(2., inputs[kModPhaseModFreqSmoother][0] / 12.);
       const double ringModFreqFact = pow(2., inputs[kModRingModFreqSmoother][0] / 12.);
 
@@ -225,12 +220,12 @@ public:
       mLFO1.SetSampleRate(sampleRate);
       mLFO2.SetSampleRate(sampleRate);
       
-      mVModulationsData.Resize(blockSize * kNumVModulations);
+      mVModulationsData.Resize(blockSize * kNumVoiceModulations);
       mVModulations.Empty();
 
-      for (int i = 0; i < kNumVModulations; i++)
+      for (auto i = 0; i < kNumVoiceModulations; i++)
       {
-        mVModulations.Add(mVModulationsData.Get() + blockSize * i);
+        mVModulations.Add(mVModulationsData.Get() + static_cast<size_t>(blockSize) * i);
       }
       
     }
@@ -321,7 +316,7 @@ public:
 
     void UpdateVoiceParam(int voiceParam, int modIdx, double value)
     {
-      mVoiceModParams[voiceParam].SetValue(modIdx, value);
+      mVoiceModParams[voiceParam].SetValue(modIdx - 1, value); // Eventually adjust the value of modIdx in the SetParam switch statement rather than here
     }
 
   public:
@@ -342,13 +337,13 @@ public:
 
     std::vector<Filter<T>*> mFilters{ new NullFilter<T>(), new NullFilter<T>() };
 
-    WDL_PtrList<T> mVModulations;
-    WDL_TypedBuf<T> mVModulationsData;
-    ParameterModulatorList<T, kNumVoiceModParams> mVParameterModulators;
+    WDL_PtrList<T> mVModulations; // Pointers to modulator buffers
+    WDL_TypedBuf<T> mVModulationsData; // Modulator buffer sample data
+    ParameterModulatorList<T, kNumVoiceModulations> mVParameterModulators; // Container for parameter modulators to handle parallel (vector) processing
 
   private:
 //    WDL_TypedBuf<float> mTimbreBuffer;
-    ParameterModulator mVoiceModParams[kNumVoiceModParams]{
+    ParameterModulator mVoiceModParams[kNumVoiceModulations]{
       ParameterModulator(-24., 24.), /* Wavetable 1 Pitch Offset */
       ParameterModulator(0., 1.), /* Wavetable 1 Position */
       ParameterModulator(-1., 1.), /* Wavetable 1 Bend */
@@ -359,10 +354,10 @@ public:
       ParameterModulator(-1., 1.), /* Wavetable 2 Bend */
       ParameterModulator(0., 1.), /* Wavetable 2 Sub */
       ParameterModulator(0., 1.), /* Wavetable 2 Amp */
-      ParameterModulator(0.001, 0.5), /* Filter 1 Cutoff */
+      ParameterModulator(0.001, 0.5, true), /* Filter 1 Cutoff */
       ParameterModulator(0., 1.), /* Filter 1 Resonance */
       ParameterModulator(0., 1.), /*Filter 1 Drive */
-      ParameterModulator(0.001, 0.5), /* Filter 2 Cutoff */
+      ParameterModulator(0.001, 0.5, true), /* Filter 2 Cutoff */
       ParameterModulator(0., 1.), /* Filter 2 Resonance */
       ParameterModulator(0., 1.), /*Filter 2 Drive */
       ParameterModulator(-24., 24.), /* Phase Mod Frequency*/
@@ -417,7 +412,7 @@ public:
       memset(outputs[i], 0, nFrames * sizeof(T));
     }
 
-    mParamSmoother.ProcessBlock(mParamsToSmooth, mModulations.GetList(), nFrames); // Populate modulations list
+    mParamSmoother.ProcessBlock(mParamsToSmooth, mModulations.GetList(), nFrames); // Populate modulations list (to be sent to mSynth as inputs)
     Voice::SetTempoAndBeat(qnPos, transportIsRunning, tempo);
     mSynth.ProcessBlock(mModulations.GetList(), outputs, 0, nOutputs, nFrames);
 
@@ -441,9 +436,9 @@ public:
     mModulationsData.Resize(blockSize * kNumModulations);
     mModulations.Empty();
     
-    for(int i = 0; i < kNumModulations; i++)
+    for(auto i = 0; i < kNumModulations; i++)
     {
-      mModulations.Add(mModulationsData.Get() + static_cast<size_t>(blockSize * i));
+      mModulations.Add(mModulationsData.Get() + static_cast<size_t>(blockSize) * i);
     }
   }
 
@@ -671,7 +666,7 @@ public:
       {
         mSynth.Reset();
         tableLoading[1] = true;
-        WtFile wtFile{ mWavetables.at(static_cast<int>(value) - 1) };
+        WtFile wtFile{ mWavetables.at(static_cast<size_t>(value) - 1) };
         WavetableOscillator<T>::LoadNewTable(wtFile, 1);
         SendParam([this, &wtFile](Voice* voice) {
           voice->mOsc2.SetWavetable(WavetableOscillator<T>::LoadedTables[1]);
