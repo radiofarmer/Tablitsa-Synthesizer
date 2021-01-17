@@ -202,10 +202,10 @@ public:
 };
 
 template<typename T, int NParams=1>
-class ParameterModulatorList
+class ModulatedParameterList
 {
 public:
-  ParameterModulatorList() {}
+  ModulatedParameterList() {}
 
   /** Write a buffer for each of several ParameterModulator objects.
   @param inputs Pointers to the buffers of initial (unmodulated) parameter values, e.g. from the inputs buffer in the block-processing function that calls this one.s
@@ -223,7 +223,6 @@ public:
 private:
   ParameterModulator* mModulations[NParams];
 } WDL_FIXALIGN;
-
 
 BEGIN_IPLUG_NAMESPACE
 
@@ -344,3 +343,74 @@ private:
   int mNumSteps;
   T* mValues;
 };
+
+BEGIN_IPLUG_NAMESPACE
+
+/*
+A container class that holds all per-voice modulators.
+*/
+template<typename T, template<typename> class EnvType=ADSREnvelope, template<typename> class LFOType=FastLFO>
+class ModulatorList
+{
+public:
+  ModulatorList() {}
+
+  ModulatorList(EnvType<T>** envPtrs, LFOType<T>** lfoPtrs) : mEnvPtrs(envPtrs), mLFOPtrs(lfoPtrs)
+  {}
+
+  void AddModulator(EnvType<T>* env)
+  {
+    mEnvPtrs.push_back(env);
+  }
+
+  void AddModulator(FastLFO<T>* lfo)
+  {
+    mLFOPtrs.push_back(lfo);
+  }
+
+  void AddModulator(Sequencer<T>* seq)
+  {
+    mSequencerPtrs.push_back(seq);
+  }
+
+  /* Write modulation values to a buffer */
+  void ProcessBlock(T** inputs, int nFrames)
+  {
+    for (auto i{ 0 }; i < nFrames; ++i)
+    {
+      for (auto e{0}; e < mEnvPtrs.size(); ++e)
+          mModulators.GetList()[e][i] = mEnvPtrs[e]->Process(inputs[e][i]);
+      for (auto l{ 0 }; l < mLFOPtrs.size(); ++l)
+        mModulators.GetList()[e][i] = mLFOPtrs[l]->Process(inputs[l][i]);
+    }
+  }
+
+  inline T** GetList()
+  {
+    return mModulators.GetList();
+  }
+
+  void EmptyAndResize(int newLength)
+  {
+    mNumMods = mEnvPtrs.size() + mLFOPtrs.size() + mSequencerPtrs.size();
+
+    mModulatorRamps.Resize(newLength * mNumMods);
+    mModulators.Empty();
+
+    for (auto i = 0; i < mNumMods; i++)
+    {
+      mModulators.Add(mModulatorRamps.Get() + static_cast<size_t>(newLength) * i);
+    }
+  }
+
+private:
+  std::vector<EnvType<T>*> mEnvPtrs;
+  std::vector<LFOType<T>*> mLFOPtrs;
+  std::vector<Sequencer<T>*> mSequencerPtrs;
+  int mNumMods{ 0 };
+
+  WDL_PtrList<T> mModulators;
+  WDL_TypedBuf<T> mModulatorRamps;
+};
+
+END_IPLUG_NAMESPACE

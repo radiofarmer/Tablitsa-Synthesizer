@@ -24,14 +24,15 @@
 
 using namespace iplug;
 
-// Global modulations
+/*
+Global Modulations (smoothers): These values are computed once per sample and sent to all voices 
+*/
 enum EModulations
 {
   kModGainSmoother = 0,
   kModEnv1SustainSmoother,
   kModEnv2SustainSmoother,
   kModAmpSustainSmoother,
-  kModLFO,
   kModPhaseModulator,
   kModWavetable1PitchSmoother,
   kModWavetable1PosSmoother,
@@ -56,7 +57,10 @@ enum EModulations
   kNumModulations,
 };
 
-// Per-Voice Modulations
+/*
+Per-Voice Modulations: These values are calculated based on the current value of the modulator object which each voice owns.
+They are calculated once per sample per voice.
+*/
 enum EVoiceModParams
 {
   kVWavetable1PitchOffset = 0,
@@ -82,6 +86,8 @@ enum EVoiceModParams
   kNumVoiceModulations
 };
 
+// See Modulators.h for the enumeration of the number of modulators
+
 template<typename T>
 class TablitsaDSP
 {
@@ -96,15 +102,20 @@ public:
 
     Voice(int id=0)
       : mID(id),
-      mAMPEnv("gain", [&]() { mOsc1.Reset(); }),
+      mAmpEnv("gain", [&]() { mOsc1.Reset(); }),
       mEnv1("env1", [&]() { mOsc1.Reset(); }) // capture ok on RT thread?
     {
 //      DBGMSG("new Voice: %i control inputs.\n", static_cast<int>(mInputs.size()));
+      mModulators.AddModulator(&mEnv1);
+      mModulators.AddModulator(&mEnv2);
+      mModulators.AddModulator(&mAmpEnv);
+      mModulators.AddModulator(&mLFO1);
+      mModulators.AddModulator(&mLFO2);
     }
 
     bool GetBusy() const override
     {
-      return mAMPEnv.GetBusy();
+      return mAmpEnv.GetBusy();
     }
 
     void Trigger(double level, bool isRetrigger) override
@@ -125,13 +136,13 @@ public:
 
       if (isRetrigger)
       {
-        mAMPEnv.Retrigger(level);
+        mAmpEnv.Retrigger(level);
         mEnv1.Retrigger(level);
         mEnv2.Retrigger(level);
       }
       else
       {
-        mAMPEnv.Start(level);
+        mAmpEnv.Start(level);
         mEnv1.Start(level);
         mEnv2.Start(level);
       }
@@ -139,7 +150,7 @@ public:
     
     void Release() override
     {
-      mAMPEnv.Release();
+      mAmpEnv.Release();
       mEnv1.Release();
       mEnv2.Release();
     }
@@ -149,11 +160,12 @@ public:
       // inputs to the synthesizer can just fetch a value every block, like this:
 //      double gate = mInputs[kVoiceControlGate].endValue;
       double pitch = mInputs[kVoiceControlPitch].endValue;
-      //double pitchBend = mInputs[kVoiceControlPitchBend].endValue;
+//      double pitchBend = mInputs[kVoiceControlPitchBend].endValue;
       // or write the entire control ramp to a buffer, like this, to get sample-accurate ramps:
 //      mInputs[kVoiceControlTimbre].Write(mTimbreBuffer.Get(), startIdx, nFrames);
 
-      mVoiceModParams[kVWavetable1PitchOffset].ProcessBlock(inputs[kModWavetable1PitchSmoother], mVModulations.GetList()[kVWavetable1PitchOffset], nFrames);
+      mModulators.ProcessBlock(&inputs[kModEnv1SustainSmoother], nFrames);
+//      mVoiceModParams[kVWavetable1PitchOffset].ProcessBlock(inputs[kModWavetable1PitchSmoother], mVModulations.GetList()[kVWavetable1PitchOffset], nFrames);
 
       const double phaseModFreqFact = pow(2., inputs[kModPhaseModFreqSmoother][0] / 12.);
       const double ringModFreqFact = pow(2., inputs[kModRingModFreqSmoother][0] / 12.);
@@ -162,8 +174,8 @@ public:
       for(auto i = startIdx; i < startIdx + nFrames; i += FRAME_INTERVAL)
       {
 //        float noise = mTimbreBuffer.Get()[i] * Rand();
-        double ampEnvVal{ mAMPEnv.Process(inputs[kModAmpSustainSmoother][i]) }; // Calculated for easy access
-        double modVals[]{ mEnv1.Process(inputs[kModEnv1SustainSmoother][i]),
+        double ampEnvVal{ mAmpEnv.Process(inputs[kModAmpSustainSmoother][i]) }; // Calculated for easy access
+        double modVals[]{ mModulators.GetList()[0][i],
           mEnv2.Process(inputs[kModEnv2SustainSmoother][i]),
           ampEnvVal,
           mLFO1.Process(mQNPos, mTransportIsRunning, mTempo),
@@ -214,7 +226,7 @@ public:
     {
       mOsc1.SetSampleRate(sampleRate);
       mOsc2.SetSampleRate(sampleRate);
-      mAMPEnv.SetSampleRate(sampleRate);
+      mAmpEnv.SetSampleRate(sampleRate);
       mEnv1.SetSampleRate(sampleRate);
       mEnv2.SetSampleRate(sampleRate);
       mLFO1.SetSampleRate(sampleRate);
@@ -222,6 +234,7 @@ public:
       
       mVModulationsData.Resize(blockSize * kNumVoiceModulations);
       mVModulations.Empty();
+      mModulators.EmptyAndResize(blockSize);
 
       for (auto i = 0; i < kNumVoiceModulations; i++)
       {
@@ -326,10 +339,10 @@ public:
 
     ADSREnvelope<T> mEnv1;
     ADSREnvelope<T> mEnv2;
-    ADSREnvelope<T> mAMPEnv;
+    ADSREnvelope<T> mAmpEnv;
     FastLFO<T> mLFO1;
     FastLFO<T> mLFO2;
-
+    ModulatorList<T, ADSREnvelope, FastLFO> mModulators;
 
     bool mLFO1Restart{ false };
     bool mLFO2Restart{ false };
@@ -339,7 +352,7 @@ public:
 
     WDL_PtrList<T> mVModulations; // Pointers to modulator buffers
     WDL_TypedBuf<T> mVModulationsData; // Modulator buffer sample data
-    ParameterModulatorList<T, kNumVoiceModulations> mVParameterModulators; // Container for parameter modulators to handle parallel (vector) processing
+    ModulatedParameterList<T, kNumVoiceModulations> mVParameterModulators; // Container for parameter modulators to handle parallel (vector) processing
 
   private:
 //    WDL_TypedBuf<float> mTimbreBuffer;
@@ -509,7 +522,7 @@ public:
       {
         EEnvStage stage = static_cast<EEnvStage>(EEnvStage::kAttack + (paramIdx - kParamAmpEnvAttack));
         mSynth.ForEachVoice([stage, value](SynthVoice& voice) {
-          dynamic_cast<TablitsaDSP::Voice&>(voice).mAMPEnv.SetStageTime(stage, value);
+          dynamic_cast<TablitsaDSP::Voice&>(voice).mAmpEnv.SetStageTime(stage, value);
         });
         break;
       }
