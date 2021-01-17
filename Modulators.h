@@ -167,7 +167,7 @@ public:
   }
 
 protected:
-  static inline double mModValues[EModulators::kNumMods];
+  static inline double mModValues[EModulators::kNumMods]{ 0. };
 
   double mInitialValue{ 0. };
   double mEnv1Depth{ 0. };
@@ -208,20 +208,33 @@ public:
   ModulatedParameterList() {}
 
   /** Write a buffer for each of several ParameterModulator objects.
-  @param inputs Pointers to the buffers of initial (unmodulated) parameter values, e.g. from the inputs buffer in the block-processing function that calls this one.s
+  @param inputs_params Pointers to the buffers of initial (unmodulated) parameter values, e.g. from the inputs buffer in the block-processing function that calls this one. (NParams, nFrames)
+  @param inputs_mods Pointers to the modulation values for the block (kNumMods, nFrames)
   @param outputs Pointers to the output buffers, of dimensions (NParams, nFrames)
   @params nFrames Length of the buffer, in samples
   */
-  void ProcessBlock(T** inputs, T** ouputs, int nFrames)
+  void ProcessBlock(T** inputs_params, T** inputs_mods, T** outputs, int nFrames)
   {
-    for (auto i{ 0 }; i < NParams; ++i)
+    for (auto i{ 0 }; i < nFrames; ++i)
     {
-      mModulations[i]->ProcessBlock(inputs[i], outputs[i], nFrames);
+      T initvals[kNumMods]{ 0. };
+      for (auto m{ 0 }; m < kNumMods; ++m)
+        initvals[m] = inputs_mods[m][i];
+      ParameterModulator::SetModValues(initvals);
+      for (auto p{ 0 }; p < NParams; ++p)
+      {
+        outputs[p][i] = mParams[p].AddModulation(inputs_params[p][i]);
+      }
     }
   }
 
+  void SetList(ParameterModulator* list)
+  {
+    mParams = list;
+  }
+
 private:
-  ParameterModulator* mModulations[NParams];
+  ParameterModulator* mParams;
 } WDL_FIXALIGN;
 
 BEGIN_IPLUG_NAMESPACE
@@ -406,9 +419,9 @@ public:
     return mModulators.GetList();
   }
 
-  void EmptyAndResize(int newLength)
+  void EmptyAndResize(int newLength, int numMods)
   {
-    mNumMods = mEnvPtrs.size() + mLFOPtrs.size() + mSequencerPtrs.size();
+    mNumMods = numMods;
 
     mModulatorRamps.Resize(newLength * mNumMods);
     mModulators.Empty();

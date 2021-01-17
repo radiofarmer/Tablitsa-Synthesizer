@@ -33,7 +33,6 @@ enum EModulations
   kModEnv1SustainSmoother,
   kModEnv2SustainSmoother,
   kModAmpEnvSustainSmoother,
-  kModPhaseModulator,
   kModWavetable1PitchSmoother,
   kModWavetable1PosSmoother,
   kModWavetable1BendSmoother,
@@ -111,6 +110,8 @@ public:
       mModulators.AddModulator(&mAmpEnv);
       mModulators.AddModulator(&mLFO1);
       mModulators.AddModulator(&mLFO2);
+
+      mVParameterModulators.SetList(mVoiceModParams);
     }
 
     bool GetBusy() const override
@@ -165,7 +166,7 @@ public:
 //      mInputs[kVoiceControlTimbre].Write(mTimbreBuffer.Get(), startIdx, nFrames);
 
       mModulators.ProcessBlock(&(inputs[kModEnv1SustainSmoother]), nFrames);
-//      mVoiceModParams[kVWavetable1PitchOffset].ProcessBlock(inputs[kModWavetable1PitchSmoother], mVModulations.GetList()[kVWavetable1PitchOffset], nFrames);
+      mVParameterModulators.ProcessBlock(&inputs[kModWavetable1PitchSmoother], mModulators.GetList(), mVModulations.GetList(), nFrames);
 
       const double phaseModFreqFact = pow(2., inputs[kModPhaseModFreqSmoother][0] / 12.);
       const double ringModFreqFact = pow(2., inputs[kModRingModFreqSmoother][0] / 12.);
@@ -183,7 +184,8 @@ public:
         ParameterModulator::SetModValues(modVals);
 
         // Oscillator Parameters
-        double osc1Freq = 440. * pow(2., pitch + mVoiceModParams[kVWavetable1PitchOffset].AddModulation(inputs[kModWavetable1PitchSmoother][i]) / 12.);
+        double freqmod = mVModulations.GetList()[kVWavetable1PitchOffset][i - startIdx];
+        double osc1Freq = 440. * pow(2., pitch + freqmod / 12.);
         mOsc1.SetWtPosition(1 - mVoiceModParams[kVWavetable1Position].AddModulation(inputs[kModWavetable1PosSmoother][i])); // Wavetable 1 Position
         mOsc1.SetWtBend(mVoiceModParams[kVWavetable1Bend].AddModulation(inputs[kModWavetable1BendSmoother][i])); // Wavetable 1 Bend
         mOsc1Sub.SetLevel(mVoiceModParams[kVWavetable1Sub].AddModulation(inputs[kModWavetable1SubSmoother][i]));
@@ -232,10 +234,10 @@ public:
       mLFO1.SetSampleRate(sampleRate);
       mLFO2.SetSampleRate(sampleRate);
       
-      mVModulationsData.Resize(blockSize * kNumVoiceModulations);
+      mVModulationsData.Resize(blockSize * kNumModulations);
       mVModulations.Empty();
 
-      mModulators.EmptyAndResize(blockSize);
+      mModulators.EmptyAndResize(blockSize, kNumMods);
 
       for (auto i = 0; i < kNumVoiceModulations; i++)
       {
