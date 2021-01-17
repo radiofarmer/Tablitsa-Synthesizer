@@ -32,7 +32,7 @@ enum EModulations
   kModGainSmoother = 0,
   kModEnv1SustainSmoother,
   kModEnv2SustainSmoother,
-  kModAmpSustainSmoother,
+  kModAmpEnvSustainSmoother,
   kModPhaseModulator,
   kModWavetable1PitchSmoother,
   kModWavetable1PosSmoother,
@@ -164,7 +164,7 @@ public:
       // or write the entire control ramp to a buffer, like this, to get sample-accurate ramps:
 //      mInputs[kVoiceControlTimbre].Write(mTimbreBuffer.Get(), startIdx, nFrames);
 
-      mModulators.ProcessBlock(&inputs[kModEnv1SustainSmoother], nFrames);
+      mModulators.ProcessBlock(&(inputs[kModEnv1SustainSmoother]), nFrames);
 //      mVoiceModParams[kVWavetable1PitchOffset].ProcessBlock(inputs[kModWavetable1PitchSmoother], mVModulations.GetList()[kVWavetable1PitchOffset], nFrames);
 
       const double phaseModFreqFact = pow(2., inputs[kModPhaseModFreqSmoother][0] / 12.);
@@ -174,12 +174,12 @@ public:
       for(auto i = startIdx; i < startIdx + nFrames; i += FRAME_INTERVAL)
       {
 //        float noise = mTimbreBuffer.Get()[i] * Rand();
-        double ampEnvVal{ mAmpEnv.Process(inputs[kModAmpSustainSmoother][i]) }; // Calculated for easy access
-        double modVals[]{ mModulators.GetList()[0][i],
-          mEnv2.Process(inputs[kModEnv2SustainSmoother][i]),
+        double ampEnvVal{ mModulators.GetList()[2][i - startIdx] }; // Calculated for easy access
+        double modVals[]{ mModulators.GetList()[0][i - startIdx],
+          mModulators.GetList()[1][i - startIdx],
           ampEnvVal,
-          mLFO1.Process(mQNPos, mTransportIsRunning, mTempo),
-          mLFO2.Process(mQNPos, mTransportIsRunning, mTempo) };
+          mModulators.GetList()[3][i - startIdx],
+          mModulators.GetList()[4][i - startIdx] };
         ParameterModulator::SetModValues(modVals);
 
         // Oscillator Parameters
@@ -234,6 +234,7 @@ public:
       
       mVModulationsData.Resize(blockSize * kNumVoiceModulations);
       mVModulations.Empty();
+
       mModulators.EmptyAndResize(blockSize);
 
       for (auto i = 0; i < kNumVoiceModulations; i++)
@@ -287,6 +288,7 @@ public:
       mQNPos = qnPos;
       mTransportIsRunning = transportIsRunning;
       mTempo = tempo;
+      FastLFO<T>::SetTempoAndBeat(mQNPos, mTransportIsRunning, mTempo);
     }
 
     void SetFilterType(int filter, int filterType)
@@ -514,7 +516,7 @@ public:
         break;
       }
       case kParamAmpEnvSustain:
-        mParamsToSmooth[kModAmpSustainSmoother] = (T) value / 100.;
+        mParamsToSmooth[kModAmpEnvSustainSmoother] = (T) value / 100.;
         break;
       case kParamAmpEnvAttack:
       case kParamAmpEnvDecay:

@@ -275,11 +275,23 @@ public:
     return f1 + frac * (f2 - f1);
   }
 
+  static inline void SetTempoAndBeat(double qnPos = 0., bool transportIsRunning = false, double tempo = 120.)
+  {
+    mQNPos = qnPos;
+    mTransportIsRunning = transportIsRunning;
+    mTempo = tempo;
+  }
+
   inline T Process(double freqHz) override
   {
     IOscillator<T>::SetFreqCPS(freqHz);
 
-    return Process();
+    return Process(mQNPos, mTransportIsRunning, mTempo);
+  }
+
+  inline T DoProcess() override
+  {
+    return Process(mQNPos, mTransportIsRunning, mTempo);
   }
 
   inline T Process(double qnPos = 0., bool transportIsRunning = false, double tempo = 120.)
@@ -322,8 +334,12 @@ private:
   static inline constexpr int mTableSize{ 1024 };
   static inline constexpr int mTableSizeM1{ 1023 };
   T mLastOutput;
+
   static inline T mLUT[LFO<T>::EShape::kNumShapes][mTableSize];
-//  LFO<T>::EShape mShape{ LFO<T>::EShape::kTriangle };
+
+  static inline double mTempo{ 120. };
+  static inline bool mTransportIsRunning{ false };
+  static inline double mQNPos{ 0. };
 };
 
 END_IPLUG_NAMESPACE
@@ -378,10 +394,10 @@ public:
   {
     for (auto i{ 0 }; i < nFrames; ++i)
     {
-      for (auto e{0}; e < mEnvPtrs.size(); ++e)
-          mModulators.GetList()[e][i] = mEnvPtrs[e]->Process(inputs[e][i]);
+      for(auto e{0}; e < mEnvPtrs.size(); ++e)
+        mModulators.GetList()[e][i] = mEnvPtrs[e]->Process(inputs[e][i]);
       for (auto l{ 0 }; l < mLFOPtrs.size(); ++l)
-        mModulators.GetList()[e][i] = mLFOPtrs[l]->Process(inputs[l][i]);
+        mModulators.GetList()[l + mEnvPtrs.size()][i] = mLFOPtrs[l]->DoProcess();
     }
   }
 
