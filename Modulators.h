@@ -92,6 +92,8 @@ public:
     case kLFO2:
       mLFO2Depth = value * mRange;
       break;
+    case kSequencer:
+      mSequencerDepth = value * mRange;
     default:
       break;
     }
@@ -161,7 +163,7 @@ public:
 
   static inline void SetModValues(double* modPtr)
   {
-    memcpy(ParameterModulator::mModValues + 1, modPtr, kNumMods * 8);
+    memcpy(ParameterModulator::mModValues, modPtr, kNumMods * sizeof(mModValues[0]));
   }
 
 protected:
@@ -221,6 +223,7 @@ public:
 private:
   ParameterModulator* mModulations[NParams];
 } WDL_FIXALIGN;
+
 
 BEGIN_IPLUG_NAMESPACE
 
