@@ -7,8 +7,7 @@
 
 enum EModulators
 {
-  kInitial=0,
-  kEnv1,
+  kEnv1=0,
   kEnv2,
   kAmpEnv,
   kLFO1,
@@ -52,23 +51,32 @@ END_IPLUG_NAMESPACE
 class ParameterModulator
 {
 public:
-  ParameterModulator(double min, double max) : mMin(min), mMax(max)
+  ParameterModulator(double min, double max, bool exponential=false) : mMin(min), mMax(max), mIsExponential(exponential)
   {
-    mRange = mMax - mMin;
+    if (mIsExponential)
+    {
+      mMin = std::max(mMin, 1e-6);
+      mRange = std::log(mMax / mMin);
+    }
+    else
+      mRange = mMax - mMin;
   }
 
   void SetMinMax(double min, double max)
   {
     mMin = min;
     mMax = max;
-    mRange = mMax - mMin;
+    if (mIsExponential)
+    {
+      mRange = std::log(mMax / std::max(mMin, 1.e-6));
+    }
+    else
+      mRange = mMax - mMin;
   }
 
-  void SetValue(int idx, double value)
+  virtual void SetValue(int idx, double value)
   {
     switch (idx) {
-    case kInitial:
-      mInitialValue = value;
     case kEnv1:
       mEnv1Depth = value * mRange;
       break;
@@ -89,6 +97,7 @@ public:
     }
   }
 
+
   inline double GetValue(double env1 = 0., double env2 = 0., double ampEnv = 0., double lfo1 = 0., double lfo2 = 0., double sequencer = 0.)
   {
     return std::max(std::min(mInitialValue +
@@ -99,25 +108,52 @@ public:
       lfo2 * mLFO2Depth, mMax), mMin);
   }
 
-  inline double AddModulation(double initVal)
+  /*
+  Write a buffer of modulation buffers. Can be called directly by a ParameterModulator, or indirectly by a ParameterModulatorList.
+  @param inputs The initival values (parameter values) for the parameter
+  @param outputs A buffer (e.g. WDL_TypedBuf) to write the values to
+  @param nFrames The length of the block
+  */
+  inline void ProcessBlock(double* inputs, double* outputs, int nFrames)
   {
-    return std::max(std::min(initVal + mModValues[kEnv1] * mEnv1Depth + mModValues[kEnv2] * mEnv2Depth + mModValues[kAmpEnv] * mAmpEnvDepth +
-      mModValues[kLFO1] * mLFO1Depth + mModValues[kLFO2] * mLFO2Depth + mModValues[kSequencer] * mSequencerDepth, mMax), mMin);
+    for (auto i{ 0 }; i < nFrames; ++i)
+    {
+      outputs[i] = AddModulation(inputs[i]);
+    }
   }
 
-  inline double AddModulation()
+  /* TODO: This may be better implemented with virtual functions (see ParameterModulationExp implementation below) */
+  inline double AddModulation(double initVal)
   {
-    return std::max(std::min(mInitialValue + mModValues[kEnv1] * mEnv1Depth + mModValues[kEnv2] * mEnv2Depth + mModValues[kAmpEnv] * mAmpEnvDepth +
-      mModValues[kLFO1] * mLFO1Depth + mModValues[kLFO2] * mLFO2Depth, mMax), mMin);
+    if (!mIsExponential)
+      return std::max(std::min(initVal + mModValues[kEnv1] * mEnv1Depth + mModValues[kEnv2] * mEnv2Depth + mModValues[kAmpEnv] * mAmpEnvDepth +
+        mModValues[kLFO1] * mLFO1Depth + mModValues[kLFO2] * mLFO2Depth + mModValues[kSequencer] * mSequencerDepth, mMax), mMin);
+    else
+      return std::max(std::min(initVal * std::exp(mModValues[kEnv1] * mEnv1Depth + mModValues[kEnv2] * mEnv2Depth + mModValues[kAmpEnv] * mAmpEnvDepth +
+        mModValues[kLFO1] * mLFO1Depth + mModValues[kLFO2] * mLFO2Depth + mModValues[kSequencer] * mSequencerDepth), mMax), mMin);
+  }
+
+  inline double AddModulationExp(double initVal)
+  {
+    return std::max(std::min(initVal * std::exp(mModValues[kEnv1] * mEnv1Depth + mModValues[kEnv2] * mEnv2Depth + mModValues[kAmpEnv] * mAmpEnvDepth +
+      mModValues[kLFO1] * mLFO1Depth + mModValues[kLFO2] * mLFO2Depth + mModValues[kSequencer] * mSequencerDepth), mMax), mMin);
   }
 
   double operator[](int idx)
   {
     switch (idx) {
-    case kInitial:
-      return mInitialValue;
     case kEnv1:
       return mEnv1Depth;
+    case kEnv2:
+      return mEnv2Depth;
+    case kAmpEnv:
+      return mAmpEnvDepth;
+    case kLFO1:
+      return mLFO1Depth;
+    case kLFO2:
+      return mLFO2Depth;
+    case kSequencer:
+      return mSequencerDepth;
     default:
       break;
     }
@@ -128,21 +164,63 @@ public:
     memcpy(ParameterModulator::mModValues + 1, modPtr, kNumMods * 8);
   }
 
-private:
+protected:
   static inline double mModValues[EModulators::kNumMods];
 
-  double mInitialValue{ 0 };
-  double mEnv1Depth{ 0 };
-  double mEnv2Depth{ 0 };
-  double mAmpEnvDepth{ 0 };
-  double mLFO1Depth{ 0 };
-  double mLFO2Depth{ 0 };
-  double mSequencerDepth{ 0 };
+  double mInitialValue{ 0. };
+  double mEnv1Depth{ 0. };
+  double mEnv2Depth{ 0. };
+  double mAmpEnvDepth{ 0. };
+  double mLFO1Depth{ 0. };
+  double mLFO2Depth{ 0. };
+  double mSequencerDepth{ 0. };
+  double mVelocityDepth{ 0. };
+  double mKeytrackDepth{ 0. };
+  double mRandomDepth{ 0. };
 
   double mMin{ 0. };
   double mMax{ 1. };
   double mRange{ 1. };
+  const bool mIsExponential{ false };
 };
+
+class ParameterModulatorExp : public ParameterModulator
+{
+public:
+  ParameterModulatorExp(double min, double max) : ParameterModulator(std::min(min, 1e-6), max)
+  {
+    mRange = std::log(mMax / mMin);
+  }
+
+  inline double AddModulation(double initVal)
+  {
+    return std::max(std::min(initVal * std::exp(mModValues[kEnv1] * mEnv1Depth + mModValues[kEnv2] * mEnv2Depth + mModValues[kAmpEnv] * mAmpEnvDepth +
+      mModValues[kLFO1] * mLFO1Depth + mModValues[kLFO2] * mLFO2Depth + mModValues[kSequencer] * mSequencerDepth), mMax), mMin);
+  }
+};
+
+template<typename T, int NParams=1>
+class ParameterModulatorList
+{
+public:
+  ParameterModulatorList() {}
+
+  /** Write a buffer for each of several ParameterModulator objects.
+  @param inputs Pointers to the buffers of initial (unmodulated) parameter values, e.g. from the inputs buffer in the block-processing function that calls this one.s
+  @param outputs Pointers to the output buffers, of dimensions (NParams, nFrames)
+  @params nFrames Length of the buffer, in samples
+  */
+  void ProcessBlock(T** inputs, T** ouputs, int nFrames)
+  {
+    for (auto i{ 0 }; i < NParams; ++i)
+    {
+      mModulations[i]->ProcessBlock(inputs[i], outputs[i], nFrames);
+    }
+  }
+
+private:
+  ParameterModulator* mModulations[NParams];
+} WDL_FIXALIGN;
 
 BEGIN_IPLUG_NAMESPACE
 
