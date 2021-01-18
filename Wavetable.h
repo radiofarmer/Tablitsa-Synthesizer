@@ -2,7 +2,7 @@
 
 #include "IPlugPlatform.h"
 
-//#define FFT
+#define FFT
 
 #define WT_DIR "..\\resources\\data\\wavetables\\"
 #define WT_SIZE 1024
@@ -378,8 +378,10 @@ public:
     mValues = new T[mNumSamples];
     memcpy(mValues, values, mStartSize * sizeof(mValues[0]));
 
+    // TODO: For mipmaps whose highest levels is longer than 2^15 samples, copy all the mipmaps above that level before performing FFTs and decinmation
+
     // Generate the rest of the mipmap
-    int levelNyquist{ start_size / (4 * mTableOS) };
+    int levelNyquist{ (mStartSize / mCyclesPerLevel) / (4 * mTableOS) };
     T* buf = new T[mLevelSizes[0]]; // Create a temporary buffer for generating new levels
     memcpy(buf, values, mLevelSizes[0] * sizeof(mValues[0])); // Populate the temporary buffer with the full-harmonic wavetable
 
@@ -390,10 +392,14 @@ public:
     */
     for (size_t i{0}; i < num_levels - 1; ++i)
     {
-      // Band-limit the mipmap level
-      buf = fft_lp_filter(buf, mLevelSizes[i], levelNyquist, mLevelSizes[i+1] > mMinSize ? 2 : 1);
-      // Copy the filtered mipmap level to the mValues buffer
-      memcpy(&(mValues[mLevelIndices[i + 1]]), buf, mLevelSizes[i + 1] * sizeof(mValues[0]));
+      // Make sure the current level is within the size range for the FFT function
+      if (std::log2(mLevelSizes[i]) <= 15)
+      {
+        // Band-limit the mipmap level
+        buf = fft_lp_filter(buf, mLevelSizes[i], levelNyquist, mLevelSizes[i + 1] > mMinSize ? 2 : 1);
+        // Copy the filtered mipmap level to the mValues buffer
+        memcpy(&(mValues[mLevelIndices[i + 1]]), buf, mLevelSizes[i + 1] * sizeof(mValues[0]));
+      }
       levelNyquist /= 2;
     }
 
@@ -411,7 +417,7 @@ public:
   const int CalculateLength()
   {
     int level{ 0 };
-    int nextLevelSize{ mStartSize * mCyclesPerLevel };
+    int nextLevelSize{ mStartSize };
     int samples{ 0 };
     while (level < mNumLevels)
     {
@@ -491,7 +497,7 @@ public:
     mNumTables = wt.NumWaveforms();
     mWtSize = wt.NumSamples() / mNumTables;
 
-    // Load mipmaps
+    // Load mipmaps for each waveform (table position)
     for (int i{ 0 }; i < mNumTables; ++i)
     {
 #ifdef FFT
