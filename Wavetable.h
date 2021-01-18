@@ -548,7 +548,7 @@ public:
 };
 
 template <typename T>
-class WavetableOscillator : public iplug::IOscillator<T>
+class WavetableOscillator final : public iplug::IOscillator<T>
 {
   union tabfudge
   {

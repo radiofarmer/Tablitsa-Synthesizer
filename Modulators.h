@@ -186,7 +186,7 @@ protected:
   const bool mIsExponential{ false };
 };
 
-class ParameterModulatorExp : public ParameterModulator
+class ParameterModulatorExp : public ParameterModulator final
 {
 public:
   ParameterModulatorExp(double min, double max) : ParameterModulator(std::min(min, 1e-6), max)
