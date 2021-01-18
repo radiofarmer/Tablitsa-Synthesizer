@@ -167,7 +167,7 @@ public:
   }
 
 protected:
-  static inline double mModValues[EModulators::kNumMods];
+  static inline double mModValues[EModulators::kNumMods]{ 0. };
 
   double mInitialValue{ 0. };
   double mEnv1Depth{ 0. };
@@ -202,28 +202,40 @@ public:
 };
 
 template<typename T, int NParams=1>
-class ParameterModulatorList
+class ModulatedParameterList
 {
 public:
-  ParameterModulatorList() {}
+  ModulatedParameterList() {}
 
   /** Write a buffer for each of several ParameterModulator objects.
-  @param inputs Pointers to the buffers of initial (unmodulated) parameter values, e.g. from the inputs buffer in the block-processing function that calls this one.s
+  @param inputs_params Pointers to the buffers of initial (unmodulated) parameter values, e.g. from the inputs buffer in the block-processing function that calls this one. (NParams, nFrames)
+  @param inputs_mods Pointers to the modulation values for the block (kNumMods, nFrames)
   @param outputs Pointers to the output buffers, of dimensions (NParams, nFrames)
   @params nFrames Length of the buffer, in samples
   */
-  void ProcessBlock(T** inputs, T** ouputs, int nFrames)
+  void ProcessBlock(T** inputs_params, T** inputs_mods, T** outputs, int nFrames)
   {
-    for (auto i{ 0 }; i < NParams; ++i)
+    for (auto i{ 0 }; i < nFrames; ++i)
     {
-      mModulations[i]->ProcessBlock(inputs[i], outputs[i], nFrames);
+      T initvals[kNumMods]{ 0. };
+      for (auto m{ 0 }; m < kNumMods; ++m)
+        initvals[m] = inputs_mods[m][i];
+      ParameterModulator::SetModValues(initvals);
+      for (auto p{ 0 }; p < NParams; ++p)
+      {
+        outputs[p][i] = mParams[p].AddModulation(inputs_params[p][i]);
+      }
     }
   }
 
-private:
-  ParameterModulator* mModulations[NParams];
-} WDL_FIXALIGN;
+  void SetList(ParameterModulator* list)
+  {
+    mParams = list;
+  }
 
+private:
+  ParameterModulator* mParams;
+} WDL_FIXALIGN;
 
 BEGIN_IPLUG_NAMESPACE
 
@@ -276,11 +288,23 @@ public:
     return f1 + frac * (f2 - f1);
   }
 
+  static inline void SetTempoAndBeat(double qnPos = 0., bool transportIsRunning = false, double tempo = 120.)
+  {
+    mQNPos = qnPos;
+    mTransportIsRunning = transportIsRunning;
+    mTempo = tempo;
+  }
+
   inline T Process(double freqHz) override
   {
     IOscillator<T>::SetFreqCPS(freqHz);
 
-    return Process();
+    return Process(mQNPos, mTransportIsRunning, mTempo);
+  }
+
+  inline T DoProcess() override
+  {
+    return Process(mQNPos, mTransportIsRunning, mTempo);
   }
 
   inline T Process(double qnPos = 0., bool transportIsRunning = false, double tempo = 120.)
@@ -323,8 +347,12 @@ private:
   static inline constexpr int mTableSize{ 1024 };
   static inline constexpr int mTableSizeM1{ 1023 };
   T mLastOutput;
+
   static inline T mLUT[LFO<T>::EShape::kNumShapes][mTableSize];
-//  LFO<T>::EShape mShape{ LFO<T>::EShape::kTriangle };
+
+  static inline double mTempo{ 120. };
+  static inline bool mTransportIsRunning{ false };
+  static inline double mQNPos{ 0. };
 };
 
 END_IPLUG_NAMESPACE
@@ -344,3 +372,74 @@ private:
   int mNumSteps;
   T* mValues;
 };
+
+BEGIN_IPLUG_NAMESPACE
+
+/*
+A container class that holds all per-voice modulators.
+*/
+template<typename T, template<typename> class EnvType=ADSREnvelope, template<typename> class LFOType=FastLFO>
+class ModulatorList
+{
+public:
+  ModulatorList() {}
+
+  ModulatorList(EnvType<T>** envPtrs, LFOType<T>** lfoPtrs) : mEnvPtrs(envPtrs), mLFOPtrs(lfoPtrs)
+  {}
+
+  void AddModulator(EnvType<T>* env)
+  {
+    mEnvPtrs.push_back(env);
+  }
+
+  void AddModulator(FastLFO<T>* lfo)
+  {
+    mLFOPtrs.push_back(lfo);
+  }
+
+  void AddModulator(Sequencer<T>* seq)
+  {
+    mSequencerPtrs.push_back(seq);
+  }
+
+  /* Write modulation values to a buffer */
+  void ProcessBlock(T** inputs, int nFrames)
+  {
+    for (auto i{ 0 }; i < nFrames; ++i)
+    {
+      for(auto e{0}; e < mEnvPtrs.size(); ++e)
+        mModulators.GetList()[e][i] = mEnvPtrs[e]->Process(inputs[e][i]);
+      for (auto l{ 0 }; l < mLFOPtrs.size(); ++l)
+        mModulators.GetList()[l + mEnvPtrs.size()][i] = mLFOPtrs[l]->DoProcess();
+    }
+  }
+
+  inline T** GetList()
+  {
+    return mModulators.GetList();
+  }
+
+  void EmptyAndResize(int newLength, int numMods)
+  {
+    mNumMods = numMods;
+
+    mModulatorRamps.Resize(newLength * mNumMods);
+    mModulators.Empty();
+
+    for (auto i = 0; i < mNumMods; i++)
+    {
+      mModulators.Add(mModulatorRamps.Get() + static_cast<size_t>(newLength) * i);
+    }
+  }
+
+private:
+  std::vector<EnvType<T>*> mEnvPtrs;
+  std::vector<LFOType<T>*> mLFOPtrs;
+  std::vector<Sequencer<T>*> mSequencerPtrs;
+  int mNumMods{ 0 };
+
+  WDL_PtrList<T> mModulators;
+  WDL_TypedBuf<T> mModulatorRamps;
+};
+
+END_IPLUG_NAMESPACE
