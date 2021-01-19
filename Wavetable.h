@@ -401,7 +401,8 @@ public:
   }
 
   AutoMipmap<T>(const AutoMipmap<T>& source) :
-    mValues(source.mValues), mStartSize(source.mStartSize), mMinSize(source.mMinSize), mNumLevels(source.mNumLevels), mCyclesPerLevel(source.mCyclesPerLevel), mTableOS(source.mTableOS)
+    mValues(source.mValues), mStartSize(source.mStartSize), mMinSize(source.mMinSize), mNumLevels(source.mNumLevels),
+    mCyclesPerLevel(source.mCyclesPerLevel), mTableOS(source.mTableOS), mNumSamples(source.mNumSamples)
   {
     mLevelSizes = source.mLevelSizes;
     mLevelIndices = source.mLevelIndices;
@@ -547,7 +548,7 @@ public:
 };
 
 template <typename T>
-class WavetableOscillator : public iplug::IOscillator<T>
+class WavetableOscillator final : public iplug::IOscillator<T>
 {
   union tabfudge
   {
