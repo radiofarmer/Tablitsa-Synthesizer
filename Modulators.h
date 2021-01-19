@@ -110,6 +110,11 @@ public:
     return mModDepths[idx];
   }
 
+  double* operator*()
+  {
+    return mModDepths;
+  }
+
   static inline void SetModValues(double* modPtr)
   {
     memcpy(ParameterModulator::mModValues, modPtr, kNumMods * sizeof(mModValues[0]));
@@ -119,15 +124,6 @@ protected:
   static inline double mModValues[EModulators::kNumMods]{ 0. };
 
   double mModDepths[kNumMods]{ 0. };
-  double mEnv1Depth{ 0. };
-  double mEnv2Depth{ 0. };
-  double mAmpEnvDepth{ 0. };
-  double mLFO1Depth{ 0. };
-  double mLFO2Depth{ 0. };
-  double mSequencerDepth{ 0. };
-  double mVelocityDepth{ 0. };
-  double mKeytrackDepth{ 0. };
-  double mRandomDepth{ 0. };
 
   double mMin{ 0. };
   double mMax{ 1. };
@@ -135,26 +131,12 @@ protected:
   const bool mIsExponential{ false };
 };
 
-class ParameterModulatorExp final : public ParameterModulator
-{
-public:
-  ParameterModulatorExp(double min, double max) : ParameterModulator(std::min(min, 1e-6), max)
-  {
-    mRange = std::log(mMax / mMin);
-  }
-
-  inline double AddModulation(double initVal)
-  {
-    return std::max(std::min(initVal * std::exp(mModValues[kEnv1] * mEnv1Depth + mModValues[kEnv2] * mEnv2Depth + mModValues[kAmpEnv] * mAmpEnvDepth +
-      mModValues[kLFO1] * mLFO1Depth + mModValues[kLFO2] * mLFO2Depth + mModValues[kSequencer] * mSequencerDepth), mMax), mMin);
-  }
-};
-
 template<typename T, int NParams=1>
 class ModulatedParameterList
 {
 public:
-  ModulatedParameterList() {}
+  ModulatedParameterList(std::initializer_list<ParameterModulator*> params) : mParams(params)
+  {}
 
   /** Write a buffer for each of several ParameterModulator objects.
   @param inputs_params Pointers to the buffers of initial (unmodulated) parameter values, e.g. from the inputs buffer in the block-processing function that calls this one. (NParams, nFrames)
@@ -172,9 +154,14 @@ public:
       ParameterModulator::SetModValues(initvals);
       for (auto p{ 0 }; p < NParams; ++p)
       {
-        outputs[p][i] = mParams[p].AddModulation(inputs_params[p][i]);
+        outputs[p][i] = mParams[p]->AddModulation(inputs_params[p][i]);
       }
     }
+  }
+
+  ParameterModulator& operator[](int idx)
+  {
+    return *(mParams[idx]);
   }
 
   void SetList(ParameterModulator* list)
@@ -183,7 +170,7 @@ public:
   }
 
 private:
-  ParameterModulator* mParams;
+  std::vector<ParameterModulator*> mParams;
 } WDL_FIXALIGN;
 
 BEGIN_IPLUG_NAMESPACE
