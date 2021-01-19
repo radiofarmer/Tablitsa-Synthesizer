@@ -76,27 +76,7 @@ public:
 
   virtual void SetValue(int idx, double value)
   {
-    switch (idx) {
-    case kEnv1:
-      mEnv1Depth = value * mRange;
-      break;
-    case kEnv2:
-      mEnv2Depth = value * mRange;
-      break;
-    case kAmpEnv:
-      mAmpEnvDepth = value * mRange;
-      break;
-    case kLFO1:
-      mLFO1Depth = value * mRange;
-      break;
-    case kLFO2:
-      mLFO2Depth = value * mRange;
-      break;
-    case kSequencer:
-      mSequencerDepth = value * mRange;
-    default:
-      break;
-    }
+    mModDepths[idx] = value * mRange;
   }
 
   /*
@@ -116,38 +96,18 @@ public:
   /* TODO: This may be better implemented with virtual functions (see ParameterModulationExp implementation below) */
   inline double AddModulation(double initVal)
   {
+    double modulation{ 0. };
+    for (auto i{ 0 }; i < kNumMods; ++i)
+      modulation += mModDepths[i] * ParameterModulator::mModValues[i];
     if (!mIsExponential)
-      return std::max(std::min(initVal + mModValues[kEnv1] * mEnv1Depth + mModValues[kEnv2] * mEnv2Depth + mModValues[kAmpEnv] * mAmpEnvDepth +
-        mModValues[kLFO1] * mLFO1Depth + mModValues[kLFO2] * mLFO2Depth + mModValues[kSequencer] * mSequencerDepth, mMax), mMin);
+      return std::max(std::min(initVal + modulation, mMax), mMin);
     else
-      return std::max(std::min(initVal * std::exp(mModValues[kEnv1] * mEnv1Depth + mModValues[kEnv2] * mEnv2Depth + mModValues[kAmpEnv] * mAmpEnvDepth +
-        mModValues[kLFO1] * mLFO1Depth + mModValues[kLFO2] * mLFO2Depth + mModValues[kSequencer] * mSequencerDepth), mMax), mMin);
-  }
-
-  inline double AddModulationExp(double initVal)
-  {
-    return std::max(std::min(initVal * std::exp(mModValues[kEnv1] * mEnv1Depth + mModValues[kEnv2] * mEnv2Depth + mModValues[kAmpEnv] * mAmpEnvDepth +
-      mModValues[kLFO1] * mLFO1Depth + mModValues[kLFO2] * mLFO2Depth + mModValues[kSequencer] * mSequencerDepth), mMax), mMin);
+      return std::max(std::min(initVal * std::exp(modulation), mMax), mMin);
   }
 
   double operator[](int idx)
   {
-    switch (idx) {
-    case kEnv1:
-      return mEnv1Depth;
-    case kEnv2:
-      return mEnv2Depth;
-    case kAmpEnv:
-      return mAmpEnvDepth;
-    case kLFO1:
-      return mLFO1Depth;
-    case kLFO2:
-      return mLFO2Depth;
-    case kSequencer:
-      return mSequencerDepth;
-    default:
-      break;
-    }
+    return mModDepths[idx];
   }
 
   static inline void SetModValues(double* modPtr)
@@ -158,7 +118,7 @@ public:
 protected:
   static inline double mModValues[EModulators::kNumMods]{ 0. };
 
-  double mInitialValue{ 0. };
+  double mModDepths[kNumMods]{ 0. };
   double mEnv1Depth{ 0. };
   double mEnv2Depth{ 0. };
   double mAmpEnvDepth{ 0. };
