@@ -99,17 +99,6 @@ public:
     }
   }
 
-
-  inline double GetValue(double env1 = 0., double env2 = 0., double ampEnv = 0., double lfo1 = 0., double lfo2 = 0., double sequencer = 0.)
-  {
-    return std::max(std::min(mInitialValue +
-      env1 * mEnv1Depth +
-      env2 * mEnv2Depth +
-      ampEnv * mAmpEnvDepth +
-      lfo1 * mLFO1Depth +
-      lfo2 * mLFO2Depth, mMax), mMin);
-  }
-
   /*
   Write a buffer of modulation buffers. Can be called directly by a ParameterModulator, or indirectly by a ParameterModulatorList.
   @param inputs The initival values (parameter values) for the parameter
