@@ -5,7 +5,7 @@
 #include <Shlwapi.h>
 #include <tchar.h>
 
-#define FFT
+//#define FFT
 
 #ifndef VST3_API
 #define WT_DIR "..\\resources\\data\\wavetables\\"

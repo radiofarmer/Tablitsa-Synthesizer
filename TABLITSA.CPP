@@ -501,12 +501,12 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
 bool Tablitsa::SerializeState(IByteChunk& chunk) const
 {
   // serialize the multislider state before serializing the regular params
-  /*for (int i = 0; i < kNumSeqSteps; i++)
+  for (int i = 0; i < kNumSeqSteps; i++)
   {
     chunk.Put(&mDSP.mSeqSteps[i]);
   }
   chunk.Put(&mDSP.mLoadedWavetables[0]);
-  chunk.Put(&mDSP.mLoadedWavetables[1]);*/
+  chunk.Put(&mDSP.mLoadedWavetables[1]);
   
   return SerializeParams(chunk); // must remember to call SerializeParams at the end
 }
@@ -514,8 +514,8 @@ bool Tablitsa::SerializeState(IByteChunk& chunk) const
 // this over-ridden method is called when the host is trying to load the plug-in state and you need to unpack the data into your algorithm
 int Tablitsa::UnserializeState(const IByteChunk& chunk, int startPos)
 {
-  /*double v = 0.;
-
+  double v = 0.;
+  
   // unserialize the steps state before unserializing the regular params
   for (int i = 0; i < kNumSeqSteps; i++)
   {
@@ -529,7 +529,7 @@ int Tablitsa::UnserializeState(const IByteChunk& chunk, int startPos)
 
   // If UI exists
   if (GetUI())
-    UpdateUIControls();*/
+    UpdateUIControls(); 
 
   // must remember to call UnserializeParams at the end
   return UnserializeParams(chunk, startPos);
@@ -551,9 +551,9 @@ void Tablitsa::UpdateUIControls()
   }
 
   // Wavetables
-  //auto* pPeriodicTable = GetUI()->GetControlWithTag(kCtrlTagPeriodicTable);
-  //pPeriodicTable->SetValue(mDSP.mLoadedWavetables[0], 0);
-  //pPeriodicTable->SetValue(mDSP.mLoadedWavetables[1], 1);
+  auto* pPeriodicTable = GetUI()->GetControlWithTag(kCtrlTagPeriodicTable);
+  pPeriodicTable->SetValue(mDSP.mLoadedWavetables[0] / 118., 0);
+  pPeriodicTable->SetValue(mDSP.mLoadedWavetables[1] / 118., 1);
 
   SendCurrentParamValuesFromDelegate();
   GetUI()->SetAllControlsDirty();

@@ -1011,6 +1011,6 @@ public:
   static inline bool tableLoading[2]{ true, true };
 
   // Non-modulatable parameters
-  double mLoadedWavetables[2]{ 1, 2 }; // Integer indices of current wavetables
+  double mLoadedWavetables[2]{ 1., 2. }; // Integer indices of current wavetables
   double mSeqSteps[kNumSeqSteps]{}; // Value of each step in the sequencer
 };
