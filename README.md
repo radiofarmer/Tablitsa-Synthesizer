@@ -1,4 +1,4 @@
-Tablitsa (In Development)
+Tablitsa Synthesizer (In Development)
 ==========================
 A polyphonic wavetable synthesizer inspired by chemistry, built with the the IPlug2 framework, a fork of Cockos WDL by Oli Larkin. Available as a stand-alone app or as a VST3 plugin.
 
