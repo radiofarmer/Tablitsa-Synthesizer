@@ -4,7 +4,7 @@ A polyphonic wavetable synthesizer inspired by chemistry, built with the the IPl
 
 ## Features
 The final version will include
-  * Two wavetable oscillators with adjustable table position ("Valency"), phase distortion ("Excitation"), and bass boost ("Mass")
+  * Two wavetable oscillators with adjustable table position ("Valency"), phase distortion ("Excitation"), and bass boost and saturation ("Mass")
   * 118 wavetables with properties inspired by chemical elements
   * A filter for each oscillator, using Hal Chamberlain's State-Variable Filter (lowpass, highpass, bandpass, allpass) and a model of the Moog Ladder Filter (lowpass, highpass, bandpass), as well as a comb filter with adjustable feedback and feedforward coefficients and adjustable delay line length
   * Three envelopes, two LFOs, a 16-step sequencer, and keytrack, velocity, and trigger-random modulation for all continuously-variable parameters
