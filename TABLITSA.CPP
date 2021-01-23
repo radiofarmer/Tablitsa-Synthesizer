@@ -458,11 +458,11 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
     pGraphics->AttachControl(new IVKnobControl(seqPanel.GetFromLeft(dialSize * 2 + 20.f).GetGridCell(0, 1, 1, 2).GetCentredInside(dialSize), kParamSequencerGlide, "Glide"), kNoTag, "Sequencer");
     pGraphics->AttachControl(new SequencerControl<kNumSeqSteps>(seqPanel.GetVPadded(-20.f).GetReducedFromRight(dialSize).GetReducedFromLeft(dialSize * 2.f).GetHPadded(-10.f), ""),
       kCtrlTagSequencer, "Sequencer")->SetActionFunction([pGraphics](IControl* pCaller) {
-      // Get the slider index
-      int lastHit = pCaller->As<IVMultiSliderControl<kNumSeqSteps>>()->GetLastSliderHit();
-      if (lastHit > -1) {
+      // Get all values
+      for(int i(0); i < pCaller->NVals(); ++i)
+      {
         // Bundle the slider index with the slider value
-        ParamTuple data = { lastHit, pCaller->GetValue(lastHit) };
+        ParamTuple data = { i, pCaller->GetValue(i) };
         // Send the new value to be evaluated in the OnMessage function
         pGraphics->GetDelegate()->SendArbitraryMsgFromUI(kMsgSeqSliderChanged, kCtrlTagSequencer, sizeof(ParamTuple), &data);
       }
