@@ -59,6 +59,9 @@ public:
     }
     else
       mRange = mMax - mMin;
+
+    mMinV = Vec4d(mMin);
+    mMaxV = Vec4d(mMax);
   }
 
   void SetMinMax(double min, double max)
@@ -71,6 +74,9 @@ public:
     }
     else
       mRange = mMax - mMin;
+
+    mMinV = Vec4d(mMin);
+    mMaxV = Vec4d(mMax);
   }
 
   virtual void SetValue(int idx, double value)
@@ -133,6 +139,9 @@ protected:
   double mMax{ 1. };
   double mRange{ 1. };
   const bool mIsExponential{ false };
+
+  Vec4d mMinV = Vec4d(0.);
+  Vec4d mMaxV = Vec4d(0.);
 };
 
 template<typename T, int NParams=1, int VectorSize=4>
@@ -164,20 +173,38 @@ public:
   }
 
   /* Vector processing of each block of parameter values.
-  Currently just calculates mod amounts in parallel at a time.
+
+  TODO: Pad the modulation matrix with extra rows of zeros so that its rows are always divisible by the vector length. (See ModulatorList)
+  TODO: Support for exponentially-scaled moduation
   */
   void ProcessBlockVec4d(T** param_inputs, T** mod_inputs, T** outputs, int nFrames)
   {
-    for (auto i{ 0 }; i < nFrames; ++i)
+    for (auto i{ 0 }; i < nFrames; i+=4)
     {
       for (auto p{ 0 }; p < NParams; ++p)
       {
+        /* For calculating per-sample modulation for single samples in parallel
         Vec4d modDepths;
-        Vec4d modVals(mod_inputs[0][i], mod_inputs[1][i], mod_inputs[2][i], mod_inputs[3][i]); // Values of the modulators themselves for the current samples
         modDepths.load(mParams[p]->Depths()); // Modulation depths for the current parameters (constant for entire sample block)
-        outputs[p][i] = mParams[p]->ClipToRange(horizontal_add(modDepths * modVals) + param_inputs[p][i]);
+        Vec4d modVals(mod_inputs[0][i], mod_inputs[1][i], mod_inputs[2][i], mod_inputs[3][i]); // Values of the modulators themselves for the current samples
+        outputs[p][i] = mParams[p]->ClipToRange(horizontal_add(modDepths * modVals) + param_inputs[p][i]);*/
+
+        // For calculating per-sample modulation for multiple samples in parallel
+        Vec4d modSum(0.);
+        Vec4d initVals;
+        initVals.load(param_inputs[p]);
+        for (auto m{ 0 }; m < 4; ++m)
+        {
+          Vec4d modSamples;
+          modSamples.load(mod_inputs[m][i]);
+          modSum += modSamples * mParams[p][m];
+        }
+        Vec4d outputV = Params[p]->ClipToRange(initVals + modSum);
+        outputV.store(&outputs[p][i]);
+
       }
     }
+    // Process the last few parameters, which don't fit exactly into the vector length
     ProcessBlock(param_inputs, mod_inputs, outputs, nFrames, NParams - (NParams % 4));
   }
 
