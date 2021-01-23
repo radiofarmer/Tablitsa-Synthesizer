@@ -1,13 +1,16 @@
 #pragma once
 
 #include "IPlugPlatform.h"
+#include <ShlObj.h>
+#include <Shlwapi.h>
+#include <tchar.h>
 
 //#define FFT
 
 #ifndef VST3_API
 #define WT_DIR "..\\resources\\data\\wavetables\\"
 #else
-#define WT_DIR "C:\\Users\\bramc\\VST-Development\\iPlug2\\Examples\\Tablitsa\\resources\\data\\wavetables\\"
+#define WT_DIR "\\Tablitsa\\wavetables\\"
 #endif
 
 #define WT_SIZE 1024
@@ -111,24 +114,31 @@ class WtFile
 
 public:
   WtFile(std::string fname) :
+#ifndef VST3_API
     mPath(WT_DIR + fname + ".wt")
+#else
+    mPath(fname + ".wt")
+#endif
   {
     std::fstream f;
     int headerSize{ sizeof(mHeader) }; // Size of WAV header
     constexpr int byteInc = 8;
-
+    
+#ifdef VST3_API
+    TCHAR szPath[MAX_PATH];
+    if (SUCCEEDED(SHGetFolderPath(NULL, CSIDL_APPDATA, NULL, 0, szPath)))
+    {
+      PathAppend(szPath, _T(WT_DIR));
+    }
+    std::wstring wpath(&szPath[0]);
+    std::string path(wpath.begin(), wpath.end());
+    mPath = path + fname + ".wt";
+#endif
     FILE* wt = fopen(mPath.c_str(), "rb");
     if (wt != nullptr)
     {
       fread(&mHeader, headerSize, 1, wt);
       mNumSamples = mHeader.numSamples;
-      
-      /*for (int i{ 0 }; i < mHeader.numLevels; ++i)
-      {
-        int harmonics;
-        fread(&harmonics, 4, 1, wt);
-        mLevels.push_back(harmonics);
-      }*/
       
       // Temporary array for samples
       double_t* samplesRaw{ new double_t[static_cast<size_t>(mNumSamples)] };
@@ -204,6 +214,7 @@ public:
   }
 
 private:
+ // static inline const std::string UserDir{ std::getenv("USER") };
   std::string mPath{};
   WtHeader mHeader{};
   int mNumSamples{ 0 };
