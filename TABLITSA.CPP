@@ -11,6 +11,7 @@
 #define ENVELOPE_PARTITION 0.8
 #define LFO_PARTITION 1.4
 
+
 const IVStyle modKnobStyle{ DEFAULT_STYLE.WithLabelText(17.) };
 
 Tablitsa::Tablitsa(const InstanceInfo& info)
@@ -499,13 +500,13 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
 bool Tablitsa::SerializeState(IByteChunk& chunk) const
 {
   // serialize the multislider state state before serializing the regular params
-  for (int i = 0; i < kNumSeqSteps; i++)
+  /*for (int i = 0; i < kNumSeqSteps; i++)
   {
     chunk.Put(&mDSP.mSeqSteps[i]);
   }
   chunk.Put(&mDSP.mLoadedWavetables[0]);
   chunk.Put(&mDSP.mLoadedWavetables[1]);
-
+  */
   return SerializeParams(chunk); // must remember to call SerializeParams at the end
 }
 
@@ -515,7 +516,7 @@ int Tablitsa::UnserializeState(const IByteChunk& chunk, int startPos)
   double v = 0.;
 
   // unserialize the steps state before unserializing the regular params
-  for (int i = 0; i < kNumSeqSteps; i++)
+  /*for (int i = 0; i < kNumSeqSteps; i++)
   {
     startPos = chunk.Get(&v, startPos);
     mDSP.mSeqSteps[i] = v;
@@ -527,7 +528,7 @@ int Tablitsa::UnserializeState(const IByteChunk& chunk, int startPos)
 
   // If UI exists
   if (GetUI())
-    UpdateUIControls();
+    UpdateUIControls();*/
 
   // must remember to call UnserializeParams at the end
   return UnserializeParams(chunk, startPos);

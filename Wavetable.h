@@ -3,10 +3,11 @@
 #include "IPlugPlatform.h"
 
 //#define FFT
+
 #ifndef VST3_API
 #define WT_DIR "..\\resources\\data\\wavetables\\"
 #else
-#define WT_DIR "..\\..\\..\\..\\..\\resources\\data\\wavetables"
+#define WT_DIR "C:\\Users\\bramc\\VST-Development\\iPlug2\\Examples\\Tablitsa\\resources\\data\\wavetables\\"
 #endif
 
 #define WT_SIZE 1024
@@ -577,11 +578,10 @@ public:
   {
     if (wt.Success())
     {
-      std::unique_lock<std::mutex> lock(mWtMutex);
-      TableLoaded = false;
+      std::unique_lock<std::mutex> lock(mMasterMutex);
+      mWtReady = false;
       delete LoadedTables[idx];
       LoadedTables[idx] = new Wavetable<T>(wt);
-      //TableLoaded = true;
     }
   }
 
@@ -632,7 +632,6 @@ public:
       if (mWT != nullptr)
         delete mWT;
       mWT = newTable; // This step takes about as long as generating the new table in the first place. Copy function for Wavetable probably needs to be overridden and optimized
-      mWtReady = true;
     }
   }
 
@@ -643,7 +642,6 @@ public:
     if (tab != nullptr)
       mWT = tab;
     mPhaseIncrFactor = (1. / (mWT->mCyclesPerLevel * mProcessOS));
-    mWtReady = true;
   }
 
   // Chooses the proper mipmap for the current note frequency (Hz) and sample rate
@@ -661,9 +659,7 @@ public:
   inline void SetMipmapLevel_ByIndex(int idx)
   {
     std::unique_lock<std::mutex> lock(mWtMutex);
-    mCV.wait(lock, [this] { return mWtReady && TableLoaded; });
-
-    assert(mWT != nullptr);
+    mCV.wait(lock, [this] { return mWtReady; });
 
     int tableOffset = static_cast<int>((1 - mWtPosition) * (mWT->mNumTables - 1.0001));
     mLUTLo[0] = mWT->GetMipmapLevel_ByIndex(tableOffset, idx, mTableSize);
@@ -938,7 +934,7 @@ public:
 
   static void NotifyLoaded(bool isLoaded = true)
   {
-    TableLoaded = true;
+    mWtReady = true;
     mCV.notify_all();
   }
 
@@ -975,10 +971,11 @@ private:
   int mWtIdx{ 0 };
 
   // Thread-related members for wavetable updates
-  static inline std::mutex mWtMutex;
+  static inline std::mutex mWtMutex; // Mutex used when swapping out the current wavetable in each oscillator object
   static inline std::condition_variable mCV;
   static inline bool TableLoaded{ false };
-  bool mWtReady{ false };
+  static inline std::mutex mMasterMutex; // Static mutex used when loading a new wavetable from a file
+  static inline bool mWtReady{ false };
 
   // Vectors
   const Vec4d mIncrVec{ 0., 1., 2., 3. };

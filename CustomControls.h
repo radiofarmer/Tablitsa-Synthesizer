@@ -26,13 +26,13 @@ public:
     
     if (!mod.L)
     {
-      SetValueToDefault(0);
+      LoadModParams();
     }
     else
       IVKnobControl::OnMouseDown(x, y, mod);
   }
 
-  void CreateContextMenu(IPopupMenu& menu) override
+  void LoadModParams()
   {
     if (mActive)
     {

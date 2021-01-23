@@ -596,6 +596,7 @@ public:
         break;
       case kParamWavetable1:
       {
+        value = std::max(1., value);
         mSynth.Reset();
         tableLoading[0] = true; // NB: this variable lets the PeriodicTable control know whether to display the selected element in the loading (faded) state or not
         WtFile wtFile{ mWavetables.at(static_cast<int>(value) - 1) };
@@ -604,7 +605,9 @@ public:
           voice->mOsc1.SetWavetable(WavetableOscillator<T>::LoadedTables[0]);
           voice->mOsc1.ReloadLUT();
           });
-        WavetableOscillator<T>::NotifyLoaded();
+        SendParam([this, &wtFile](Voice* voice) {
+          voice->mOsc1.NotifyLoaded();
+          });
         tableLoading[0] = false;
         break;
       }
@@ -685,6 +688,7 @@ public:
       }
       case kParamWavetable2:
       {
+        value = std::max(1., value);
         mSynth.Reset();
         tableLoading[1] = true;
         WtFile wtFile{ mWavetables.at(static_cast<size_t>(value) - 1) };
@@ -693,8 +697,10 @@ public:
           voice->mOsc2.SetWavetable(WavetableOscillator<T>::LoadedTables[1]);
           voice->mOsc2.ReloadLUT();
           });
+        SendParam([this, &wtFile](Voice* voice) {
+          voice->mOsc2.NotifyLoaded();
+          });
         mSynth.Reset();
-        WavetableOscillator<T>::NotifyLoaded();
         tableLoading[1] = false;
         break;
       }
