@@ -551,9 +551,9 @@ void Tablitsa::UpdateUIControls()
   }
 
   // Wavetables
-  auto* pPeriodicTable = GetUI()->GetControlWithTag(kCtrlTagPeriodicTable);
-  pPeriodicTable->SetValue(mDSP.mLoadedWavetables[0], 0);
-  pPeriodicTable->SetValue(mDSP.mLoadedWavetables[1], 1);
+  //auto* pPeriodicTable = GetUI()->GetControlWithTag(kCtrlTagPeriodicTable);
+  //pPeriodicTable->SetValue(mDSP.mLoadedWavetables[0], 0);
+  //pPeriodicTable->SetValue(mDSP.mLoadedWavetables[1], 1);
 
   SendCurrentParamValuesFromDelegate();
   GetUI()->SetAllControlsDirty();
