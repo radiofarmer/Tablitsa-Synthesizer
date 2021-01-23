@@ -228,6 +228,7 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
     const ISVG tableImg = pGraphics->LoadSVG(PERIODIC_TABLE_FN);
     pGraphics->AttachControl(new PeriodicTable(controls.GetReducedFromBottom(controls.H() * 0.5f ).GetFromLeft(720.f).GetPadded(-30.f), tableImg, { kParamWavetable1, kParamWavetable2 }),
       kCtrlTagPeriodicTable); // TODO: Set action function to store non-modulatable parameter value
+    dynamic_cast<PeriodicTable*>(pGraphics->GetControlWithTag(kCtrlTagPeriodicTable))->LoadValues();
 
     // Wavetable controls
     const IRECT osc1Panel = controls.GetReducedFromLeft(720.f).GetReducedFromBottom(controls.H() / 2.f).GetGridCell(0, 0, 2, 3).GetPadded(-10.f);

@@ -27,9 +27,24 @@ public:
     if (!mod.L)
     {
       LoadModParams();
+      mMouseDown = !mMouseDown;
+      /* By default, center-clicking causes the control to be captured such that it still responds to the mouse wheel when
+      the mouse is not actually over it. ReleaseMouseCapture() empties the captured-control queue. */
+      GetUI()->ReleaseMouseCapture();
     }
     else
       IVKnobControl::OnMouseDown(x, y, mod);
+  }
+
+  void OnMouseOut() override
+  {
+    IVKnobControl::OnMouseOut();
+  }
+
+  void OnMouseWheel(float x, float y, const IMouseMod& mod, float d) override
+  {
+    if (mMouseIsOver)
+      IVKnobControl::OnMouseWheel(x, y, mod, d);
   }
 
   void LoadModParams()
@@ -61,8 +76,6 @@ public:
   {
     if (mActive && mActiveIdx == GetParamIdx())
       SetColor(kFG, GetColor(kPR));
-    else if (mActive)
-      mActive = false;
     else
       SetColor(kFG, mDefaultColor);
     DrawBackground(g, mRECT);
@@ -276,6 +289,14 @@ public:
     mLaTLHC[1] = mRECT.T + LaTLHC[1] * mScaleFact;
     mTableBounds = IRECT(mTableTLHC[0], mTableTLHC[1], mTableTLHC[0] + mTableWidth, mTableTLHC[1] + mTableHeight);
     mLaAcBounds = IRECT(mLaTLHC[0], mLaTLHC[1], mLaTLHC[0] + mLaAcWidth, mLaTLHC[1] + mLaAcHeight);
+  }
+
+  void LoadValues()
+  {
+    // TODO: Make the number of elements a template parameter to make it easier to add an oscillator in the future
+    for (auto i{0}; i < 2; ++i)
+      mSelectedElements[i] = GetParam(i)->Value();
+    SetDirty(false);
   }
 
   void Draw(IGraphics& g)
