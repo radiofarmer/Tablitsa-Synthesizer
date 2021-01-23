@@ -208,7 +208,7 @@
       <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <PreprocessorDefinitions>$(VST3_DEFS);$(RELEASE_DEFS);$(EXTRA_RELEASE_DEFS);%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>$(VST3_DEFS);$(RELEASE_DEFS);$(EXTRA_RELEASE_DEFS);%(PreprocessorDefinitions);_VST3s</PreprocessorDefinitions>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
       <AdditionalIncludeDirectories>C:\Users\bramc\VST-Development\iPlug2\WDL;C:\Users\bramc\VST-Development\vectorclass;C:\Users\bramc\VST-Development\vectorclass\vector3d;$(VST3_INC_PATHS);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
@@ -248,7 +248,7 @@
       <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <PreprocessorDefinitions>$(VST3_DEFS);$(TRACER_DEFS);$(EXTRA_TRACER_DEFS);%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>$(VST3_DEFS);_VST3;$(TRACER_DEFS);$(EXTRA_TRACER_DEFS);%(PreprocessorDefinitions);_VST3s</PreprocessorDefinitions>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <AdditionalIncludeDirectories>C:\Users\bramc\VST-Development\iPlug2\WDL;C:\Users\bramc\VST-Development\vectorclass;C:\Users\bramc\VST-Development\vectorclass\vector3d;$(VST3_INC_PATHS);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>

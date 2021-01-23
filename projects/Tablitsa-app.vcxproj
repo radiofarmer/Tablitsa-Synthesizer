@@ -346,6 +346,7 @@
     <ClInclude Include="..\Tablitsa.h" />
     <ClInclude Include="..\Tablitsa_DSP.h" />
     <ClInclude Include="..\resources\resource.h" />
+    <ClInclude Include="..\VectorFunctions.h" />
     <ClInclude Include="..\VoiceThread.h" />
     <ClInclude Include="..\Wavetable.h" />
   </ItemGroup>
@@ -433,6 +434,7 @@
     <ClCompile Include="..\..\..\IPlug\IPlugTimer.cpp" />
     <ClCompile Include="..\..\..\WDL\fft.c" />
     <ClCompile Include="..\Tablitsa.cpp" />
+    <ClCompile Include="..\VectorFunctions.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="..\resources\main.rc" />

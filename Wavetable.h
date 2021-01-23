@@ -3,8 +3,12 @@
 #include "IPlugPlatform.h"
 
 //#define FFT
-
+#ifndef VST3_API
 #define WT_DIR "..\\resources\\data\\wavetables\\"
+#else
+#define WT_DIR "..\\..\\..\\..\\..\\resources\\data\\wavetables"
+#endif
+
 #define WT_SIZE 1024
 #define WAV16_MAX 32767
 #define WT_MAX_DEFAULT 16384
@@ -636,7 +640,8 @@ public:
   {
     std::unique_lock<std::mutex> lock(mWtMutex);
     mWtReady = false;
-    mWT = tab;
+    if (tab != nullptr)
+      mWT = tab;
     mPhaseIncrFactor = (1. / (mWT->mCyclesPerLevel * mProcessOS));
     mWtReady = true;
   }
