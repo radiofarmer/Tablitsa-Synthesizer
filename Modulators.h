@@ -2,8 +2,7 @@
 
 #include "IPlugParameter.h"
 #include "LFO.h"
-
-#include <vector>
+#include "VectorFunctions.h"
 
 enum EModulators
 {
@@ -60,6 +59,9 @@ public:
     }
     else
       mRange = mMax - mMin;
+
+    mMinV = Vec4d(mMin);
+    mMaxV = Vec4d(mMax);
   }
 
   void SetMinMax(double min, double max)
@@ -72,42 +74,14 @@ public:
     }
     else
       mRange = mMax - mMin;
+
+    mMinV = Vec4d(mMin);
+    mMaxV = Vec4d(mMax);
   }
 
   virtual void SetValue(int idx, double value)
   {
-    switch (idx) {
-    case kEnv1:
-      mEnv1Depth = value * mRange;
-      break;
-    case kEnv2:
-      mEnv2Depth = value * mRange;
-      break;
-    case kAmpEnv:
-      mAmpEnvDepth = value * mRange;
-      break;
-    case kLFO1:
-      mLFO1Depth = value * mRange;
-      break;
-    case kLFO2:
-      mLFO2Depth = value * mRange;
-      break;
-    case kSequencer:
-      mSequencerDepth = value * mRange;
-    default:
-      break;
-    }
-  }
-
-
-  inline double GetValue(double env1 = 0., double env2 = 0., double ampEnv = 0., double lfo1 = 0., double lfo2 = 0., double sequencer = 0.)
-  {
-    return std::max(std::min(mInitialValue +
-      env1 * mEnv1Depth +
-      env2 * mEnv2Depth +
-      ampEnv * mAmpEnvDepth +
-      lfo1 * mLFO1Depth +
-      lfo2 * mLFO2Depth, mMax), mMin);
+    mModDepths[idx] = value * mRange;
   }
 
   /*
@@ -127,38 +101,28 @@ public:
   /* TODO: This may be better implemented with virtual functions (see ParameterModulationExp implementation below) */
   inline double AddModulation(double initVal)
   {
+    double modulation{ 0. };
+    for (auto i{ 0 }; i < kNumMods; ++i)
+      modulation += mModDepths[i] * ParameterModulator::mModValues[i];
     if (!mIsExponential)
-      return std::max(std::min(initVal + mModValues[kEnv1] * mEnv1Depth + mModValues[kEnv2] * mEnv2Depth + mModValues[kAmpEnv] * mAmpEnvDepth +
-        mModValues[kLFO1] * mLFO1Depth + mModValues[kLFO2] * mLFO2Depth + mModValues[kSequencer] * mSequencerDepth, mMax), mMin);
+      return std::max(std::min(initVal + modulation, mMax), mMin);
     else
-      return std::max(std::min(initVal * std::exp(mModValues[kEnv1] * mEnv1Depth + mModValues[kEnv2] * mEnv2Depth + mModValues[kAmpEnv] * mAmpEnvDepth +
-        mModValues[kLFO1] * mLFO1Depth + mModValues[kLFO2] * mLFO2Depth + mModValues[kSequencer] * mSequencerDepth), mMax), mMin);
+      return std::max(std::min(initVal * std::exp(modulation), mMax), mMin);
   }
 
-  inline double AddModulationExp(double initVal)
+  inline double ClipToRange(double value)
   {
-    return std::max(std::min(initVal * std::exp(mModValues[kEnv1] * mEnv1Depth + mModValues[kEnv2] * mEnv2Depth + mModValues[kAmpEnv] * mAmpEnvDepth +
-      mModValues[kLFO1] * mLFO1Depth + mModValues[kLFO2] * mLFO2Depth + mModValues[kSequencer] * mSequencerDepth), mMax), mMin);
+    return std::max(std::min(value, mMax), mMin);
   }
 
   double operator[](int idx)
   {
-    switch (idx) {
-    case kEnv1:
-      return mEnv1Depth;
-    case kEnv2:
-      return mEnv2Depth;
-    case kAmpEnv:
-      return mAmpEnvDepth;
-    case kLFO1:
-      return mLFO1Depth;
-    case kLFO2:
-      return mLFO2Depth;
-    case kSequencer:
-      return mSequencerDepth;
-    default:
-      break;
-    }
+    return mModDepths[idx];
+  }
+
+  const double* Depths()
+  {
+    return mModDepths;
   }
 
   static inline void SetModValues(double* modPtr)
@@ -169,43 +133,23 @@ public:
 protected:
   static inline double mModValues[EModulators::kNumMods]{ 0. };
 
-  double mInitialValue{ 0. };
-  double mEnv1Depth{ 0. };
-  double mEnv2Depth{ 0. };
-  double mAmpEnvDepth{ 0. };
-  double mLFO1Depth{ 0. };
-  double mLFO2Depth{ 0. };
-  double mSequencerDepth{ 0. };
-  double mVelocityDepth{ 0. };
-  double mKeytrackDepth{ 0. };
-  double mRandomDepth{ 0. };
+  double mModDepths[kNumMods]{ 0. };
 
   double mMin{ 0. };
   double mMax{ 1. };
   double mRange{ 1. };
   const bool mIsExponential{ false };
+
+  Vec4d mMinV = Vec4d(0.);
+  Vec4d mMaxV = Vec4d(0.);
 };
 
-class ParameterModulatorExp : public ParameterModulator
-{
-public:
-  ParameterModulatorExp(double min, double max) : ParameterModulator(std::min(min, 1e-6), max)
-  {
-    mRange = std::log(mMax / mMin);
-  }
-
-  inline double AddModulation(double initVal)
-  {
-    return std::max(std::min(initVal * std::exp(mModValues[kEnv1] * mEnv1Depth + mModValues[kEnv2] * mEnv2Depth + mModValues[kAmpEnv] * mAmpEnvDepth +
-      mModValues[kLFO1] * mLFO1Depth + mModValues[kLFO2] * mLFO2Depth + mModValues[kSequencer] * mSequencerDepth), mMax), mMin);
-  }
-};
-
-template<typename T, int NParams=1>
+template<typename T, int NParams=1, int VectorSize=4>
 class ModulatedParameterList
 {
 public:
-  ModulatedParameterList() {}
+  ModulatedParameterList(std::initializer_list<ParameterModulator*> params) : mParams(params), mParamBlocks(NParams / 4)
+  {}
 
   /** Write a buffer for each of several ParameterModulator objects.
   @param inputs_params Pointers to the buffers of initial (unmodulated) parameter values, e.g. from the inputs buffer in the block-processing function that calls this one. (NParams, nFrames)
@@ -213,28 +157,65 @@ public:
   @param outputs Pointers to the output buffers, of dimensions (NParams, nFrames)
   @params nFrames Length of the buffer, in samples
   */
-  void ProcessBlock(T** inputs_params, T** inputs_mods, T** outputs, int nFrames)
+  void ProcessBlock(T** param_inputs, T** mod_inputs, T** outputs, int nFrames, const int offset=0)
   {
     for (auto i{ 0 }; i < nFrames; ++i)
     {
-      T initvals[kNumMods]{ 0. };
+      T modDepths[NParams]{ 0. };
       for (auto m{ 0 }; m < kNumMods; ++m)
-        initvals[m] = inputs_mods[m][i];
-      ParameterModulator::SetModValues(initvals);
-      for (auto p{ 0 }; p < NParams; ++p)
+        modDepths[m] = mod_inputs[m][i];
+      ParameterModulator::SetModValues(modDepths);
+      for (auto p{ offset }; p < NParams; ++p)
       {
-        outputs[p][i] = mParams[p].AddModulation(inputs_params[p][i]);
+        outputs[p][i] = mParams[p]->AddModulation(param_inputs[p][i]);
       }
     }
   }
 
-  void SetList(ParameterModulator* list)
+  /* Vector processing of each block of parameter values.
+
+  TODO: Pad the modulation matrix with extra rows of zeros so that its rows are always divisible by the vector length. (See ModulatorList)
+  TODO: Support for exponentially-scaled moduation
+  */
+  void ProcessBlockVec4d(T** param_inputs, T** mod_inputs, T** outputs, int nFrames)
   {
-    mParams = list;
+    for (auto i{ 0 }; i < nFrames; i+=4)
+    {
+      for (auto p{ 0 }; p < NParams; ++p)
+      {
+        /* For calculating per-sample modulation for single samples in parallel
+        Vec4d modDepths;
+        modDepths.load(mParams[p]->Depths()); // Modulation depths for the current parameters (constant for entire sample block)
+        Vec4d modVals(mod_inputs[0][i], mod_inputs[1][i], mod_inputs[2][i], mod_inputs[3][i]); // Values of the modulators themselves for the current samples
+        outputs[p][i] = mParams[p]->ClipToRange(horizontal_add(modDepths * modVals) + param_inputs[p][i]);*/
+
+        // For calculating per-sample modulation for multiple samples in parallel
+        Vec4d modSum(0.);
+        Vec4d initVals;
+        initVals.load(param_inputs[p]);
+        for (auto m{ 0 }; m < 4; ++m)
+        {
+          Vec4d modSamples;
+          modSamples.load(mod_inputs[m][i]);
+          modSum += modSamples * mParams[p][m];
+        }
+        Vec4d outputV = Params[p]->ClipToRange(initVals + modSum);
+        outputV.store(&outputs[p][i]);
+
+      }
+    }
+    // Process the last few parameters, which don't fit exactly into the vector length
+    ProcessBlock(param_inputs, mod_inputs, outputs, nFrames, NParams - (NParams % 4));
+  }
+
+  ParameterModulator& operator[](int idx)
+  {
+    return *(mParams[idx]);
   }
 
 private:
-  ParameterModulator* mParams;
+  std::vector<ParameterModulator*> mParams;
+  const int mParamBlocks;
 } WDL_FIXALIGN;
 
 BEGIN_IPLUG_NAMESPACE
@@ -411,6 +392,8 @@ public:
         mModulators.GetList()[e][i] = mEnvPtrs[e]->Process(inputs[e][i]);
       for (auto l{ 0 }; l < mLFOPtrs.size(); ++l)
         mModulators.GetList()[l + mEnvPtrs.size()][i] = mLFOPtrs[l]->DoProcess();
+      for (auto m{ mEnvPtrs.size() + mEnvPtrs.size() }; m < mNumMods; ++m)
+        mModulators.GetList()[m][i] = 0.;
     }
   }
 

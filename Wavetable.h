@@ -1,10 +1,18 @@
 #pragma once
 
 #include "IPlugPlatform.h"
+#include <ShlObj.h>
+#include <Shlwapi.h>
+#include <tchar.h>
 
 #define FFT
 
+#ifndef VST3_API
 #define WT_DIR "..\\resources\\data\\wavetables\\"
+#else
+#define WT_DIR "\\Tablitsa\\wavetables\\"
+#endif
+
 #define WT_SIZE 1024
 #define WAV16_MAX 32767
 #define WT_MAX_DEFAULT 16384
@@ -106,24 +114,31 @@ class WtFile
 
 public:
   WtFile(std::string fname) :
+#ifndef VST3_API
     mPath(WT_DIR + fname + ".wt")
+#else
+    mPath(fname + ".wt")
+#endif
   {
     std::fstream f;
     int headerSize{ sizeof(mHeader) }; // Size of WAV header
     constexpr int byteInc = 8;
-
+    
+#ifdef VST3_API
+    TCHAR szPath[MAX_PATH];
+    if (SUCCEEDED(SHGetFolderPath(NULL, CSIDL_APPDATA, NULL, 0, szPath)))
+    {
+      PathAppend(szPath, _T(WT_DIR));
+    }
+    std::wstring wpath(&szPath[0]);
+    std::string path(wpath.begin(), wpath.end());
+    mPath = path + fname + ".wt";
+#endif
     FILE* wt = fopen(mPath.c_str(), "rb");
     if (wt != nullptr)
     {
       fread(&mHeader, headerSize, 1, wt);
       mNumSamples = mHeader.numSamples;
-      
-      /*for (int i{ 0 }; i < mHeader.numLevels; ++i)
-      {
-        int harmonics;
-        fread(&harmonics, 4, 1, wt);
-        mLevels.push_back(harmonics);
-      }*/
       
       // Temporary array for samples
       double_t* samplesRaw{ new double_t[static_cast<size_t>(mNumSamples)] };
@@ -199,6 +214,7 @@ public:
   }
 
 private:
+ // static inline const std::string UserDir{ std::getenv("USER") };
   std::string mPath{};
   WtHeader mHeader{};
   int mNumSamples{ 0 };
@@ -554,7 +570,7 @@ public:
 };
 
 template <typename T>
-class WavetableOscillator : public iplug::IOscillator<T>
+class WavetableOscillator final : public iplug::IOscillator<T>
 {
   union tabfudge
   {
@@ -579,11 +595,10 @@ public:
   {
     if (wt.Success())
     {
-      std::unique_lock<std::mutex> lock(mWtMutex);
-      TableLoaded = false;
+      std::unique_lock<std::mutex> lock(mMasterMutex);
+      mWtReady = false;
       delete LoadedTables[idx];
       LoadedTables[idx] = new Wavetable<T>(wt);
-      //TableLoaded = true;
     }
   }
 
@@ -634,7 +649,6 @@ public:
       if (mWT != nullptr)
         delete mWT;
       mWT = newTable; // This step takes about as long as generating the new table in the first place. Copy function for Wavetable probably needs to be overridden and optimized
-      mWtReady = true;
     }
   }
 
@@ -642,9 +656,9 @@ public:
   {
     std::unique_lock<std::mutex> lock(mWtMutex);
     mWtReady = false;
-    mWT = tab;
+    if (tab != nullptr)
+      mWT = tab;
     mPhaseIncrFactor = (1. / (mWT->mCyclesPerLevel * mProcessOS));
-    mWtReady = true;
   }
 
   // Chooses the proper mipmap for the current note frequency (Hz) and sample rate
@@ -662,9 +676,7 @@ public:
   inline void SetMipmapLevel_ByIndex(int idx)
   {
     std::unique_lock<std::mutex> lock(mWtMutex);
-    mCV.wait(lock, [this] { return mWtReady && TableLoaded; });
-
-    assert(mWT != nullptr);
+    mCV.wait(lock, [this] { return mWtReady; });
 
     int tableOffset = static_cast<int>((1 - mWtPosition) * (mWT->mNumTables - 1.0001));
     mLUTLo[0] = mWT->GetMipmapLevel_ByIndex(tableOffset, idx, mTableSize);
@@ -939,7 +951,7 @@ public:
 
   static void NotifyLoaded(bool isLoaded = true)
   {
-    TableLoaded = true;
+    mWtReady = true;
     mCV.notify_all();
   }
 
@@ -976,10 +988,11 @@ private:
   int mWtIdx{ 0 };
 
   // Thread-related members for wavetable updates
-  static inline std::mutex mWtMutex;
+  static inline std::mutex mWtMutex; // Mutex used when swapping out the current wavetable in each oscillator object
   static inline std::condition_variable mCV;
   static inline bool TableLoaded{ false };
-  bool mWtReady{ false };
+  static inline std::mutex mMasterMutex; // Static mutex used when loading a new wavetable from a file
+  static inline bool mWtReady{ false };
 
   // Vectors
   const Vec4d mIncrVec{ 0., 1., 2., 3. };

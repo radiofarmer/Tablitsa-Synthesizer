@@ -114,7 +114,7 @@ public:
       mModulators.AddModulator(&mLFO1);
       mModulators.AddModulator(&mLFO2);
 
-      mVParameterModulators.SetList(mVoiceModParams);
+//      mVParameterModulators.SetList(mVoiceModParams);
     }
 
     bool GetBusy() const override
@@ -169,7 +169,7 @@ public:
 //      mInputs[kVoiceControlTimbre].Write(mTimbreBuffer.Get(), startIdx, nFrames);
 
       mModulators.ProcessBlock(&(inputs[kModEnv1SustainSmoother]), nFrames);
-      mVParameterModulators.ProcessBlock(&inputs[kModWavetable1PitchSmoother], mModulators.GetList(), mVModulations.GetList(), nFrames);
+      mVoiceModParams.ProcessBlock(&inputs[kModWavetable1PitchSmoother], mModulators.GetList(), mVModulations.GetList(), nFrames);
 
       const double phaseModFreqFact = pow(2., inputs[kModPhaseModFreqSmoother][0] / 12.);
       const double ringModFreqFact = pow(2., inputs[kModRingModFreqSmoother][0] / 12.);
@@ -361,31 +361,30 @@ public:
 
     WDL_PtrList<T> mVModulations; // Pointers to modulator buffers
     WDL_TypedBuf<T> mVModulationsData; // Modulator buffer sample data
-    ModulatedParameterList<T, kNumVoiceModulations> mVParameterModulators; // Container for parameter modulators to handle parallel (vector) processing
 
   private:
 //    WDL_TypedBuf<float> mTimbreBuffer;
-    ParameterModulator mVoiceModParams[kNumVoiceModulations]{
-      ParameterModulator(-24., 24.), /* Wavetable 1 Pitch Offset */
-      ParameterModulator(0., 1.), /* Wavetable 1 Position */
-      ParameterModulator(-1., 1.), /* Wavetable 1 Bend */
-      ParameterModulator(0., 1.), /* Wavetable 1 Sub */
-      ParameterModulator(0., 1.), /* Wavetable 1 Amp */
-      ParameterModulator(-24., 24.), /* Wavetable 2 Pitch Offset */
-      ParameterModulator(0., 1.), /* Wavetable 2 Position */
-      ParameterModulator(-1., 1.), /* Wavetable 2 Bend */
-      ParameterModulator(0., 1.), /* Wavetable 2 Sub */
-      ParameterModulator(0., 1.), /* Wavetable 2 Amp */
-      ParameterModulator(0.001, 0.5, true), /* Filter 1 Cutoff */
-      ParameterModulator(0., 1.), /* Filter 1 Resonance */
-      ParameterModulator(0., 1.), /*Filter 1 Drive */
-      ParameterModulator(0.001, 0.5, true), /* Filter 2 Cutoff */
-      ParameterModulator(0., 1.), /* Filter 2 Resonance */
-      ParameterModulator(0., 1.), /*Filter 2 Drive */
-      ParameterModulator(-24., 24.), /* Phase Mod Frequency*/
-      ParameterModulator(0., 1.), /* Phase Mod Depth */
-      ParameterModulator(-24., 24.), /* Ring Mod Frequency*/
-      ParameterModulator(0., 1.) /* Ring Mod Depth */ };
+    ModulatedParameterList<T, kNumVoiceModulations> mVoiceModParams{
+      new ParameterModulator(-24., 24.), /* Wavetable 1 Pitch Offset */
+      new ParameterModulator(0., 1.), /* Wavetable 1 Position */
+      new ParameterModulator(-1., 1.), /* Wavetable 1 Bend */
+      new ParameterModulator(0., 1.), /* Wavetable 1 Sub */
+      new ParameterModulator(0., 1.), /* Wavetable 1 Amp */
+      new ParameterModulator(-24., 24.), /* Wavetable 2 Pitch Offset */
+      new ParameterModulator(0., 1.), /* Wavetable 2 Position */
+      new ParameterModulator(-1., 1.), /* Wavetable 2 Bend */
+      new ParameterModulator(0., 1.), /* Wavetable 2 Sub */
+      new ParameterModulator(0., 1.), /* Wavetable 2 Amp */
+      new ParameterModulator(0.001, 0.5, true), /* Filter 1 Cutoff */
+      new ParameterModulator(0., 1.), /* Filter 1 Resonance */
+      new ParameterModulator(0., 1.), /*Filter 1 Drive */
+      new ParameterModulator(0.001, 0.5, true), /* Filter 2 Cutoff */
+      new ParameterModulator(0., 1.), /* Filter 2 Resonance */
+      new ParameterModulator(0., 1.), /*Filter 2 Drive */
+      new ParameterModulator(-24., 24.), /* Phase Mod Frequency*/
+      new ParameterModulator(0., 1.), /* Phase Mod Depth */
+      new ParameterModulator(-24., 24.), /* Ring Mod Frequency*/
+      new ParameterModulator(0., 1.) /* Ring Mod Depth */ };
 
     static inline double mTempo{ 120. };
     static inline bool mTransportIsRunning{ false };
@@ -597,6 +596,7 @@ public:
         break;
       case kParamWavetable1:
       {
+        value = std::max(1., value);
         mSynth.Reset();
         tableLoading[0] = true; // NB: this variable lets the PeriodicTable control know whether to display the selected element in the loading (faded) state or not
         WtFile wtFile{ mWavetables.at(static_cast<int>(value) - 1) };
@@ -605,7 +605,9 @@ public:
           voice->mOsc1.SetWavetable(WavetableOscillator<T>::LoadedTables[0]);
           voice->mOsc1.ReloadLUT();
           });
-        WavetableOscillator<T>::NotifyLoaded();
+        SendParam([this, &wtFile](Voice* voice) {
+          voice->mOsc1.NotifyLoaded();
+          });
         tableLoading[0] = false;
         break;
       }
@@ -686,6 +688,7 @@ public:
       }
       case kParamWavetable2:
       {
+        value = std::max(1., value);
         mSynth.Reset();
         tableLoading[1] = true;
         WtFile wtFile{ mWavetables.at(static_cast<size_t>(value) - 1) };
@@ -694,8 +697,10 @@ public:
           voice->mOsc2.SetWavetable(WavetableOscillator<T>::LoadedTables[1]);
           voice->mOsc2.ReloadLUT();
           });
+        SendParam([this, &wtFile](Voice* voice) {
+          voice->mOsc2.NotifyLoaded();
+          });
         mSynth.Reset();
-        WavetableOscillator<T>::NotifyLoaded();
         tableLoading[1] = false;
         break;
       }
@@ -1007,5 +1012,5 @@ public:
 
   // Non-modulatable parameters
   double mLoadedWavetables[2]{ 1, 2 }; // Integer indices of current wavetables
-  float mSeqSteps[kNumSeqSteps]{}; // Value of each step in the sequencer
+  double mSeqSteps[kNumSeqSteps]{}; // Value of each step in the sequencer
 };

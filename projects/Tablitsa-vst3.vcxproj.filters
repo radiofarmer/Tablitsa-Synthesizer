@@ -406,6 +406,7 @@
       <Filter>IGraphics</Filter>
     </ClInclude>
     <ClInclude Include="..\Tablitsa_DSP.h" />
+    <ClInclude Include="..\Wavetable.h" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="resources">
