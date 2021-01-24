@@ -30,6 +30,7 @@ Global Modulations (smoothers): These values are computed once per sample and se
 enum EModulations
 {
   kModGainSmoother = 0,
+  kModPanSmoother,
   kModEnv1SustainSmoother,
   kModEnv2SustainSmoother,
   kModAmpEnvSustainSmoother,
@@ -434,8 +435,8 @@ public:
     for(int s=0; s < nFrames;s++)
     {
       T smoothedGain = mModulations.GetList()[kModGainSmoother][s];
-      outputs[0][s] *= smoothedGain;
-      outputs[1][s] *= smoothedGain;
+      outputs[0][s] *= smoothedGain * (2 - mModulations.GetList()[kModPanSmoother][s]);
+      outputs[1][s] *= smoothedGain * mModulations.GetList()[kModPanSmoother][s];
     }
   }
 
@@ -513,6 +514,9 @@ public:
         break;
       case kParamGain:
         mParamsToSmooth[kModGainSmoother] = (T) value / 100.;
+        break;
+      case kParamPan:
+        mParamsToSmooth[kModPanSmoother] = (T)value / 90. + 1.;
         break;
       case kParamEnv1Sustain:
         mParamsToSmooth[kModEnv1SustainSmoother] = (T)value / 100.;
