@@ -311,7 +311,7 @@ public:
 
     T s_out = Lookup(phase);
     IOscillator<T>::mPhase = WrapPhase(IOscillator<T>::mPhase + phaseIncr * mTableSize, 0., static_cast<double>(mTableSize));
-    return s_out;
+    return s_out * mLevelScalar;
   }
 
 private:
