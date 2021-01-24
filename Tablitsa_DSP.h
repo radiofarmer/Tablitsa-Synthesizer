@@ -127,6 +127,10 @@ public:
     {
       mOsc1.Reset();
       mOsc2.Reset();
+
+      mVelocity = level;
+      mTriggerRand = static_cast<double>(std::rand()) / static_cast<double>(RAND_MAX);
+
       for (auto f : mFilters)
       {
         f->Reset();
@@ -142,14 +146,14 @@ public:
       if (isRetrigger)
       {
         mAmpEnv.Retrigger(level);
-        mEnv1.Retrigger(level);
-        mEnv2.Retrigger(level);
+        mEnv1.Retrigger(1.); // Change this to make the envelope height dependent on velocity
+        mEnv2.Retrigger(1.);
       }
       else
       {
         mAmpEnv.Start(level);
-        mEnv1.Start(level);
-        mEnv2.Start(level);
+        mEnv1.Start(1.);
+        mEnv2.Start(1.);
       }
     }
     
@@ -164,12 +168,17 @@ public:
     {
       // inputs to the synthesizer can just fetch a value every block, like this:
 //      double gate = mInputs[kVoiceControlGate].endValue;
-      double pitch = mInputs[kVoiceControlPitch].endValue;
+      double pitch = mInputs[kVoiceControlPitch].endValue; // pitch = (MidiKey - 69) / 12
 //      double pitchBend = mInputs[kVoiceControlPitchBend].endValue;
       // or write the entire control ramp to a buffer, like this, to get sample-accurate ramps:
 //      mInputs[kVoiceControlTimbre].Write(mTimbreBuffer.Get(), startIdx, nFrames);
 
+      // Set the static (note-constant) modulator values
+      T staticMods[]{ mVelocity, (pitch * 12. + 69.) / 128., mTriggerRand };
+      mVoiceModParams.SetStaticModulation(staticMods);
+      // Write ramps for modulators
       mModulators.ProcessBlock(&(inputs[kModEnv1SustainSmoother]), nFrames);
+      // Apply modulation ramps to all modulated parameters
       mVoiceModParams.ProcessBlock(&inputs[kModWavetable1PitchSmoother], mModulators.GetList(), mVModulations.GetList(), nFrames);
 
       const double phaseModFreqFact = pow(2., mVModulations.GetList()[kVPhaseModFreq][0] / 12.);
@@ -341,6 +350,12 @@ public:
     BassBoost<T> mOsc1Sub;
     BassBoost<T> mOsc2Sub;
 
+    // Static Modulators
+    T mKey{ 69. };
+    T mVelocity{ 1. };
+    T mTriggerRand{ 0.5 };
+
+    // Dynamic Modulators
     ADSREnvelope<T> mEnv1;
     ADSREnvelope<T> mEnv2;
     ADSREnvelope<T> mAmpEnv;
@@ -518,6 +533,19 @@ public:
       case kParamPan:
         mParamsToSmooth[kModPanSmoother] = (T)value / 90. + 1.;
         break;
+      case kParamPanEnv1:
+      case kParamPanEnv2:
+      case kParamPanLFO1:
+      case kParamPanLFO2:
+      case kParamPanSeq:
+      case kParamPanVel:
+      case kParamPanKTk:
+      case kParamPanRnd:
+      {
+        const int modIdx = paramIdx - kParamPan;
+        // TODO : Make this voice-specific?
+        break;
+      }
       case kParamEnv1Sustain:
         mParamsToSmooth[kModEnv1SustainSmoother] = (T)value / 100.;
         break;
@@ -629,6 +657,9 @@ public:
       case kParamWavetable1PitchLFO1:
       case kParamWavetable1PitchLFO2:
       case kParamWavetable1PitchSeq:
+      case kParamWavetable1PitchVel:
+      case kParamWavetable1PitchKTk:
+      case kParamWavetable1PitchRnd:
       {
         const int modIdx = paramIdx - kParamWavetable1Pitch;
         SendParam([paramIdx, modIdx, value](Voice* voice) {
@@ -644,6 +675,9 @@ public:
       case kParamWavetable1AmpLFO1:
       case kParamWavetable1AmpLFO2:
       case kParamWavetable1AmpSeq:
+      case kParamWavetable1AmpVel:
+      case kParamWavetable1AmpKTk:
+      case kParamWavetable1AmpRnd:
       {
         const int modIdx = paramIdx - kParamWavetable1Amp;
         SendParam([value, modIdx](Voice* voice) {
@@ -659,6 +693,9 @@ public:
       case kParamWavetable1PosLFO1:
       case kParamWavetable1PosLFO2:
       case kParamWavetable1PosSeq:
+      case kParamWavetable1PosVel:
+      case kParamWavetable1PosKTk:
+      case kParamWavetable1PosRnd:
       {
         const int modIdx = paramIdx - kParamWavetable1Pos;
         SendParam([paramIdx, modIdx, value](Voice* voice) {
@@ -674,6 +711,9 @@ public:
       case kParamWavetable1BendLFO1:
       case kParamWavetable1BendLFO2:
       case kParamWavetable1BendSeq:
+      case kParamWavetable1BendVel:
+      case kParamWavetable1BendKTk:
+      case kParamWavetable1BendRnd:
       {
         const int modIdx = paramIdx - kParamWavetable1Bend;
         mSynth.ForEachVoice([paramIdx, modIdx, value](SynthVoice& voice) {
@@ -689,6 +729,9 @@ public:
       case kParamWavetable1SubLFO1:
       case kParamWavetable1SubLFO2:
       case kParamWavetable1SubSeq:
+      case kParamWavetable1SubVel:
+      case kParamWavetable1SubKTk:
+      case kParamWavetable1SubRnd:
       {
         const int modIdx = paramIdx - kParamWavetable1Sub;
         mSynth.ForEachVoice([paramIdx, modIdx, value](SynthVoice& voice) {
@@ -708,6 +751,9 @@ public:
       case kParamWavetable2PitchLFO1:
       case kParamWavetable2PitchLFO2:
       case kParamWavetable2PitchSeq:
+      case kParamWavetable2PitchVel:
+      case kParamWavetable2PitchKTk:
+      case kParamWavetable2PitchRnd:
       {
         const int modIdx = paramIdx - kParamWavetable2Pitch;
         mSynth.ForEachVoice([paramIdx, modIdx, value](SynthVoice& voice) {
@@ -723,6 +769,9 @@ public:
       case kParamWavetable2AmpLFO1:
       case kParamWavetable2AmpLFO2:
       case kParamWavetable2AmpSeq:
+      case kParamWavetable2AmpVel:
+      case kParamWavetable2AmpKTk:
+      case kParamWavetable2AmpRnd:
       {
         const int modIdx = paramIdx - kParamWavetable2Amp;
         SendParam([value, modIdx](Voice* voice) {
@@ -738,6 +787,9 @@ public:
       case kParamWavetable2PosLFO1:
       case kParamWavetable2PosLFO2:
       case kParamWavetable2PosSeq:
+      case kParamWavetable2PosVel:
+      case kParamWavetable2PosKTk:
+      case kParamWavetable2PosRnd:
       {
         const int modIdx = paramIdx - kParamWavetable2Pos;
         mSynth.ForEachVoice([paramIdx, modIdx, value](SynthVoice& voice) {
@@ -753,6 +805,9 @@ public:
       case kParamWavetable2BendLFO1:
       case kParamWavetable2BendLFO2:
       case kParamWavetable2BendSeq:
+      case kParamWavetable2BendVel:
+      case kParamWavetable2BendKTk:
+      case kParamWavetable2BendRnd:
       {
         const int modIdx = paramIdx - kParamWavetable2Bend;
         mSynth.ForEachVoice([paramIdx, modIdx, value](SynthVoice& voice) {
@@ -785,6 +840,9 @@ public:
       case kParamFilter1CutoffAmpEnv:
       case kParamFilter1CutoffLFO1:
       case kParamFilter1CutoffLFO2:
+      case kParamFilter1CutoffVel:
+      case kParamFilter1CutoffKTk:
+      case kParamFilter1CutoffRnd:
       {
         const int modIdx = paramIdx - kParamFilter1Cutoff;
         mSynth.ForEachVoice([paramIdx, modIdx, value](SynthVoice& voice) {
@@ -801,6 +859,9 @@ public:
       case kParamFilter1ResonanceAmpEnv:
       case kParamFilter1ResonanceLFO1:
       case kParamFilter1ResonanceLFO2:
+      case kParamFilter1ResonanceVel:
+      case kParamFilter1ResonanceKTk:
+      case kParamFilter1ResonanceRnd:
       {
         const int modIdx = paramIdx - kParamFilter1Resonance;
         SendParam([paramIdx, modIdx, value](Voice* voice) {
@@ -818,6 +879,9 @@ public:
       case kParamFilter1DriveAmpEnv:
       case kParamFilter1DriveLFO1:
       case kParamFilter1DriveLFO2:
+      case kParamFilter1DriveVel:
+      case kParamFilter1DriveKTk:
+      case kParamFilter1DriveRnd:
       {
         const int modIdx = paramIdx - kParamFilter1Drive;
         mSynth.ForEachVoice([paramIdx, modIdx, value](SynthVoice& voice) {
@@ -850,6 +914,9 @@ public:
       case kParamFilter2CutoffAmpEnv:
       case kParamFilter2CutoffLFO1:
       case kParamFilter2CutoffLFO2:
+      case kParamFilter2CutoffVel:
+      case kParamFilter2CutoffKTk:
+      case kParamFilter2CutoffRnd:
       {
         const int modIdx = paramIdx - kParamFilter2Cutoff;
         mSynth.ForEachVoice([paramIdx, modIdx, value](SynthVoice& voice) {
@@ -866,6 +933,9 @@ public:
       case kParamFilter2ResonanceAmpEnv:
       case kParamFilter2ResonanceLFO1:
       case kParamFilter2ResonanceLFO2:
+      case kParamFilter2ResonanceVel:
+      case kParamFilter2ResonanceKTk:
+      case kParamFilter2ResonanceRnd:
       {
         const int modIdx = paramIdx - kParamFilter2Resonance;
         mSynth.ForEachVoice([paramIdx, modIdx, value](SynthVoice& voice) {
@@ -883,6 +953,9 @@ public:
       case kParamFilter2DriveAmpEnv:
       case kParamFilter2DriveLFO1:
       case kParamFilter2DriveLFO2:
+      case kParamFilter2DriveVel:
+      case kParamFilter2DriveKTk:
+      case kParamFilter2DriveRnd:
       {
         const int modIdx = paramIdx - kParamFilter2Drive;
         mSynth.ForEachVoice([paramIdx, modIdx, value](SynthVoice& voice) {
@@ -915,6 +988,9 @@ public:
       case kParamPhaseModFreqLFO1:
       case kParamPhaseModFreqLFO2:
       case kParamPhaseModFreqSeq:
+      case kParamPhaseModFreqVel:
+      case kParamPhaseModFreqKTk:
+      case kParamPhaseModFreqRnd:
       {
         const int modIdx = paramIdx - kParamPhaseModFreq;
         SendParam([value, modIdx](Voice* voice) {
@@ -931,6 +1007,9 @@ public:
       case kParamPhaseModAmountLFO1:
       case kParamPhaseModAmountLFO2:
       case kParamPhaseModAmountSeq:
+      case kParamPhaseModAmountVel:
+      case kParamPhaseModAmountKTk:
+      case kParamPhaseModAmountRnd:
       {
         const int modIdx = paramIdx - kParamPhaseModAmount;
         SendParam([value, modIdx](Voice* voice) {
@@ -963,6 +1042,9 @@ public:
       case kParamRingModFreqLFO1:
       case kParamRingModFreqLFO2:
       case kParamRingModFreqSeq:
+      case kParamRingModFreqVel:
+      case kParamRingModFreqKTk:
+      case kParamRingModFreqRnd:
       {
         const int modIdx = paramIdx - kParamRingModFreq;
         SendParam([value, modIdx](Voice* voice) {
@@ -979,6 +1061,9 @@ public:
       case kParamRingModAmountLFO1:
       case kParamRingModAmountLFO2:
       case kParamRingModAmountSeq:
+      case kParamRingModAmountVel:
+      case kParamRingModAmountKTk:
+      case kParamRingModAmountRnd:
       {
         const int modIdx = paramIdx - kParamRingModAmount;
         SendParam([value, modIdx](Voice* voice) {
