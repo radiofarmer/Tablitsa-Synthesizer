@@ -756,6 +756,9 @@ public:
       case kParamWavetable2AmpLFO1:
       case kParamWavetable2AmpLFO2:
       case kParamWavetable2AmpSeq:
+      case kParamWavetable2AmpVel:
+      case kParamWavetable2AmpKTk:
+      case kParamWavetable2AmpRnd:
       {
         const int modIdx = paramIdx - kParamWavetable2Amp;
         SendParam([value, modIdx](Voice* voice) {
@@ -789,6 +792,9 @@ public:
       case kParamWavetable2BendLFO1:
       case kParamWavetable2BendLFO2:
       case kParamWavetable2BendSeq:
+      case kParamWavetable2BendVel:
+      case kParamWavetable2BendKTk:
+      case kParamWavetable2BendRnd:
       {
         const int modIdx = paramIdx - kParamWavetable2Bend;
         mSynth.ForEachVoice([paramIdx, modIdx, value](SynthVoice& voice) {
@@ -840,6 +846,9 @@ public:
       case kParamFilter1ResonanceAmpEnv:
       case kParamFilter1ResonanceLFO1:
       case kParamFilter1ResonanceLFO2:
+      case kParamFilter1ResonanceVel:
+      case kParamFilter1ResonanceKTk:
+      case kParamFilter1ResonanceRnd:
       {
         const int modIdx = paramIdx - kParamFilter1Resonance;
         SendParam([paramIdx, modIdx, value](Voice* voice) {
@@ -857,6 +866,9 @@ public:
       case kParamFilter1DriveAmpEnv:
       case kParamFilter1DriveLFO1:
       case kParamFilter1DriveLFO2:
+      case kParamFilter1DriveVel:
+      case kParamFilter1DriveKTk:
+      case kParamFilter1DriveRnd:
       {
         const int modIdx = paramIdx - kParamFilter1Drive;
         mSynth.ForEachVoice([paramIdx, modIdx, value](SynthVoice& voice) {
@@ -889,6 +901,9 @@ public:
       case kParamFilter2CutoffAmpEnv:
       case kParamFilter2CutoffLFO1:
       case kParamFilter2CutoffLFO2:
+      case kParamFilter2CutoffVel:
+      case kParamFilter2CutoffKTk:
+      case kParamFilter2CutoffRnd:
       {
         const int modIdx = paramIdx - kParamFilter2Cutoff;
         mSynth.ForEachVoice([paramIdx, modIdx, value](SynthVoice& voice) {
@@ -905,6 +920,9 @@ public:
       case kParamFilter2ResonanceAmpEnv:
       case kParamFilter2ResonanceLFO1:
       case kParamFilter2ResonanceLFO2:
+      case kParamFilter2ResonanceVel:
+      case kParamFilter2ResonanceKTk:
+      case kParamFilter2ResonanceRnd:
       {
         const int modIdx = paramIdx - kParamFilter2Resonance;
         mSynth.ForEachVoice([paramIdx, modIdx, value](SynthVoice& voice) {
@@ -922,6 +940,9 @@ public:
       case kParamFilter2DriveAmpEnv:
       case kParamFilter2DriveLFO1:
       case kParamFilter2DriveLFO2:
+      case kParamFilter2DriveVel:
+      case kParamFilter2DriveKTk:
+      case kParamFilter2DriveRnd:
       {
         const int modIdx = paramIdx - kParamFilter2Drive;
         mSynth.ForEachVoice([paramIdx, modIdx, value](SynthVoice& voice) {
@@ -954,6 +975,9 @@ public:
       case kParamPhaseModFreqLFO1:
       case kParamPhaseModFreqLFO2:
       case kParamPhaseModFreqSeq:
+      case kParamPhaseModFreqVel:
+      case kParamPhaseModFreqKTk:
+      case kParamPhaseModFreqRnd:
       {
         const int modIdx = paramIdx - kParamPhaseModFreq;
         SendParam([value, modIdx](Voice* voice) {
@@ -970,6 +994,9 @@ public:
       case kParamPhaseModAmountLFO1:
       case kParamPhaseModAmountLFO2:
       case kParamPhaseModAmountSeq:
+      case kParamPhaseModAmountVel:
+      case kParamPhaseModAmountKTk:
+      case kParamPhaseModAmountRnd:
       {
         const int modIdx = paramIdx - kParamPhaseModAmount;
         SendParam([value, modIdx](Voice* voice) {
@@ -1002,6 +1029,9 @@ public:
       case kParamRingModFreqLFO1:
       case kParamRingModFreqLFO2:
       case kParamRingModFreqSeq:
+      case kParamRingModFreqVel:
+      case kParamRingModFreqKTk:
+      case kParamRingModFreqRnd:
       {
         const int modIdx = paramIdx - kParamRingModFreq;
         SendParam([value, modIdx](Voice* voice) {
@@ -1018,6 +1048,9 @@ public:
       case kParamRingModAmountLFO1:
       case kParamRingModAmountLFO2:
       case kParamRingModAmountSeq:
+      case kParamRingModAmountVel:
+      case kParamRingModAmountKTk:
+      case kParamRingModAmountRnd:
       {
         const int modIdx = paramIdx - kParamRingModAmount;
         SendParam([value, modIdx](Voice* voice) {
