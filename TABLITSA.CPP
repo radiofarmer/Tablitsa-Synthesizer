@@ -20,7 +20,8 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
   /*Master Controls*/
   GetParam(kParamGain)->InitDouble("Gain", 25., 0., 100.0, 0.01, "%");
   GetParam(kParamPan)->InitAngleDegrees("Pan", 0., -90., 90.);
-  GetParam(kParamNoteGlideTime)->InitMilliseconds("Note Glide Time", 0., 0.0, 30.);
+  GetParam(kParamNoteGlideTime)->InitMilliseconds("Note Glide Time", 0., 0.0, 3000.);
+//  GetParam(kParamNoteGlideRate)->InitMilliseconds("Note Glide Time", 0., 0.0, 3000.);
   /*Modulators*/
   GetParam(kParamEnv1Attack)->InitDouble("Env1 Attack", 10., 1., 3000., 0.1, "ms", IParam::kFlagsNone, "ADSR", IParam::ShapePowCurve(3.));
   GetParam(kParamEnv1Decay)->InitDouble("Env1 Decay", 10., 1., 3000., 0.1, "ms", IParam::kFlagsNone, "ADSR", IParam::ShapePowCurve(3.));
@@ -293,14 +294,18 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
     pGraphics->AttachControl(new IVGroupControl("Wavetable 2", "Osc2", 0.f, 15.f, 0.f, 2.f));
 
     /* Master Controls */
-    const IRECT masterPanel = controls.GetReducedFromLeft(720.f).GetReducedFromBottom(controls.H() / 2.f).GetGridCell(0, 1, 1, 3).GetPadded(-10.f);
+    const IRECT masterPanel = controls.GetReducedFromLeft(720.f + osc1Panel.W() + 10.f).GetReducedFromBottom(controls.H() / 2.f).GetPadded(-10.f);
     // Gain, Pan, and Volume Meter
-    pGraphics->AttachControl(new IVKnobControl(masterPanel.GetGridCell(0, 0, 4, 2).GetCentredInside(dialSize), kParamGain, "Gain"), kNoTag, "Master");
-    pGraphics->AttachControl(new IVModKnobControl(masterPanel.GetGridCell(1, 0, 4, 2).GetCentredInside(dialSize), kParamPan, "Pan"), kNoTag, "Master");
-    pGraphics->AttachControl(new IVLEDMeterControl<2>(masterPanel.GetGridCell(0, 1, 2, 2)), kCtrlTagMeter, "Master");
+    pGraphics->AttachControl(new IVKnobControl(masterPanel.GetGridCell(0, 0, 4, 6).GetCentredInside(dialSize), kParamGain, "Gain"), kNoTag, "Master");
+    pGraphics->AttachControl(new IVModKnobControl(masterPanel.GetGridCell(0, 1, 4, 6).GetCentredInside(dialSize), kParamPan, "Pan"), kNoTag, "Master");
+    pGraphics->AttachControl(new IVLEDMeterControl<2>(masterPanel.GetGridCell(0, 5, 2, 6)), kCtrlTagMeter, "Master");
+    // Static modulators
+    
     // Polyphony and Portamento
-    pGraphics->AttachControl(new IVKnobControl(masterPanel.GetGridCell(2, 0, 4, 2).GetCentredInside(dialSize), kParamNoteGlideTime, "Glide"), kNoTag, "Master");
-    //pGraphics->AttachControl(new IVToggleControl)
+    pGraphics->AttachControl(new IVKnobControl(masterPanel.GetGridCell(1, 0, 4, 6).GetCentredInside(dialSize), kParamNoteGlideTime, "Glide"), kNoTag, "Master");
+    // Mono/Poly and Portamento Rate/Tiime switches
+    // ...
+    //pGraphics->AttachControl(new IVToggleControl) ...
 
     /* Waveform Modulation Panel */
     const IRECT lowerPanel = controls.GetReducedFromTop(controls.H() * 0.5f).GetPadded(-10.f).GetReducedFromRight(250.f);
