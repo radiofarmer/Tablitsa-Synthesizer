@@ -533,6 +533,19 @@ public:
       case kParamPan:
         mParamsToSmooth[kModPanSmoother] = (T)value / 90. + 1.;
         break;
+      case kParamPanEnv1:
+      case kParamPanEnv2:
+      case kParamPanLFO1:
+      case kParamPanLFO2:
+      case kParamPanSeq:
+      case kParamPanVel:
+      case kParamPanKTk:
+      case kParamPanRnd:
+      {
+        const int modIdx = paramIdx - kParamPan;
+        // TODO : Make this voice-specific?
+        break;
+      }
       case kParamEnv1Sustain:
         mParamsToSmooth[kModEnv1SustainSmoother] = (T)value / 100.;
         break;
