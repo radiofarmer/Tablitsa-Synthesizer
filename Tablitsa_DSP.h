@@ -30,6 +30,7 @@ Global Modulations (smoothers): These values are computed once per sample and se
 enum EModulations
 {
   kModGainSmoother = 0,
+  kModPanSmoother,
   kModEnv1SustainSmoother,
   kModEnv2SustainSmoother,
   kModAmpEnvSustainSmoother,
@@ -171,8 +172,8 @@ public:
       mModulators.ProcessBlock(&(inputs[kModEnv1SustainSmoother]), nFrames);
       mVoiceModParams.ProcessBlock(&inputs[kModWavetable1PitchSmoother], mModulators.GetList(), mVModulations.GetList(), nFrames);
 
-      const double phaseModFreqFact = pow(2., inputs[kModPhaseModFreqSmoother][0] / 12.);
-      const double ringModFreqFact = pow(2., inputs[kModRingModFreqSmoother][0] / 12.);
+      const double phaseModFreqFact = pow(2., mVModulations.GetList()[kVPhaseModFreq][0] / 12.);
+      const double ringModFreqFact = pow(2., mVModulations.GetList()[kVRingModFreq][0] / 12.);
 
       // make sound output for each output channel
       for(auto i = startIdx; i < startIdx + nFrames; i += FRAME_INTERVAL)
@@ -180,12 +181,6 @@ public:
         int bufferIdx = i - startIdx;
 //        float noise = mTimbreBuffer.Get()[i] * Rand();
         double ampEnvVal{ mModulators.GetList()[2][bufferIdx] }; // Calculated for easy access
-        double modVals[]{ mModulators.GetList()[0][bufferIdx],
-          mModulators.GetList()[1][bufferIdx],
-          ampEnvVal,
-          mModulators.GetList()[3][bufferIdx],
-          mModulators.GetList()[4][bufferIdx] };
-        ParameterModulator::SetModValues(modVals);
 
         // Oscillator Parameters
         double osc1Freq = 440. * pow(2., pitch + mVModulations.GetList()[kVWavetable1PitchOffset][bufferIdx] / 12.);
@@ -365,26 +360,26 @@ public:
   private:
 //    WDL_TypedBuf<float> mTimbreBuffer;
     ModulatedParameterList<T, kNumVoiceModulations> mVoiceModParams{
-      new ParameterModulator(-24., 24.), /* Wavetable 1 Pitch Offset */
-      new ParameterModulator(0., 1.), /* Wavetable 1 Position */
-      new ParameterModulator(-1., 1.), /* Wavetable 1 Bend */
-      new ParameterModulator(0., 1.), /* Wavetable 1 Sub */
-      new ParameterModulator(0., 1.), /* Wavetable 1 Amp */
-      new ParameterModulator(-24., 24.), /* Wavetable 2 Pitch Offset */
-      new ParameterModulator(0., 1.), /* Wavetable 2 Position */
-      new ParameterModulator(-1., 1.), /* Wavetable 2 Bend */
-      new ParameterModulator(0., 1.), /* Wavetable 2 Sub */
-      new ParameterModulator(0., 1.), /* Wavetable 2 Amp */
-      new ParameterModulator(0.001, 0.5, true), /* Filter 1 Cutoff */
-      new ParameterModulator(0., 1.), /* Filter 1 Resonance */
-      new ParameterModulator(0., 1.), /*Filter 1 Drive */
-      new ParameterModulator(0.001, 0.5, true), /* Filter 2 Cutoff */
-      new ParameterModulator(0., 1.), /* Filter 2 Resonance */
-      new ParameterModulator(0., 1.), /*Filter 2 Drive */
-      new ParameterModulator(-24., 24.), /* Phase Mod Frequency*/
-      new ParameterModulator(0., 1.), /* Phase Mod Depth */
-      new ParameterModulator(-24., 24.), /* Ring Mod Frequency*/
-      new ParameterModulator(0., 1.) /* Ring Mod Depth */ };
+      new ParameterModulator(-24., 24., "Wt1 Pitch Offset"),
+      new ParameterModulator(0., 1., "Wt1 Position"),
+      new ParameterModulator(-1., 1., "Wt1 Bend"),
+      new ParameterModulator(0., 1., "Wt1 Sub"),
+      new ParameterModulator(0., 1., "Wt1 Amp"),
+      new ParameterModulator(-24., 24., "Wt1 Pitch Offset"),
+      new ParameterModulator(0., 1., "Wt2 Position"),
+      new ParameterModulator(-1., 1., "Wt2 Bend"),
+      new ParameterModulator(0., 1., "Wt2 Sub"),
+      new ParameterModulator(0., 1., "Wt2 Amp"),
+      new ParameterModulator(0.001, 0.5, "Flt1 Cutoff", true),
+      new ParameterModulator(0., 1., "Flt1 Resonance"),
+      new ParameterModulator(0., 1., "Flt1 Drive"),
+      new ParameterModulator(0.001, 0.5, "Flt2 Cutoff", true),
+      new ParameterModulator(0., 1., "Flt2 Resonance"),
+      new ParameterModulator(0., 1., "Flt2 Drive"),
+      new ParameterModulator(-24., 24., "Phase Mod Freq"), 
+      new ParameterModulator(0., 1., "Phase Mod Depth"),
+      new ParameterModulator(-24., 24., "Ring Mod Freq"),
+      new ParameterModulator(0., 1., "Ring Mod Depth") };
 
     static inline double mTempo{ 120. };
     static inline bool mTransportIsRunning{ false };
@@ -440,8 +435,8 @@ public:
     for(int s=0; s < nFrames;s++)
     {
       T smoothedGain = mModulations.GetList()[kModGainSmoother][s];
-      outputs[0][s] *= smoothedGain;
-      outputs[1][s] *= smoothedGain;
+      outputs[0][s] *= smoothedGain * (2 - mModulations.GetList()[kModPanSmoother][s]);
+      outputs[1][s] *= smoothedGain * mModulations.GetList()[kModPanSmoother][s];
     }
   }
 
@@ -519,6 +514,9 @@ public:
         break;
       case kParamGain:
         mParamsToSmooth[kModGainSmoother] = (T) value / 100.;
+        break;
+      case kParamPan:
+        mParamsToSmooth[kModPanSmoother] = (T)value / 90. + 1.;
         break;
       case kParamEnv1Sustain:
         mParamsToSmooth[kModEnv1SustainSmoother] = (T)value / 100.;
