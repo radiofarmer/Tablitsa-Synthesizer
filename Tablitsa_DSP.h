@@ -341,8 +341,8 @@ public:
     }
 
   public:
-    WavetableOscillator<T> mOsc1;
-    WavetableOscillator<T> mOsc2;
+    WavetableOscillator<T> mOsc1{ 0, WtFile("Hydrogen") };
+    WavetableOscillator<T> mOsc2{ 1, WtFile("Helium") };
     BassBoost<T> mOsc1Sub;
     BassBoost<T> mOsc2Sub;
 
@@ -466,6 +466,31 @@ public:
   void ProcessMidiMsg(const IMidiMsg& msg)
   {
     mSynth.AddMidiMsgToQueue(msg);
+  }
+
+  void UpdateOscillatorWavetable(int wtIdx, int oscIdx)
+  {
+    mSynth.Reset();
+    tableLoading[oscIdx] = true; // NB: this variable lets the PeriodicTable control know whether to display the selected element in the loading (faded) state or not
+    WtFile wtFile{ mWavetables.at(wtIdx) };
+    WavetableOscillator<T>::LoadNewTable(wtFile, oscIdx);
+    if (oscIdx == 0)
+    {
+      SendParam([this, oscIdx, &wtFile](Voice* voice) {
+        voice->mOsc1.SetWavetable(WavetableOscillator<T>::LoadedTables[oscIdx]);
+        voice->mOsc1.ReloadLUT();
+        });
+      WavetableOscillator<T>::NotifyLoaded(oscIdx);
+    }
+    else
+    {
+      SendParam([this, oscIdx, &wtFile](Voice* voice) {
+        voice->mOsc2.SetWavetable(WavetableOscillator<T>::LoadedTables[oscIdx]);
+        voice->mOsc2.ReloadLUT();
+        });
+      WavetableOscillator<T>::NotifyLoaded(oscIdx);
+    }
+    tableLoading[oscIdx] = false;
   }
 
   inline void SendParam(std::function<void(Voice* voice)> func)
@@ -596,19 +621,6 @@ public:
         break;
       case kParamWavetable1:
       {
-        value = std::max(1., value);
-        mSynth.Reset();
-        tableLoading[0] = true; // NB: this variable lets the PeriodicTable control know whether to display the selected element in the loading (faded) state or not
-        WtFile wtFile{ mWavetables.at(static_cast<int>(value) - 1) };
-        WavetableOscillator<T>::LoadNewTable(wtFile, 0);
-        SendParam([this, &wtFile](Voice* voice) {
-          voice->mOsc1.SetWavetable(WavetableOscillator<T>::LoadedTables[0]);
-          voice->mOsc1.ReloadLUT();
-          });
-        SendParam([this, &wtFile](Voice* voice) {
-          voice->mOsc1.NotifyLoaded();
-          });
-        tableLoading[0] = false;
         break;
       }
       case kParamWavetable1Pitch:
@@ -688,20 +700,6 @@ public:
       }
       case kParamWavetable2:
       {
-        value = std::max(1., value);
-        mSynth.Reset();
-        tableLoading[1] = true;
-        WtFile wtFile{ mWavetables.at(static_cast<size_t>(value) - 1) };
-        WavetableOscillator<T>::LoadNewTable(wtFile, 1);
-        SendParam([this, &wtFile](Voice* voice) {
-          voice->mOsc2.SetWavetable(WavetableOscillator<T>::LoadedTables[1]);
-          voice->mOsc2.ReloadLUT();
-          });
-        SendParam([this, &wtFile](Voice* voice) {
-          voice->mOsc2.NotifyLoaded();
-          });
-        mSynth.Reset();
-        tableLoading[1] = false;
         break;
       }
       case kParamWavetable2Pitch:
@@ -1011,6 +1009,6 @@ public:
   static inline bool tableLoading[2]{ true, true };
 
   // Non-modulatable parameters
-  double mLoadedWavetables[2]{ 1, 2 }; // Integer indices of current wavetables
+  double mLoadedWavetables[2]{ 1., 2. }; // Integer indices of current wavetables
   double mSeqSteps[kNumSeqSteps]{}; // Value of each step in the sequencer
 };
