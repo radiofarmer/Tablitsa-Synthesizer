@@ -47,6 +47,7 @@ struct ModShapePowCurve : public IParam::ShapePowCurve
 
 END_IPLUG_NAMESPACE
 
+template<int DynMods=6, int StatMods=3>
 class ParameterModulator
 {
 public:
@@ -102,12 +103,20 @@ public:
   inline double AddModulation(double initVal)
   {
     double modulation{ 0. };
-    for (auto i{ 0 }; i < kNumMods; ++i)
+    for (auto i{ 0 }; i < DynMods; ++i)
       modulation += mModDepths[i] * ParameterModulator::mModValues[i];
+    modulation += mStaticModulation;
     if (!mIsExponential)
       return std::max(std::min(initVal + modulation, mMax), mMin);
     else
       return std::max(std::min(initVal * std::exp(modulation), mMax), mMin);
+  }
+
+  inline void SetStaticModulation(double* staticMods)
+  {
+    mStaticModulation = 0.;
+    for (auto i{ 0 }; i < StatMods; ++i)
+      mStaticModulation += mModDepths[i + DynMods] * staticMods[i];
   }
 
   inline double ClipToRange(double value)
@@ -127,13 +136,14 @@ public:
 
   static inline void SetModValues(double* modPtr)
   {
-    memcpy(ParameterModulator::mModValues, modPtr, kNumMods * sizeof(mModValues[0]));
+    memcpy(ParameterModulator::mModValues, modPtr, DynMods * sizeof(double));
   }
 
 protected:
   static inline double mModValues[EModulators::kNumMods]{ 0. };
+  double mStaticModulation{};
 
-  double mModDepths[kNumMods]{ 0. };
+  double mModDepths[DynMods + StatMods]{ 0. };
 
   double mMin{ 0. };
   double mMax{ 1. };
@@ -145,12 +155,18 @@ protected:
   Vec4d mMaxV = Vec4d(0.);
 };
 
-template<typename T, int NParams=1, int VectorSize=4>
+template<typename T, int NParams = 1, int DynamicMods=6, int StaticMods=3, int VectorSize=4>
 class ModulatedParameterList
 {
 public:
-  ModulatedParameterList(std::initializer_list<ParameterModulator*> params) : mParams(params), mParamBlocks(NParams / 4)
+  ModulatedParameterList(std::initializer_list<ParameterModulator<DynamicMods, StaticMods>*> params) : mParams(params), mParamBlocks(NParams / 4)
   {}
+
+  inline void SetStaticModulation(T* staticMods)
+  {
+    for (auto& p : mParams)
+      p->SetStaticModulation(staticMods);
+  }
 
   /** Write a buffer for each of several ParameterModulator objects.
   @param inputs_params Pointers to the buffers of initial (unmodulated) parameter values, e.g. from the inputs buffer in the block-processing function that calls this one. (NParams, nFrames)
@@ -163,9 +179,9 @@ public:
     for (auto i{ 0 }; i < nFrames; ++i)
     {
       T modDepths[NParams]{ 0. };
-      for (auto m{ 0 }; m < kNumMods; ++m)
+      for (auto m{ 0 }; m < DynamicMods; ++m)
         modDepths[m] = mod_inputs[m][i];
-      ParameterModulator::SetModValues(modDepths);
+      ParameterModulator<DynamicMods, StaticMods>::SetModValues(modDepths);
       for (auto p{ offset }; p < NParams; ++p)
       {
         outputs[p][i] = mParams[p]->AddModulation(param_inputs[p][i]);
@@ -209,14 +225,15 @@ public:
     ProcessBlock(param_inputs, mod_inputs, outputs, nFrames, NParams - (NParams % 4));
   }
 
-  ParameterModulator& operator[](int idx)
+  ParameterModulator<DynamicMods, StaticMods>& operator[](int idx)
   {
     return *(mParams[idx]);
   }
 
 private:
-  std::vector<ParameterModulator*> mParams;
+  std::vector<ParameterModulator<DynamicMods, StaticMods>*> mParams;
   const int mParamBlocks;
+  T mStaticScalar{ 0. };
 } WDL_FIXALIGN;
 
 BEGIN_IPLUG_NAMESPACE

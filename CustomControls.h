@@ -56,6 +56,10 @@ public:
       GetUI()->GetControlWithTag(kCtrlTagAmpEnvDepth)->SetParamIdx(kNoParameter);
       GetUI()->GetControlWithTag(kCtrlTagLFO1Depth)->SetParamIdx(kNoParameter);
       GetUI()->GetControlWithTag(kCtrlTagLFO2Depth)->SetParamIdx(kNoParameter);
+      GetUI()->GetControlWithTag(kCtrlTagSequencerDepth)->SetParamIdx(kNoParameter);
+      GetUI()->GetControlWithTag(kCtrlTagVelDepth)->SetParamIdx(kNoParameter);
+      GetUI()->GetControlWithTag(kCtrlTagKTkDepth)->SetParamIdx(kNoParameter);
+      GetUI()->GetControlWithTag(kCtrlTagRndDepth)->SetParamIdx(kNoParameter);
     }
     else
     {
@@ -65,6 +69,10 @@ public:
       GetUI()->GetControlWithTag(kCtrlTagAmpEnvDepth)->SetParamIdx(mModParamIdx + 3);
       GetUI()->GetControlWithTag(kCtrlTagLFO1Depth)->SetParamIdx(mModParamIdx + 4);
       GetUI()->GetControlWithTag(kCtrlTagLFO2Depth)->SetParamIdx(mModParamIdx + 5);
+      GetUI()->GetControlWithTag(kCtrlTagSequencerDepth)->SetParamIdx(mModParamIdx + 6);
+      GetUI()->GetControlWithTag(kCtrlTagVelDepth)->SetParamIdx(mModParamIdx + 7);
+      GetUI()->GetControlWithTag(kCtrlTagKTkDepth)->SetParamIdx(mModParamIdx + 8);
+      GetUI()->GetControlWithTag(kCtrlTagRndDepth)->SetParamIdx(mModParamIdx + 9);
       mActiveIdx = GetParamIdx();
     }
     // Send values and change this control's active state
@@ -192,7 +200,14 @@ public:
   {
     float value = (float)GetValue(); // NB: Value is normalized to between 0. and 1.
     const IRECT handleBounds = (GetParamIdx() == kNoParameter) ? mTrackBounds.FracRect(mDirection, 0.f) : mTrackBounds.FracRect(mDirection, value);
-    const IRECT filledTrack = (GetParamIdx() == kNoParameter) ?  handleBounds : (value >= 0.5f) ? mTrackBounds.GetGridCell(0, 0, 2, 1).FracRect(mDirection, 2.f * (value - 0.5f)) : mTrackBounds.GetGridCell(1, 0, 2, 1).FracRect(mDirection, 2.f * (0.5 - value), true);
+    const IRECT filledTrack = mDirection==EDirection::Vertical ? (GetParamIdx() == kNoParameter) ?
+      handleBounds : (value >= 0.5f) ?
+      mTrackBounds.GetGridCell(0, 0, 2, 1).FracRect(mDirection, 2.f * (value - 0.5f)) :
+      mTrackBounds.GetGridCell(1, 0, 2, 1).FracRect(mDirection, 2.f * (0.5 - value), true) : // <- Vertical
+      (GetParamIdx() == kNoParameter) ?
+      handleBounds : (value >= 0.5f) ?
+      mTrackBounds.GetGridCell(0, 1, 1, 2).FracRect(mDirection, 2.f * (value - 0.5f)) :
+      mTrackBounds.GetGridCell(0, 0, 1, 2).FracRect(mDirection, 2.f * (0.5 - value), true); // <- Horizontal
     
     if (mTrackSize > 0.f)
       DrawTrack(g, filledTrack);

@@ -127,6 +127,10 @@ public:
     {
       mOsc1.Reset();
       mOsc2.Reset();
+
+      mVelocity = level;
+      mTriggerRand = static_cast<double>(std::rand()) / static_cast<double>(RAND_MAX);
+
       for (auto f : mFilters)
       {
         f->Reset();
@@ -142,14 +146,14 @@ public:
       if (isRetrigger)
       {
         mAmpEnv.Retrigger(level);
-        mEnv1.Retrigger(level);
-        mEnv2.Retrigger(level);
+        mEnv1.Retrigger(1.); // Change this to make the envelope height dependent on velocity
+        mEnv2.Retrigger(1.);
       }
       else
       {
         mAmpEnv.Start(level);
-        mEnv1.Start(level);
-        mEnv2.Start(level);
+        mEnv1.Start(1.);
+        mEnv2.Start(1.);
       }
     }
     
@@ -164,12 +168,17 @@ public:
     {
       // inputs to the synthesizer can just fetch a value every block, like this:
 //      double gate = mInputs[kVoiceControlGate].endValue;
-      double pitch = mInputs[kVoiceControlPitch].endValue;
+      double pitch = mInputs[kVoiceControlPitch].endValue; // pitch = (MidiKey - 69) / 12
 //      double pitchBend = mInputs[kVoiceControlPitchBend].endValue;
       // or write the entire control ramp to a buffer, like this, to get sample-accurate ramps:
 //      mInputs[kVoiceControlTimbre].Write(mTimbreBuffer.Get(), startIdx, nFrames);
 
+      // Set the static (note-constant) modulator values
+      T staticMods[]{ mVelocity, (pitch * 12. + 69.) / 128., mTriggerRand };
+      mVoiceModParams.SetStaticModulation(staticMods);
+      // Write ramps for modulators
       mModulators.ProcessBlock(&(inputs[kModEnv1SustainSmoother]), nFrames);
+      // Apply modulation ramps to all modulated parameters
       mVoiceModParams.ProcessBlock(&inputs[kModWavetable1PitchSmoother], mModulators.GetList(), mVModulations.GetList(), nFrames);
 
       const double phaseModFreqFact = pow(2., mVModulations.GetList()[kVPhaseModFreq][0] / 12.);
@@ -341,6 +350,12 @@ public:
     BassBoost<T> mOsc1Sub;
     BassBoost<T> mOsc2Sub;
 
+    // Static Modulators
+    T mKey{ 69. };
+    T mVelocity{ 1. };
+    T mTriggerRand{ 0.5 };
+
+    // Dynamic Modulators
     ADSREnvelope<T> mEnv1;
     ADSREnvelope<T> mEnv2;
     ADSREnvelope<T> mAmpEnv;
@@ -629,6 +644,9 @@ public:
       case kParamWavetable1PitchLFO1:
       case kParamWavetable1PitchLFO2:
       case kParamWavetable1PitchSeq:
+      case kParamWavetable1PitchVel:
+      case kParamWavetable1PitchKTk:
+      case kParamWavetable1PitchRnd:
       {
         const int modIdx = paramIdx - kParamWavetable1Pitch;
         SendParam([paramIdx, modIdx, value](Voice* voice) {
@@ -785,6 +803,9 @@ public:
       case kParamFilter1CutoffAmpEnv:
       case kParamFilter1CutoffLFO1:
       case kParamFilter1CutoffLFO2:
+      case kParamFilter1CutoffVel:
+      case kParamFilter1CutoffKTk:
+      case kParamFilter1CutoffRnd:
       {
         const int modIdx = paramIdx - kParamFilter1Cutoff;
         mSynth.ForEachVoice([paramIdx, modIdx, value](SynthVoice& voice) {
