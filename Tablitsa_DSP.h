@@ -662,6 +662,9 @@ public:
       case kParamWavetable1AmpLFO1:
       case kParamWavetable1AmpLFO2:
       case kParamWavetable1AmpSeq:
+      case kParamWavetable1AmpVel:
+      case kParamWavetable1AmpKTk:
+      case kParamWavetable1AmpRnd:
       {
         const int modIdx = paramIdx - kParamWavetable1Amp;
         SendParam([value, modIdx](Voice* voice) {
@@ -677,6 +680,9 @@ public:
       case kParamWavetable1PosLFO1:
       case kParamWavetable1PosLFO2:
       case kParamWavetable1PosSeq:
+      case kParamWavetable1PosVel:
+      case kParamWavetable1PosKTk:
+      case kParamWavetable1PosRnd:
       {
         const int modIdx = paramIdx - kParamWavetable1Pos;
         SendParam([paramIdx, modIdx, value](Voice* voice) {
@@ -692,6 +698,9 @@ public:
       case kParamWavetable1BendLFO1:
       case kParamWavetable1BendLFO2:
       case kParamWavetable1BendSeq:
+      case kParamWavetable1BendVel:
+      case kParamWavetable1BendKTk:
+      case kParamWavetable1BendRnd:
       {
         const int modIdx = paramIdx - kParamWavetable1Bend;
         mSynth.ForEachVoice([paramIdx, modIdx, value](SynthVoice& voice) {
@@ -707,6 +716,9 @@ public:
       case kParamWavetable1SubLFO1:
       case kParamWavetable1SubLFO2:
       case kParamWavetable1SubSeq:
+      case kParamWavetable1SubVel:
+      case kParamWavetable1SubKTk:
+      case kParamWavetable1SubRnd:
       {
         const int modIdx = paramIdx - kParamWavetable1Sub;
         mSynth.ForEachVoice([paramIdx, modIdx, value](SynthVoice& voice) {
@@ -726,6 +738,9 @@ public:
       case kParamWavetable2PitchLFO1:
       case kParamWavetable2PitchLFO2:
       case kParamWavetable2PitchSeq:
+      case kParamWavetable2PitchVel:
+      case kParamWavetable2PitchKTk:
+      case kParamWavetable2PitchRnd:
       {
         const int modIdx = paramIdx - kParamWavetable2Pitch;
         mSynth.ForEachVoice([paramIdx, modIdx, value](SynthVoice& voice) {
@@ -756,6 +771,9 @@ public:
       case kParamWavetable2PosLFO1:
       case kParamWavetable2PosLFO2:
       case kParamWavetable2PosSeq:
+      case kParamWavetable2PosVel:
+      case kParamWavetable2PosKTk:
+      case kParamWavetable2PosRnd:
       {
         const int modIdx = paramIdx - kParamWavetable2Pos;
         mSynth.ForEachVoice([paramIdx, modIdx, value](SynthVoice& voice) {
