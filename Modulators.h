@@ -50,7 +50,7 @@ END_IPLUG_NAMESPACE
 class ParameterModulator
 {
 public:
-  ParameterModulator(double min, double max, bool exponential=false) : mMin(min), mMax(max), mIsExponential(exponential)
+  ParameterModulator(double min, double max, const char* name="", bool exponential=false) : mMin(min), mMax(max), mName(name), mIsExponential(exponential)
   {
     if (mIsExponential)
     {
@@ -138,6 +138,7 @@ protected:
   double mMin{ 0. };
   double mMax{ 1. };
   double mRange{ 1. };
+  WDL_String mName;
   const bool mIsExponential{ false };
 
   Vec4d mMinV = Vec4d(0.);
