@@ -263,7 +263,8 @@ enum EControlTags
 
 enum EMsgTags
 {
-  kMsgWavetableChanged = 0,
+  kMsgWavetable1Changed = 0,
+  kMsgWavetable2Changed,
   kMsgSeqSliderChanged
 };
 

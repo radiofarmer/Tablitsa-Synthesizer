@@ -453,6 +453,7 @@ public:
     {
       // Send new wavetable value
       SetValue(static_cast<double>(mSelectedElements[mIsDragging]) / 118., mIsDragging);
+      GetUI()->GetDelegate()->SendArbitraryMsgFromUI(mIsDragging == 0 ? kMsgWavetable1Changed : kMsgWavetable2Changed, kCtrlTagPeriodicTable, sizeof(double), &mSelectedElements[mIsDragging]);
 //      GetDelegate()->SendParameterValueFromUI(GetParamIdx(mIsDragging), static_cast<double>(mSelectedElements[mIsDragging] - 1) / 118.);
 //      GetDelegate()->OnParamChange(GetParamIdx(mIsDragging));
     };

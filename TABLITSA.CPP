@@ -459,6 +459,9 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
     pGraphics->AttachControl(new SequencerControl<kNumSeqSteps>(seqPanel.GetVPadded(-20.f).GetReducedFromRight(dialSize).GetReducedFromLeft(dialSize * 2.f).GetHPadded(-10.f), ""),
       kCtrlTagSequencer, "Sequencer")->SetActionFunction([pGraphics](IControl* pCaller) {
       // Get all values
+      /* NB: In the SnapToMouse() function, values for sliders which fall between MouseMove events are interpolated using the preceeding and following slider.
+      If this function were to save only the last slider hit (as in the iPlugChunks example at the time of this comment), sliders with interpolated values will not
+      have their values stored and serialized. */
       for(int i(0); i < pCaller->NVals(); ++i)
       {
         // Bundle the slider index with the slider value
@@ -612,10 +615,22 @@ void Tablitsa::OnParamChange(int paramIdx)
 
 bool Tablitsa::OnMessage(int msgTag, int ctrlTag, int dataSize, const void* pData)
 {
+  // TODO: switch statement
   if(ctrlTag == kCtrlTagBender && msgTag == IWheelControl::kMessageTagSetPitchBendRange)
   {
     const int bendRange = *static_cast<const int*>(pData);
     mDSP.mSynth.SetPitchBendRange(bendRange);
+  }
+  else if (msgTag == kMsgWavetable1Changed)
+  {
+    // mDSP.mLoadedWavetables is used solely for the purpose of serialization and does not appear in signal-processing functions
+    const double wtIdx = *static_cast<const double*>(pData);
+    mDSP.mLoadedWavetables[0] = wtIdx;
+  }
+  else if (msgTag == kMsgWavetable2Changed)
+  {
+    const double wtIdx = *static_cast<const double*>(pData);
+    mDSP.mLoadedWavetables[1] = wtIdx;
   }
   else if (msgTag == kMsgSeqSliderChanged)
   {

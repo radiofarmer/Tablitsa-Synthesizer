@@ -579,8 +579,8 @@ class WavetableOscillator final : public iplug::IOscillator<T>
   } ALIGNED(8);
 
 public:
-  WavetableOscillator(double startPhase = 0., double startFreq = 1.)
-    : IOscillator<T>(startPhase* mTableSizeM1, startFreq), mPrevFreq(static_cast<int>(startFreq))
+  WavetableOscillator(int id, double startPhase = 0., double startFreq = 1.)
+    : mID(id), IOscillator<T>(startPhase* mTableSizeM1, startFreq), mPrevFreq(static_cast<int>(startFreq))
   {
     SetWavetable("Hydrogen");
   }
@@ -596,7 +596,7 @@ public:
     if (wt.Success())
     {
       std::unique_lock<std::mutex> lock(mMasterMutex);
-      mWtReady = false;
+      mWtReady[idx] = false;
       delete LoadedTables[idx];
       LoadedTables[idx] = new Wavetable<T>(wt);
     }
@@ -645,7 +645,7 @@ public:
     {
       std::unique_lock<std::mutex> lock(mWtMutex);
       Wavetable<T>* newTable = new Wavetable<T>(wt);
-      mWtReady = false;
+      mWtReady[mID] = false;
       if (mWT != nullptr)
         delete mWT;
       mWT = newTable; // This step takes about as long as generating the new table in the first place. Copy function for Wavetable probably needs to be overridden and optimized
@@ -655,7 +655,7 @@ public:
   void SetWavetable(Wavetable<T>* tab)
   {
     std::unique_lock<std::mutex> lock(mWtMutex);
-    mWtReady = false;
+    mWtReady[mID] = false;
     if (tab != nullptr)
       mWT = tab;
     mPhaseIncrFactor = (1. / (mWT->mCyclesPerLevel * mProcessOS));
@@ -676,7 +676,7 @@ public:
   inline void SetMipmapLevel_ByIndex(int idx)
   {
     std::unique_lock<std::mutex> lock(mWtMutex);
-    mCV.wait(lock, [this] { return mWtReady; });
+    mCV.wait(lock, [this] { return mWtReady[mID]; });
 
     int tableOffset = static_cast<int>((1 - mWtPosition) * (mWT->mNumTables - 1.0001));
     mLUTLo[0] = mWT->GetMipmapLevel_ByIndex(tableOffset, idx, mTableSize);
@@ -949,9 +949,9 @@ public:
     mPrevFreq = -1;
   }
 
-  static void NotifyLoaded(bool isLoaded = true)
+  static void NotifyLoaded(int oscIdx)
   {
-    mWtReady = true;
+    mWtReady[oscIdx] = true;
     mCV.notify_all();
   }
 
@@ -964,6 +964,9 @@ private:
   inline static int mProcessOS{ 1 };
 #endif
   ChebyshevBL<T> mAAFilter;
+
+  // Oscillator ID
+  int mID;
 
   // Lookup Table Parameters
   int mTableSize = WT_SIZE; // Default: 2^9
@@ -992,7 +995,7 @@ private:
   static inline std::condition_variable mCV;
   static inline bool TableLoaded{ false };
   static inline std::mutex mMasterMutex; // Static mutex used when loading a new wavetable from a file
-  static inline bool mWtReady{ false };
+  static inline bool mWtReady[2]{ false, false };
 
   // Vectors
   const Vec4d mIncrVec{ 0., 1., 2., 3. };
