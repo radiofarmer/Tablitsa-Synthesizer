@@ -299,6 +299,12 @@ public:
     SetDirty(false);
   }
 
+  void SetSelectedElement(int atomicNumber, int elemIdx)
+  {
+    assert(atomicNumber >= 1 && atomicNumber <= 118);
+    mSelectedElements[elemIdx] = atomicNumber;
+  }
+
   void Draw(IGraphics& g)
   {
     g.FillRoundRect(IColor(255, 20, 0, 45), mRECT);

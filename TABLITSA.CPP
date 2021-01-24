@@ -604,9 +604,9 @@ void Tablitsa::UpdateUIControls()
   }
 
   // Wavetables
-  auto* pPeriodicTable = GetUI()->GetControlWithTag(kCtrlTagPeriodicTable);
-  pPeriodicTable->SetValue(mDSP.mLoadedWavetables[0] / 118., 0);
-  pPeriodicTable->SetValue(mDSP.mLoadedWavetables[1] / 118., 1);
+  auto* pPeriodicTable = dynamic_cast<PeriodicTable*>(GetUI()->GetControlWithTag(kCtrlTagPeriodicTable));
+  pPeriodicTable->SetSelectedElement(static_cast<int>(mDSP.mLoadedWavetables[0]), 0);
+  pPeriodicTable->SetSelectedElement(static_cast<int>(mDSP.mLoadedWavetables[1]), 1);
   mDSP.UpdateOscillatorWavetable(static_cast<int>(mDSP.mLoadedWavetables[0]) - 1, 0);
   mDSP.UpdateOscillatorWavetable(static_cast<int>(mDSP.mLoadedWavetables[1]) - 1, 1);
 
