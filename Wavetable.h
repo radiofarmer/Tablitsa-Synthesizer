@@ -579,10 +579,11 @@ class WavetableOscillator final : public iplug::IOscillator<T>
   } ALIGNED(8);
 
 public:
-  WavetableOscillator(int id, double startPhase = 0., double startFreq = 1.)
+  WavetableOscillator(int id, WtFile& table, double startPhase = 0., double startFreq = 1.)
     : mID(id), IOscillator<T>(startPhase* mTableSizeM1, startFreq), mPrevFreq(static_cast<int>(startFreq))
   {
-    SetWavetable("Hydrogen");
+    WavetableOscillator<T>::LoadNewTable(table, mID);
+    WavetableOscillator<T>::SetWavetable(WavetableOscillator<T>::LoadedTables[mID]);
   }
 
   void SetSampleRate(double sampleRate) override
@@ -599,56 +600,6 @@ public:
       mWtReady[idx] = false;
       delete LoadedTables[idx];
       LoadedTables[idx] = new Wavetable<T>(wt);
-    }
-  }
-
-  /*
-  Select wavetable with a numerical index
-  */
-  void SetWavetable(int tableIdx)
-  {
-    assert(WavetableOscillator<T>::mWavetables.size() > tableIdx);
-    SetWavetable((WavetableOscillator<T>::mWavetables.at(tableIdx)));
-  }
-
-  /*
-  Set wavetable by filepath
-  */
-  void SetWavetable(std::string path)
-  {
-    //WavFile wav(path);
-    //SetWavetable(wav);
-    WtFile wt(path);
-    SetWavetable(wt);
-  }
-
-  /*
-  Load a wavetable from a standard RIFF WAV file
-  */
-  void SetWavetable(WavFile& wav)
-  {
-    if (wav.Success())
-    {
-      std::unique_lock<std::mutex> lock(mWtMutex);
-      if (mWT != nullptr)
-        delete mWT;
-      mWT = new Wavetable<T>(wav, 2);
-    }
-  }
-
-  /*
-  Load a wavetable from the custom .wt format
-  */
-  void SetWavetable(WtFile& wt)
-  {
-    if (wt.Success())
-    {
-      std::unique_lock<std::mutex> lock(mWtMutex);
-      Wavetable<T>* newTable = new Wavetable<T>(wt);
-      mWtReady[mID] = false;
-      if (mWT != nullptr)
-        delete mWT;
-      mWT = newTable; // This step takes about as long as generating the new table in the first place. Copy function for Wavetable probably needs to be overridden and optimized
     }
   }
 

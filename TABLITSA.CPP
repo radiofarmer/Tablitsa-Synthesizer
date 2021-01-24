@@ -623,7 +623,6 @@ bool Tablitsa::OnMessage(int msgTag, int ctrlTag, int dataSize, const void* pDat
   }
   else if (msgTag == kMsgWavetable1Changed)
   {
-    // mDSP.mLoadedWavetables is used solely for the purpose of serialization and does not appear in signal-processing functions
     const double wtIdx = *static_cast<const double*>(pData);
     mDSP.mLoadedWavetables[0] = wtIdx;
   }

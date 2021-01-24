@@ -341,8 +341,8 @@ public:
     }
 
   public:
-    WavetableOscillator<T> mOsc1{ 0 };
-    WavetableOscillator<T> mOsc2{ 1 };
+    WavetableOscillator<T> mOsc1{ 0, WtFile("Hydrogen") };
+    WavetableOscillator<T> mOsc2{ 1, WtFile("Helium") };
     BassBoost<T> mOsc1Sub;
     BassBoost<T> mOsc2Sub;
 
