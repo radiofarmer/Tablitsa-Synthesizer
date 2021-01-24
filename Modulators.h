@@ -50,7 +50,7 @@ END_IPLUG_NAMESPACE
 class ParameterModulator
 {
 public:
-  ParameterModulator(double min, double max, bool exponential=false) : mMin(min), mMax(max), mIsExponential(exponential)
+  ParameterModulator(double min, double max, const char* name="", bool exponential=false) : mMin(min), mMax(max), mName(name), mIsExponential(exponential)
   {
     if (mIsExponential)
     {
@@ -138,6 +138,7 @@ protected:
   double mMin{ 0. };
   double mMax{ 1. };
   double mRange{ 1. };
+  WDL_String mName;
   const bool mIsExponential{ false };
 
   Vec4d mMinV = Vec4d(0.);
@@ -311,7 +312,7 @@ public:
 
     T s_out = Lookup(phase);
     IOscillator<T>::mPhase = WrapPhase(IOscillator<T>::mPhase + phaseIncr * mTableSize, 0., static_cast<double>(mTableSize));
-    return s_out;
+    return s_out * mLevelScalar;
   }
 
 private:
