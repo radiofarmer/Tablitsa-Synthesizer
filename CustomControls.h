@@ -451,8 +451,12 @@ public:
   {
     if (mIsDragging > -1)
     {
-      // Send new wavetable value
+      // Send new wavetable value (param method)
       SetValue(static_cast<double>(mSelectedElements[mIsDragging]) / 118., mIsDragging);
+
+      // Send new wavetable value (hidden param method)
+      double newTableIdx = static_cast<double>(mSelectedElements[mIsDragging]) / 118.;
+      GetUI()->GetDelegate()->SendArbitraryMsgFromUI(mIsDragging == 0 ? kMsgWavetable1Changed : kMsgWavetable2Changed, kCtrlTagPeriodicTable, sizeof(double), &newTableIdx);
 //      GetDelegate()->SendParameterValueFromUI(GetParamIdx(mIsDragging), static_cast<double>(mSelectedElements[mIsDragging] - 1) / 118.);
 //      GetDelegate()->OnParamChange(GetParamIdx(mIsDragging));
     };
@@ -482,7 +486,7 @@ class SequencerControl : public IVMultiSliderControl<MAXNC>
 {
 public:
   SequencerControl(const IRECT& bounds, const char* label, const IVStyle& style = DEFAULT_STYLE, int nSteps = 0, EDirection dir = EDirection::Vertical) :
-    IVMultiSliderControl(bounds, label, style, nSteps, dir)
+    IVMultiSliderControl<MAXNC>(bounds, label, style, nSteps, dir)
   {
 
   }

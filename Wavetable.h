@@ -394,8 +394,10 @@ public:
     mValues = new T[mNumSamples];
     memcpy(mValues, values, mStartSize * sizeof(mValues[0]));
 
+    // TODO: For mipmaps whose highest levels is longer than 2^15 samples, copy all the mipmaps above that level before performing FFTs and decinmation
+
     // Generate the rest of the mipmap
-    int levelNyquist{ start_size / (4 * mTableOS) };
+    int levelNyquist{ (mStartSize / mCyclesPerLevel) / (4 * mTableOS) };
     T* buf = new T[mLevelSizes[0]]; // Create a temporary buffer for generating new levels
     memcpy(buf, values, mLevelSizes[0] * sizeof(mValues[0])); // Populate the temporary buffer with the full-harmonic wavetable
 
@@ -406,10 +408,14 @@ public:
     */
     for (size_t i{0}; i < num_levels - 1; ++i)
     {
-      // Band-limit the mipmap level
-      buf = fft_lp_filter(buf, mLevelSizes[i], levelNyquist, mLevelSizes[i+1] > mMinSize ? 2 : 1);
-      // Copy the filtered mipmap level to the mValues buffer
-      memcpy(&(mValues[mLevelIndices[i + 1]]), buf, mLevelSizes[i + 1] * sizeof(mValues[0]));
+      // Make sure the current level is within the size range for the FFT function
+      if (std::log2(mLevelSizes[i]) <= 15)
+      {
+        // Band-limit the mipmap level
+        buf = fft_lp_filter(buf, mLevelSizes[i], levelNyquist, mLevelSizes[i + 1] > mMinSize ? 2 : 1);
+        // Copy the filtered mipmap level to the mValues buffer
+        memcpy(&(mValues[mLevelIndices[i + 1]]), buf, mLevelSizes[i + 1] * sizeof(mValues[0]));
+      }
       levelNyquist /= 2;
     }
 
@@ -427,7 +433,7 @@ public:
   const int CalculateLength()
   {
     int level{ 0 };
-    int nextLevelSize{ mStartSize * mCyclesPerLevel };
+    int nextLevelSize{ mStartSize };
     int samples{ 0 };
     while (level < mNumLevels)
     {
@@ -507,7 +513,7 @@ public:
     mNumTables = wt.NumWaveforms();
     mWtSize = wt.NumSamples() / mNumTables;
 
-    // Load mipmaps
+    // Load mipmaps for each waveform (table position)
     for (int i{ 0 }; i < mNumTables; ++i)
     {
 #ifdef FFT
@@ -573,10 +579,11 @@ class WavetableOscillator final : public iplug::IOscillator<T>
   } ALIGNED(8);
 
 public:
-  WavetableOscillator(double startPhase = 0., double startFreq = 1.)
-    : IOscillator<T>(startPhase* mTableSizeM1, startFreq), mPrevFreq(static_cast<int>(startFreq))
+  WavetableOscillator(int id, WtFile& table, double startPhase = 0., double startFreq = 1.)
+    : mID(id), IOscillator<T>(startPhase* mTableSizeM1, startFreq), mPrevFreq(static_cast<int>(startFreq))
   {
-    SetWavetable("Hydrogen");
+    WavetableOscillator<T>::LoadNewTable(table, mID);
+    WavetableOscillator<T>::SetWavetable(WavetableOscillator<T>::LoadedTables[mID]);
   }
 
   void SetSampleRate(double sampleRate) override
@@ -590,66 +597,16 @@ public:
     if (wt.Success())
     {
       std::unique_lock<std::mutex> lock(mMasterMutex);
-      mWtReady = false;
+      mWtReady[idx] = false;
       delete LoadedTables[idx];
       LoadedTables[idx] = new Wavetable<T>(wt);
-    }
-  }
-
-  /*
-  Select wavetable with a numerical index
-  */
-  void SetWavetable(int tableIdx)
-  {
-    assert(WavetableOscillator<T>::mWavetables.size() > tableIdx);
-    SetWavetable((WavetableOscillator<T>::mWavetables.at(tableIdx)));
-  }
-
-  /*
-  Set wavetable by filepath
-  */
-  void SetWavetable(std::string path)
-  {
-    //WavFile wav(path);
-    //SetWavetable(wav);
-    WtFile wt(path);
-    SetWavetable(wt);
-  }
-
-  /*
-  Load a wavetable from a standard RIFF WAV file
-  */
-  void SetWavetable(WavFile& wav)
-  {
-    if (wav.Success())
-    {
-      std::unique_lock<std::mutex> lock(mWtMutex);
-      if (mWT != nullptr)
-        delete mWT;
-      mWT = new Wavetable<T>(wav, 2);
-    }
-  }
-
-  /*
-  Load a wavetable from the custom .wt format
-  */
-  void SetWavetable(WtFile& wt)
-  {
-    if (wt.Success())
-    {
-      std::unique_lock<std::mutex> lock(mWtMutex);
-      Wavetable<T>* newTable = new Wavetable<T>(wt);
-      mWtReady = false;
-      if (mWT != nullptr)
-        delete mWT;
-      mWT = newTable; // This step takes about as long as generating the new table in the first place. Copy function for Wavetable probably needs to be overridden and optimized
     }
   }
 
   void SetWavetable(Wavetable<T>* tab)
   {
     std::unique_lock<std::mutex> lock(mWtMutex);
-    mWtReady = false;
+    mWtReady[mID] = false;
     if (tab != nullptr)
       mWT = tab;
     mPhaseIncrFactor = (1. / (mWT->mCyclesPerLevel * mProcessOS));
@@ -670,7 +627,7 @@ public:
   inline void SetMipmapLevel_ByIndex(int idx)
   {
     std::unique_lock<std::mutex> lock(mWtMutex);
-    mCV.wait(lock, [this] { return mWtReady; });
+    mCV.wait(lock, [this] { return mWtReady[mID]; });
 
     int tableOffset = static_cast<int>((1 - mWtPosition) * (mWT->mNumTables - 1.0001));
     mLUTLo[0] = mWT->GetMipmapLevel_ByIndex(tableOffset, idx, mTableSize);
@@ -943,9 +900,9 @@ public:
     mPrevFreq = -1;
   }
 
-  static void NotifyLoaded(bool isLoaded = true)
+  static void NotifyLoaded(int oscIdx)
   {
-    mWtReady = true;
+    mWtReady[oscIdx] = true;
     mCV.notify_all();
   }
 
@@ -958,6 +915,9 @@ private:
   inline static int mProcessOS{ 1 };
 #endif
   ChebyshevBL<T> mAAFilter;
+
+  // Oscillator ID
+  int mID;
 
   // Lookup Table Parameters
   int mTableSize = WT_SIZE; // Default: 2^9
@@ -986,7 +946,7 @@ private:
   static inline std::condition_variable mCV;
   static inline bool TableLoaded{ false };
   static inline std::mutex mMasterMutex; // Static mutex used when loading a new wavetable from a file
-  static inline bool mWtReady{ false };
+  static inline bool mWtReady[2]{ false, false };
 
   // Vectors
   const Vec4d mIncrVec{ 0., 1., 2., 3. };

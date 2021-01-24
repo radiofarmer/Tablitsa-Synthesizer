@@ -458,11 +458,14 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
     pGraphics->AttachControl(new IVKnobControl(seqPanel.GetFromLeft(dialSize * 2 + 20.f).GetGridCell(0, 1, 1, 2).GetCentredInside(dialSize), kParamSequencerGlide, "Glide"), kNoTag, "Sequencer");
     pGraphics->AttachControl(new SequencerControl<kNumSeqSteps>(seqPanel.GetVPadded(-20.f).GetReducedFromRight(dialSize).GetReducedFromLeft(dialSize * 2.f).GetHPadded(-10.f), ""),
       kCtrlTagSequencer, "Sequencer")->SetActionFunction([pGraphics](IControl* pCaller) {
-      // Get the slider index
-      int lastHit = pCaller->As<IVMultiSliderControl<kNumSeqSteps>>()->GetLastSliderHit();
-      if (lastHit > -1) {
+      // Get all values
+      /* NB: In the SnapToMouse() function, values for sliders which fall between MouseMove events are interpolated using the preceeding and following slider.
+      If this function were to save only the last slider hit (as in the iPlugChunks example at the time of this comment), sliders with interpolated values will not
+      have their values stored and serialized. */
+      for(int i(0); i < pCaller->NVals(); ++i)
+      {
         // Bundle the slider index with the slider value
-        ParamTuple data = { lastHit, pCaller->GetValue(lastHit) };
+        ParamTuple data = { i, pCaller->GetValue(i) };
         // Send the new value to be evaluated in the OnMessage function
         pGraphics->GetDelegate()->SendArbitraryMsgFromUI(kMsgSeqSliderChanged, kCtrlTagSequencer, sizeof(ParamTuple), &data);
       }
@@ -501,12 +504,12 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
 bool Tablitsa::SerializeState(IByteChunk& chunk) const
 {
   // serialize the multislider state before serializing the regular params
-  /*for (int i = 0; i < kNumSeqSteps; i++)
+  for (int i = 0; i < kNumSeqSteps; i++)
   {
     chunk.Put(&mDSP.mSeqSteps[i]);
   }
   chunk.Put(&mDSP.mLoadedWavetables[0]);
-  chunk.Put(&mDSP.mLoadedWavetables[1]);*/
+  chunk.Put(&mDSP.mLoadedWavetables[1]);
   
   return SerializeParams(chunk); // must remember to call SerializeParams at the end
 }
@@ -514,8 +517,8 @@ bool Tablitsa::SerializeState(IByteChunk& chunk) const
 // this over-ridden method is called when the host is trying to load the plug-in state and you need to unpack the data into your algorithm
 int Tablitsa::UnserializeState(const IByteChunk& chunk, int startPos)
 {
-  /*double v = 0.;
-
+  double v = 0.;
+  
   // unserialize the steps state before unserializing the regular params
   for (int i = 0; i < kNumSeqSteps; i++)
   {
@@ -529,7 +532,7 @@ int Tablitsa::UnserializeState(const IByteChunk& chunk, int startPos)
 
   // If UI exists
   if (GetUI())
-    UpdateUIControls();*/
+    UpdateUIControls(); 
 
   // must remember to call UnserializeParams at the end
   return UnserializeParams(chunk, startPos);
@@ -551,9 +554,11 @@ void Tablitsa::UpdateUIControls()
   }
 
   // Wavetables
-  //auto* pPeriodicTable = GetUI()->GetControlWithTag(kCtrlTagPeriodicTable);
-  //pPeriodicTable->SetValue(mDSP.mLoadedWavetables[0], 0);
-  //pPeriodicTable->SetValue(mDSP.mLoadedWavetables[1], 1);
+  auto* pPeriodicTable = GetUI()->GetControlWithTag(kCtrlTagPeriodicTable);
+  pPeriodicTable->SetValue(mDSP.mLoadedWavetables[0] / 118., 0);
+  pPeriodicTable->SetValue(mDSP.mLoadedWavetables[1] / 118., 1);
+  mDSP.UpdateOscillatorWavetable(static_cast<int>(mDSP.mLoadedWavetables[0]) - 1, 0);
+  mDSP.UpdateOscillatorWavetable(static_cast<int>(mDSP.mLoadedWavetables[1]) - 1, 1);
 
   SendCurrentParamValuesFromDelegate();
   GetUI()->SetAllControlsDirty();
@@ -612,10 +617,23 @@ void Tablitsa::OnParamChange(int paramIdx)
 
 bool Tablitsa::OnMessage(int msgTag, int ctrlTag, int dataSize, const void* pData)
 {
+  // TODO: switch statement
   if(ctrlTag == kCtrlTagBender && msgTag == IWheelControl::kMessageTagSetPitchBendRange)
   {
     const int bendRange = *static_cast<const int*>(pData);
     mDSP.mSynth.SetPitchBendRange(bendRange);
+  }
+  else if (msgTag == kMsgWavetable1Changed)
+  {
+    const double wtIdx = *static_cast<const double*>(pData); //Semi-Normalized value (between 1/118 and 1)
+    mDSP.mLoadedWavetables[0] = wtIdx * 118.; // Corresponds to the atomic number (not the 0-indexed vector item)
+    mDSP.UpdateOscillatorWavetable(static_cast<int>(mDSP.mLoadedWavetables[0]) - 1, 0);
+  }
+  else if (msgTag == kMsgWavetable2Changed)
+  {
+    const double wtIdx = *static_cast<const double*>(pData);
+    mDSP.mLoadedWavetables[1] = wtIdx * 118.;
+    mDSP.UpdateOscillatorWavetable(static_cast<int>(mDSP.mLoadedWavetables[1]) - 1, 1);
   }
   else if (msgTag == kMsgSeqSliderChanged)
   {
