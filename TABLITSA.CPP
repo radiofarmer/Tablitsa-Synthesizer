@@ -557,6 +557,8 @@ void Tablitsa::UpdateUIControls()
   auto* pPeriodicTable = GetUI()->GetControlWithTag(kCtrlTagPeriodicTable);
   pPeriodicTable->SetValue(mDSP.mLoadedWavetables[0] / 118., 0);
   pPeriodicTable->SetValue(mDSP.mLoadedWavetables[1] / 118., 1);
+  mDSP.UpdateOscillatorWavetable(static_cast<int>(mDSP.mLoadedWavetables[0]) - 1, 0);
+  mDSP.UpdateOscillatorWavetable(static_cast<int>(mDSP.mLoadedWavetables[1]) - 1, 1);
 
   SendCurrentParamValuesFromDelegate();
   GetUI()->SetAllControlsDirty();
@@ -623,13 +625,15 @@ bool Tablitsa::OnMessage(int msgTag, int ctrlTag, int dataSize, const void* pDat
   }
   else if (msgTag == kMsgWavetable1Changed)
   {
-    const double wtIdx = *static_cast<const double*>(pData);
-    mDSP.mLoadedWavetables[0] = wtIdx;
+    const double wtIdx = *static_cast<const double*>(pData); //Semi-Normalized value (between 1/118 and 1)
+    mDSP.mLoadedWavetables[0] = wtIdx * 118.; // Corresponds to the atomic number (not the 0-indexed vector item)
+    mDSP.UpdateOscillatorWavetable(static_cast<int>(mDSP.mLoadedWavetables[0]) - 1, 0);
   }
   else if (msgTag == kMsgWavetable2Changed)
   {
     const double wtIdx = *static_cast<const double*>(pData);
-    mDSP.mLoadedWavetables[1] = wtIdx;
+    mDSP.mLoadedWavetables[1] = wtIdx * 118.;
+    mDSP.UpdateOscillatorWavetable(static_cast<int>(mDSP.mLoadedWavetables[1]) - 1, 1);
   }
   else if (msgTag == kMsgSeqSliderChanged)
   {

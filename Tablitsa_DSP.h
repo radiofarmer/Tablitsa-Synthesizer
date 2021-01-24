@@ -621,8 +621,6 @@ public:
         break;
       case kParamWavetable1:
       {
-        value = std::max(1., value);
-        UpdateOscillatorWavetable(static_cast<int>(value) - 1, 0);
         break;
       }
       case kParamWavetable1Pitch:
@@ -702,8 +700,6 @@ public:
       }
       case kParamWavetable2:
       {
-        value = std::max(1., value);
-        UpdateOscillatorWavetable(static_cast<int>(value) - 1, 1);
         break;
       }
       case kParamWavetable2Pitch:
