@@ -18,6 +18,13 @@ constexpr int kNumSeqSteps = 16;
 enum EParams
 {
   kParamGain = 0,
+  kParamPan,
+  kParamPanEnv1,
+  kParamPanEnv2,
+  kParamPanAmpEnv,
+  kParamPanLFO1,
+  kParamPanLFO2,
+  kParamPanSeq,
   kParamNoteGlideTime,
   kParamAmpEnvAttack,
   kParamAmpEnvDecay,
@@ -267,13 +274,6 @@ enum EParams
   kParamRingModAmountRnd,
   kParamSequencerSteps,
   kParamSequencerGlide,
-  kParamPan,
-  kParamPanEnv1,
-  kParamPanEnv2,
-  kParamPanAmpEnv,
-  kParamPanLFO1,
-  kParamPanLFO2,
-  kParamPanSeq,
   kNumParams
 };
 
