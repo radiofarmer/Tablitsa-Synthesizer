@@ -343,7 +343,7 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
     dynamic_cast<PeriodicTable*>(pGraphics->GetControlWithTag(kCtrlTagPeriodicTable))->LoadValues();
 
     // Wavetable controls
-    const IRECT osc1Panel = controls.GetReducedFromLeft(720.f).GetReducedFromBottom(controls.H() / 2.f).GetGridCell(0, 0, 2, 3).GetPadded(-10.f);
+    const IRECT osc1Panel = controls.GetReducedFromLeft(720.f).GetReducedFromBottom(controls.H() / 2.f).GetGridCell(0, 0, 2, 3).GetPadded(-10.f).GetHPadded(-12.f);
     pGraphics->AttachControl(new IVModKnobControl(osc1Panel.GetGridCell(0, 0, 2, 2).GetCentredInside(dialSize), kParamWavetable1Pitch, "Pitch", DEFAULT_STYLE, true, 0.05), kNoTag, "Osc1");
     pGraphics->AttachControl(new IVModKnobControl(osc1Panel.GetGridCell(0, 1, 2, 2).GetCentredInside(dialSize), kParamWavetable1Amp, "Amp"), kNoTag, "Osc1");
     pGraphics->AttachControl(new IVModKnobControl(osc1Panel.GetGridCell(1, 0, 2, 3).GetCentredInside(dialSize), kParamWavetable1Pos, "Valency"), kNoTag, "Osc1");
@@ -351,7 +351,7 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
     pGraphics->AttachControl(new IVModKnobControl(osc1Panel.GetGridCell(1, 2, 2, 3).GetCentredInside(dialSize), kParamWavetable1Sub, "Mass"), kNoTag, "Osc1");
     pGraphics->AttachControl(new IVGroupControl("Wavetable 1", "Osc1", 0.f, 15.f, 0.f, 2.f));
 
-    const IRECT osc2Panel = controls.GetReducedFromLeft(720.f).GetReducedFromBottom(controls.H() / 2.f).GetGridCell(1, 0, 2, 3).GetPadded(-10.f);
+    const IRECT osc2Panel = controls.GetReducedFromLeft(720.f).GetReducedFromBottom(controls.H() / 2.f).GetGridCell(1, 0, 2, 3).GetPadded(-10.f).GetHPadded(-12.f);
     pGraphics->AttachControl(new IVModKnobControl(osc2Panel.GetGridCell(0, 0, 2, 2).GetCentredInside(dialSize), kParamWavetable2Pitch, "Pitch", DEFAULT_STYLE, true, 0.05), kNoTag, "Osc2");
     pGraphics->AttachControl(new IVModKnobControl(osc2Panel.GetGridCell(0, 1, 2, 2).GetCentredInside(dialSize), kParamWavetable2Amp, "Amp"), kNoTag, "Osc2");
     pGraphics->AttachControl(new IVModKnobControl(osc2Panel.GetGridCell(1, 0, 2, 3).GetCentredInside(dialSize), kParamWavetable2Pos, "Valency"), kNoTag, "Osc2");
