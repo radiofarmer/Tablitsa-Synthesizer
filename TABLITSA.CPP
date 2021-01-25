@@ -21,7 +21,9 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
   GetParam(kParamGain)->InitDouble("Gain", 25., 0., 100.0, 0.01, "%");
   GetParam(kParamPan)->InitAngleDegrees("Pan", 0., -90., 90.);
   GetParam(kParamNoteGlideTime)->InitMilliseconds("Note Glide Time", 0., 0.0, 3000.);
-//  GetParam(kParamNoteGlideRate)->InitMilliseconds("Note Glide Time", 0., 0.0, 3000.);
+  GetParam(kParamNoteGlideRate)->InitDouble("Note Glide Rate", 0., 0.5, 256., 0.1, "St/s");
+  GetParam(kParamPortamentoMode)->InitBool("Equal Glide Time", true);
+  GetParam(kParamMonophonic)->InitBool("Monophonic", true);
   /*Modulators*/
   GetParam(kParamEnv1Attack)->InitDouble("Env1 Attack", 10., 1., 3000., 0.1, "ms", IParam::kFlagsNone, "ADSR", IParam::ShapePowCurve(3.));
   GetParam(kParamEnv1Decay)->InitDouble("Env1 Decay", 10., 1., 3000., 0.1, "ms", IParam::kFlagsNone, "ADSR", IParam::ShapePowCurve(3.));
@@ -237,10 +239,15 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
   GetParam(kParamFilter2FF)->InitPercentage("Filter 2 FF");
   GetParam(kParamFilter2FB)->InitPercentage("Filter 2 FB");
   GetParam(kParamFilter2Delay)->InitInt("Filter 2 Delay", 8, 1, 512);
-    
+
+#ifndef VST3_API
+#define KEYBOARD_HEIGHT 150.f
+#else
+#define KEYBOARD_HEIGHT 0.f
+#endif
 #if IPLUG_EDITOR // http://bit.ly/2S64BDd
   mMakeGraphicsFunc = [&]() {
-    return MakeGraphics(*this, PLUG_WIDTH, PLUG_HEIGHT, PLUG_FPS, GetScaleForScreen(PLUG_WIDTH, PLUG_HEIGHT));
+    return MakeGraphics(*this, PLUG_WIDTH, PLUG_HEIGHT + KEYBOARD_HEIGHT, PLUG_FPS, GetScaleForScreen(PLUG_WIDTH, PLUG_HEIGHT));
   };
   
   mLayoutFunc = [&](IGraphics* pGraphics) {
@@ -257,9 +264,9 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
     pGraphics->LoadFont("Roboto-Regular", ROBOTO_FN);
     const IRECT b = pGraphics->GetBounds().GetPadded(-10.f);
     constexpr float dialSize{ 80.f };
-#ifdef KEYBOARD
-    IRECT controls = b.GetOffset(0, 0, 0, -150.f).GetHPadded(-5.f);
-    IRECT keyboardBounds = b.GetFromBottom(150.f);
+    IRECT controls = b.GetOffset(0, 0, 0, -KEYBOARD_HEIGHT).GetHPadded(-5.f);
+#ifndef VST3_API
+    IRECT keyboardBounds = b.GetFromBottom((float)KEYBOARD_HEIGHT).GetPadded(-10.f);
     IRECT wheelsBounds = keyboardBounds.ReduceFromLeft(100.f).GetPadded(-10.f);
 
     // Keyboard
@@ -268,8 +275,7 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
     pGraphics->AttachControl(new IWheelControl(wheelsBounds.FracRectHorizontal(0.5)), kCtrlTagBender);
     pGraphics->AttachControl(new IWheelControl(wheelsBounds.FracRectHorizontal(0.5, true), IMidiMsg::EControlChangeMsg::kModWheel));
 //    pGraphics->AttachControl(new IVMultiSliderControl<4>(b.GetGridCell(0, 2, 2).GetPadded(-30), "", DEFAULT_STYLE, kParamAttack, EDirection::Vertical, 0.f, 1.f));
-#else
-    IRECT controls = b.GetPadded(-10.f);
+
 #endif
     const ISVG tableImg = pGraphics->LoadSVG(PERIODIC_TABLE_FN);
     pGraphics->AttachControl(new PeriodicTable(controls.GetReducedFromBottom(controls.H() * 0.5f ).GetFromLeft(720.f).GetPadded(-30.f), tableImg, { kParamWavetable1, kParamWavetable2 }),
@@ -298,14 +304,21 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
     // Gain, Pan, and Volume Meter
     pGraphics->AttachControl(new IVKnobControl(masterPanel.GetGridCell(0, 0, 4, 6).GetCentredInside(dialSize), kParamGain, "Gain"), kNoTag, "Master");
     pGraphics->AttachControl(new IVModKnobControl(masterPanel.GetGridCell(0, 1, 4, 6).GetCentredInside(dialSize), kParamPan, "Pan"), kNoTag, "Master");
-    pGraphics->AttachControl(new IVLEDMeterControl<2>(masterPanel.GetGridCell(0, 5, 2, 6)), kCtrlTagMeter, "Master");
     // Static modulators
     
     // Polyphony and Portamento
     pGraphics->AttachControl(new IVKnobControl(masterPanel.GetGridCell(1, 0, 4, 6).GetCentredInside(dialSize), kParamNoteGlideTime, "Glide"), kNoTag, "Master");
+    pGraphics->AttachControl(new IVToggleControl(masterPanel.GetGridCell(1, 1, 4, 6).GetVPadded(-6.f), kParamPortamentoMode, "", DEFAULT_STYLE.WithShowLabel(false), "Rate", "Time"),
+      kNoTag, "Master")->SetAnimationEndActionFunction([pGraphics](IControl* pControl) {
+        bool constantTime = pControl->GetValue() > 0.5;
+        pGraphics->HideControl(kParamNoteGlideTime, constantTime);
+        pGraphics->HideControl(kParamNoteGlideRate, !constantTime);
+        pGraphics->SetAllControlsDirty();
+        });
     // Mono/Poly and Portamento Rate/Tiime switches
     // ...
     //pGraphics->AttachControl(new IVToggleControl) ...
+    pGraphics->AttachControl(new IVLEDMeterControl<2>(masterPanel.GetGridCell(0, 5, 2, 6)), kCtrlTagMeter, "Master");
 
     /* Waveform Modulation Panel */
     const IRECT lowerPanel = controls.GetReducedFromTop(controls.H() * 0.5f).GetPadded(-10.f).GetReducedFromRight(250.f);
@@ -503,10 +516,10 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
     pGraphics->AttachControl(new IVGroupControl("LFO 2", "LFO2", 0.f, 10.f, 0.f, 0.f));
 
     /* Sequencer */
-    const IRECT seqPanel = lowerPanel.GetGridCell(2, 2, 3, 3).GetFromLeft(PLUG_WIDTH - lfoPanel.L).GetPadded(-2.f);
-    pGraphics->AttachControl(new IVKnobControl(seqPanel.GetFromLeft(dialSize * 2 + 20.f).GetGridCell(0, 0, 1, 2).GetCentredInside(dialSize), kParamSequencerSteps, "Steps"), kNoTag, "Sequencer");
-    pGraphics->AttachControl(new IVKnobControl(seqPanel.GetFromLeft(dialSize * 2 + 20.f).GetGridCell(0, 1, 1, 2).GetCentredInside(dialSize), kParamSequencerGlide, "Glide"), kNoTag, "Sequencer");
-    pGraphics->AttachControl(new SequencerControl<kNumSeqSteps>(seqPanel.GetVPadded(-20.f).GetReducedFromRight(dialSize).GetReducedFromLeft(dialSize * 2.f).GetHPadded(-10.f), ""),
+    const IRECT seqPanel = lowerPanel.GetGridCell(2, 2, 3, 3).GetFromLeft(PLUG_WIDTH - lfoPanel.L).GetReducedFromRight(20.f).GetPadded(-2.f).GetHPadded(-10.f);
+    pGraphics->AttachControl(new IVKnobControl(seqPanel.GetFromLeft(dialSize * 1.5).GetGridCell(0, 0, 1, 2).GetCentredInside(dialSize), kParamSequencerSteps, "Steps"), kNoTag, "Sequencer");
+    pGraphics->AttachControl(new IVKnobControl(seqPanel.GetFromLeft(dialSize * 1.5).GetGridCell(0, 1, 1, 2).GetCentredInside(dialSize), kParamSequencerGlide, "Glide"), kNoTag, "Sequencer");
+    pGraphics->AttachControl(new SequencerControl<kNumSeqSteps>(seqPanel.GetVPadded(-20.f).GetReducedFromRight(dialSize).GetReducedFromLeft(dialSize * 1.5f), ""),
       kCtrlTagSequencer, "Sequencer")->SetActionFunction([pGraphics](IControl* pCaller) {
       // Get all values
       /* NB: In the SnapToMouse() function, values for sliders which fall between MouseMove events are interpolated using the preceeding and following slider.
@@ -520,17 +533,17 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
         pGraphics->GetDelegate()->SendArbitraryMsgFromUI(kMsgSeqSliderChanged, kCtrlTagSequencer, sizeof(ParamTuple), &data);
       }
       });
-    pGraphics->AttachControl(new ModSliderControl(seqPanel.GetGridCell(0, 4, 1, 5).GetVPadded(-15.f), kNoParameter, "Depth"), kCtrlTagSequencerDepth, "Sequencer");
-    pGraphics->AttachControl(new IVGroupControl("Sequencer", "Sequencer", 0.f, 10.f, 0.f, 0.f));
+    pGraphics->AttachControl(new ModSliderControl(seqPanel.GetGridCell(0, 5, 1, 6).GetVPadded(-15.f), kNoParameter, "Depth"), kCtrlTagSequencerDepth, "Sequencer");
+    pGraphics->AttachControl(new IVGroupControl("Sequencer", "Sequencer", 0.f, 15.f, 0.f, 0.f));
 
     
-#ifdef KEYBOARD
-    pGraphics->AttachControl(new IVButtonControl(keyboardBounds.GetFromTRHC(200, 30).GetTranslated(0, 30), SplashClickActionFunc,
+#ifndef VST3_API
+    pGraphics->AttachControl(new IVButtonControl(keyboardBounds.GetFromTRHC(200, 30).GetTranslated(0, -30.f), SplashClickActionFunc,
       "Show/Hide Keyboard", DEFAULT_STYLE.WithColor(kFG, COLOR_WHITE).WithLabelText({15.f, EVAlign::Middle})))->SetAnimationEndActionFunction(
       [pGraphics, controls](IControl* pCaller) {
         static bool hide = false;
         pGraphics->GetControlWithTag(kCtrlTagKeyboard)->Hide(hide = !hide);
-        pGraphics->Resize((float)PLUG_WIDTH, hide ? controls.H() : (float)PLUG_HEIGHT, pGraphics->GetDrawScale());
+        pGraphics->Resize((float)PLUG_WIDTH, hide ? (float)PLUG_HEIGHT : (float)PLUG_HEIGHT + (float)KEYBOARD_HEIGHT, pGraphics->GetDrawScale());
     });
     pGraphics->SetQwertyMidiKeyHandlerFunc([pGraphics](const IMidiMsg& msg) {
                                               dynamic_cast<IVKeyboardControl*>(pGraphics->GetControlWithTag(kCtrlTagKeyboard))->SetNoteFromMidi(msg.NoteNumber(), msg.StatusMsg() == IMidiMsg::kNoteOn);

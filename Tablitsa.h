@@ -26,6 +26,9 @@ enum EParams
   kParamPanLFO2,
   kParamPanSeq,
   kParamNoteGlideTime,
+  kParamNoteGlideRate,
+  kParamPortamentoMode,
+  kParamMonophonic,
   kParamAmpEnvAttack,
   kParamAmpEnvDecay,
   kParamAmpEnvSustain,
@@ -214,6 +217,12 @@ enum EParams
   kParamRingModAmountSeq,
   kParamSequencerSteps,
   kParamSequencerGlide,
+  kParamDelayTimeRSec,
+  kParamDelayTimeLSec,
+  kParamDelayTimeRBeats,
+  kParamDelayTimeLBeats,
+  kParamDelayFeedback,
+  kParamDealyMix,
   kNumParams
 };
 

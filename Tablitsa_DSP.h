@@ -460,6 +460,11 @@ public:
 
   void ProcessMidiMsg(const IMidiMsg& msg)
   {
+    if (!mConstantGlideTime && msg.StatusMsg() == IMidiMsg::EStatusMsg::kNoteOn)
+    {
+      mSynth.SetNoteGlideTime(std::abs(static_cast<double>(msg.NoteNumber()) - mLastNoteOn) / mGlideRateScalar);
+      mLastNoteOn = static_cast<double>(msg.NoteNumber());
+    }
     mSynth.AddMidiMsgToQueue(msg);
   }
 
@@ -511,6 +516,12 @@ public:
     switch (paramIdx) {
       case kParamNoteGlideTime:
         mSynth.SetNoteGlideTime(value / 1000.);
+        break;
+      case kParamNoteGlideRate:
+        mGlideRateScalar = value;
+        break;
+      case kParamPortamentoMode:
+        mConstantGlideTime = value > 0.5;
         break;
       case kParamGain:
         mParamsToSmooth[kModGainSmoother] = (T) value / 100.;
@@ -1000,6 +1011,11 @@ public:
   LFO<T> mLFO;
   std::vector<std::string> mWavetables{ ELEMENT_NAMES };
   std::vector<Voice*> mSynthVoices;
+
+  // Portamento Parameters
+  bool mConstantGlideTime{ true };
+  double mGlideRateScalar{ 1. }; // Semitones per second
+  double mLastNoteOn{ 0 };
 
   double mSampleRate{ 44100. };
   static inline bool mCombOn{ false };
