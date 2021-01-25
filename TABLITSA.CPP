@@ -21,9 +21,9 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
   GetParam(kParamGain)->InitDouble("Gain", 25., 0., 100.0, 0.01, "%");
   GetParam(kParamPan)->InitAngleDegrees("Pan", 0., -90., 90.);
   GetParam(kParamNoteGlideTime)->InitMilliseconds("Note Glide Time", 0., 0.0, 3000.);
-  GetParam(kParamNoteGlideRate)->InitDouble("Note Glide Rate", 0., 0.5, 256., 0.1, "St/s");
+  GetParam(kParamNoteGlideRate)->InitDouble("Note Glide Rate", 12., 0.5, 128., 0.1, "St/s");
   GetParam(kParamPortamentoMode)->InitBool("Equal Glide Time", true);
-  GetParam(kParamMonophonic)->InitBool("Monophonic", true);
+  GetParam(kParamMonophonic)->InitBool("Monophonic", false);
   /*Modulators*/
   GetParam(kParamEnv1Attack)->InitDouble("Env1 Attack", 10., 1., 3000., 0.1, "ms", IParam::kFlagsNone, "ADSR", IParam::ShapePowCurve(3.));
   GetParam(kParamEnv1Decay)->InitDouble("Env1 Decay", 10., 1., 3000., 0.1, "ms", IParam::kFlagsNone, "ADSR", IParam::ShapePowCurve(3.));
@@ -370,14 +370,16 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
     pGraphics->AttachControl(new ModSliderControl(masterPanel.GetGridCell(1, 0, 2, 1).GetVPadded(-12.f).GetGridCell(2, 0, 3, 3).GetHPadded(-20.f), kNoParameter, "Trigger Random", DEFAULT_STYLE, false, EDirection::Horizontal), kCtrlTagRndDepth, "StaticMods");
     pGraphics->AttachControl(new IVGroupControl("Midi Mods", "StaticMods", 5.f, 15.f, 5.f, 12.f));
     // Polyphony and Portamento
-    pGraphics->AttachControl(new IVKnobControl(masterPanel.GetGridCell(1, 0, 4, 6).GetCentredInside(dialSize), kParamNoteGlideTime, "Glide"), kNoTag, "Master");
-    pGraphics->AttachControl(new IVToggleControl(masterPanel.GetGridCell(1, 1, 4, 6).GetVPadded(-6.f), kParamPortamentoMode, "", DEFAULT_STYLE.WithShowLabel(false), "Rate", "Time"),
+    pGraphics->AttachControl(new IVToggleControl(masterPanel.GetGridCell(3, 1, 8, 6).GetVPadded(-6.f), kParamPortamentoMode, "", DEFAULT_STYLE.WithShowLabel(false), "Rate", "Time"),
       kNoTag, "Master")->SetAnimationEndActionFunction([pGraphics](IControl* pControl) {
         bool constantTime = pControl->GetValue() > 0.5;
-        pGraphics->HideControl(kParamNoteGlideTime, constantTime);
-        pGraphics->HideControl(kParamNoteGlideRate, !constantTime);
+        pGraphics->HideControl(kParamNoteGlideTime, !constantTime);
+        pGraphics->HideControl(kParamNoteGlideRate, constantTime);
         pGraphics->SetAllControlsDirty();
         });
+    pGraphics->AttachControl(new IVKnobControl(masterPanel.GetGridCell(1, 0, 4, 6).GetCentredInside(dialSize), kParamNoteGlideRate, "Glide Rate"), kNoTag, "Master")->Hide(true);
+    pGraphics->AttachControl(new IVKnobControl(masterPanel.GetGridCell(1, 0, 4, 6).GetCentredInside(dialSize), kParamNoteGlideTime, "Glide Time"), kNoTag, "Master")->DisablePrompt(false);
+    pGraphics->AttachControl(new IVToggleControl(masterPanel.GetGridCell(2, 1, 8, 6).GetVPadded(-6.f), kParamMonophonic, "", DEFAULT_STYLE.WithShowLabel(false), "Poly", "Mono"));
     // Mono/Poly and Portamento Rate/Tiime switches
     // ...
     //pGraphics->AttachControl(new IVToggleControl) ...

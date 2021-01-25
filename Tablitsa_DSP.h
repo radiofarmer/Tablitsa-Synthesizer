@@ -529,6 +529,9 @@ public:
     using EEnvStage = ADSREnvelope<sample>::EStage;
     
     switch (paramIdx) {
+      case kParamMonophonic:
+        mSynth.SetPolyMode(value > 0.5 ? VoiceAllocator::EPolyMode::kPolyModeMono : VoiceAllocator::EPolyMode::kPolyModePoly);
+      break;
       case kParamNoteGlideTime:
         mSynth.SetNoteGlideTime(value / 1000.);
         break;
