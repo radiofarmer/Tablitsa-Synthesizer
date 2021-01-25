@@ -23,5 +23,6 @@ packages/*
 
 Icon?
 .DS_Stor*
+*.RPP-bak
 
 dependencies/*

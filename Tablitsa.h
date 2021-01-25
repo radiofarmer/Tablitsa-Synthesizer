@@ -32,6 +32,7 @@ enum EParams
   kParamNoteGlideRate,
   kParamPortamentoMode,
   kParamMonophonic,
+  kParamLegato,
   kParamAmpEnvAttack,
   kParamAmpEnvDecay,
   kParamAmpEnvSustain,

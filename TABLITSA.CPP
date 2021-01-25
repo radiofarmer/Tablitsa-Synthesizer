@@ -370,25 +370,24 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
     pGraphics->AttachControl(new ModSliderControl(masterPanel.GetGridCell(1, 0, 2, 1).GetVPadded(-12.f).GetGridCell(2, 0, 3, 3).GetHPadded(-20.f), kNoParameter, "Trigger Random", DEFAULT_STYLE, false, EDirection::Horizontal), kCtrlTagRndDepth, "StaticMods");
     pGraphics->AttachControl(new IVGroupControl("Midi Mods", "StaticMods", 5.f, 15.f, 5.f, 12.f));
     // Polyphony and Portamento
-    pGraphics->AttachControl(new IVToggleControl(masterPanel.GetGridCell(3, 1, 8, 6).GetVPadded(-6.f), kParamPortamentoMode, "", DEFAULT_STYLE.WithShowLabel(false), "Rate", "Time"),
+    pGraphics->AttachControl(new IVToggleControl(masterPanel.GetGridCell(3, 1, 12, 6).GetVPadded(-2.f), kParamPortamentoMode, "", DEFAULT_STYLE.WithShowLabel(false), "Rate", "Time"),
       kNoTag, "Master")->SetAnimationEndActionFunction([pGraphics](IControl* pControl) {
         bool constantTime = pControl->GetValue() > 0.5;
         pGraphics->HideControl(kParamNoteGlideTime, !constantTime);
         pGraphics->HideControl(kParamNoteGlideRate, constantTime);
         pGraphics->SetAllControlsDirty();
         });
+    // Mono/Poly and Portamento Rate/Time switches
     pGraphics->AttachControl(new IVKnobControl(masterPanel.GetGridCell(1, 0, 4, 6).GetCentredInside(dialSize), kParamNoteGlideRate, "Glide Rate"), kNoTag, "Master")->Hide(true);
     pGraphics->AttachControl(new IVKnobControl(masterPanel.GetGridCell(1, 0, 4, 6).GetCentredInside(dialSize), kParamNoteGlideTime, "Glide Time"), kNoTag, "Master")->DisablePrompt(false);
-    pGraphics->AttachControl(new IVToggleControl(masterPanel.GetGridCell(2, 1, 8, 6).GetVPadded(-6.f), kParamMonophonic, "", DEFAULT_STYLE.WithShowLabel(false), "Poly", "Mono"));
-    // Mono/Poly and Portamento Rate/Tiime switches
-    // ...
-    //pGraphics->AttachControl(new IVToggleControl) ...
+    pGraphics->AttachControl(new IVToggleControl(masterPanel.GetGridCell(4, 1, 12, 6).GetVPadded(-2.f), kParamMonophonic, "", DEFAULT_STYLE.WithShowLabel(false), "Poly", "Mono"));
+    pGraphics->AttachControl(new IVToggleControl(masterPanel.GetGridCell(5, 1, 12, 6).GetVPadded(-2.f), kParamLegato, "", DEFAULT_STYLE.WithShowLabel(false), "Legato", "Retrigger"));
     pGraphics->AttachControl(new IVLEDMeterControl<2>(masterPanel.GetGridCell(0, 5, 2, 6)), kCtrlTagMeter, "Master");
 
     /* Waveform Modulation Panel */
     const IRECT lowerPanel = controls.GetReducedFromTop(controls.H() * 0.5f).GetPadded(-10.f).GetReducedFromRight(250.f);
     const IRECT oscModPanel = lowerPanel.GetGridCell(0, 0, 3, 3).GetPadded(-2.f);
-    pGraphics->AttachControl(new ICaptionControl(oscModPanel.GetGridCell(0, 0, 3, 3), kParamOscModulator), kNoTag, "OscMod")->SetActionFunction(
+    pGraphics->AttachControl(new ICaptionControl(oscModPanel.GetVPadded(-10.f).GetGridCell(0, 0, 3, 3).GetVShifted(10.f), kParamOscModulator), kNoTag, "OscMod")->SetActionFunction(
       [pGraphics](IControl* pControl) {
         bool phaseMod = pControl->GetValue() < 0.5;
         pGraphics->GetControlWithTag(kCtrlTagOscModFreq)->SetParamIdx(phaseMod ? kParamPhaseModFreq : kParamRingModFreq);
@@ -403,8 +402,8 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
         pOsc1Switch->SetDirty(true);
       }
       );
-    pGraphics->AttachControl(new IVToggleControl(oscModPanel.GetVPadded(-10.f).GetGridCell(1, 0, 3, 3).GetMidHPadded(35.f), kParamOsc1PM, "Osc1", DEFAULT_STYLE.WithShowLabel(false), "Osc 1 OFF", "Osc 1 ON"), kCtrlTagOsc1ModSwitch, "OscMod");
-    pGraphics->AttachControl(new IVToggleControl(oscModPanel.GetVPadded(-10.f).GetGridCell(2, 0, 3, 3).GetMidHPadded(35.f), kParamOsc2PM, "Osc1", DEFAULT_STYLE.WithShowLabel(false), "Osc 2 OFF", "Osc 2 ON"), kCtrlTagOsc2ModSwitch, "OscMod");
+    pGraphics->AttachControl(new IVToggleControl(oscModPanel.GetVPadded(-10.f).GetVPadded(-10.f).GetGridCell(1, 0, 3, 3).GetMidHPadded(35.f), kParamOsc1PM, "Osc1", DEFAULT_STYLE.WithShowLabel(false), "Osc 1 OFF", "Osc 1 ON"), kCtrlTagOsc1ModSwitch, "OscMod");
+    pGraphics->AttachControl(new IVToggleControl(oscModPanel.GetVPadded(-10.f).GetVPadded(-10.f).GetGridCell(2, 0, 3, 3).GetMidHPadded(35.f), kParamOsc2PM, "Osc1", DEFAULT_STYLE.WithShowLabel(false), "Osc 2 OFF", "Osc 2 ON"), kCtrlTagOsc2ModSwitch, "OscMod");
     pGraphics->AttachControl(new IVModKnobControl(oscModPanel.GetVPadded(-10.f).GetGridCell(0, 1, 1, 3).GetCentredInside(dialSize).GetCentredInside(dialSize), kParamPhaseModFreq, "Pitch"), kCtrlTagOscModFreq, "OscMod");
     pGraphics->AttachControl(new IVModKnobControl(oscModPanel.GetGridCell(0, 2, 1, 3).GetCentredInside(dialSize).GetCentredInside(dialSize), kParamPhaseModAmount, "Amount"), kCtrlTagOscModAmt, "OscMod");
     pGraphics->AttachControl(new IVGroupControl("Oscillator Modulation", "OscMod", 0.f, 10.f, 0.f, 0.f));
