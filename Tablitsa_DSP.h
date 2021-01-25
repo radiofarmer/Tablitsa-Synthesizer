@@ -114,6 +114,8 @@ public:
       mModulators.AddModulator(&mAmpEnv);
       mModulators.AddModulator(&mLFO1);
       mModulators.AddModulator(&mLFO2);
+      mAmpEnvPtr = &mAmpEnv;
+      mAmpEnv.Kill(true);
 
 //      mVParameterModulators.SetList(mVoiceModParams);
     }
@@ -145,12 +147,14 @@ public:
 
       if (isRetrigger)
       {
+        mMonoAmpEnv.Retrigger(level);
         mAmpEnv.Retrigger(level);
         mEnv1.Retrigger(1.); // Change this to make the envelope height dependent on velocity
         mEnv2.Retrigger(1.);
       }
       else
       {
+        mMonoAmpEnv.Start(level);
         mAmpEnv.Start(level);
         mEnv1.Start(1.);
         mEnv2.Start(1.);
@@ -159,6 +163,7 @@ public:
     
     void Release() override
     {
+      mMonoAmpEnv.Release();
       mAmpEnv.Release();
       mEnv1.Release();
       mEnv2.Release();
@@ -241,6 +246,7 @@ public:
       mEnv2.SetSampleRate(sampleRate);
       mLFO1.SetSampleRate(sampleRate);
       mLFO2.SetSampleRate(sampleRate);
+      mMonoAmpEnv.SetSampleRate(sampleRate);
       
       mVModulationsData.Resize(blockSize * kNumModulations);
       mVModulations.Empty();
@@ -363,6 +369,9 @@ public:
     FastLFO<T> mLFO2;
     ModulatorList<T, ADSREnvelope, FastLFO> mModulators;
 
+    static inline ADSREnvelope<T> mMonoAmpEnv;
+    ADSREnvelope<T>* mAmpEnvPtr;
+
     bool mLFO1Restart{ false };
     bool mLFO2Restart{ false };
     int mFilterUpdateFreq{ 2 };
@@ -430,6 +439,7 @@ public:
       mSynthVoices.push_back(new Voice(i));
       mSynth.AddVoice(mSynthVoices.at(i), 0);
     }
+
     // some MidiSynth API examples:
     // mSynth.SetKeyToPitchFn([](int k){return (k - 69.)/24.;}); // quarter-tone scale
     // mSynth.SetNoteGlideTime(0.5); // portamento
@@ -459,11 +469,12 @@ public:
   {
     mSampleRate = sampleRate;
     mSynth.SetSampleRateAndBlockSize(sampleRate, blockSize);
-    mSynth.Reset();
+    ResetAllVoices();
     mSynth.ForEachVoice([sampleRate](SynthVoice& voice) {
       for (auto f : dynamic_cast<TablitsaDSP::Voice&>(voice).mFilters)
         f->UpdateSampleRate(sampleRate);
       });
+    // Param Smoother list
     mModulationsData.Resize(blockSize * kNumModulations);
     mModulations.Empty();
     
@@ -471,6 +482,14 @@ public:
     {
       mModulations.Add(mModulationsData.Get() + static_cast<size_t>(blockSize) * i);
     }
+  }
+
+  void ResetAllVoices()
+  {
+    mSynth.Reset(); // Note: this sets all envelopes to the release stage, meaning all voices are technically active
+    mSynth.ForEachVoice([](SynthVoice& voice) {
+      dynamic_cast<TablitsaDSP::Voice&>(voice).mAmpEnv.Kill(true); // Set all amp envelopes to idle
+      });
   }
 
   void ProcessMidiMsg(const IMidiMsg& msg)
@@ -485,7 +504,7 @@ public:
 
   void UpdateOscillatorWavetable(int wtIdx, int oscIdx)
   {
-    mSynth.Reset();
+    ResetAllVoices();
     tableLoading[oscIdx] = true; // NB: this variable lets the PeriodicTable control know whether to display the selected element in the loading (faded) state or not
     WtFile wtFile{ mWavetables.at(wtIdx) };
     WavetableOscillator<T>::LoadNewTable(wtFile, oscIdx);
@@ -529,9 +548,6 @@ public:
     using EEnvStage = ADSREnvelope<sample>::EStage;
     
     switch (paramIdx) {
-      case kParamMonophonic:
-        mSynth.SetPolyMode(value > 0.5 ? VoiceAllocator::EPolyMode::kPolyModeMono : VoiceAllocator::EPolyMode::kPolyModePoly);
-      break;
       case kParamNoteGlideTime:
         mSynth.SetNoteGlideTime(value / 1000.);
         break;
@@ -541,6 +557,13 @@ public:
       case kParamPortamentoMode:
         mConstantGlideTime = value > 0.5;
         break;
+      case kParamMonophonic:
+      {
+        mMono = value > 0.5;
+        ResetAllVoices();
+        mSynth.SetPolyMode(value > 0.5 ? VoiceAllocator::EPolyMode::kPolyModeMono : VoiceAllocator::EPolyMode::kPolyModePoly);
+        break;
+      }
       case kParamGain:
         mParamsToSmooth[kModGainSmoother] = (T) value / 100.;
         break;
@@ -584,6 +607,7 @@ public:
         mSynth.ForEachVoice([stage, value](SynthVoice& voice) {
           dynamic_cast<TablitsaDSP::Voice&>(voice).mEnv2.SetStageTime(stage, value);
           });
+        Voice::mMonoAmpEnv.SetStageTime(stage, value);
         break;
       }
       case kParamAmpEnvSustain:
@@ -593,6 +617,7 @@ public:
       case kParamAmpEnvDecay:
       case kParamAmpEnvRelease:
       {
+        // Polyphonic envelopes (owned by voices)
         EEnvStage stage = static_cast<EEnvStage>(EEnvStage::kAttack + (paramIdx - kParamAmpEnvAttack));
         mSynth.ForEachVoice([stage, value](SynthVoice& voice) {
           dynamic_cast<TablitsaDSP::Voice&>(voice).mAmpEnv.SetStageTime(stage, value);
@@ -1096,10 +1121,10 @@ public:
   WDL_PtrList<T> mModulations; // Ptrlist for global modulations
   LogParamSmooth<T, kNumModulations> mParamSmoother;
   sample mParamsToSmooth[kNumModulations];
-  LFO<T> mLFO;
   std::vector<std::string> mWavetables{ ELEMENT_NAMES };
   std::vector<Voice*> mSynthVoices;
 
+  static inline bool mMono{ false };
   // Portamento Parameters
   bool mConstantGlideTime{ true };
   double mGlideRateScalar{ 1. }; // Semitones per second

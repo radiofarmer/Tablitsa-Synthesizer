@@ -658,7 +658,7 @@ public:
   }
 
   //todo rewrite this
-  inline T Process()
+  inline T Process() 
   {
     T output = 0.;
     ProcessBlock(&output, 1);
@@ -681,7 +681,7 @@ public:
     }
   }
 
-  inline std::array<T, OUTPUT_SIZE> ProcessMultiple(double freqCPS) override
+  inline std::array<T, OUTPUT_SIZE> ProcessMultiple(double freqCPS)
   {
     AdjustWavetable(freqCPS);
 
