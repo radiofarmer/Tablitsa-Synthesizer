@@ -64,38 +64,53 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
   GetParam(kParamWavetable1PitchLFO1)->InitDouble("WT1 Pitch LFO1 Mod", 0., -1., 1., 0.01);
   GetParam(kParamWavetable1PitchLFO2)->InitDouble("WT1 Pitch LFO2 Mod", 0., -1., 1., 0.01);
   GetParam(kParamWavetable1PitchSeq)->InitDouble("WT1 Pitch Seq Mod", 0., -1., 1., 0.01);
+  GetParam(kParamWavetable1PitchVel)->InitDouble("WT1 Pitch Vel Mod", 0., -1., 1., 0.01);
+  GetParam(kParamWavetable1PitchKTk)->InitDouble("WT1 Pitch LFO2 Mod", 0., -1., 1., 0.01);
+  GetParam(kParamWavetable1PitchRnd)->InitDouble("WT1 Pitch Seq Mod", 0., -1., 1., 0.01);
   // Wavetable 1 Position
   GetParam(kParamWavetable1Pos)->InitDouble("WT1 Pos", 0., 0., 1., 0.01);
   GetParam(kParamWavetable1PosEnv1)->InitDouble("WT1 Pos Env1 Mod", 0., -1., 1., 0.01);
-  GetParam(kParamWavetable1PosEnv2)->InitDouble("WT1 Pos Env1 Mod", 0., -1., 1., 0.01);
-  GetParam(kParamWavetable1PosAmpEnv)->InitDouble("WT1 Pos Env1 Mod", 0., -1., 1., 0.01);
-  GetParam(kParamWavetable1PosLFO1)->InitDouble("WT1 Pos Env1 Mod", 0., -1., 1., 0.01);
-  GetParam(kParamWavetable1PosLFO2)->InitDouble("WT1 Pos Env1 Mod", 0., -1., 1., 0.01);
+  GetParam(kParamWavetable1PosEnv2)->InitDouble("WT1 Pos Env2 Mod", 0., -1., 1., 0.01);
+  GetParam(kParamWavetable1PosAmpEnv)->InitDouble("WT1 Pos AmpEnv Mod", 0., -1., 1., 0.01);
+  GetParam(kParamWavetable1PosLFO1)->InitDouble("WT1 Pos LFO1 Mod", 0., -1., 1., 0.01);
+  GetParam(kParamWavetable1PosLFO2)->InitDouble("WT1 Pos L Mod", 0., -1., 1., 0.01);
   GetParam(kParamWavetable1PosSeq)->InitDouble("WT1 Pos Seq Mod", 0., -1., 1., 0.01);
+  GetParam(kParamWavetable1PosVel)->InitDouble("WT1 Pos Vel Mod", 0., -1., 1., 0.01);
+  GetParam(kParamWavetable1PosKTk)->InitDouble("WT1 Pos KTk Mod", 0., -1., 1., 0.01);
+  GetParam(kParamWavetable1PosRnd)->InitDouble("WT1 Pos Rnd Mod", 0., -1., 1., 0.01);
   // Wavetable 1 Bend
   GetParam(kParamWavetable1Bend)->InitDouble("WT1 Bend", 0., -1., 1., 0.01);
   GetParam(kParamWavetable1BendEnv1)->InitDouble("WT1 Bend Env1 Mod", 0., -1., 1., 0.01);
-  GetParam(kParamWavetable1BendEnv2)->InitDouble("WT1 Pos Env2 Mod", 0., -1., 1., 0.01);
-  GetParam(kParamWavetable1BendAmpEnv)->InitDouble("WT1 Pos AmpEnv Mod", 0., -1., 1., 0.01);
-  GetParam(kParamWavetable1BendLFO1)->InitDouble("WT1 Pos LFO1 Mod", 0., -1., 1., 0.01);
-  GetParam(kParamWavetable1BendLFO2)->InitDouble("WT1 Pos LFO2 Mod", 0., -1., 1., 0.01);
+  GetParam(kParamWavetable1BendEnv2)->InitDouble("WT1 Bend Env2 Mod", 0., -1., 1., 0.01);
+  GetParam(kParamWavetable1BendAmpEnv)->InitDouble("WT1 Bend AmpEnv Mod", 0., -1., 1., 0.01);
+  GetParam(kParamWavetable1BendLFO1)->InitDouble("WT1 Bend LFO1 Mod", 0., -1., 1., 0.01);
+  GetParam(kParamWavetable1BendLFO2)->InitDouble("WT1 Bend LFO2 Mod", 0., -1., 1., 0.01);
   GetParam(kParamWavetable1BendSeq)->InitDouble("WT1 Bend Seq Mod", 0., -1., 1., 0.01);
+  GetParam(kParamWavetable1BendVel)->InitDouble("WT1 Bend Vel Mod", 0., -1., 1., 0.01);
+  GetParam(kParamWavetable1BendKTk)->InitDouble("WT1 Bend KTk Mod", 0., -1., 1., 0.01);
+  GetParam(kParamWavetable1BendRnd)->InitDouble("WT1 Bend Rnd Mod", 0., -1., 1., 0.01);
   // Wavetable 1 Sub
   GetParam(kParamWavetable1Sub)->InitDouble("WT1 Sub", 0., 0., 1., 0.01);
   GetParam(kParamWavetable1SubEnv1)->InitDouble("WT1 Sub Env1 Mod", 0., -1., 1., 0.01);
-  GetParam(kParamWavetable1SubEnv2)->InitDouble("WT1 Pos Env2 Mod", 0., -1., 1., 0.01);
-  GetParam(kParamWavetable1SubAmpEnv)->InitDouble("WT1 Pos SubEnv Mod", 0., -1., 1., 0.01);
-  GetParam(kParamWavetable1SubLFO1)->InitDouble("WT1 Pos LFO1 Mod", 0., -1., 1., 0.01);
-  GetParam(kParamWavetable1SubLFO2)->InitDouble("WT1 Pos LFO2 Mod", 0., -1., 1., 0.01);
+  GetParam(kParamWavetable1SubEnv2)->InitDouble("WT1 Sub Env2 Mod", 0., -1., 1., 0.01);
+  GetParam(kParamWavetable1SubAmpEnv)->InitDouble("WT1 Sub SubEnv Mod", 0., -1., 1., 0.01);
+  GetParam(kParamWavetable1SubLFO1)->InitDouble("WT1 Sub LFO1 Mod", 0., -1., 1., 0.01);
+  GetParam(kParamWavetable1SubLFO2)->InitDouble("WT1 Sub LFO2 Mod", 0., -1., 1., 0.01);
   GetParam(kParamWavetable1SubSeq)->InitDouble("WT1 Sub Seq Mod", 0., -1., 1., 0.01);
+  GetParam(kParamWavetable1SubVel)->InitDouble("WT1 Sub Vel Mod", 0., -1., 1., 0.01);
+  GetParam(kParamWavetable1SubKTk)->InitDouble("WT1 Sub KTk Mod", 0., -1., 1., 0.01);
+  GetParam(kParamWavetable1SubRnd)->InitDouble("WT1 Sub Rnd Mod", 0., -1., 1., 0.01);
   // Wavetable 1 Amp
   GetParam(kParamWavetable1Amp)->InitDouble("WT1 Amp", 0.5, 0., 1., 0.01);
   GetParam(kParamWavetable1AmpEnv1)->InitDouble("WT1 Amp Env1 Mod", 0., -1., 1., 0.01);
-  GetParam(kParamWavetable1AmpEnv2)->InitDouble("WT1 Pos Env2 Mod", 0., -1., 1., 0.01);
-  GetParam(kParamWavetable1AmpAmpEnv)->InitDouble("WT1 Pos AmpEnv Mod", 0., -1., 1., 0.01);
-  GetParam(kParamWavetable1AmpLFO1)->InitDouble("WT1 Pos LFO1 Mod", 0., -1., 1., 0.01);
-  GetParam(kParamWavetable1AmpLFO2)->InitDouble("WT1 Pos LFO2 Mod", 0., -1., 1., 0.01);
+  GetParam(kParamWavetable1AmpEnv2)->InitDouble("WT1 Amp Env2 Mod", 0., -1., 1., 0.01);
+  GetParam(kParamWavetable1AmpAmpEnv)->InitDouble("WT1 Amp AmpEnv Mod", 0., -1., 1., 0.01);
+  GetParam(kParamWavetable1AmpLFO1)->InitDouble("WT1 Amp LFO1 Mod", 0., -1., 1., 0.01);
+  GetParam(kParamWavetable1AmpLFO2)->InitDouble("WT1 Amp LFO2 Mod", 0., -1., 1., 0.01);
   GetParam(kParamWavetable1AmpSeq)->InitDouble("WT1 Amp Seq Mod", 0., -1., 1., 0.01);
+  GetParam(kParamWavetable1AmpVel)->InitDouble("WT1 Amp Vel Mod", 0., -1., 1., 0.01);
+  GetParam(kParamWavetable1AmpKTk)->InitDouble("WT1 Amp KTk Mod", 0., -1., 1., 0.01);
+  GetParam(kParamWavetable1AmpRnd)->InitDouble("WT1 Amp Rnd Mod", 0., -1., 1., 0.01);
 
   // Wavetable 2 Pitch
   GetParam(kParamWavetable2Pitch)->InitDouble("WT2 Pitch", 0., -24., 24., 0.1);
@@ -105,14 +120,20 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
   GetParam(kParamWavetable2PitchLFO1)->InitDouble("WT2 Pitch LFO1 Mod", 0., -1., 1., 0.01);
   GetParam(kParamWavetable2PitchLFO2)->InitDouble("WT2 Pitch LFO2 Mod", 0., -1., 1., 0.01);
   GetParam(kParamWavetable2PitchSeq)->InitDouble("WT2 Pitch Seq Mod", 0., -1., 1., 0.01);
+  GetParam(kParamWavetable2PitchVel)->InitDouble("WT2 Pitch Vel Mod", 0., -1., 1., 0.01);
+  GetParam(kParamWavetable2PitchKTk)->InitDouble("WT2 Pitch LFO2 Mod", 0., -1., 1., 0.01);
+  GetParam(kParamWavetable2PitchRnd)->InitDouble("WT2 Pitch Seq Mod", 0., -1., 1., 0.01);
   // Wavetable 2 Position
   GetParam(kParamWavetable2Pos)->InitDouble("WT2 Pos", 0., 0., 1., 0.01);
   GetParam(kParamWavetable2PosEnv1)->InitDouble("WT2 Pos Env1 Mod", 0., -1., 1., 0.01);
   GetParam(kParamWavetable2PosEnv2)->InitDouble("WT2 Pos Env2 Mod", 0., -1., 1., 0.01);
   GetParam(kParamWavetable2PosAmpEnv)->InitDouble("WT2 Pos AmpEnv Mod", 0., -1., 1., 0.01);
   GetParam(kParamWavetable2PosLFO1)->InitDouble("WT2 Pos LFO1 Mod", 0., -1., 1., 0.01);
-  GetParam(kParamWavetable2PosLFO2)->InitDouble("WT2 Pos LFO2 Mod", 0., -1., 1., 0.01);
+  GetParam(kParamWavetable2PosLFO2)->InitDouble("WT2 Pos L Mod", 0., -1., 1., 0.01);
   GetParam(kParamWavetable2PosSeq)->InitDouble("WT2 Pos Seq Mod", 0., -1., 1., 0.01);
+  GetParam(kParamWavetable2PosVel)->InitDouble("WT2 Pos Vel Mod", 0., -1., 1., 0.01);
+  GetParam(kParamWavetable2PosKTk)->InitDouble("WT2 Pos KTk Mod", 0., -1., 1., 0.01);
+  GetParam(kParamWavetable2PosRnd)->InitDouble("WT2 Pos Rnd Mod", 0., -1., 1., 0.01);
   // Wavetable 2 Bend
   GetParam(kParamWavetable2Bend)->InitDouble("WT2 Bend", 0., -1., 1., 0.01);
   GetParam(kParamWavetable2BendEnv1)->InitDouble("WT2 Bend Env1 Mod", 0., -1., 1., 0.01);
@@ -121,6 +142,9 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
   GetParam(kParamWavetable2BendLFO1)->InitDouble("WT2 Bend LFO1 Mod", 0., -1., 1., 0.01);
   GetParam(kParamWavetable2BendLFO2)->InitDouble("WT2 Bend LFO2 Mod", 0., -1., 1., 0.01);
   GetParam(kParamWavetable2BendSeq)->InitDouble("WT2 Bend Seq Mod", 0., -1., 1., 0.01);
+  GetParam(kParamWavetable2BendVel)->InitDouble("WT2 Bend Vel Mod", 0., -1., 1., 0.01);
+  GetParam(kParamWavetable2BendKTk)->InitDouble("WT2 Bend KTk Mod", 0., -1., 1., 0.01);
+  GetParam(kParamWavetable2BendRnd)->InitDouble("WT2 Bend Rnd Mod", 0., -1., 1., 0.01);
   // Wavetable 2 Sub
   GetParam(kParamWavetable2Sub)->InitDouble("WT2 Sub", 0., 0., 1., 0.01);
   GetParam(kParamWavetable2SubEnv1)->InitDouble("WT2 Sub Env1 Mod", 0., -1., 1., 0.01);
@@ -129,6 +153,9 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
   GetParam(kParamWavetable2SubLFO1)->InitDouble("WT2 Sub LFO1 Mod", 0., -1., 1., 0.01);
   GetParam(kParamWavetable2SubLFO2)->InitDouble("WT2 Sub LFO2 Mod", 0., -1., 1., 0.01);
   GetParam(kParamWavetable2SubSeq)->InitDouble("WT2 Sub Seq Mod", 0., -1., 1., 0.01);
+  GetParam(kParamWavetable2SubVel)->InitDouble("WT2 Sub Vel Mod", 0., -1., 1., 0.01);
+  GetParam(kParamWavetable2SubKTk)->InitDouble("WT2 Sub KTk Mod", 0., -1., 1., 0.01);
+  GetParam(kParamWavetable2SubRnd)->InitDouble("WT2 Sub Rnd Mod", 0., -1., 1., 0.01);
   // Wavetable 2 Amp
   GetParam(kParamWavetable2Amp)->InitDouble("WT2 Amp", 0.5, 0., 1., 0.01);
   GetParam(kParamWavetable2AmpEnv1)->InitDouble("WT2 Amp Env1 Mod", 0., -1., 1., 0.01);
@@ -137,6 +164,9 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
   GetParam(kParamWavetable2AmpLFO1)->InitDouble("WT2 Amp LFO1 Mod", 0., -1., 1., 0.01);
   GetParam(kParamWavetable2AmpLFO2)->InitDouble("WT2 Amp LFO2 Mod", 0., -1., 1., 0.01);
   GetParam(kParamWavetable2AmpSeq)->InitDouble("WT2 Amp Seq Mod", 0., -1., 1., 0.01);
+  GetParam(kParamWavetable2AmpVel)->InitDouble("WT2 Amp Vel Mod", 0., -1., 1., 0.01);
+  GetParam(kParamWavetable2AmpKTk)->InitDouble("WT2 Amp KTk Mod", 0., -1., 1., 0.01);
+  GetParam(kParamWavetable2AmpRnd)->InitDouble("WT2 Amp Rnd Mod", 0., -1., 1., 0.01);
 
   // Modulation Oscillator
   GetParam(kParamOscModulator)->InitEnum("Oscillator Modulation Mode", 0, { "Phase", "Ring" });
@@ -152,14 +182,20 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
   GetParam(kParamPhaseModFreqLFO1)->InitDouble("Phase Mod Frequency LFO1 Mod", 0., -1., 1., 0.01);
   GetParam(kParamPhaseModFreqLFO2)->InitDouble("Phase Mod Frequency LFO2 Mod", 0., -1., 1., 0.01);
   GetParam(kParamPhaseModFreqSeq)->InitDouble("Phase Mod Frequency Seq Mod", 0., -1., 1., 0.01);
+  GetParam(kParamPhaseModFreqVel)->InitDouble("Phase Mod Frequency Vel Mod", 0., -1., 1., 0.01);
+  GetParam(kParamPhaseModFreqKTk)->InitDouble("Phase Mod Frequency KTk Mod", 0., -1., 1., 0.01);
+  GetParam(kParamPhaseModFreqRnd)->InitDouble("Phase Mod Frequency Rnd Mod", 0., -1., 1., 0.01);
   // Phase Mod Amount
   GetParam(kParamPhaseModAmount)->InitPercentage("Phase Modulator Amount", 25., 0., 100., 1.);
   GetParam(kParamPhaseModAmountEnv1)->InitDouble("Phase Mod Depth Env1 Mod", 0., -1., 1., 0.01);
-  GetParam(kParamPhaseModFreqEnv2)->InitDouble("Phase Mod Depth Env2 Mod", 0., -1., 1., 0.01);
-  GetParam(kParamPhaseModFreqAmpEnv)->InitDouble("Phase Mod Depth AmpEnv Mod", 0., -1., 1., 0.01);
-  GetParam(kParamPhaseModFreqLFO1)->InitDouble("Phase Mod Depth LFO1 Mod", 0., -1., 1., 0.01);
-  GetParam(kParamPhaseModFreqLFO2)->InitDouble("Phase Mod Depth LFO2 Mod", 0., -1., 1., 0.01);
-  GetParam(kParamPhaseModFreqSeq)->InitDouble("Phase Mod Depth Seq Mod", 0., -1., 1., 0.01);
+  GetParam(kParamPhaseModAmountEnv2)->InitDouble("Phase Mod Depth Env2 Mod", 0., -1., 1., 0.01);
+  GetParam(kParamPhaseModAmountAmpEnv)->InitDouble("Phase Mod Depth AmpEnv Mod", 0., -1., 1., 0.01);
+  GetParam(kParamPhaseModAmountLFO1)->InitDouble("Phase Mod Depth LFO1 Mod", 0., -1., 1., 0.01);
+  GetParam(kParamPhaseModAmountLFO2)->InitDouble("Phase Mod Depth LFO2 Mod", 0., -1., 1., 0.01);
+  GetParam(kParamPhaseModAmountSeq)->InitDouble("Phase Mod Depth Seq Mod", 0., -1., 1., 0.01);
+  GetParam(kParamPhaseModAmountVel)->InitDouble("Phase Mod Depth Vel Mod", 0., -1., 1., 0.01);
+  GetParam(kParamPhaseModAmountKTk)->InitDouble("Phase Mod Depth KTk Mod", 0., -1., 1., 0.01);
+  GetParam(kParamPhaseModAmountRnd)->InitDouble("Phase Mod Depth Rnd Mod", 0., -1., 1., 0.01);
   // Ring Mod Freq
   GetParam(kParamRingModFreq)->InitDouble("Ring Modulator Freq", 0., -24., 24., 0.01);
   GetParam(kParamRingModFreqEnv1)->InitDouble("Ring Mod Frequency Env1 Mod", 0., -1., 1., 0.01);
@@ -168,15 +204,21 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
   GetParam(kParamRingModFreqLFO1)->InitDouble("Ring Mod Frequency LFO1 Mod", 0., -1., 1., 0.01);
   GetParam(kParamRingModFreqLFO2)->InitDouble("Ring Mod Frequency LFO2 Mod", 0., -1., 1., 0.01);
   GetParam(kParamRingModFreqSeq)->InitDouble("Ring Mod Frequency Seq Mod", 0., -1., 1., 0.01);
+  GetParam(kParamRingModFreqVel)->InitDouble("Ring Mod Frequency Vel Mod", 0., -1., 1., 0.01);
+  GetParam(kParamRingModFreqKTk)->InitDouble("Ring Mod Frequency KTk Mod", 0., -1., 1., 0.01);
+  GetParam(kParamRingModFreqRnd)->InitDouble("Ring Mod Frequency Rnd Mod", 0., -1., 1., 0.01);
   // Ring Mod Amount
   GetParam(kParamRingModAmount)->InitPercentage("Ring Modulator Amount", 25., 0., 100., 1.);
   GetParam(kParamRingModAmount)->InitPercentage("Ring Modulator Amount", 25., 0., 100., 1.);
   GetParam(kParamRingModAmountEnv1)->InitDouble("Ring Mod Depth Env1 Mod", 0., -1., 1., 0.01);
-  GetParam(kParamRingModFreqEnv2)->InitDouble("Ring Mod Depth Env2 Mod", 0., -1., 1., 0.01);
-  GetParam(kParamRingModFreqAmpEnv)->InitDouble("Ring Mod Depth AmpEnv Mod", 0., -1., 1., 0.01);
-  GetParam(kParamRingModFreqLFO1)->InitDouble("Ring Mod Depth LFO1 Mod", 0., -1., 1., 0.01);
-  GetParam(kParamRingModFreqLFO2)->InitDouble("Ring Mod Depth LFO2 Mod", 0., -1., 1., 0.01);
-  GetParam(kParamRingModFreqSeq)->InitDouble("Ring Mod Depth Seq Mod", 0., -1., 1., 0.01);
+  GetParam(kParamRingModAmountEnv2)->InitDouble("Ring Mod Depth Env2 Mod", 0., -1., 1., 0.01);
+  GetParam(kParamRingModAmountAmpEnv)->InitDouble("Ring Mod Depth AmpEnv Mod", 0., -1., 1., 0.01);
+  GetParam(kParamRingModAmountLFO1)->InitDouble("Ring Mod Depth LFO1 Mod", 0., -1., 1., 0.01);
+  GetParam(kParamRingModAmountLFO2)->InitDouble("Ring Mod Depth LFO2 Mod", 0., -1., 1., 0.01);
+  GetParam(kParamRingModAmountSeq)->InitDouble("Ring Mod Depth Seq Mod", 0., -1., 1., 0.01);
+  GetParam(kParamRingModAmountVel)->InitDouble("Ring Mod Depth Vel Mod", 0., -1., 1., 0.01);
+  GetParam(kParamRingModAmountKTk)->InitDouble("Ring Mod Depth KTk Mod", 0., -1., 1., 0.01);
+  GetParam(kParamRingModAmountRnd)->InitDouble("Ring Mod Depth Rnd Mod", 0., -1., 1., 0.01);
 
   // Filter 1
   GetParam(kParamFilter1Type)->InitEnum("Filter 1 Type", kNoFilter, { FILTER_TYPE_LIST });
@@ -190,6 +232,9 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
   GetParam(kParamFilter1CutoffLFO1)->InitDouble("Filter 1 Cutoff LFO1 Depth", 0., -1., 1., 0.01, "", IParam::kFlagsNone, "Mod Depth", ModShapePowCurve(3.));
   GetParam(kParamFilter1CutoffLFO2)->InitDouble("Filter 1 Cutoff LFO2 Depth", 0., -1., 1., 0.01, "", IParam::kFlagsNone, "Mod Depth", ModShapePowCurve(3.));
   GetParam(kParamFilter1CutoffSeq)->InitDouble("Filter 1 Cutoff Seq Depth", 0., -1., 1., 0.01, "", IParam::kFlagsNone, "Mod Depth", ModShapePowCurve(3.));
+  GetParam(kParamFilter1CutoffVel)->InitDouble("Filter 1 Cutoff LFO1 Depth", 0., -1., 1., 0.01, "", IParam::kFlagsNone, "Mod Depth", ModShapePowCurve(3.));
+  GetParam(kParamFilter1CutoffKTk)->InitDouble("Filter 1 Cutoff LFO2 Depth", 0., -1., 1., 0.01, "", IParam::kFlagsNone, "Mod Depth", ModShapePowCurve(3.));
+  GetParam(kParamFilter1CutoffRnd)->InitDouble("Filter 1 Cutoff Seq Depth", 0., -1., 1., 0.01, "", IParam::kFlagsNone, "Mod Depth", ModShapePowCurve(3.));
   GetParam(kParamFilter1Resonance)->InitPercentage("Filter 1 Resonance", 0.1, 0., 100., 1);
   GetParam(kParamFilter1ResonanceEnv1)->InitDouble("Filter 1 Resonance Env1 Depth", 0., -1., 1., 0.01);
   GetParam(kParamFilter1ResonanceEnv2)->InitDouble("Filter 1 Resonance Env2 Depth", 0., -1., 1., 0.01);
@@ -197,6 +242,9 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
   GetParam(kParamFilter1ResonanceLFO1)->InitDouble("Filter 1 Resonance LFO1 Depth", 0., -1., 1., 0.01);
   GetParam(kParamFilter1ResonanceLFO2)->InitDouble("Filter 1 Resonance LFO2 Depth", 0., -1., 1., 0.01);
   GetParam(kParamFilter1ResonanceSeq)->InitDouble("Filter 1 Resonance Seq Depth", 0., -1., 1., 0.01);
+  GetParam(kParamFilter1ResonanceVel)->InitDouble("Filter 1 Resonance LFO1 Depth", 0., -1., 1., 0.01);
+  GetParam(kParamFilter1ResonanceKTk)->InitDouble("Filter 1 Resonance LFO2 Depth", 0., -1., 1., 0.01);
+  GetParam(kParamFilter1ResonanceRnd)->InitDouble("Filter 1 Resonance Seq Depth", 0., -1., 1., 0.01);
   GetParam(kParamFilter1Drive)->InitPercentage("Filter 1 Drive", 0.1, 0., 100., 1);
   GetParam(kParamFilter1DriveEnv1)->InitDouble("Filter 1 Drive Env1 Depth", 0., -1., 1., 0.01);
   GetParam(kParamFilter1DriveEnv2)->InitDouble("Filter 1 Drive Env2 Depth", 0., -1., 1., 0.01);
@@ -204,6 +252,9 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
   GetParam(kParamFilter1DriveLFO1)->InitDouble("Filter 1 Drive LFO1 Depth", 0., -1., 1., 0.01);
   GetParam(kParamFilter1DriveLFO2)->InitDouble("Filter 1 Drive LFO2 Depth", 0., -1., 1., 0.01);
   GetParam(kParamFilter1DriveSeq)->InitDouble("Filter 1 Drive Seq Depth", 0., -1., 1., 0.01);
+  GetParam(kParamFilter1DriveVel)->InitDouble("Filter 1 Drive LFO1 Depth", 0., -1., 1., 0.01);
+  GetParam(kParamFilter1DriveKTk)->InitDouble("Filter 1 Drive LFO2 Depth", 0., -1., 1., 0.01);
+  GetParam(kParamFilter1DriveRnd)->InitDouble("Filter 1 Drive Seq Depth", 0., -1., 1., 0.01);
   // Comb-specific parameters with different ranges (the modulation parameters are common between all filter types, as these always between -1 and 1)
   GetParam(kParamFilter1FF)->InitPercentage("Filter 1 FF");
   GetParam(kParamFilter1FB)->InitPercentage("Filter 1 FB");
@@ -221,6 +272,9 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
   GetParam(kParamFilter2CutoffLFO1)->InitDouble("Filter 2 Cutoff LFO1 Depth", 0., -1., 1., 0.01, "", IParam::kFlagsNone, "Mod Depth", ModShapePowCurve(3.));
   GetParam(kParamFilter2CutoffLFO2)->InitDouble("Filter 2 Cutoff LFO2 Depth", 0., -1., 1., 0.01, "", IParam::kFlagsNone, "Mod Depth", ModShapePowCurve(3.));
   GetParam(kParamFilter2CutoffSeq)->InitDouble("Filter 2 Cutoff Seq Depth", 0., -1., 1., 0.01, "", IParam::kFlagsNone, "Mod Depth", ModShapePowCurve(3.));
+  GetParam(kParamFilter2CutoffVel)->InitDouble("Filter 2 Cutoff LFO1 Depth", 0., -1., 1., 0.01, "", IParam::kFlagsNone, "Mod Depth", ModShapePowCurve(3.));
+  GetParam(kParamFilter2CutoffKTk)->InitDouble("Filter 2 Cutoff LFO2 Depth", 0., -1., 1., 0.01, "", IParam::kFlagsNone, "Mod Depth", ModShapePowCurve(3.));
+  GetParam(kParamFilter2CutoffRnd)->InitDouble("Filter 2 Cutoff Seq Depth", 0., -1., 1., 0.01, "", IParam::kFlagsNone, "Mod Depth", ModShapePowCurve(3.));
   GetParam(kParamFilter2Resonance)->InitPercentage("Filter 2 Resonance", 0.1, 0., 100., 1);
   GetParam(kParamFilter2ResonanceEnv1)->InitDouble("Filter 2 Resonance Env1 Depth", 0., -1., 1., 0.01);
   GetParam(kParamFilter2ResonanceEnv2)->InitDouble("Filter 2 Resonance Env2 Depth", 0., -1., 1., 0.01);
@@ -228,6 +282,9 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
   GetParam(kParamFilter2ResonanceLFO1)->InitDouble("Filter 2 Resonance LFO1 Depth", 0., -1., 1., 0.01);
   GetParam(kParamFilter2ResonanceLFO2)->InitDouble("Filter 2 Resonance LFO2 Depth", 0., -1., 1., 0.01);
   GetParam(kParamFilter2ResonanceSeq)->InitDouble("Filter 2 Resonance Seq Depth", 0., -1., 1., 0.01);
+  GetParam(kParamFilter2ResonanceVel)->InitDouble("Filter 2 Resonance LFO1 Depth", 0., -1., 1., 0.01);
+  GetParam(kParamFilter2ResonanceKTk)->InitDouble("Filter 2 Resonance LFO2 Depth", 0., -1., 1., 0.01);
+  GetParam(kParamFilter2ResonanceRnd)->InitDouble("Filter 2 Resonance Seq Depth", 0., -1., 1., 0.01);
   GetParam(kParamFilter2Drive)->InitPercentage("Filter 2 Drive", 0.1, 0., 100., 1);
   GetParam(kParamFilter2DriveEnv1)->InitDouble("Filter 2 Drive Env1 Depth", 0., -1., 1., 0.01);
   GetParam(kParamFilter2DriveEnv2)->InitDouble("Filter 2 Drive Env2 Depth", 0., -1., 1., 0.01);
@@ -235,6 +292,9 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
   GetParam(kParamFilter2DriveLFO1)->InitDouble("Filter 2 Drive LFO1 Depth", 0., -1., 1., 0.01);
   GetParam(kParamFilter2DriveLFO2)->InitDouble("Filter 2 Drive LFO2 Depth", 0., -1., 1., 0.01);
   GetParam(kParamFilter2DriveSeq)->InitDouble("Filter 2 Drive Seq Depth", 0., -1., 1., 0.01);
+  GetParam(kParamFilter2DriveVel)->InitDouble("Filter 2 Drive LFO1 Depth", 0., -1., 1., 0.01);
+  GetParam(kParamFilter2DriveKTk)->InitDouble("Filter 2 Drive LFO2 Depth", 0., -1., 1., 0.01);
+  GetParam(kParamFilter2DriveRnd)->InitDouble("Filter 2 Drive Seq Depth", 0., -1., 1., 0.01);
   // Comb-specific parameters with different ranges (the modulation parameters are common between all filter types, as these always between -1 and 1)
   GetParam(kParamFilter2FF)->InitPercentage("Filter 2 FF");
   GetParam(kParamFilter2FB)->InitPercentage("Filter 2 FB");
@@ -305,7 +365,10 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
     pGraphics->AttachControl(new IVKnobControl(masterPanel.GetGridCell(0, 0, 4, 6).GetCentredInside(dialSize), kParamGain, "Gain"), kNoTag, "Master");
     pGraphics->AttachControl(new IVModKnobControl(masterPanel.GetGridCell(0, 1, 4, 6).GetCentredInside(dialSize), kParamPan, "Pan"), kNoTag, "Master");
     // Static modulators
-    
+    pGraphics->AttachControl(new ModSliderControl(masterPanel.GetGridCell(1, 0, 2, 1).GetVPadded(-12.f).GetGridCell(0, 0, 3, 3).GetHPadded(-20.f), kNoParameter, "Velocity", DEFAULT_STYLE, false, EDirection::Horizontal), kCtrlTagVelDepth, "StaticMods");
+    pGraphics->AttachControl(new ModSliderControl(masterPanel.GetGridCell(1, 0, 2, 1).GetVPadded(-12.f).GetGridCell(1, 0, 3, 3).GetHPadded(-20.f), kNoParameter, "Keytrack", DEFAULT_STYLE, false, EDirection::Horizontal), kCtrlTagKTkDepth, "StaticMods");
+    pGraphics->AttachControl(new ModSliderControl(masterPanel.GetGridCell(1, 0, 2, 1).GetVPadded(-12.f).GetGridCell(2, 0, 3, 3).GetHPadded(-20.f), kNoParameter, "Trigger Random", DEFAULT_STYLE, false, EDirection::Horizontal), kCtrlTagRndDepth, "StaticMods");
+    pGraphics->AttachControl(new IVGroupControl("Midi Mods", "StaticMods", 5.f, 15.f, 5.f, 12.f));
     // Polyphony and Portamento
     pGraphics->AttachControl(new IVKnobControl(masterPanel.GetGridCell(1, 0, 4, 6).GetCentredInside(dialSize), kParamNoteGlideTime, "Glide"), kNoTag, "Master");
     pGraphics->AttachControl(new IVToggleControl(masterPanel.GetGridCell(1, 1, 4, 6).GetVPadded(-6.f), kParamPortamentoMode, "", DEFAULT_STYLE.WithShowLabel(false), "Rate", "Time"),

@@ -56,6 +56,10 @@ public:
       GetUI()->GetControlWithTag(kCtrlTagAmpEnvDepth)->SetParamIdx(kNoParameter);
       GetUI()->GetControlWithTag(kCtrlTagLFO1Depth)->SetParamIdx(kNoParameter);
       GetUI()->GetControlWithTag(kCtrlTagLFO2Depth)->SetParamIdx(kNoParameter);
+      GetUI()->GetControlWithTag(kCtrlTagSequencerDepth)->SetParamIdx(kNoParameter);
+      GetUI()->GetControlWithTag(kCtrlTagVelDepth)->SetParamIdx(kNoParameter);
+      GetUI()->GetControlWithTag(kCtrlTagKTkDepth)->SetParamIdx(kNoParameter);
+      GetUI()->GetControlWithTag(kCtrlTagRndDepth)->SetParamIdx(kNoParameter);
     }
     else
     {
@@ -65,6 +69,10 @@ public:
       GetUI()->GetControlWithTag(kCtrlTagAmpEnvDepth)->SetParamIdx(mModParamIdx + 3);
       GetUI()->GetControlWithTag(kCtrlTagLFO1Depth)->SetParamIdx(mModParamIdx + 4);
       GetUI()->GetControlWithTag(kCtrlTagLFO2Depth)->SetParamIdx(mModParamIdx + 5);
+      GetUI()->GetControlWithTag(kCtrlTagSequencerDepth)->SetParamIdx(mModParamIdx + 6);
+      GetUI()->GetControlWithTag(kCtrlTagVelDepth)->SetParamIdx(mModParamIdx + 7);
+      GetUI()->GetControlWithTag(kCtrlTagKTkDepth)->SetParamIdx(mModParamIdx + 8);
+      GetUI()->GetControlWithTag(kCtrlTagRndDepth)->SetParamIdx(mModParamIdx + 9);
       mActiveIdx = GetParamIdx();
     }
     // Send values and change this control's active state
@@ -127,26 +135,44 @@ public:
       // LFO 1
       radius -= 3.f * mTrackToHandleDistance / 4.f;
       modAngle = std::max(std::min(static_cast<float>(GetDelegate()->GetParam(mModParamIdx + 4)->Value()) * (mAngle2 - mAngle1) + angle, mAngle2), mAngle1);
-      g.DrawArc(mModArcColor[3], cx, cy, radius, modAngle >= angle ? angle : modAngle, modAngle >= angle ? modAngle : angle, &mBlend, mTrackSize * 2);
+      g.DrawArc(mModArcColor[3], cx, cy, radius, modAngle >= angle ? angle : modAngle, modAngle >= angle ? modAngle : angle, &mBlend, mTrackSize * 3);
       modAngle = std::max(std::min(static_cast<float>(-1. * GetDelegate()->GetParam(mModParamIdx + 4)->Value()) * (mAngle2 - mAngle1) + angle, mAngle2), mAngle1);
       g.DrawArc(IColor::LinearInterpolateBetween(mModArcColor[3], IColor(200, 255, 255, 255), 0.4), cx, cy, radius, modAngle >= angle ? angle : modAngle, modAngle >= angle ? modAngle : angle, &mBlend, mTrackSize * 2);
       // LFO 2
       radius += mTrackToHandleDistance / 4.f;
       modAngle = std::max(std::min(static_cast<float>(GetDelegate()->GetParam(mModParamIdx + 5)->Value()) * (mAngle2 - mAngle1) + angle, mAngle2), mAngle1);
-      g.DrawArc(mModArcColor[4], cx, cy, radius, modAngle >= angle ? angle : modAngle, modAngle >= angle ? modAngle : angle, &mBlend, mTrackSize);
+      g.DrawArc(mModArcColor[4], cx, cy, radius, modAngle >= angle ? angle : modAngle, modAngle >= angle ? modAngle : angle, &mBlend, mTrackSize * 2);
       modAngle = std::max(std::min(static_cast<float>(-1. * GetDelegate()->GetParam(mModParamIdx + 5)->Value()) * (mAngle2 - mAngle1) + angle, mAngle2), mAngle1);
       g.DrawArc(IColor::LinearInterpolateBetween(mModArcColor[4], IColor(200, 255, 255, 255), 0.4), cx, cy, radius, modAngle >= angle ? angle : modAngle, modAngle >= angle ? modAngle : angle, &mBlend, mTrackSize);
+      // Sequencer
+      radius += mTrackToHandleDistance / 4.f;
+      modAngle = std::max(std::min(static_cast<float>(GetDelegate()->GetParam(mModParamIdx + 6)->Value()) * (mAngle2 - mAngle1) + angle, mAngle2), mAngle1);
+      g.DrawArc(mModArcColor[5], cx, cy, radius, modAngle >= angle ? angle : modAngle, modAngle >= angle ? modAngle : angle, &mBlend, mTrackSize);
+      // Velocity
+      radius -= mTrackToHandleDistance / 4.f;
+      modAngle = std::max(std::min(static_cast<float>(GetDelegate()->GetParam(mModParamIdx + 7)->Value()) * (mAngle2 - mAngle1) + angle, mAngle2), mAngle1);
+      g.DrawArc(mModArcColor[6], cx, cy, radius, modAngle >= angle ? angle : modAngle, modAngle >= angle ? modAngle : angle, &mBlend, mTrackSize);
+      // Keytrack
+      modAngle = std::max(std::min(static_cast<float>(GetDelegate()->GetParam(mModParamIdx + 8)->Value()) * (mAngle2 - mAngle1) + angle, mAngle2), mAngle1);
+      g.DrawArc(mModArcColor[7], cx, cy, radius, modAngle >= angle ? angle : modAngle, modAngle >= angle ? modAngle : angle, &mBlend, mTrackSize);
+      // Trigger Random
+      modAngle = std::max(std::min(static_cast<float>(GetDelegate()->GetParam(mModParamIdx + 9)->Value()) * (mAngle2 - mAngle1) + angle, mAngle2), mAngle1);
+      g.DrawArc(mModArcColor[8], cx, cy, radius, modAngle >= angle ? angle : modAngle, modAngle >= angle ? modAngle : angle, &mBlend, mTrackSize);
     }
   }
 
 protected:
   const IColor mDefaultColor;
-  static inline const IColor mModArcColor[5]{
+  static inline const IColor mModArcColor[]{
     {200, 200, 100, 100},
     {200, 225, 150, 100},
     {200, 250, 200, 100},
     {200, 160, 0, 225},
     {200, 225, 0, 190},
+    {200, 0, 250, 100},
+    {150, 0, 100, 255},
+    {150, 200, 0, 200},
+    {150, 0, 255, 255}
   };
   bool mActive{ false };
   double mGearing;
@@ -192,7 +218,14 @@ public:
   {
     float value = (float)GetValue(); // NB: Value is normalized to between 0. and 1.
     const IRECT handleBounds = (GetParamIdx() == kNoParameter) ? mTrackBounds.FracRect(mDirection, 0.f) : mTrackBounds.FracRect(mDirection, value);
-    const IRECT filledTrack = (GetParamIdx() == kNoParameter) ?  handleBounds : (value >= 0.5f) ? mTrackBounds.GetGridCell(0, 0, 2, 1).FracRect(mDirection, 2.f * (value - 0.5f)) : mTrackBounds.GetGridCell(1, 0, 2, 1).FracRect(mDirection, 2.f * (0.5 - value), true);
+    const IRECT filledTrack = mDirection==EDirection::Vertical ? (GetParamIdx() == kNoParameter) ?
+      handleBounds : (value >= 0.5f) ?
+      mTrackBounds.GetGridCell(0, 0, 2, 1).FracRect(mDirection, 2.f * (value - 0.5f)) :
+      mTrackBounds.GetGridCell(1, 0, 2, 1).FracRect(mDirection, 2.f * (0.5 - value), true) : // <- Vertical
+      (GetParamIdx() == kNoParameter) ?
+      handleBounds : (value >= 0.5f) ?
+      mTrackBounds.GetGridCell(0, 1, 1, 2).FracRect(mDirection, 2.f * (value - 0.5f)) :
+      mTrackBounds.GetGridCell(0, 0, 1, 2).FracRect(mDirection, 2.f * (0.5 - value), true); // <- Horizontal
     
     if (mTrackSize > 0.f)
       DrawTrack(g, filledTrack);
