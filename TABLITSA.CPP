@@ -702,6 +702,13 @@ void Tablitsa::ProcessBlock(sample** inputs, sample** outputs, int nFrames)
 void Tablitsa::OnIdle()
 {
   mMeterSender.TransmitData(*this);
+
+  if (mDSP.mStepPos != mDSP.mPrevPos)
+  {
+    mDSP.mPrevPos = mDSP.mStepPos;
+    SendControlMsgFromDelegate(kCtrlTagSequencer, IVMultiSliderControl<>::kMsgTagSetHighlight, sizeof(int), &mDSP.mPrevPos);
+  }
+
   //mLFOVisSender.TransmitData(*this);
 }
 
