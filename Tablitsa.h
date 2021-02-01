@@ -58,6 +58,14 @@ enum EParams
   kParamLFO2Amp,
   kParamLFO2RateMode,
   kParamLFO2Restart,
+  kParamSequencerSteps,
+  kParamSequencerGlide,
+  kParamSequencerCurve,
+  kParamSequencerRateHz,
+  kParamSequencerRateTempo,
+  kParamSequencerRateMode,
+  kParamSequencerRestart,
+  kParamSequencerAmp,
   kParamWavetable1,
   kParamWavetable2,
   kParamWavetable1Pitch,
@@ -279,8 +287,6 @@ enum EParams
   kParamRingModAmountVel,
   kParamRingModAmountKTk,
   kParamRingModAmountRnd,
-  kParamSequencerSteps,
-  kParamSequencerGlide,
   kParamDelayTimeRSec,
   kParamDelayTimeLSec,
   kParamDelayTimeRBeats,
@@ -341,7 +347,8 @@ enum EMsgTags
 {
   kMsgWavetable1Changed = 0,
   kMsgWavetable2Changed,
-  kMsgSeqSliderChanged
+  kMsgSeqSliderChanged,
+  kMsgRandomizeSequencer
 };
 
 using namespace iplug;

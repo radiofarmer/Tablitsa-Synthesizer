@@ -106,7 +106,8 @@ public:
     Voice(int id=0)
       : mID(id),
       mAmpEnv("gain", [&]() { mOsc1.Reset(); }),
-      mEnv1("env1", [&]() { mOsc1.Reset(); }) // capture ok on RT thread?
+      mEnv1("env1", [&]() { mOsc1.Reset(); }),
+      mSequencer(TablitsaDSP::mSeqSteps) // capture ok on RT thread?
     {
 //      DBGMSG("new Voice: %i control inputs.\n", static_cast<int>(mInputs.size()));
       mModulators.AddModulator(&mEnv1);
@@ -114,7 +115,7 @@ public:
       mModulators.AddModulator(&mAmpEnv);
       mModulators.AddModulator(&mLFO1);
       mModulators.AddModulator(&mLFO2);
-      mAmpEnvPtr = &mAmpEnv;
+      mModulators.AddModulator(&mSequencer);
       mAmpEnv.Kill(true);
 
 //      mVParameterModulators.SetList(mVoiceModParams);
@@ -138,23 +139,26 @@ public:
         f->Reset();
       }
 
-      // Reset LFOs
+      // Reset LFOs and Sequencer
       if (mLFO1Restart)
         mLFO1.Reset();
-
       if (mLFO2Restart)
         mLFO2.Reset();
+      if (mSequencerRestart)
+      {
+        mSequencer.Reset();
+      }
+      // Update sequencer display with this voice's phase
+      TablitsaDSP<T>::mActiveSequencer = &mSequencer;
 
       if (isRetrigger)
       {
-        mMonoAmpEnv.Retrigger(level);
         mAmpEnv.Retrigger(level);
         mEnv1.Retrigger(1.); // Change this to make the envelope height dependent on velocity
         mEnv2.Retrigger(1.);
       }
       else
       {
-        mMonoAmpEnv.Start(level);
         mAmpEnv.Start(level);
         mEnv1.Start(1.);
         mEnv2.Start(1.);
@@ -271,40 +275,13 @@ public:
       //TODO:
     }
 
-    void SetLFORateCPS(int lfo, double value)
-    {
-      switch (lfo) {
-      case 0:
-        mLFO1.SetFreqCPS(value);
-        break;
-      case 1:
-        mLFO2.SetFreqCPS(value);
-        break;
-      default:
-        break;
-      };
-    }
-
-    void SetLFORateTempo(int lfo, double value)
-    {
-      switch(lfo) {
-      case 0:
-        mLFO1.SetQNScalarFromDivision(static_cast<int>(value));
-        break;
-      case 1:
-        mLFO2.SetQNScalarFromDivision(static_cast<int>(value));
-        break;
-      default:
-        break;
-      };
-    }
-
     static inline void SetTempoAndBeat(double qnPos = 0., bool transportIsRunning = false, double tempo = 120.)
     {
       mQNPos = qnPos;
       mTransportIsRunning = transportIsRunning;
       mTempo = tempo;
       FastLFO<T>::SetTempoAndBeat(mQNPos, mTransportIsRunning, mTempo);
+      Sequencer<T>::SetTempoAndBeat(mQNPos, mTransportIsRunning, mTempo);
     }
 
     void SetFilterType(int filter, int filterType)
@@ -367,6 +344,7 @@ public:
     ADSREnvelope<T> mAmpEnv;
     FastLFO<T> mLFO1;
     FastLFO<T> mLFO2;
+    Sequencer<T, kNumSeqSteps> mSequencer;
     ModulatorList<T, ADSREnvelope, FastLFO> mModulators;
 
     static inline ADSREnvelope<T> mMonoAmpEnv;
@@ -374,6 +352,7 @@ public:
 
     bool mLFO1Restart{ false };
     bool mLFO2Restart{ false };
+    bool mSequencerRestart{ false };
     int mFilterUpdateFreq{ 2 };
 
     std::vector<Filter<T>*> mFilters{ new NullFilter<T>(), new NullFilter<T>() };
@@ -405,6 +384,7 @@ public:
       new ParameterModulator(-24., 24., "Ring Mod Freq"),
       new ParameterModulator(0., 1., "Ring Mod Depth") };
 
+    // Sample and Beat data
     static inline double mTempo{ 120. };
     static inline bool mTransportIsRunning{ false };
     static inline double mQNPos{ 0. };
@@ -527,6 +507,14 @@ public:
     tableLoading[oscIdx] = false;
   }
 
+  int GetSequencerStep()
+  {
+    if (mActiveSequencer)
+      return mActiveSequencer->GetCurrentStep();
+    else
+      return 0;
+  }
+
   inline void SendParam(std::function<void(Voice* voice)> func)
   {
     for (Voice* v : mSynthVoices)
@@ -631,12 +619,12 @@ public:
         break;
       case kParamLFO1RateTempo:
         mSynth.ForEachVoice([value](SynthVoice& voice) {
-          dynamic_cast<TablitsaDSP::Voice&>(voice).SetLFORateTempo(0, value);
+          dynamic_cast<TablitsaDSP::Voice&>(voice).mLFO1.SetQNScalarFromDivision(static_cast<int>(value));
           });
         break;
       case kParamLFO1RateHz:
         mSynth.ForEachVoice([value](SynthVoice& voice) {
-          dynamic_cast<TablitsaDSP::Voice&>(voice).SetLFORateCPS(0, value);
+          dynamic_cast<TablitsaDSP::Voice&>(voice).mLFO1.SetFreqCPS(value);
           });
         break;
       case kParamLFO1RateMode:
@@ -651,7 +639,8 @@ public:
         break;
       case kParamLFO1Restart:
         mSynth.ForEachVoice([value](SynthVoice& voice) {
-          dynamic_cast<TablitsaDSP::Voice&>(voice).mLFO1Restart = (value > 0.5);
+          auto v = dynamic_cast<TablitsaDSP::Voice&>(voice);
+          v.mLFO1Restart = (value > 0.5);
           });
         break;
       case kParamLFO2Amp:
@@ -661,12 +650,12 @@ public:
         break;
       case kParamLFO2RateTempo:
         mSynth.ForEachVoice([value](SynthVoice& voice) {
-          dynamic_cast<TablitsaDSP::Voice&>(voice).SetLFORateTempo(1, value);
+          dynamic_cast<TablitsaDSP::Voice&>(voice).mLFO2.SetQNScalarFromDivision(static_cast<int>(value));
           });
         break;
       case kParamLFO2RateHz:
         mSynth.ForEachVoice([value](SynthVoice& voice) {
-          dynamic_cast<TablitsaDSP::Voice&>(voice).SetLFORateCPS(1, value);
+          dynamic_cast<TablitsaDSP::Voice&>(voice).mLFO2.SetFreqCPS(value);
           });
         break;
       case kParamLFO2RateMode:
@@ -684,6 +673,39 @@ public:
           dynamic_cast<TablitsaDSP::Voice&>(voice).mLFO2Restart = (value > 0.5);
           });
         break;
+      case kParamSequencerAmp:
+        mSynth.ForEachVoice([value](SynthVoice& voice) {
+          dynamic_cast<TablitsaDSP::Voice&>(voice).mSequencer.SetScalar(value);
+          });
+        break;
+      case kParamSequencerSteps:
+        mSynth.ForEachVoice([value](SynthVoice& voice) {
+          dynamic_cast<TablitsaDSP::Voice&>(voice).mSequencer.SetLength(static_cast<int>(value));
+          });
+        break;
+      case kParamSequencerRateTempo:
+        mSynth.ForEachVoice([value](SynthVoice& voice) {
+          dynamic_cast<TablitsaDSP::Voice&>(voice).mSequencer.SetQNScalarFromDivision(static_cast<int>(value));
+          });
+        break;
+      case kParamSequencerRateHz:
+        mSynth.ForEachVoice([value](SynthVoice& voice) {
+          dynamic_cast<TablitsaDSP::Voice&>(voice).mSequencer.SetFreqCPS(value);
+          });
+        break;
+      case kParamSequencerRateMode:
+        mSynth.ForEachVoice([value](SynthVoice& voice) {
+          dynamic_cast<TablitsaDSP::Voice&>(voice).mSequencer.SetRateMode(value > 0.5);
+          });
+        break;
+      case kParamSequencerRestart:
+      {
+        mSynth.ForEachVoice([value](SynthVoice& voice) {
+          dynamic_cast<TablitsaDSP::Voice&>(voice).mSequencerRestart = (value > 0.5);
+          });
+        // Toggle between using a master/static phase to update the Sequencer display, and using the phase of the last-triggered voice
+        break;
+      }
       case kParamWavetable1:
       {
         break;
@@ -879,6 +901,7 @@ public:
       case kParamFilter1CutoffAmpEnv:
       case kParamFilter1CutoffLFO1:
       case kParamFilter1CutoffLFO2:
+      case kParamFilter1CutoffSeq:
       case kParamFilter1CutoffVel:
       case kParamFilter1CutoffKTk:
       case kParamFilter1CutoffRnd:
@@ -898,6 +921,7 @@ public:
       case kParamFilter1ResonanceAmpEnv:
       case kParamFilter1ResonanceLFO1:
       case kParamFilter1ResonanceLFO2:
+      case kParamFilter1ResonanceSeq:
       case kParamFilter1ResonanceVel:
       case kParamFilter1ResonanceKTk:
       case kParamFilter1ResonanceRnd:
@@ -918,6 +942,7 @@ public:
       case kParamFilter1DriveAmpEnv:
       case kParamFilter1DriveLFO1:
       case kParamFilter1DriveLFO2:
+      case kParamFilter1DriveSeq:
       case kParamFilter1DriveVel:
       case kParamFilter1DriveKTk:
       case kParamFilter1DriveRnd:
@@ -953,6 +978,7 @@ public:
       case kParamFilter2CutoffAmpEnv:
       case kParamFilter2CutoffLFO1:
       case kParamFilter2CutoffLFO2:
+      case kParamFilter2CutoffSeq:
       case kParamFilter2CutoffVel:
       case kParamFilter2CutoffKTk:
       case kParamFilter2CutoffRnd:
@@ -972,6 +998,7 @@ public:
       case kParamFilter2ResonanceAmpEnv:
       case kParamFilter2ResonanceLFO1:
       case kParamFilter2ResonanceLFO2:
+      case kParamFilter2ResonanceSeq:
       case kParamFilter2ResonanceVel:
       case kParamFilter2ResonanceKTk:
       case kParamFilter2ResonanceRnd:
@@ -992,6 +1019,7 @@ public:
       case kParamFilter2DriveAmpEnv:
       case kParamFilter2DriveLFO1:
       case kParamFilter2DriveLFO2:
+      case kParamFilter2DriveSeq:
       case kParamFilter2DriveVel:
       case kParamFilter2DriveKTk:
       case kParamFilter2DriveRnd:
@@ -1124,18 +1152,23 @@ public:
   std::vector<std::string> mWavetables{ ELEMENT_NAMES };
   std::vector<Voice*> mSynthVoices;
 
+  // Polyphonic/Monophonic
   static inline bool mMono{ false };
+
   // Portamento Parameters
   bool mConstantGlideTime{ true };
   double mGlideRateScalar{ 1. }; // Semitones per second
   double mLastNoteOn{ 0 };
 
   double mSampleRate{ 44100. };
-  static inline bool mCombOn{ false };
 
+  // Status Variables
   static inline bool tableLoading[2]{ true, true };
+  static inline bool mCombOn{ false };
+  int mSeqPos{ 0 };
+  static inline Sequencer<T, kNumSeqSteps>* mActiveSequencer{ nullptr };
 
   // Non-modulatable parameters
   double mLoadedWavetables[2]{ 1., 2. }; // Integer indices of current wavetables
-  double mSeqSteps[kNumSeqSteps]{}; // Value of each step in the sequencer
+  static inline double mSeqSteps[kNumSeqSteps]{}; // Value of each step in the sequencer
 };
