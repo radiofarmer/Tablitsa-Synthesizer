@@ -368,7 +368,7 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
     pGraphics->AttachControl(new IVGroupControl("Wavetable 2", "Osc2", 0.f, 15.f, 0.f, 2.f));
 
     /* Master Controls */
-    const IRECT masterPanel = controls.GetReducedFromLeft(720.f + osc1Panel.W() + 10.f).GetReducedFromBottom(controls.H() / 2.f).GetPadded(-10.f);
+    const IRECT masterPanel = controls.GetReducedFromLeft(720.f + osc1Panel.W() + 30.f).GetReducedFromBottom(controls.H() / 2.f).GetPadded(-10.f);
     // Gain, Pan, and Volume Meter
     pGraphics->AttachControl(new IVKnobControl(masterPanel.GetGridCell(0, 0, 4, 6).GetCentredInside(dialSize), kParamGain, "Gain"), kNoTag, "Master");
     pGraphics->AttachControl(new IVModKnobControl(masterPanel.GetGridCell(0, 1, 4, 6).GetCentredInside(dialSize), kParamPan, "Pan"), kNoTag, "Master");

@@ -552,6 +552,9 @@ public:
         mSynth.SetPolyMode(value > 0.5 ? VoiceAllocator::EPolyMode::kPolyModeMono : VoiceAllocator::EPolyMode::kPolyModePoly);
         break;
       }
+      case kParamLegato:
+        mSynth.SetLegato(value > 0.5); // Not yet implemented
+        break;
       case kParamGain:
         mParamsToSmooth[kModGainSmoother] = (T) value / 100.;
         break;

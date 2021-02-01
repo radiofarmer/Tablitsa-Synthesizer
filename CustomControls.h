@@ -49,7 +49,7 @@ public:
 
   void LoadModParams()
   {
-    if (mActive)
+    if (mActive && mActiveIdx == GetParamIdx())
     {
       GetUI()->GetControlWithTag(kCtrlTagEnv1Depth)->SetParamIdx(kNoParameter);
       GetUI()->GetControlWithTag(kCtrlTagEnv2Depth)->SetParamIdx(kNoParameter);
@@ -60,6 +60,8 @@ public:
       GetUI()->GetControlWithTag(kCtrlTagVelDepth)->SetParamIdx(kNoParameter);
       GetUI()->GetControlWithTag(kCtrlTagKTkDepth)->SetParamIdx(kNoParameter);
       GetUI()->GetControlWithTag(kCtrlTagRndDepth)->SetParamIdx(kNoParameter);
+      mActiveIdx = -1;
+      mActive = false;
     }
     else
     {
@@ -74,10 +76,11 @@ public:
       GetUI()->GetControlWithTag(kCtrlTagKTkDepth)->SetParamIdx(mModParamIdx + 8);
       GetUI()->GetControlWithTag(kCtrlTagRndDepth)->SetParamIdx(mModParamIdx + 9);
       mActiveIdx = GetParamIdx();
+      mActive = true;
     }
     // Send values and change this control's active state
     GetDelegate()->SendCurrentParamValuesFromDelegate();
-    mActive = !mActive;
+    //mActive = !mActive;
   }
 
   void Draw(IGraphics& g) override
@@ -107,7 +110,7 @@ public:
 
     IRECT knobHandleBounds = mWidgetBounds.GetCentredInside((widgetRadius - mTrackToHandleDistance) * 2.f);
     const float angle = mAngle1 + (static_cast<float>(GetValue()) * (mAngle2 - mAngle1));
-    DrawPressableShape(g, /*mShape*/ EVShape::Ellipse, knobHandleBounds, mMouseDown, mMouseIsOver, IsDisabled());
+    DrawPressableShape(g, /*mShape*/ EVShape::Ellipse, knobHandleBounds, mActive && mActiveIdx == GetParamIdx(), mMouseIsOver, IsDisabled());
     DrawIndicatorTrack(g, angle, cx, cy, widgetRadius);
     DrawPointer(g, angle, cx, cy, knobHandleBounds.W() / 2.f);
   }
