@@ -332,7 +332,6 @@ public:
     return s_out * mLevelScalar;
   }
 
-private:
   static inline T WrapPhase(T x, T lo = 0., T hi = 1.)
   {
     while (x >= hi)
@@ -342,42 +341,92 @@ private:
     return x;
   };
 
-private:
+protected:
   static inline constexpr int mTableSize{ 1024 };
   static inline constexpr int mTableSizeM1{ 1023 };
   T mLastOutput;
 
   static inline T mLUT[LFO<T>::EShape::kNumShapes][mTableSize];
 
+  static inline double mStaticPhase{ 0 };
   static inline double mTempo{ 120. };
   static inline bool mTransportIsRunning{ false };
   static inline double mQNPos{ 0. };
 };
 
-END_IPLUG_NAMESPACE
-
-template <typename T>
-class Sequencer
+template <typename T, int NSteps=16>
+class Sequencer final : public FastLFO<T>
 {
-public:
-  Sequencer(const int nSteps) : mNumSteps(nSteps)
+  enum ERateMode
   {
-    mValues = new T[mNumSteps]{ 0. };
+    kBPM,
+    kHz
+  };
+
+public:
+  Sequencer(T* stepValues) : FastLFO<T>()
+  {
+    mStepValues = stepValues;
   }
 
+  void SetLength(const int numSteps)
+  {
+    mLength = numSteps;
+  }
 
+  inline T DoProcess() override
+  {
+    return Process(FastLFO<T>::mQNPos, mTransportIsRunning, mTempo);
+  }
+
+  inline T Process(double qnPos = 0., bool transportIsRunning = false, double tempo = 120.) override
+  {
+    T oneOverQNScalar = 1. / LFO<T>::mQNScalar;
+    T phase = IOscillator<T>::mPhase;
+
+    if (FastLFO<T>::mRateMode == FastLFO<T>::ERateMode::kBPM && !transportIsRunning)
+      IOscillator<T>::SetFreqCPS(tempo / 60.);
+
+    double samplesPerBeat = IOscillator<T>::mSampleRate * (60.0 / (tempo == 0.0 ? 1.0 : tempo)); // samples per beat
+
+    T phaseIncr = IOscillator<T>::mPhaseIncr;
+
+    double sampleAccurateQnPos = qnPos + (phase / samplesPerBeat);
+
+    if (FastLFO<T>::mRateMode == FastLFO<T>::ERateMode::kBPM)
+    {
+      phaseIncr *= LFO<T>::mQNScalar;
+      if (transportIsRunning)
+        phase = std::fmod(sampleAccurateQnPos, oneOverQNScalar) * LFO<T>::mQNScalar;
+    }
+
+    mStepPos = static_cast<int>(phase * NSteps) % mLength;
+    T s_out = GetStepValue(mStepPos);
+    IOscillator<T>::mPhase = FastLFO<T>::WrapPhase(IOscillator<T>::mPhase + phaseIncr, 0., static_cast<double>(mTableSize));
+    return s_out * mLevelScalar;
+  }
+
+  inline T GetStepValue(int pos)
+  {
+    return mStepValues[pos];
+  }
+
+  int GetCurrentStep()
+  {
+    return mStepPos;
+  }
 
 private:
-  int mNumSteps;
-  T* mValues;
+  T* mStepValues;
+  int mStepPos{ 0 };
+  int mPrevStep{ -1 };
+  int mLength{ NSteps };
 };
-
-BEGIN_IPLUG_NAMESPACE
 
 /*
 A container class that holds all per-voice modulators.
 */
-template<typename T, template<typename> class EnvType=ADSREnvelope, template<typename> class LFOType=FastLFO>
+template<typename T, template<typename> class EnvType=ADSREnvelope, template<typename> class LFOType=FastLFO, template<typename> class SequencerType=Sequencer>
 class ModulatorList
 {
 public:
@@ -389,16 +438,19 @@ public:
   void AddModulator(EnvType<T>* env)
   {
     mEnvPtrs.push_back(env);
+    mNumEnvs += 1;
   }
 
   void AddModulator(FastLFO<T>* lfo)
   {
     mLFOPtrs.push_back(lfo);
+    mNumLFOs += 1;
   }
 
   void AddModulator(Sequencer<T>* seq)
   {
     mSequencerPtrs.push_back(seq);
+    mNumSeqs += 1;
   }
 
   /* Write modulation values to a buffer */
@@ -410,8 +462,8 @@ public:
         mModulators.GetList()[e][i] = mEnvPtrs[e]->Process(inputs[e][i]);
       for (auto l{ 0 }; l < mLFOPtrs.size(); ++l)
         mModulators.GetList()[l + mEnvPtrs.size()][i] = mLFOPtrs[l]->DoProcess();
-      for (auto m{ mEnvPtrs.size() + mEnvPtrs.size() }; m < mNumMods; ++m)
-        mModulators.GetList()[m][i] = 0.;
+      for (auto s{ 0 }; s < mSequencerPtrs.size(); ++s)
+        mModulators.GetList()[s + mEnvPtrs.size() + mLFOPtrs.size()][i] = mSequencerPtrs[s]->DoProcess();
     }
   }
 
@@ -436,8 +488,11 @@ public:
 private:
   std::vector<EnvType<T>*> mEnvPtrs;
   std::vector<LFOType<T>*> mLFOPtrs;
-  std::vector<Sequencer<T>*> mSequencerPtrs;
+  std::vector<SequencerType<T>*> mSequencerPtrs;
   int mNumMods{ 0 };
+  int mNumEnvs{ 0 };
+  int mNumLFOs{ 0 };
+  int mNumSeqs{ 0 };
 
   WDL_PtrList<T> mModulators;
   WDL_TypedBuf<T> mModulatorRamps;

@@ -527,6 +527,6 @@ public:
   SequencerControl(const IRECT& bounds, const char* label, const IVStyle& style = DEFAULT_STYLE, int nSteps = 0, EDirection dir = EDirection::Vertical) :
     IVMultiSliderControl<MAXNC>(bounds, label, style, nSteps, dir)
   {
-
+    SetColor(kX1, GetColor(kPR));
   }
 };
