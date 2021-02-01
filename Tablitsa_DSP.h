@@ -142,12 +142,31 @@ public:
       // Reset LFOs and Sequencer
       if (mLFO1Restart)
         mLFO1.Reset();
+      else
+      {
+        if (Voice::mMasterLFO1)
+          mLFO1.SetPhase(Voice::mMasterLFO1->GetPhase());
+        Voice::mMasterLFO1 = &mLFO1;
+      }
+
       if (mLFO2Restart)
         mLFO2.Reset();
-      if (mSequencerRestart)
+      else
       {
-        mSequencer.Reset();
+        if (Voice::mMasterLFO2)
+          mLFO2.SetPhase(Voice::mMasterLFO2->GetPhase());
+        Voice::mMasterLFO2 = &mLFO2;
       }
+
+      if (mSequencerRestart)
+        mSequencer.Reset();
+      else
+      {
+        if (Voice::mMasterSeq)
+          mSequencer.SetPhase(Voice::mMasterSeq->GetPhase());
+        Voice::mMasterSeq = &mSequencer;
+      }
+
       // Update sequencer display with this voice's phase
       TablitsaDSP<T>::mActiveSequencer = &mSequencer;
 
@@ -167,7 +186,6 @@ public:
     
     void Release() override
     {
-      mMonoAmpEnv.Release();
       mAmpEnv.Release();
       mEnv1.Release();
       mEnv2.Release();
@@ -250,7 +268,6 @@ public:
       mEnv2.SetSampleRate(sampleRate);
       mLFO1.SetSampleRate(sampleRate);
       mLFO2.SetSampleRate(sampleRate);
-      mMonoAmpEnv.SetSampleRate(sampleRate);
       
       mVModulationsData.Resize(blockSize * kNumModulations);
       mVModulations.Empty();
@@ -347,8 +364,11 @@ public:
     Sequencer<T, kNumSeqSteps> mSequencer;
     ModulatorList<T, ADSREnvelope, FastLFO> mModulators;
 
-    static inline ADSREnvelope<T> mMonoAmpEnv;
-    ADSREnvelope<T>* mAmpEnvPtr;
+    // Pointers to master modulators, for free-run mode
+    static inline FastLFO<T>* mMasterLFO1; // The last-triggered `mLFO1`, which "owns" the master phase
+    static inline FastLFO<T>* mMasterLFO2; // The last-triggered `mLFO2`, which "owns" the master phase
+    static inline Sequencer<T>* mMasterSeq; // The last-triggered `mSequencer`, which "owns" the master phase
+
 
     bool mLFO1Restart{ false };
     bool mLFO2Restart{ false };
@@ -595,7 +615,6 @@ public:
         mSynth.ForEachVoice([stage, value](SynthVoice& voice) {
           dynamic_cast<TablitsaDSP::Voice&>(voice).mEnv2.SetStageTime(stage, value);
           });
-        Voice::mMonoAmpEnv.SetStageTime(stage, value);
         break;
       }
       case kParamAmpEnvSustain:
@@ -639,8 +658,7 @@ public:
         break;
       case kParamLFO1Restart:
         mSynth.ForEachVoice([value](SynthVoice& voice) {
-          auto v = dynamic_cast<TablitsaDSP::Voice&>(voice);
-          v.mLFO1Restart = (value > 0.5);
+          dynamic_cast<TablitsaDSP::Voice&>(voice).mLFO1Restart = (value > 0.5);
           });
         break;
       case kParamLFO2Amp:
