@@ -294,6 +294,16 @@ public:
     mTempo = tempo;
   }
 
+  const double GetPhase()
+  {
+    return IOscillator<T>::mPhase;
+  }
+
+  void SetPhase(double newPhase)
+  {
+    IOscillator<T>::mPhase = newPhase;
+  }
+
   inline T Process(double freqHz) override
   {
     IOscillator<T>::SetFreqCPS(freqHz);
