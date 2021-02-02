@@ -116,7 +116,7 @@ public:
       mModulators.AddModulator(&mLFO1);
       mModulators.AddModulator(&mLFO2);
       mModulators.AddModulator(&mSequencer);
-      mAmpEnv.Kill(true);
+      mAmpEnv.Kill(true); // Force amplitude envelopes to start in the "Idle" stage
 
 //      mVParameterModulators.SetList(mVoiceModParams);
     }
@@ -176,11 +176,22 @@ public:
         mEnv1.Retrigger(1.); // Change this to make the envelope height dependent on velocity
         mEnv2.Retrigger(1.);
       }
-      else
+      else if (!mLegato)
       {
         mAmpEnv.Start(level);
         mEnv1.Start(1.);
         mEnv2.Start(1.);
+      }
+      else
+      {
+        if (Voice::mMasterAmpEnv && !Voice::mMasterAmpEnv->GetReleased() && Voice::mMasterAmpEnv->GetStage() >= 0)
+          mAmpEnv.StartAt(level, Voice::mMasterAmpEnv->GetValue(), Voice::mMasterAmpEnv->GetPrevResult(), Voice::mMasterAmpEnv->GetStage());
+        else
+        {
+          mAmpEnv.Start(level);
+          Voice::mMasterAmpEnv = &mAmpEnv; // Sync the master envelopes to this voice's envelopes
+        }
+        // Still to do: In mono mode, do not reset the master envelope(s) as long as keys are being held
       }
     }
     
@@ -364,15 +375,19 @@ public:
     Sequencer<T, kNumSeqSteps> mSequencer;
     ModulatorList<T, ADSREnvelope, FastLFO> mModulators;
 
-    // Pointers to master modulators, for free-run mode
-    static inline FastLFO<T>* mMasterLFO1; // The last-triggered `mLFO1`, which "owns" the master phase
-    static inline FastLFO<T>* mMasterLFO2; // The last-triggered `mLFO2`, which "owns" the master phase
-    static inline Sequencer<T>* mMasterSeq; // The last-triggered `mSequencer`, which "owns" the master phase
+    // Pointers to master modulators, for free-run and legato modes
+//    static inline ADSREnvelope<T>* mMasterEnv1;
+//    static inline ADSREnvelope<T>* mMasterEnv2;
+    static inline ADSREnvelope<T>* mMasterAmpEnv{ nullptr };
+    static inline FastLFO<T>* mMasterLFO1{ nullptr }; // The last-triggered `mLFO1`, which "owns" the master phase
+    static inline FastLFO<T>* mMasterLFO2{ nullptr }; // The last-triggered `mLFO2`, which "owns" the master phase
+    static inline Sequencer<T>* mMasterSeq{ nullptr }; // The last-triggered `mSequencer`, which "owns" the master phase
 
 
     bool mLFO1Restart{ false };
     bool mLFO2Restart{ false };
     bool mSequencerRestart{ false };
+    bool mLegato{ false }; // This ought to be a static inline member, but the compiler apparently doesn't like that
     int mFilterUpdateFreq{ 2 };
 
     std::vector<Filter<T>*> mFilters{ new NullFilter<T>(), new NullFilter<T>() };
@@ -573,8 +588,14 @@ public:
         break;
       }
       case kParamLegato:
-        mSynth.SetLegato(value > 0.5); // Not yet implemented
+      {
+        bool legato = value > 0.5;
+        mSynth.SetLegato(legato); // Not yet implemented
+        mSynth.ForEachVoice([legato](SynthVoice& voice) {
+          dynamic_cast<TablitsaDSP::Voice&>(voice).mLegato = legato;
+          });
         break;
+      }
       case kParamGain:
         mParamsToSmooth[kModGainSmoother] = (T) value / 100.;
         break;

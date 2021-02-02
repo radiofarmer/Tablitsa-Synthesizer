@@ -451,6 +451,11 @@ public:
     mNumEnvs += 1;
   }
 
+  void ReplaceModulator(EnvType<T>* env, size_t idx)
+  {
+    mEnvPtrs[idx] = env;
+  }
+  
   void AddModulator(FastLFO<T>* lfo)
   {
     mLFOPtrs.push_back(lfo);
