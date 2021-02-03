@@ -586,7 +586,7 @@ public:
     WavetableOscillator<T>::SetWavetable(WavetableOscillator<T>::LoadedTables[mID]);
   }
 
-  void SetSampleRate(double sampleRate) override
+  void SetSampleRate(double sampleRate)
   {
     mSampleRate = sampleRate * mProcessOS;
   }

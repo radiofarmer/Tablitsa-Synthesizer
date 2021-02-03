@@ -304,14 +304,14 @@ public:
     IOscillator<T>::mPhase = newPhase;
   }
 
-  inline T Process(double freqHz) override
+  inline T Process(double freqHz)
   {
     IOscillator<T>::SetFreqCPS(freqHz);
 
     return Process(mQNPos, mTransportIsRunning, mTempo);
   }
 
-  inline T DoProcess() override
+  inline T DoProcess()
   {
     return Process(mQNPos, mTransportIsRunning, mTempo);
   }
@@ -384,17 +384,17 @@ public:
     mLength = numSteps;
   }
 
-  void SetQNScalarFromDivision(int division) override
+  void SetQNScalarFromDivision(int division) 
   {
     mQNScalar = GetQNScalar(static_cast<ETempoDivison>(Clip(division, 0, (int)kNumDivisions))) / NSteps; // Tempo-synced rate indicates the length of one step
   }
 
-  inline T DoProcess() override
+  inline T DoProcess() 
   {
     return Process(FastLFO<T>::mQNPos, mTransportIsRunning, mTempo);
   }
 
-  inline T Process(double qnPos = 0., bool transportIsRunning = false, double tempo = 120.) override
+  inline T Process(double qnPos = 0., bool transportIsRunning = false, double tempo = 120.) 
   {
     T oneOverQNScalar = 1. / LFO<T>::mQNScalar;
     T phase = IOscillator<T>::mPhase;

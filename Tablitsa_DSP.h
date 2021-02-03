@@ -759,7 +759,7 @@ public:
       }
       case kParamLegato:
       {
-        Voice::mLegato = value > 0.5;
+        TablitsaDSP::Voice::mLegato = value > 0.5;
         break;
       }
       case kParamWavetable1:
