@@ -443,7 +443,7 @@ public:
 
   protected:
     std::vector<double> mCoefs;
-    DelayLine<T> mZ{ 2 };
+    DelayLine mZ{ 2 };
     Vec4d mB;
     Vec4d mA;
     Vec4d mDelay{ 0. };
@@ -515,7 +515,7 @@ private:
     { 1.0, 2.0, 1.0, 1.0, -0.4401516515832734, 0.9299883719435977 },
     { 1.0, 2.0, 1.0, 1.0, -0.317836352796945, 0.9768802444563486 } };
   double mAddendPtrs[12]{};
-  std::vector<DelayLine<T>*> mDelayPtrs;
+  std::vector<DelayLine*> mDelayPtrs;
   Vec8d mZ1_Coefs1;
   Vec8d mZ2_Coefs1;
   Vec4d mZ1_Coefs2;
@@ -560,6 +560,6 @@ private:
   int mDelayLength;
   T& mFF{ mFc };
   T& mFB{ mQ };
-  DelayLine<T> mDelayIn{ COMB_MAX_DELAY + 1 };
-  DelayLine<T> mDelayOut{ COMB_MAX_DELAY + 1 };
+  DelayLine mDelayIn{ COMB_MAX_DELAY + 1 };
+  DelayLine mDelayOut{ COMB_MAX_DELAY + 1 };
 };

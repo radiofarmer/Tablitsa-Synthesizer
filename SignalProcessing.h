@@ -1,13 +1,12 @@
 #pragma once
 
-template<typename T>
 class DelayLine
 {
 public:
   DelayLine(int length) : mLength(length)
   {
     assert (mLength > 1);
-    mBuffer = new T[mLength]{};
+    mBuffer = new double[mLength]{};
   }
 
   ~DelayLine()
@@ -18,7 +17,7 @@ public:
   void reset()
   {
     delete[] mBuffer;
-    mBuffer = new T[mLength]{};
+    mBuffer = new double[mLength]{};
   }
 
   void SetDelay(int d)
@@ -26,7 +25,7 @@ public:
     mLength = d;
   }
 
-  inline void push(T s)
+  inline void push(double s)
   {
     mRead = mWrite;
     mBuffer[mWrite++] = s;
@@ -34,7 +33,7 @@ public:
       mWrite = 0;
   }
 
-  inline T at(int offset = 0)
+  inline double at(int offset = 0)
   {
     int readPoint{ mRead - offset };
     if (readPoint < 0)
@@ -42,19 +41,19 @@ public:
     return mBuffer[readPoint];
   }
 
-  const T* GetPointer()
+  const double* GetPointer()
   {
     return mBuffer;
   }
 
-  inline T operator[](int idx)
+  inline double operator[](int idx)
   {
     return at(idx);
   }
 
 private:
   int mLength;
-  T* mBuffer;
+  double* mBuffer;
   int mRead{ 0 };
   int mWrite{ 0 };
 };
