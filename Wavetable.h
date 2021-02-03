@@ -392,30 +392,33 @@ public:
   {
     mNumSamples = CalculateLength();
     mValues = new T[mNumSamples];
-    memcpy(mValues, values, mStartSize * sizeof(T));
 
-    // TODO: For mipmaps whose highest levels is longer than 2^15 samples, copy all the mipmaps above that level before performing FFTs and decinmation
-
-    // Generate the rest of the mipmap
+    // Then generate the rest of the mipmap
     int levelNyquist{ (mStartSize / mCyclesPerLevel) / (4 * mTableOS) };
-    T* buf = new T[mLevelSizes[0]]; // Create a temporary buffer for generating new levels
-    memcpy(buf, values, mLevelSizes[0] * sizeof(T)); // Populate the temporary buffer with the full-harmonic wavetable
+    // Before proceeding with band-limiting and downsampling check for further waveforms with more than 2^15 samples
+    int currLevel = 0;
+    do {
+      memcpy(mValues + mLevelIndices[currLevel], values, mLevelSizes[currLevel] * sizeof(T)); // Copy the first wavetable and any further wavetables with more than 2^15 samples
+      levelNyquist /= 2;
+      currLevel++;
+    } while (std::log2(mLevelSizes[currLevel - 1]) > 15);
+
+    T* buf = new T[mLevelSizes[currLevel - 1]]; // Create a temporary FFT working buffer for generating new levels
+    memcpy(buf, values, mLevelSizes[currLevel - 1] * sizeof(T)); // Populate the temporary FFT working buffer with the full-harmonic wavetable
 
     /*
     For each specified mipmap level, band-limit the temporary buffer to the level Nyquist frequency, which
     is decreased by a factor of two between each level. If the last-processed level is larger than the minimum
     specified level size, decimate it by a factor of two before copying it to the permanent mValues buffer.
     */
-    for (size_t i{0}; i < num_levels - 1; ++i)
+    for (auto i{currLevel}; i < num_levels; ++i)
     {
       // Make sure the current level is within the size range for the FFT function
-      if (std::log2(mLevelSizes[i]) <= 15)
-      {
-        // Band-limit the mipmap level
-        buf = fft_lp_filter(buf, mLevelSizes[i], levelNyquist, mLevelSizes[i] > mMinSize ? 2 : 1);
-        // Copy the filtered mipmap level to the mValues buffer
-        memcpy(mValues + mLevelIndices[i + 1], buf, mLevelSizes[i + 1] * sizeof(T));
-      }
+      assert (std::log2(mLevelSizes[i]) <= 15 && "Mipmap level exceeds maximum FFT length");
+      // Band-limit the mipmap level
+      buf = fft_lp_filter(buf, mLevelSizes[i - 1], levelNyquist, mLevelSizes[i - 1] > mMinSize ? 2 : 1);
+      // Copy the filtered mipmap level to the mValues buffer
+      memcpy(mValues + mLevelIndices[i], buf, mLevelSizes[i] * sizeof(T));
       levelNyquist /= 2;
     }
 
