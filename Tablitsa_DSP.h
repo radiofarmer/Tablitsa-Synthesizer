@@ -131,7 +131,7 @@ public:
       mOsc1.Reset();
       mOsc2.Reset();
 
-      mVelocity = level;
+      mVelocity = level; // TODO: Handling of different velocity settings (i.e. which envelopes are affected by velocity)
       mTriggerRand = static_cast<double>(std::rand()) / static_cast<double>(RAND_MAX);
 
       for (auto f : mFilters)
@@ -173,10 +173,10 @@ public:
       if (isRetrigger)
       {
         mAmpEnv.Retrigger(level);
-        mEnv1.Retrigger(1.); // Change this to make the envelope height dependent on velocity
+        mEnv1.Retrigger(1.);
         mEnv2.Retrigger(1.);
       }
-      else if (!mLegato)
+      else if (!Voice::mLegato)
       {
         mAmpEnv.Start(level);
         mEnv1.Start(1.);
@@ -185,10 +185,18 @@ public:
       else
       {
         if (Voice::mMasterAmpEnv && !Voice::mMasterAmpEnv->GetReleased() && Voice::mMasterAmpEnv->GetStage() >= 0)
+        {
           mAmpEnv.StartAt(level, Voice::mMasterAmpEnv->GetValue(), Voice::mMasterAmpEnv->GetPrevResult(), Voice::mMasterAmpEnv->GetStage());
+          mEnv1.StartAt(level, Voice::mMasterEnv1->GetValue(), Voice::mMasterEnv1->GetPrevResult(), Voice::mMasterEnv1->GetStage());
+          mEnv2.StartAt(level, Voice::mMasterEnv2->GetValue(), Voice::mMasterEnv2->GetPrevResult(), Voice::mMasterEnv2->GetStage());
+        }
         else
         {
           mAmpEnv.Start(level);
+          mEnv1.Start(1.);
+          mEnv2.Start(1.);
+          Voice::mMasterEnv1 = &mEnv1;
+          Voice::mMasterEnv2 = &mEnv2;
           Voice::mMasterAmpEnv = &mAmpEnv; // Sync the master envelopes to this voice's envelopes
         }
         // Still to do: In mono mode, do not reset the master envelope(s) as long as keys are being held
@@ -376,19 +384,21 @@ public:
     ModulatorList<T, ADSREnvelope, FastLFO> mModulators;
 
     // Pointers to master modulators, for free-run and legato modes
-//    static inline ADSREnvelope<T>* mMasterEnv1;
-//    static inline ADSREnvelope<T>* mMasterEnv2;
+    static inline ADSREnvelope<T>* mMasterEnv1{ nullptr };
+    static inline ADSREnvelope<T>* mMasterEnv2{ nullptr };
     static inline ADSREnvelope<T>* mMasterAmpEnv{ nullptr };
     static inline FastLFO<T>* mMasterLFO1{ nullptr }; // The last-triggered `mLFO1`, which "owns" the master phase
     static inline FastLFO<T>* mMasterLFO2{ nullptr }; // The last-triggered `mLFO2`, which "owns" the master phase
     static inline Sequencer<T>* mMasterSeq{ nullptr }; // The last-triggered `mSequencer`, which "owns" the master phase
 
-
     bool mLFO1Restart{ false };
     bool mLFO2Restart{ false };
     bool mSequencerRestart{ false };
-    bool mLegato{ false }; // This ought to be a static inline member, but the compiler apparently doesn't like that
+    static inline bool mLegato{ false }; // This ought to be a static inline member, but the compiler apparently doesn't like that
     int mFilterUpdateFreq{ 2 };
+    static inline double mEnv1VelocityMod{ 0. };
+    static inline double mEnv2VelocityMod{ 0. };
+    static inline double mAmpEnvVelocityMod{ 1. };
 
     std::vector<Filter<T>*> mFilters{ new NullFilter<T>(), new NullFilter<T>() };
 
@@ -587,15 +597,6 @@ public:
         mSynth.SetPolyMode(value > 0.5 ? VoiceAllocator::EPolyMode::kPolyModeMono : VoiceAllocator::EPolyMode::kPolyModePoly);
         break;
       }
-      case kParamLegato:
-      {
-        bool legato = value > 0.5;
-        mSynth.SetLegato(legato); // Not yet implemented
-        mSynth.ForEachVoice([legato](SynthVoice& voice) {
-          dynamic_cast<TablitsaDSP::Voice&>(voice).mLegato = legato;
-          });
-        break;
-      }
       case kParamGain:
         mParamsToSmooth[kModGainSmoother] = (T) value / 100.;
         break;
@@ -625,6 +626,14 @@ public:
         EEnvStage stage = static_cast<EEnvStage>(EEnvStage::kAttack + (paramIdx - kParamEnv1Attack));
         mSynth.ForEachVoice([stage, value](SynthVoice& voice) {
           dynamic_cast<TablitsaDSP::Voice&>(voice).mEnv1.SetStageTime(stage, value);
+          });
+        break;
+      }
+      case kParamEnv1Velocity:
+      {
+        Voice::mEnv1VelocityMod = value;
+        mSynth.ForEachVoice([value](SynthVoice& voice) {
+          dynamic_cast<TablitsaDSP::Voice&>(voice);
           });
         break;
       }
@@ -746,6 +755,11 @@ public:
           dynamic_cast<TablitsaDSP::Voice&>(voice).mSequencerRestart = (value > 0.5);
           });
         // Toggle between using a master/static phase to update the Sequencer display, and using the phase of the last-triggered voice
+        break;
+      }
+      case kParamLegato:
+      {
+        TablitsaDSP::Voice::mLegato = value > 0.5;
         break;
       }
       case kParamWavetable1:

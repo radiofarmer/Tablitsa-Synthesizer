@@ -29,14 +29,17 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
   GetParam(kParamEnv1Decay)->InitDouble("Env1 Decay", 10., 1., 3000., 0.1, "ms", IParam::kFlagsNone, "ADSR", IParam::ShapePowCurve(3.));
   GetParam(kParamEnv1Sustain)->InitDouble("Env1 Sustain", 50., 0., 100., 1, "%", IParam::kFlagsNone, "ADSR");
   GetParam(kParamEnv1Release)->InitDouble("Env1 Release", 10., 2., 3000., 0.1, "ms", IParam::kFlagsNone, "ADSR");
+  GetParam(kParamEnv1Velocity)->InitDouble("Env1 Velocity Mod", 0., 0., 1., 0.01);
   GetParam(kParamEnv2Attack)->InitDouble("Env2 Attack", 10., 1., 3000., 0.1, "ms", IParam::kFlagsNone, "ADSR", IParam::ShapePowCurve(3.));
   GetParam(kParamEnv2Decay)->InitDouble("Env2 Decay", 10., 1., 3000., 0.1, "ms", IParam::kFlagsNone, "ADSR", IParam::ShapePowCurve(3.));
   GetParam(kParamEnv2Sustain)->InitDouble("Env2 Sustain", 50., 0., 100., 1, "%", IParam::kFlagsNone, "ADSR");
   GetParam(kParamEnv2Release)->InitDouble("Env2 Release", 10., 2., 3000., 0.1, "ms", IParam::kFlagsNone, "ADSR");
+  GetParam(kParamEnv2Velocity)->InitDouble("Env2 Velocity Mod", 0., 0., 1., 0.01);
   GetParam(kParamAmpEnvAttack)->InitDouble("AmpEnv Attack", 10., 1., 3000., 0.1, "ms", IParam::kFlagsNone, "ADSR", IParam::ShapePowCurve(3.));
   GetParam(kParamAmpEnvDecay)->InitDouble("AmpEnv Decay", 10., 1., 3000., 0.1, "ms", IParam::kFlagsNone, "ADSR", IParam::ShapePowCurve(3.));
   GetParam(kParamAmpEnvSustain)->InitDouble("AmpEnv Sustain", 50., 0., 100., 1, "%", IParam::kFlagsNone, "ADSR");
   GetParam(kParamAmpEnvRelease)->InitDouble("AmpEnv Release", 10., 2., 3000., 0.1, "ms", IParam::kFlagsNone, "ADSR");
+  GetParam(kParamAmpEnvVelocity)->InitDouble("AmpEnv Velocity Mod", 0., 0., 1., 0.01);
   GetParam(kParamLFO1Shape)->InitEnum("LFO1 Shape", LFO<>::kTriangle, {LFO_SHAPE_VALIST});
   GetParam(kParamLFO1RateHz)->InitFrequency("LFO1 Rate", 1., 0.01, 40.);
   GetParam(kParamLFO1RateTempo)->InitEnum("LFO1 Rate", LFO<>::k1, {LFO_TEMPODIV_VALIST});
@@ -529,26 +532,29 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
     // Envelope Sliders
     const IRECT envPanel = lowerPanel.GetGridCell(0, 1, 1, 3).GetPadded(-2.f);
     // Envelope 1
-    pGraphics->AttachControl(new IVKnobControl(envPanel.GetGridCell(0, 0, 3, 5).GetCentredInside(dialSize), kParamEnv1Attack, "Att", modKnobStyle), kNoTag, "Env1");
-    pGraphics->AttachControl(new IVKnobControl(envPanel.GetGridCell(0, 1, 3, 5).GetCentredInside(dialSize), kParamEnv1Decay, "Dec", modKnobStyle), kNoTag, "Env1");
-    pGraphics->AttachControl(new IVKnobControl(envPanel.GetGridCell(0, 2, 3, 5).GetCentredInside(dialSize), kParamEnv1Sustain, "Sus", modKnobStyle), kNoTag, "Env1");
-    pGraphics->AttachControl(new IVKnobControl(envPanel.GetGridCell(0, 3, 3, 5).GetCentredInside(dialSize), kParamEnv1Release, "Rel", modKnobStyle), kNoTag, "Env1");
-    pGraphics->AttachControl(new ModSliderControl(envPanel.GetGridCell(0, 4, 3, 5).GetVPadded(-15.f), kNoParameter, "Depth", modKnobStyle), kCtrlTagEnv1Depth, "Env1");
-    pGraphics->AttachControl(new IVGroupControl("Env 1", "Env1", 0.f, 10.f, 0.f, 0.f));
+    pGraphics->AttachControl(new IVKnobControl(envPanel.GetGridCell(0, 0, 3, 6).GetCentredInside(dialSize), kParamEnv1Attack, "Att", modKnobStyle), kNoTag, "Env1");
+    pGraphics->AttachControl(new IVKnobControl(envPanel.GetGridCell(0, 1, 3, 6).GetCentredInside(dialSize), kParamEnv1Decay, "Dec", modKnobStyle), kNoTag, "Env1");
+    pGraphics->AttachControl(new IVKnobControl(envPanel.GetGridCell(0, 2, 3, 6).GetCentredInside(dialSize), kParamEnv1Sustain, "Sus", modKnobStyle), kNoTag, "Env1");
+    pGraphics->AttachControl(new IVKnobControl(envPanel.GetGridCell(0, 3, 3, 6).GetCentredInside(dialSize), kParamEnv1Release, "Rel", modKnobStyle), kNoTag, "Env1");
+    pGraphics->AttachControl(new IVSliderControl(envPanel.GetGridCell(0, 4, 3, 6).GetVPadded(-15.f), kParamEnv1Velocity, "Velocity", modKnobStyle), kNoTag, "Env1");
+    pGraphics->AttachControl(new ModSliderControl(envPanel.GetGridCell(0, 5, 3, 6).GetVPadded(-15.f).GetHPadded(-10.f), kNoParameter, "Depth", modKnobStyle), kCtrlTagEnv1Depth, "Env1");
+    pGraphics->AttachControl(new IVGroupControl("Env 1", "Env1", -2.f, 10.f, 0.f, 0.f));
     // Envelope 2
-    pGraphics->AttachControl(new IVKnobControl(envPanel.GetGridCell(1, 0, 3, 5).GetCentredInside(dialSize), kParamEnv2Attack, "Att", modKnobStyle), kNoTag, "Env2");
-    pGraphics->AttachControl(new IVKnobControl(envPanel.GetGridCell(1, 1, 3, 5).GetCentredInside(dialSize), kParamEnv2Decay, "Dec", modKnobStyle), kNoTag, "Env2");
-    pGraphics->AttachControl(new IVKnobControl(envPanel.GetGridCell(1, 2, 3, 5).GetCentredInside(dialSize), kParamEnv2Sustain, "Sus", modKnobStyle), kNoTag, "Env2");
-    pGraphics->AttachControl(new IVKnobControl(envPanel.GetGridCell(1, 3, 3, 5).GetCentredInside(dialSize), kParamEnv2Release, "Rel", modKnobStyle), kNoTag, "Env2");
-    pGraphics->AttachControl(new ModSliderControl(envPanel.GetGridCell(1, 4, 3, 5).GetVPadded(-15.f), kNoParameter, "Depth", modKnobStyle), kCtrlTagEnv2Depth, "Env2");
-    pGraphics->AttachControl(new IVGroupControl("Env 2", "Env2", 0.f, 10.f, 0.f, 0.f));
+    pGraphics->AttachControl(new IVKnobControl(envPanel.GetGridCell(1, 0, 3, 6).GetCentredInside(dialSize), kParamEnv2Attack, "Att", modKnobStyle), kNoTag, "Env2");
+    pGraphics->AttachControl(new IVKnobControl(envPanel.GetGridCell(1, 1, 3, 6).GetCentredInside(dialSize), kParamEnv2Decay, "Dec", modKnobStyle), kNoTag, "Env2");
+    pGraphics->AttachControl(new IVKnobControl(envPanel.GetGridCell(1, 2, 3, 6).GetCentredInside(dialSize), kParamEnv2Sustain, "Sus", modKnobStyle), kNoTag, "Env2");
+    pGraphics->AttachControl(new IVKnobControl(envPanel.GetGridCell(1, 3, 3, 6).GetCentredInside(dialSize), kParamEnv2Release, "Rel", modKnobStyle), kNoTag, "Env2");
+    pGraphics->AttachControl(new IVSliderControl(envPanel.GetGridCell(1, 4, 3, 6).GetVPadded(-15.f), kParamEnv2Velocity, "Velocity", modKnobStyle), kNoTag, "Env2");
+    pGraphics->AttachControl(new ModSliderControl(envPanel.GetGridCell(1, 5, 3, 6).GetVPadded(-15.f).GetHPadded(-10.f), kNoParameter, "Depth", modKnobStyle), kCtrlTagEnv2Depth, "Env2");
+    pGraphics->AttachControl(new IVGroupControl("Env 2", "Env2", -2.f, 10.f, 0.f, 0.f));
     // Amplitude Envelope
-    pGraphics->AttachControl(new IVKnobControl(envPanel.GetGridCell(2, 0, 3, 5).GetCentredInside(dialSize), kParamAmpEnvAttack, "Att", modKnobStyle), kNoTag, "AmpEnv");
-    pGraphics->AttachControl(new IVKnobControl(envPanel.GetGridCell(2, 1, 3, 5).GetCentredInside(dialSize), kParamAmpEnvDecay, "Dec", modKnobStyle), kNoTag, "AmpEnv");
-    pGraphics->AttachControl(new IVKnobControl(envPanel.GetGridCell(2, 2, 3, 5).GetCentredInside(dialSize), kParamAmpEnvSustain, "Sus", modKnobStyle), kNoTag, "AmpEnv");
-    pGraphics->AttachControl(new IVKnobControl(envPanel.GetGridCell(2, 3, 3, 5).GetCentredInside(dialSize), kParamAmpEnvRelease, "Rel", modKnobStyle), kNoTag, "AmpEnv");
-    pGraphics->AttachControl(new ModSliderControl(envPanel.GetGridCell(2, 4, 3, 5).GetVPadded(-15.f), kNoParameter, "Depth", modKnobStyle), kCtrlTagAmpEnvDepth, "AmpEnv");
-    pGraphics->AttachControl(new IVGroupControl("Amp Env", "AmpEnv", 0.f, 10.f, 0.f, 0.f));
+    pGraphics->AttachControl(new IVKnobControl(envPanel.GetGridCell(2, 0, 3, 6).GetCentredInside(dialSize), kParamAmpEnvAttack, "Att", modKnobStyle), kNoTag, "AmpEnv");
+    pGraphics->AttachControl(new IVKnobControl(envPanel.GetGridCell(2, 1, 3, 6).GetCentredInside(dialSize), kParamAmpEnvDecay, "Dec", modKnobStyle), kNoTag, "AmpEnv");
+    pGraphics->AttachControl(new IVKnobControl(envPanel.GetGridCell(2, 2, 3, 6).GetCentredInside(dialSize), kParamAmpEnvSustain, "Sus", modKnobStyle), kNoTag, "AmpEnv");
+    pGraphics->AttachControl(new IVKnobControl(envPanel.GetGridCell(2, 3, 3, 6).GetCentredInside(dialSize), kParamAmpEnvRelease, "Rel", modKnobStyle), kNoTag, "AmpEnv");
+    pGraphics->AttachControl(new IVSliderControl(envPanel.GetGridCell(2, 4, 3, 6).GetVPadded(-15.f), kParamAmpEnvVelocity, "Velocity", modKnobStyle), kNoTag, "AmpEnv");
+    pGraphics->AttachControl(new ModSliderControl(envPanel.GetGridCell(2, 5, 3, 6).GetVPadded(-15.f).GetHPadded(-10.f), kNoParameter, "Depth", modKnobStyle), kCtrlTagAmpEnvDepth, "AmpEnv");
+    pGraphics->AttachControl(new IVGroupControl("Amp Env", "AmpEnv", -2.f, 10.f, 0.f, 0.f));
 
     /*
     LFO Panels
@@ -588,7 +594,7 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
     pGraphics->AttachControl(new IVGroupControl("LFO 2", "LFO2", 0.f, 10.f, 0.f, 0.f));
 
     /* Sequencer */
-    const IRECT sequencerDisplayPanel = lowerPanel.GetGridCell(2, 2, 3, 3).GetFromLeft(PLUG_WIDTH - lfoPanel.L).GetPadded(-10.f);
+    const IRECT sequencerDisplayPanel = lowerPanel.GetGridCell(2, 2, 3, 3).GetFromLeft(PLUG_WIDTH - lfoPanel.L).GetPadded(0.f, 10.f, 0.f, 0.f);
     const IRECT sequencerParamsPanel = controls.GetFromBottom(PLUG_HEIGHT - lfoPanel.T).GetFromRight(PLUG_WIDTH - lfoPanel.R).GetReducedFromBottom(lowerPanel.H() / 3).GetPadded(-20.f, -15.f, -20.f, -15.f);
 
     // Sequencer Action Functions
