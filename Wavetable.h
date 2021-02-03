@@ -6,6 +6,7 @@
 #include <tchar.h>
 
 #define FFT
+#define FFT_MAX_SIZE 32768
 
 #ifndef VST3_API
 #define WT_DIR "..\\resources\\data\\wavetables\\"
@@ -48,7 +49,7 @@
 #include <mutex>
 #endif
 
-double* fft_lp_filter(WDL_FFT_REAL* samples, const int length, int max_bin, int decimation=1)
+void fft_lp_filter(WDL_FFT_REAL* samples, const int length, int max_bin, int decimation=1)
 {
   WDL_fft_init();
   WDL_real_fft(samples, length, 0);
@@ -73,7 +74,7 @@ double* fft_lp_filter(WDL_FFT_REAL* samples, const int length, int max_bin, int 
     samples[i] = samples[i * decimation] * (WDL_FFT_REAL)0.5;
   }
 
-  return (double*)samples;
+  //return (double*)samples;
 }
 
 enum endian
@@ -401,24 +402,32 @@ public:
       memcpy(mValues + mLevelIndices[currLevel], values, mLevelSizes[currLevel] * sizeof(T)); // Copy the first wavetable and any further wavetables with more than 2^15 samples
       levelNyquist /= 2;
       currLevel++;
-    } while (std::log2(mLevelSizes[currLevel - 1]) > 15);
+    } while (std::pow(2., std::ceil(std::log2(mLevelSizes[currLevel]))) > FFT_MAX_SIZE);
 
-    T* buf = new T[mLevelSizes[currLevel - 1]]; // Create a temporary FFT working buffer for generating new levels
-    memcpy(buf, values, mLevelSizes[currLevel - 1] * sizeof(T)); // Populate the temporary FFT working buffer with the full-harmonic wavetable
+    T* buf = new T[static_cast<int>(FFT_MAX_SIZE)]{ 0. }; // Create a temporary FFT working buffer for generating new levels
+    memcpy(buf, values + mLevelIndices[currLevel], mLevelSizes[currLevel] * sizeof(T)); // Populate the temporary FFT working buffer with the full-harmonic wavetable
 
-    /*
-    For each specified mipmap level, band-limit the temporary buffer to the level Nyquist frequency, which
+    /* For each specified mipmap level, band-limit the temporary buffer to the level Nyquist frequency, which
     is decreased by a factor of two between each level. If the last-processed level is larger than the minimum
-    specified level size, decimate it by a factor of two before copying it to the permanent mValues buffer.
-    */
-    for (auto i{currLevel}; i < num_levels; ++i)
+    specified level size, decimate it by a factor of two before copying it to the permanent mValues buffer. */
+    for (auto i{currLevel}; i < num_levels - 1; ++i)
     {
       // Make sure the current level is within the size range for the FFT function
       assert (std::log2(mLevelSizes[i]) <= 15 && "Mipmap level exceeds maximum FFT length");
+      // Get a suitable power of two for the FFT
+      int powOfTwo = static_cast<int>(std::pow(2, static_cast<int>(std::ceil(std::log2(mLevelSizes[i])))));
+      
       // Band-limit the mipmap level
-      buf = fft_lp_filter(buf, mLevelSizes[i - 1], levelNyquist, mLevelSizes[i - 1] > mMinSize ? 2 : 1);
+      fft_lp_filter(buf, FFT_MAX_SIZE, levelNyquist, FFT_MAX_SIZE / mLevelSizes[i]);
       // Copy the filtered mipmap level to the mValues buffer
       memcpy(mValues + mLevelIndices[i], buf, mLevelSizes[i] * sizeof(T));
+
+      // Reset buffer
+      delete[] buf;
+      T* buf = new T[static_cast<int>(FFT_MAX_SIZE)]{ 0. };
+      memcpy(buf, values + mLevelIndices[currLevel], mLevelSizes[currLevel] * sizeof(T));
+
+      // Adjust Nyquist frequency
       levelNyquist /= 2;
     }
 
@@ -446,7 +455,7 @@ public:
 
       // Calculate the next level size and index
       samples += nextLevelSize;
-      if (nextLevelSize > mMinSize) // `mMinSize` has already been multipled by `mCyclesPerLevel`
+      if (nextLevelSize > mMinSize) // Note: `mMinSize` has already been multipled by `mCyclesPerLevel`
         nextLevelSize /= 2;
       level++;
      }
