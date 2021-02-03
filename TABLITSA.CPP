@@ -50,7 +50,7 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
   GetParam(kParamLFO2Restart)->InitBool("LFO2 Retrigger", false);
   GetParam(kParamLFO2Amp)->InitDouble("LFO Amp", 1., -1., 1., 0.01, "", IParam::kFlagsNone, "LFO");
   GetParam(kParamSequencerRateHz)->InitFrequency("Sequencer Rate", 1., 0.01, 40.);
-  GetParam(kParamSequencerRateTempo)->InitEnum("Sequencer Rate", LFO<>::k1, { LFO_TEMPODIV_VALIST });
+  GetParam(kParamSequencerRateTempo)->InitEnum("Sequencer Rate", LFO<>::k4th, { LFO_TEMPODIV_VALIST });
   GetParam(kParamSequencerRateMode)->InitBool("Sequencer Sync", false);
   GetParam(kParamSequencerRestart)->InitBool("Sequencer Retrigger", false);
   GetParam(kParamSequencerSteps)->InitInt("Sequencer Length", 16, 1, 16);

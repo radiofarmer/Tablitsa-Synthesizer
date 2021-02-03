@@ -384,6 +384,11 @@ public:
     mLength = numSteps;
   }
 
+  void SetQNScalarFromDivision(int division) override
+  {
+    mQNScalar = GetQNScalar(static_cast<ETempoDivison>(Clip(division, 0, (int)kNumDivisions))) / NSteps; // Tempo-synced rate indicates the length of one step
+  }
+
   inline T DoProcess() override
   {
     return Process(FastLFO<T>::mQNPos, mTransportIsRunning, mTempo);
