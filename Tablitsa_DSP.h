@@ -176,7 +176,7 @@ public:
         mEnv1.Retrigger(1.);
         mEnv2.Retrigger(1.);
       }
-      else if (!mLegato)
+      else if (!Voice::mLegato)
       {
         mAmpEnv.Start(level);
         mEnv1.Start(1.);
@@ -394,7 +394,7 @@ public:
     bool mLFO1Restart{ false };
     bool mLFO2Restart{ false };
     bool mSequencerRestart{ false };
-    bool mLegato{ false }; // This ought to be a static inline member, but the compiler apparently doesn't like that
+    static inline bool mLegato{ false }; // This ought to be a static inline member, but the compiler apparently doesn't like that
     int mFilterUpdateFreq{ 2 };
     static inline double mEnv1VelocityMod{ 0. };
     static inline double mEnv2VelocityMod{ 0. };
@@ -597,15 +597,6 @@ public:
         mSynth.SetPolyMode(value > 0.5 ? VoiceAllocator::EPolyMode::kPolyModeMono : VoiceAllocator::EPolyMode::kPolyModePoly);
         break;
       }
-      case kParamLegato:
-      {
-        bool legato = value > 0.5;
-        mSynth.SetLegato(legato); // Not yet implemented
-        mSynth.ForEachVoice([legato](SynthVoice& voice) {
-          dynamic_cast<TablitsaDSP::Voice&>(voice).mLegato = legato;
-          });
-        break;
-      }
       case kParamGain:
         mParamsToSmooth[kModGainSmoother] = (T) value / 100.;
         break;
@@ -764,6 +755,11 @@ public:
           dynamic_cast<TablitsaDSP::Voice&>(voice).mSequencerRestart = (value > 0.5);
           });
         // Toggle between using a master/static phase to update the Sequencer display, and using the phase of the last-triggered voice
+        break;
+      }
+      case kParamLegato:
+      {
+        Voice::mLegato = value > 0.5;
         break;
       }
       case kParamWavetable1:
