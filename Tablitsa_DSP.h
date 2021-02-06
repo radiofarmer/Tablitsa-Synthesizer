@@ -1,5 +1,6 @@
 #pragma once
 
+#include "IPlugConstants.h"
 #include "Oscillator.h"
 #include "MidiSynth.h"
 #include "ADSREnvelope.h"
@@ -485,6 +486,10 @@ public:
     for(int s=0; s < nFrames;s++)
     {
       T smoothedGain = mModulations.GetList()[kModGainSmoother][s];
+      // Master effects processing
+      outputs[0][s] += mDelayEffect.Process(outputs[0][s]);
+      outputs[1][s] += mDelayEffect.Process(outputs[1][s]);
+
       outputs[0][s] *= smoothedGain * (2 - mModulations.GetList()[kModPanSmoother][s]);
       outputs[1][s] *= smoothedGain * mModulations.GetList()[kModPanSmoother][s];
     }
@@ -499,9 +504,13 @@ public:
       for (auto f : dynamic_cast<TablitsaDSP::Voice&>(voice).mFilters)
         f->UpdateSampleRate(sampleRate);
       });
+
     // Param Smoother list
     mModulationsData.Resize(blockSize * kNumModulations);
     mModulations.Empty();
+
+    // Effects
+    mDelayEffect.SetSampleRate(sampleRate);
     
     for(auto i = 0; i < kNumModulations; i++)
     {
@@ -1225,7 +1234,7 @@ public:
   double mGlideRateScalar{ 1. }; // Semitones per second
   double mLastNoteOn{ 0 };
 
-  double mSampleRate{ 44100. };
+  double mSampleRate{ DEFAULT_SAMPLE_RATE };
 
   // Status Variables
   static inline bool tableLoading[2]{ true, true };
@@ -1238,4 +1247,8 @@ public:
   static inline double mSeqSteps[kNumSeqSteps]{}; // Value of each step in the sequencer
   int mStepPos{ 0 };
   int mPrevPos{ -1 };
+
+  // Effects
+  std::vector<Effect<T>*> mEffects;
+  DelayEffect<T> mDelayEffect{ DEFAULT_SAMPLE_RATE };
 };
