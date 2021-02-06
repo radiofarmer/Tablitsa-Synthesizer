@@ -118,7 +118,10 @@ public:
       mModulators.AddModulator(&mSequencer);
       mAmpEnv.Kill(true); // Force amplitude envelopes to start in the "Idle" stage
 
-//      mVParameterModulators.SetList(mVoiceModParams);
+      // Fill the envelope queues for legato mode with null pointers
+      Voice::AmpEnvQueue.push_back(nullptr);
+      Voice::Env1Queue.push_back(nullptr);
+      Voice::Env2Queue.push_back(nullptr);
     }
 
     bool GetBusy() const override
@@ -184,22 +187,36 @@ public:
       }
       else
       {
-        if (Voice::mMasterAmpEnv && !Voice::mMasterAmpEnv->GetReleased() && Voice::mMasterAmpEnv->GetStage() >= 0)
+        // Check for currently active envelopes
+        ADSREnvelope<T>* masterAmpEnv = nullptr;
+        ADSREnvelope<T>* masterEnv1 = nullptr;
+        ADSREnvelope<T>* masterEnv2 = nullptr;
+        for (auto i{ 0 }; i < Voice::AmpEnvQueue.size(); ++i)
         {
-          mAmpEnv.StartAt(level, Voice::mMasterAmpEnv->GetValue(), Voice::mMasterAmpEnv->GetPrevResult(), Voice::mMasterAmpEnv->GetStage());
-          mEnv1.StartAt(level, Voice::mMasterEnv1->GetValue(), Voice::mMasterEnv1->GetPrevResult(), Voice::mMasterEnv1->GetStage());
-          mEnv2.StartAt(level, Voice::mMasterEnv2->GetValue(), Voice::mMasterEnv2->GetPrevResult(), Voice::mMasterEnv2->GetStage());
+          if (Voice::AmpEnvQueue[i])
+          {
+            masterAmpEnv = AmpEnvQueue[i];
+            masterEnv1 = Env1Queue[i];
+            masterEnv2 = Env2Queue[i];
+          }
+        }
+        //if (Voice::mMasterAmpEnv && !Voice::mMasterAmpEnv->GetReleased() && Voice::mMasterAmpEnv->GetStage() >= 0)
+        if (masterAmpEnv)
+        {
+          mAmpEnv.StartAt(level, masterAmpEnv->GetValue(), masterAmpEnv->GetPrevResult(), masterAmpEnv->GetStage());
+          mEnv1.StartAt(level, masterEnv1->GetValue(), masterEnv1->GetPrevResult(), masterEnv1->GetStage());
+          mEnv2.StartAt(level, masterEnv2->GetValue(), masterEnv2->GetPrevResult(), masterEnv2->GetStage());
         }
         else
         {
           mAmpEnv.Start(level);
           mEnv1.Start(1.);
           mEnv2.Start(1.);
-          Voice::mMasterEnv1 = &mEnv1;
-          Voice::mMasterEnv2 = &mEnv2;
-          Voice::mMasterAmpEnv = &mAmpEnv; // Sync the master envelopes to this voice's envelopes
         }
-        // Still to do: In mono mode, do not reset the master envelope(s) as long as keys are being held
+        // Sync the master envelopes to this voice's envelopes
+        Voice::Env1Queue[mID] = &mEnv1;
+        Voice::Env2Queue[mID] = &mEnv2;
+        Voice::AmpEnvQueue[mID] = &mAmpEnv;
       }
     }
     
@@ -208,6 +225,10 @@ public:
       mAmpEnv.Release();
       mEnv1.Release();
       mEnv2.Release();
+      // Remove this voice's envelopes from the envelope queue
+      Voice::AmpEnvQueue[mID] = nullptr;
+      Voice::Env1Queue[mID] = nullptr;
+      Voice::Env2Queue[mID] = nullptr;
     }
 
     void ProcessSamplesAccumulating(T** inputs, T** outputs, int nInputs, int nOutputs, int startIdx, int nFrames) override
@@ -384,9 +405,9 @@ public:
     ModulatorList<T, ADSREnvelope, FastLFO> mModulators;
 
     // Pointers to master modulators, for free-run and legato modes
-    static inline ADSREnvelope<T>* mMasterEnv1{ nullptr };
-    static inline ADSREnvelope<T>* mMasterEnv2{ nullptr };
-    static inline ADSREnvelope<T>* mMasterAmpEnv{ nullptr };
+    static inline std::vector<ADSREnvelope<T>*> Env1Queue;
+    static inline std::vector<ADSREnvelope<T>*> Env2Queue;
+    static inline std::vector<ADSREnvelope<T>*> AmpEnvQueue;
     static inline FastLFO<T>* mMasterLFO1{ nullptr }; // The last-triggered `mLFO1`, which "owns" the master phase
     static inline FastLFO<T>* mMasterLFO2{ nullptr }; // The last-triggered `mLFO2`, which "owns" the master phase
     static inline Sequencer<T>* mMasterSeq{ nullptr }; // The last-triggered `mSequencer`, which "owns" the master phase
@@ -598,8 +619,14 @@ public:
         break;
       }
       case kParamGain:
-        mParamsToSmooth[kModGainSmoother] = (T) value / 100.;
+      {
+#ifdef VST3_API
+        mParamsToSmooth[kModGainSmoother] = (T)value / 100.;
+#else
+        mParamsToSmooth[kModGainSmoother] = std::pow(10., value / 20.);
+#endif
         break;
+      }
       case kParamPan:
         mParamsToSmooth[kModPanSmoother] = (T)value / 90. + 1.;
         break;
@@ -760,6 +787,12 @@ public:
       case kParamLegato:
       {
         TablitsaDSP::Voice::mLegato = value > 0.5;
+        if (!(value > 0.5))
+        {
+          std::fill(TablitsaDSP::Voice::AmpEnvQueue.begin(), TablitsaDSP::Voice::AmpEnvQueue.end(), nullptr);
+          std::fill(TablitsaDSP::Voice::Env1Queue.begin(), TablitsaDSP::Voice::Env1Queue.end(), nullptr);
+          std::fill(TablitsaDSP::Voice::Env2Queue.begin(), TablitsaDSP::Voice::Env2Queue.end(), nullptr);
+        }
         break;
       }
       case kParamWavetable1:
