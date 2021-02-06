@@ -804,6 +804,7 @@ public:
         break;
       case kParamWavetable1PitchEnv1:
       case kParamWavetable1PitchEnv2:
+      case kParamWavetable1PitchAmpEnv:
       case kParamWavetable1PitchLFO1:
       case kParamWavetable1PitchLFO2:
       case kParamWavetable1PitchSeq:
@@ -822,6 +823,7 @@ public:
         break;
       case kParamWavetable1AmpEnv1:
       case kParamWavetable1AmpEnv2:
+      case kParamWavetable1AmpAmpEnv:
       case kParamWavetable1AmpLFO1:
       case kParamWavetable1AmpLFO2:
       case kParamWavetable1AmpSeq:
@@ -840,6 +842,7 @@ public:
         break;
       case kParamWavetable1PosEnv1:
       case kParamWavetable1PosEnv2:
+      case kParamWavetable1PosAmpEnv:
       case kParamWavetable1PosLFO1:
       case kParamWavetable1PosLFO2:
       case kParamWavetable1PosSeq:
@@ -858,6 +861,7 @@ public:
         break;
       case kParamWavetable1BendEnv1:
       case kParamWavetable1BendEnv2:
+      case kParamWavetable1BendAmpEnv:
       case kParamWavetable1BendLFO1:
       case kParamWavetable1BendLFO2:
       case kParamWavetable1BendSeq:
@@ -876,6 +880,7 @@ public:
         break;
       case kParamWavetable1SubEnv1:
       case kParamWavetable1SubEnv2:
+      case kParamWavetable1SubAmpEnv:
       case kParamWavetable1SubLFO1:
       case kParamWavetable1SubLFO2:
       case kParamWavetable1SubSeq:
@@ -898,6 +903,7 @@ public:
         break;
       case kParamWavetable2PitchEnv1:
       case kParamWavetable2PitchEnv2:
+      case kParamWavetable2PitchAmpEnv:
       case kParamWavetable2PitchLFO1:
       case kParamWavetable2PitchLFO2:
       case kParamWavetable2PitchSeq:
@@ -916,6 +922,7 @@ public:
         break;
       case kParamWavetable2AmpEnv1:
       case kParamWavetable2AmpEnv2:
+      case kParamWavetable2AmpAmpEnv:
       case kParamWavetable2AmpLFO1:
       case kParamWavetable2AmpLFO2:
       case kParamWavetable2AmpSeq:
@@ -934,6 +941,7 @@ public:
         break;
       case kParamWavetable2PosEnv1:
       case kParamWavetable2PosEnv2:
+      case kParamWavetable2PosAmpEnv:
       case kParamWavetable2PosLFO1:
       case kParamWavetable2PosLFO2:
       case kParamWavetable2PosSeq:
@@ -952,6 +960,7 @@ public:
         break;
       case kParamWavetable2BendEnv1:
       case kParamWavetable2BendEnv2:
+      case kParamWavetable2BendAmpEnv:
       case kParamWavetable2BendLFO1:
       case kParamWavetable2BendLFO2:
       case kParamWavetable2BendSeq:
