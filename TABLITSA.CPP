@@ -18,7 +18,11 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
 : Plugin(info, MakeConfig(kNumParams, kNumPresets))
 {
   /*Master Controls*/
-  GetParam(kParamGain)->InitDouble("Gain", 25., 0., 100.0, 0.01, "%");
+#ifdef VST3_API
+  GetParam(kParamGain)->InitDouble("Gain", 25., 0., 100.0, 0.01, "%", IParam::kFlagsNone, "Master");
+#else
+  GetParam(kParamGain)->InitGain("Gain", -24., -72., 0.);
+#endif
   GetParam(kParamPan)->InitAngleDegrees("Pan", 0., -90., 90.);
   GetParam(kParamNoteGlideTime)->InitMilliseconds("Note Glide Time", 0., 0.0, 3000.);
   GetParam(kParamNoteGlideRate)->InitDouble("Note Glide Rate", 12., 0.5, 128., 0.1, "St/s");
@@ -311,6 +315,15 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
   GetParam(kParamFilter2FB)->InitPercentage("Filter 2 FB");
   GetParam(kParamFilter2Delay)->InitInt("Filter 2 Delay", 8, 1, 512);
 
+  // Effect Parameters
+  GetParam(kParamDelayTimeLMilliseconds)->InitMilliseconds("Delay L Time (ms)", 100., 1., 5000.);
+  GetParam(kParamDelayTimeRMilliseconds)->InitMilliseconds("Delay R Time (ms)", 100., 1., 5000.);
+  GetParam(kParamDelayTimeLBeats)->InitEnum("Delay L Time (tempo)", LFO<>::k1, { LFO_TEMPODIV_VALIST });
+  GetParam(kParamDelayTimeRBeats)->InitEnum("Delay L Time (tempo)", LFO<>::k1, { LFO_TEMPODIV_VALIST });
+  GetParam(kParamDelayGain)->InitPercentage("Delay Gain");
+  GetParam(kParamDelayFeedback)->InitPercentage("Delay Feedback");
+  GetParam(kParamDelayMix)->InitPercentage("Delay Mix");
+
 #ifndef VST3_API
 #define KEYBOARD_HEIGHT 150.f
 #else
@@ -376,10 +389,10 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
     pGraphics->AttachControl(new IVKnobControl(masterPanel.GetGridCell(0, 0, 4, 6).GetCentredInside(dialSize), kParamGain, "Gain"), kNoTag, "Master");
     pGraphics->AttachControl(new IVModKnobControl(masterPanel.GetGridCell(0, 1, 4, 6).GetCentredInside(dialSize), kParamPan, "Pan"), kNoTag, "Master");
     // Static modulators
-    pGraphics->AttachControl(new ModSliderControl(masterPanel.GetGridCell(1, 0, 2, 1).GetVPadded(-12.f).GetGridCell(0, 0, 3, 3).GetHPadded(-20.f), kNoParameter, "Velocity", DEFAULT_STYLE, false, EDirection::Horizontal), kCtrlTagVelDepth, "StaticMods");
-    pGraphics->AttachControl(new ModSliderControl(masterPanel.GetGridCell(1, 0, 2, 1).GetVPadded(-12.f).GetGridCell(1, 0, 3, 3).GetHPadded(-20.f), kNoParameter, "Keytrack", DEFAULT_STYLE, false, EDirection::Horizontal), kCtrlTagKTkDepth, "StaticMods");
-    pGraphics->AttachControl(new ModSliderControl(masterPanel.GetGridCell(1, 0, 2, 1).GetVPadded(-12.f).GetGridCell(2, 0, 3, 3).GetHPadded(-20.f), kNoParameter, "Trigger Random", DEFAULT_STYLE, false, EDirection::Horizontal), kCtrlTagRndDepth, "StaticMods");
-    pGraphics->AttachControl(new IVGroupControl("Midi Mods", "StaticMods", 5.f, 15.f, 5.f, 12.f));
+    pGraphics->AttachControl(new ModSliderControl(masterPanel.GetGridCell(1, 0, 2, 1).GetVPadded(-12.f).GetGridCell(0, 0, 3, 3).GetHPadded(-24.f).GetHShifted(-5.f), kNoParameter, "Velocity", DEFAULT_STYLE, false, EDirection::Horizontal), kCtrlTagVelDepth, "StaticMods");
+    pGraphics->AttachControl(new ModSliderControl(masterPanel.GetGridCell(1, 0, 2, 1).GetVPadded(-12.f).GetGridCell(1, 0, 3, 3).GetHPadded(-24.f).GetHShifted(-5.f), kNoParameter, "Keytrack", DEFAULT_STYLE, false, EDirection::Horizontal), kCtrlTagKTkDepth, "StaticMods");
+    pGraphics->AttachControl(new ModSliderControl(masterPanel.GetGridCell(1, 0, 2, 1).GetVPadded(-12.f).GetGridCell(2, 0, 3, 3).GetHPadded(-24.f).GetHShifted(-5.f), kNoParameter, "Trigger Random", DEFAULT_STYLE, false, EDirection::Horizontal), kCtrlTagRndDepth, "StaticMods");
+    pGraphics->AttachControl(new IVGroupControl("Midi Mods", "StaticMods", 10.f, 15.f, 5.f, 12.f));
     // Polyphony and Portamento
     pGraphics->AttachControl(new IVToggleControl(masterPanel.GetGridCell(3, 1, 12, 6).GetVPadded(-2.f), kParamPortamentoMode, "", DEFAULT_STYLE.WithShowLabel(false), "Rate", "Time"),
       kNoTag, "Master")->SetAnimationEndActionFunction([pGraphics](IControl* pControl) {
@@ -392,8 +405,18 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
     pGraphics->AttachControl(new IVKnobControl(masterPanel.GetGridCell(1, 0, 4, 6).GetCentredInside(dialSize), kParamNoteGlideRate, "Glide Rate"), kNoTag, "Master")->Hide(true);
     pGraphics->AttachControl(new IVKnobControl(masterPanel.GetGridCell(1, 0, 4, 6).GetCentredInside(dialSize), kParamNoteGlideTime, "Glide Time"), kNoTag, "Master")->DisablePrompt(false);
     pGraphics->AttachControl(new IVToggleControl(masterPanel.GetGridCell(4, 1, 12, 6).GetVPadded(-2.f), kParamMonophonic, "", DEFAULT_STYLE.WithShowLabel(false), "Poly", "Mono"));
-    pGraphics->AttachControl(new IVToggleControl(masterPanel.GetGridCell(5, 1, 12, 6).GetVPadded(-2.f), kParamLegato, "", DEFAULT_STYLE.WithShowLabel(false), "Legato", "Retrigger"));
-    pGraphics->AttachControl(new IVLEDMeterControl<2>(masterPanel.GetGridCell(0, 5, 2, 6)), kCtrlTagMeter, "Master");
+    pGraphics->AttachControl(new IVToggleControl(masterPanel.GetGridCell(5, 1, 12, 6).GetVPadded(-2.f), kParamLegato, "", DEFAULT_STYLE.WithShowLabel(false), "Retrigger", "Legato"));
+    pGraphics->AttachControl(new IVLEDMeterControl<2>(masterPanel.GetGridCell(0, 5, 2, 6).GetVPadded(-20.f)), kCtrlTagMeter, "Master");
+
+
+    /* Effects Panel */
+    pGraphics->AttachControl(new IVKnobControl(masterPanel.GetGridCell(2, 2, 4, 7).GetVPadded(-25.f).GetCentredInside(dialSize), kParamDelayTimeLMilliseconds, "Left"), kNoTag, "Delay");
+    pGraphics->AttachControl(new IVKnobControl(masterPanel.GetGridCell(2, 3, 4, 7).GetVPadded(-25.f).GetCentredInside(dialSize), kParamDelayTimeLMilliseconds, "Right"), kNoTag, "Delay");
+    pGraphics->AttachControl(new IVKnobControl(masterPanel.GetGridCell(2, 4, 4, 7).GetVPadded(-25.f).GetCentredInside(dialSize), kParamDelayGain, "Gain"), kNoTag, "Delay");
+    pGraphics->AttachControl(new IVKnobControl(masterPanel.GetGridCell(2, 5, 4, 7).GetVPadded(-25.f).GetCentredInside(dialSize), kParamDelayGain, "Mix"), kNoTag, "Delay");
+    pGraphics->AttachControl(new IVToggleControl(masterPanel.GetGridCell(2, 6, 4, 7).GetVPadded(-6.f).SubRect(EDirection::Vertical, 2, 0).GetVPadded(-2.f), kNoParameter, "", DEFAULT_STYLE, "ms", "Tempo"), kNoTag, "Delay");
+    pGraphics->AttachControl(new IVToggleControl(masterPanel.GetGridCell(2, 6, 4, 7) .GetVPadded(-6.f).SubRect(EDirection::Vertical, 2, 1).GetVPadded(-2.f), kNoParameter, "", DEFAULT_STYLE, "Unlinked", "L/R Lock"), kNoTag, "Delay");
+    pGraphics->AttachControl(new IVGroupControl("Delay", "Delay", -5.f, 10.f, 0.f, 0.f));
 
     /* Waveform Modulation Panel */
     const IRECT lowerPanel = controls.GetReducedFromTop(controls.H() * 0.5f).GetPadded(-10.f).GetReducedFromRight(250.f);
@@ -418,7 +441,7 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
     pGraphics->AttachControl(new IVModKnobControl(oscModPanel.GetVPadded(-10.f).GetGridCell(0, 1, 1, 3).GetCentredInside(dialSize).GetCentredInside(dialSize), kParamPhaseModFreq, "Pitch"), kCtrlTagOscModFreq, "OscMod");
     pGraphics->AttachControl(new IVModKnobControl(oscModPanel.GetGridCell(0, 2, 1, 3).GetCentredInside(dialSize).GetCentredInside(dialSize), kParamPhaseModAmount, "Amount"), kCtrlTagOscModAmt, "OscMod");
     pGraphics->AttachControl(new IVGroupControl("Oscillator Modulation", "OscMod", 0.f, 10.f, 0.f, 0.f));
-
+    
     /*
     Filter Panel
     */
