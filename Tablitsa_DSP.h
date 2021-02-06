@@ -508,8 +508,9 @@ public:
     {
       T smoothedGain = mModulations.GetList()[kModGainSmoother][s];
       // Master effects processing
-      outputs[0][s] += mDelayEffect.Process(outputs[0][s]);
-      outputs[1][s] += mDelayEffect.Process(outputs[1][s]);
+      T* delay = mDelayEffect.ProcessStereo(outputs[0][s], outputs[0][s]);
+      outputs[0][s] += delay[0];
+      outputs[1][s] += delay[1];
 
       outputs[0][s] *= smoothedGain * (2 - mModulations.GetList()[kModPanSmoother][s]);
       outputs[1][s] *= smoothedGain * mModulations.GetList()[kModPanSmoother][s];
@@ -1246,8 +1247,14 @@ public:
         break;
       }
       case kParamDelayTimeLMilliseconds:
-        break;
       case kParamDelayTimeRMilliseconds:
+        mDelayEffect.SetDelay(value, paramIdx - kParamDelayTimeLMilliseconds);
+        break;
+      case kParamDelayFeedback:
+        mDelayEffect.SetFeedback((T)value / 100.);
+        break;
+      case kParamDelayMix:
+        mDelayEffect.SetGain((T)value / 100.);
         break;
       default:
         break;

@@ -83,19 +83,56 @@ public:
     Effect(sampleRate),
     mMaxDelayMS(maxDelayMS),
     mMaxDelay(static_cast<int>(mMaxDelayMS / 1000. * mSampleRate)),
-    mDelayL(mMaxDelay),
-    mDelayR(mMaxDelay),
+    mDelayL(mMaxDelay + 1),
+    mDelayR(mMaxDelay + 1),
     mDelayLTime(mMaxDelay / 2),
     mDelayRTime(mMaxDelay / 2)
   {
 
   }
 
+  void SetDelay(T timeMS, int channel)
+  {
+    if (channel == 0)
+    {
+      mDelayLTimeMS = timeMS;
+      mDelayLTime = static_cast<int>(timeMS / 1000. * mSampleRate);
+    }
+    else if (channel == 1)
+    {
+      mDelayRTimeMS = timeMS;
+      mDelayRTime = static_cast<int>(timeMS / 1000. * mSampleRate);
+    }
+  }
+
+  void SetFeedback(T fb)
+  {
+    mFeedback = fb;
+  }
+
+  void SetGain(T gain)
+  {
+    mDelayLGain = gain;
+    mDelayRGain = gain;
+  }
+
   T Process(T s) override
   {
-    mDelayL.push(s);
-    mDelayR.push(s);
-    return mDelayL[mDelayLTime] * mDelayLGain + mDelayR[mDelayRTime] * mDelayRGain;
+    T left_out = mDelayL[mDelayLTime];
+    T right_out = mDelayR[mDelayRTime];
+    mDelayL.push(s + left_out * mFeedback);
+    mDelayR.push(s + right_out * mFeedback);
+    return left_out * mDelayLGain + right_out * mDelayRGain;
+  }
+
+  T* ProcessStereo(T sl, T sr)
+  {
+    T left_out = mDelayL[mDelayLTime];
+    T right_out = mDelayR[mDelayRTime];
+    mDelayL.push(sl + left_out * mFeedback);
+    mDelayR.push(sr + right_out * mFeedback);
+    T output[2]{ left_out * mDelayLGain, right_out * mDelayRGain };
+    return output;
   }
 
 private:
@@ -106,6 +143,9 @@ private:
 
   T mDelayLGain{ 0.5 };
   T mDelayRGain{ 0.5 };
+  double mDelayLTimeMS;
+  double mDelayRTimeMS;
   int mDelayLTime;
   int mDelayRTime;
+  T mFeedback{ 0. };
 };

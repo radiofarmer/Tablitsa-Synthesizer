@@ -290,11 +290,10 @@ enum EParams
   kParamRingModAmountVel,
   kParamRingModAmountKTk,
   kParamRingModAmountRnd,
-  kParamDelayTimeRMilliseconds,
   kParamDelayTimeLMilliseconds,
-  kParamDelayTimeRBeats,
+  kParamDelayTimeRMilliseconds,
   kParamDelayTimeLBeats,
-  kParamDelayGain,
+  kParamDelayTimeRBeats,
   kParamDelayFeedback,
   kParamDelayMix,
   kNumParams

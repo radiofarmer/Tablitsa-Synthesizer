@@ -316,13 +316,12 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
   GetParam(kParamFilter2Delay)->InitInt("Filter 2 Delay", 8, 1, 512);
 
   // Effect Parameters
-  GetParam(kParamDelayTimeLMilliseconds)->InitMilliseconds("Delay L Time (ms)", 100., 1., 5000.);
-  GetParam(kParamDelayTimeRMilliseconds)->InitMilliseconds("Delay R Time (ms)", 100., 1., 5000.);
+  GetParam(kParamDelayTimeLMilliseconds)->InitDouble("Delay L Time (ms)", 100., 1., 5000., 1., "ms", IParam::kFlagsNone, "Delay", IParam::ShapePowCurve(3.));
+  GetParam(kParamDelayTimeRMilliseconds)->InitDouble("Delay R Time (ms)", 100., 1., 5000., 1., "ms", IParam::kFlagsNone, "Delay", IParam::ShapePowCurve(3.));
   GetParam(kParamDelayTimeLBeats)->InitEnum("Delay L Time (tempo)", LFO<>::k1, { LFO_TEMPODIV_VALIST });
   GetParam(kParamDelayTimeRBeats)->InitEnum("Delay L Time (tempo)", LFO<>::k1, { LFO_TEMPODIV_VALIST });
-  GetParam(kParamDelayGain)->InitPercentage("Delay Gain");
   GetParam(kParamDelayFeedback)->InitPercentage("Delay Feedback");
-  GetParam(kParamDelayMix)->InitPercentage("Delay Mix");
+  GetParam(kParamDelayMix)->InitPercentage("Delay Mix", 0.);
 
 #ifndef VST3_API
 #define KEYBOARD_HEIGHT 150.f
@@ -411,12 +410,12 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
 
     /* Effects Panel */
     pGraphics->AttachControl(new IVKnobControl(masterPanel.GetGridCell(2, 2, 4, 7).GetVPadded(-25.f).GetCentredInside(dialSize), kParamDelayTimeLMilliseconds, "Left"), kNoTag, "Delay");
-    pGraphics->AttachControl(new IVKnobControl(masterPanel.GetGridCell(2, 3, 4, 7).GetVPadded(-25.f).GetCentredInside(dialSize), kParamDelayTimeLMilliseconds, "Right"), kNoTag, "Delay");
-    pGraphics->AttachControl(new IVKnobControl(masterPanel.GetGridCell(2, 4, 4, 7).GetVPadded(-25.f).GetCentredInside(dialSize), kParamDelayGain, "Gain"), kNoTag, "Delay");
-    pGraphics->AttachControl(new IVKnobControl(masterPanel.GetGridCell(2, 5, 4, 7).GetVPadded(-25.f).GetCentredInside(dialSize), kParamDelayGain, "Mix"), kNoTag, "Delay");
+    pGraphics->AttachControl(new IVKnobControl(masterPanel.GetGridCell(2, 3, 4, 7).GetVPadded(-25.f).GetCentredInside(dialSize), kParamDelayTimeRMilliseconds, "Right"), kNoTag, "Delay");
+    pGraphics->AttachControl(new IVKnobControl(masterPanel.GetGridCell(2, 4, 4, 7).GetVPadded(-25.f).GetCentredInside(dialSize), kParamDelayFeedback, "Feedback"), kNoTag, "Delay");
+    pGraphics->AttachControl(new IVKnobControl(masterPanel.GetGridCell(2, 5, 4, 7).GetVPadded(-25.f).GetCentredInside(dialSize), kParamDelayMix, "Mix"), kNoTag, "Delay");
     pGraphics->AttachControl(new IVToggleControl(masterPanel.GetGridCell(2, 6, 4, 7).GetVPadded(-6.f).SubRect(EDirection::Vertical, 2, 0).GetVPadded(-2.f), kNoParameter, "", DEFAULT_STYLE, "ms", "Tempo"), kNoTag, "Delay");
     pGraphics->AttachControl(new IVToggleControl(masterPanel.GetGridCell(2, 6, 4, 7) .GetVPadded(-6.f).SubRect(EDirection::Vertical, 2, 1).GetVPadded(-2.f), kNoParameter, "", DEFAULT_STYLE, "Unlinked", "L/R Lock"), kNoTag, "Delay");
-    pGraphics->AttachControl(new IVGroupControl("Delay", "Delay", -5.f, 10.f, 0.f, 0.f));
+    pGraphics->AttachControl(new IVGroupControl("Delay", "Delay", -10.f, 15.f, 0.f, 0.f));
 
     /* Waveform Modulation Panel */
     const IRECT lowerPanel = controls.GetReducedFromTop(controls.H() * 0.5f).GetPadded(-10.f).GetReducedFromRight(250.f);
