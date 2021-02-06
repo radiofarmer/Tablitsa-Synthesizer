@@ -1236,6 +1236,10 @@ public:
           });
         break;
       }
+      case kParamDelayTimeLMilliseconds:
+        break;
+      case kParamDelayTimeRMilliseconds:
+        break;
       default:
         break;
     }
