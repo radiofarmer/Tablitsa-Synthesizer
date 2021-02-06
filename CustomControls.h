@@ -524,7 +524,7 @@ private:
 };
 
 template <int MAXNC = 1>
-class SequencerControl : public IVMultiSliderControl<MAXNC>
+class SequencerControl final : public IVMultiSliderControl<MAXNC>
 {
 public:
   SequencerControl(const IRECT& bounds, const char* label, const IVStyle& style = DEFAULT_STYLE, int nSteps = 0, EDirection dir = EDirection::Vertical) :
@@ -532,4 +532,50 @@ public:
   {
     SetColor(kX1, GetColor(kPR));
   }
+
+  void DrawWidget(IGraphics& g) override
+  {
+    const int nVals = NVals();
+    int nSteps = mNSteps + mZeroValueStepHasBounds;
+
+    // Step labels
+    IText labelText(DEFAULT_TEXT.WithFGColor(mLabelColor));
+    IRECT textBounds;
+    g.MeasureText(labelText, "10", textBounds);
+    const float stepHeight = IVTrackControlBase::mTrackBounds.Get()[0].H() / nSteps;
+    // Make sure label fits inside the step borders
+    while (textBounds.H() >= stepHeight)
+    {
+      labelText = labelText.WithSize(labelText.mSize - 0.5f);
+      g.MeasureText(labelText, "10", textBounds);
+    }
+
+    for (int ch = 0; ch < nVals; ch++)
+    {
+      if (GetStepped())
+      {
+        for (int step{ 0 }; step < nSteps; ++step)
+        {
+          const IRECT trackBounds = IVTrackControlBase::mTrackBounds.Get()[ch];
+          if (mDirection == EDirection::Vertical)
+          {
+            float stepSpan = trackBounds.H() / nSteps;
+            const IRECT stepBounds = trackBounds.SubRect(EDirection::Vertical, nSteps, step);
+            g.PathClear();
+            g.PathMoveTo(trackBounds.L + 1, trackBounds.B - step * stepSpan);
+            g.PathLineTo(trackBounds.R - 1, trackBounds.B - step * stepSpan);
+            g.PathStroke(mStepMarkerColor, 1.f);
+            int a = step % 2;
+            if (step % 2 == 0)
+              g.DrawText(labelText, std::to_string(nSteps - step - 1).c_str(), stepBounds);
+          }
+        }
+      }
+      DrawTrack(g, IVTrackControlBase::mTrackBounds.Get()[ch], ch);
+    }
+  }
+
+private:
+  static inline const IColor mStepMarkerColor{ 50, 0, 0, 0 };
+  static inline const IColor mLabelColor = mStepMarkerColor.WithOpacity(0.75);
 };
