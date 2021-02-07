@@ -294,6 +294,7 @@ enum EParams
   kParamDelayTimeRMilliseconds,
   kParamDelayTimeLBeats,
   kParamDelayTimeRBeats,
+  kParamDelayTimeMode,
   kParamDelayFeedback,
   kParamDelayMix,
   kNumParams
@@ -343,6 +344,10 @@ enum EControlTags
   kCtrlTagOsc1ModSwitch,
   kCtrlTagOsc2ModSwitch,
   kCtrlTagSequencer,
+  kCtrlTagDelayLMilliseconds,
+  kCtrlTagDelayRMilliseconds,
+  kCtrlTagDelayLBeats,
+  kCtrlTagDelayRBeats,
   kNumCtrlTags
 };
 

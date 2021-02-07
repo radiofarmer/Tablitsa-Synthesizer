@@ -1246,10 +1246,21 @@ public:
           });
         break;
       }
+      case kParamDelayTimeMode:
+        mDelayEffect.SetTempoSync(value > 0.5);
+        break;
       case kParamDelayTimeLMilliseconds:
       case kParamDelayTimeRMilliseconds:
-        mDelayEffect.SetDelay(value, paramIdx - kParamDelayTimeLMilliseconds);
+        mDelayEffect.SetDelayMS(value, paramIdx - kParamDelayTimeLMilliseconds);
         break;
+      case kParamDelayTimeLBeats:
+      case kParamDelayTimeRBeats:
+      {
+        double qnScalar = LFO<T>::GetQNScalar(static_cast<LFO<T>::ETempoDivision>(Clip((int)value, 0, (int)LFO<T>::ETempoDivision::kNumDivisions)));
+        double qnPerMeasure = 4. / mTSDenom * mTSNum;
+        mDelayEffect.SetDelayTempo(1. / qnScalar / qnPerMeasure, paramIdx - kParamDelayTimeLBeats, mTempo);
+        break;
+      }
       case kParamDelayFeedback:
         mDelayEffect.SetFeedback((T)value / 100.);
         break;
@@ -1278,7 +1289,11 @@ public:
   double mGlideRateScalar{ 1. }; // Semitones per second
   double mLastNoteOn{ 0 };
 
+  // Audio processing and musical parameters
   double mSampleRate{ DEFAULT_SAMPLE_RATE };
+  int mTSNum{ 4 };
+  int mTSDenom{ 4 };
+  double mTempo{ DEFAULT_TEMPO };
 
   // Status Variables
   static inline bool tableLoading[2]{ true, true };
@@ -1294,5 +1309,5 @@ public:
 
   // Effects
   std::vector<Effect<T>*> mEffects;
-  DelayEffect<T> mDelayEffect{ DEFAULT_SAMPLE_RATE };
+  DelayEffect<T> mDelayEffect{ DEFAULT_SAMPLE_RATE, DEFAULT_SAMPLE_RATE * 12. };
 };
