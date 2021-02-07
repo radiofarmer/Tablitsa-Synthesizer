@@ -1,5 +1,6 @@
 #pragma once
 
+#include "IPlugConstants.h"
 #include "Oscillator.h"
 #include "MidiSynth.h"
 #include "ADSREnvelope.h"
@@ -263,15 +264,15 @@ public:
         mOsc1.SetWtPosition(1 - mVModulations.GetList()[kVWavetable1Position][bufferIdx]); // Wavetable 1 Position
         mOsc1.SetWtBend(mVModulations.GetList()[kVWavetable1Bend][bufferIdx]); // Wavetable 1 Bend
         mOsc1Sub.SetLevel(mVModulations.GetList()[kVWavetable1Sub][bufferIdx]);
-        mOsc1.SetPhaseModulation(mVModulations.GetList()[kVPhaseModAmt][bufferIdx], phaseModFreqFact);
-        mOsc1.SetRingModulation(mVModulations.GetList()[kVRingModFreq][bufferIdx], ringModFreqFact);
+        mOsc1.SetPhaseModulation(mVModulations.GetList()[kVPhaseModAmt][bufferIdx], osc1Freq * phaseModFreqFact);
+        mOsc1.SetRingModulation(mVModulations.GetList()[kVRingModAmt][bufferIdx], osc1Freq * ringModFreqFact);
 
         double osc2Freq = 440. * pow(2., pitch + mVModulations.GetList()[kVWavetable2PitchOffset][bufferIdx] / 12.);
         mOsc2.SetWtPosition(1 - mVModulations.GetList()[kVWavetable2Position][bufferIdx]); // Wavetable 2 Position
         mOsc2.SetWtBend(mVModulations.GetList()[kVWavetable2Bend][bufferIdx]); // Wavetable 2 Bend
         mOsc2Sub.SetLevel(mVModulations.GetList()[kVWavetable2Sub][bufferIdx]);
-        mOsc2.SetPhaseModulation(mVModulations.GetList()[kVPhaseModAmt][bufferIdx], phaseModFreqFact);
-        mOsc2.SetRingModulation(mVModulations.GetList()[kVRingModFreq][bufferIdx], ringModFreqFact);
+        mOsc2.SetPhaseModulation(mVModulations.GetList()[kVPhaseModAmt][bufferIdx], osc2Freq * phaseModFreqFact);
+        mOsc2.SetRingModulation(mVModulations.GetList()[kVRingModAmt][bufferIdx], osc2Freq * ringModFreqFact);
         
         mFilters.at(0)->SetCutoff(mVModulations.GetList()[kVFilter1Cutoff][bufferIdx]); // Filter 1 Cutoff
         mFilters.at(0)->SetQ(mVModulations.GetList()[kVFilter1Resonance][bufferIdx]); // Filter 1 Resonance
@@ -506,6 +507,11 @@ public:
     for(int s=0; s < nFrames;s++)
     {
       T smoothedGain = mModulations.GetList()[kModGainSmoother][s];
+      // Master effects processing
+      T* delay = mDelayEffect.ProcessStereo(outputs[0][s], outputs[0][s]);
+      outputs[0][s] += delay[0];
+      outputs[1][s] += delay[1];
+
       outputs[0][s] *= smoothedGain * (2 - mModulations.GetList()[kModPanSmoother][s]);
       outputs[1][s] *= smoothedGain * mModulations.GetList()[kModPanSmoother][s];
     }
@@ -520,9 +526,13 @@ public:
       for (auto f : dynamic_cast<TablitsaDSP::Voice&>(voice).mFilters)
         f->UpdateSampleRate(sampleRate);
       });
+
     // Param Smoother list
     mModulationsData.Resize(blockSize * kNumModulations);
     mModulations.Empty();
+
+    // Effects
+    mDelayEffect.SetSampleRate(sampleRate);
     
     for(auto i = 0; i < kNumModulations; i++)
     {
@@ -1236,9 +1246,26 @@ public:
           });
         break;
       }
-      case kParamDelayTimeLMilliseconds:
+      case kParamDelayTimeMode:
+        mDelayEffect.SetTempoSync(value > 0.5);
         break;
+      case kParamDelayTimeLMilliseconds:
       case kParamDelayTimeRMilliseconds:
+        mDelayEffect.SetDelayMS(value, paramIdx - kParamDelayTimeLMilliseconds);
+        break;
+      case kParamDelayTimeLBeats:
+      case kParamDelayTimeRBeats:
+      {
+        double qnScalar = LFO<T>::GetQNScalar(static_cast<LFO<T>::ETempoDivision>(Clip((int)value, 0, (int)LFO<T>::ETempoDivision::kNumDivisions)));
+        double qnPerMeasure = 4. / mTSDenom * mTSNum;
+        mDelayEffect.SetDelayTempo(1. / qnScalar / qnPerMeasure, paramIdx - kParamDelayTimeLBeats, mTempo);
+        break;
+      }
+      case kParamDelayFeedback:
+        mDelayEffect.SetFeedback((T)value / 100.);
+        break;
+      case kParamDelayMix:
+        mDelayEffect.SetGain((T)value / 100.);
         break;
       default:
         break;
@@ -1262,7 +1289,11 @@ public:
   double mGlideRateScalar{ 1. }; // Semitones per second
   double mLastNoteOn{ 0 };
 
-  double mSampleRate{ 44100. };
+  // Audio processing and musical parameters
+  double mSampleRate{ DEFAULT_SAMPLE_RATE };
+  int mTSNum{ 4 };
+  int mTSDenom{ 4 };
+  double mTempo{ DEFAULT_TEMPO };
 
   // Status Variables
   static inline bool tableLoading[2]{ true, true };
@@ -1275,4 +1306,8 @@ public:
   static inline double mSeqSteps[kNumSeqSteps]{}; // Value of each step in the sequencer
   int mStepPos{ 0 };
   int mPrevPos{ -1 };
+
+  // Effects
+  std::vector<Effect<T>*> mEffects;
+  DelayEffect<T> mDelayEffect{ DEFAULT_SAMPLE_RATE, DEFAULT_SAMPLE_RATE * 12. };
 };

@@ -386,7 +386,7 @@ public:
 
   void SetQNScalarFromDivision(int division) 
   {
-    mQNScalar = GetQNScalar(static_cast<ETempoDivison>(Clip(division, 0, (int)kNumDivisions))) / NSteps; // Tempo-synced rate indicates the length of one step
+    mQNScalar = GetQNScalar(static_cast<ETempoDivision>(Clip(division, 0, (int)kNumDivisions))) / NSteps; // Tempo-synced rate indicates the length of one step
   }
 
   inline T DoProcess() 
