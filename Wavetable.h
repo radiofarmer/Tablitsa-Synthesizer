@@ -610,6 +610,7 @@ public:
     if (tab != nullptr)
       mWT = tab;
     mPhaseIncrFactor = (1. / (mWT->mCyclesPerLevel * mProcessOS));
+    mCyclesPerLevelRecip = 1. / mWT->mCyclesPerLevel;
   }
 
   // Chooses the proper mipmap for the current note frequency (Hz) and sample rate
@@ -737,7 +738,8 @@ public:
       oversampled[s] = lowerTable + mTableInterp * ((f3 + frac2 * (f4 - f3)) - lowerTable);
 #else
       const T output = lowerTable + mTableInterp * ((f3 + frac2 * (f4 - f3)) - lowerTable);
-      mLastOutput = pOutput[s] = output + mRM * mRingModAmt * (RingMod() * output - output);
+      pOutput[s] = output + mRM * mRingModAmt * (RingMod() * output - output);
+      mLastOutput = pOutput[s];
 #endif
       // Increment Phase
       IOscillator<T>::mPhase += mPhaseIncr * mPhaseIncrFactor;
@@ -816,7 +818,7 @@ public:
   {
     double cycle;
     mPhaseInCycle = modf(phase * mWT->mCyclesPerLevel, &cycle);
-    return (cycle + std::pow(mPhaseInCycle, 1. + (mWtBend >= 0. ? mWtBend : mWtBend / 2.))) / mWT->mCyclesPerLevel;
+    return (cycle + std::pow(mPhaseInCycle, 1. + (mWtBend >= 0. ? mWtBend : mWtBend / 2.))) * mCyclesPerLevelRecip;
   }
 
   inline double WrapPhase(double phase)
@@ -831,12 +833,12 @@ public:
   /* Returns an adjusted phase increment based on the current (cycle-normalized) phase. */
   inline double PhaseMod()
   {
-    return mPM * mPhaseModAmt * mPhaseModulator.Lookup(mPhaseInCycle * mPhaseModFreq);
+    return mPM * mPhaseModAmt * mPhaseModulator.Process() * mCyclesPerLevelRecip;
   }
 
   inline double RingMod()
   {
-    return mRingModulator.Lookup(mPhaseInCycle * mRingModFreq);
+    return mRingModulator.Process();
   }
 
   inline double* GetWtPosition()
@@ -876,10 +878,10 @@ public:
     else
       mPM = 0.;
   }
-  inline void SetPhaseModulation(double amt, double freqOffset)
+  inline void SetPhaseModulation(double amt, double freqCPS)
   {
     mPhaseModAmt = amt;
-    mPhaseModFreq = freqOffset * twoPi;
+    mPhaseModulator.SetFreqCPS(freqCPS);
   }
 
   inline void SetRingModulation(bool on)
@@ -889,10 +891,10 @@ public:
     else
       mRM = 0.;
   }
-  inline void SetRingModulation(double amt, double freqOffset)
+  inline void SetRingModulation(double amt, double freqCPS)
   {
     mRingModAmt = amt;
-    mRingModFreq = freqOffset * twoPi;
+    mRingModulator.SetFreqCPS(freqCPS);
   }
 
   void ReloadLUT()
@@ -928,6 +930,7 @@ private:
   double mTableInterp{ 1 };
   double mPhaseIncrFactor{ 1. }; // Reciprocal of the product of the number of cycles per wavetable level and the processing oversampling level
   double mPhaseInCycle{ 0. }; // The fractional phase (between zero and one) within a single cycle, independent of the number of cycles per wavetable level.
+  double mCyclesPerLevelRecip{ 1. };
 
   // Wavetabe Data
   T* mLUTLo[2]{}; // Pointer for lower-frequency (higher-sample) lookup table
@@ -964,5 +967,5 @@ private:
 public:
   static inline Wavetable<T>* LoadedTables[2]{ nullptr, nullptr };
   static inline iplug::FastSinOscillator<T> mPhaseModulator;
-  static inline iplug::FastSinOscillator<T> mRingModulator;
+  static inline iplug::FastSinOscillator<T> mRingModulator{ 0.5 }; // Offset start phase by half a cycle
 };
