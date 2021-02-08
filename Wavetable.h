@@ -735,6 +735,7 @@ public:
       T lowerTable = (f1 + frac * (f2 - f1));
 #ifdef OVERSAMPLING
       oversampled[s] = lowerTable + mTableInterp * ((f3 + frac2 * (f4 - f3)) - lowerTable);
+      oversampled[s] += mRM * mRingModAmt * (RingMod() * oversampeld[s] - oversampled[s]);
 #else
       const T output = lowerTable + mTableInterp * ((f3 + frac2 * (f4 - f3)) - lowerTable);
       pOutput[s] = output + mRM * mRingModAmt * (RingMod() * output - output);
@@ -761,7 +762,8 @@ public:
 
     const double phaseIncr = IOscillator<T>::mPhaseIncr * mPhaseIncrFactor;
     double phase = SamplePhaseShift(IOscillator<T>::mPhase);
-    Vec4d phaseDouble = mul_add(mIncrVec, phaseIncr, phase) * mTableSize; // Next four phase positions in samples, including fractional position
+    Vec4d phaseMod = Vec4d(PhaseMod(), PhaseMod(), PhaseMod(), PhaseMod()); // TODO: Make vector-lookup-capable version of FastSinOscillator
+    Vec4d phaseDouble = mul_add(mIncrVec, phaseIncr, phase + phaseMod) * mTableSize; // Next four phase positions in samples, including fractional position
     Vec4q phaseInt = truncatei(phaseDouble); // Indices of the (left) samples to read
     Vec4d phaseFrac = phaseDouble - to_double(phaseInt);
     phaseInt &= mTableSizeM1;
@@ -797,7 +799,9 @@ public:
     Vec4d tb1 = mul_add(tb1hi - tb1lo, mTableInterp, tb1lo);
     
     // Mix wavetables
+    Vec4d ringMod{ RingMod(), RingMod(), RingMod(), RingMod() };
     Vec4d mixed = mul_add(tb1 - tb0, 1 - tableOffset, tb0);
+    mixed = mul_add(ringMod - 1., mRM * mRingModAmt * mixed, mixed);
 
     IOscillator<T>::mPhase += phaseIncr * (double)VECTOR_SIZE;
     IOscillator<T>::mPhase -= floor(IOscillator<T>::mPhase);
@@ -965,6 +969,6 @@ private:
 
 public:
   static inline Wavetable<T>* LoadedTables[2]{ nullptr, nullptr };
-  static inline iplug::FastSinOscillator<T> mPhaseModulator;
-  static inline iplug::FastSinOscillator<T> mRingModulator{ 0.5 }; // Offset start phase by half a cycle
+  iplug::FastSinOscillator<T> mPhaseModulator;
+  iplug::FastSinOscillator<T> mRingModulator{ 0.5 }; // Offset start phase by half a cycle
 };
