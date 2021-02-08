@@ -724,7 +724,6 @@ public:
         mLUTHi[0] + halfOffset,
         mLUTHi[1] + (halfOffset & mNextTableSizeM1)
       }; // Obtain the integer portion
-//      const double frac = mTableSize * phaseNorm - floor(mTableSize * phaseNorm);
       // Read from wavetable
       const double sampleWtPosition{ tableOffset  };
       const double sampleWtPositionInv{ 1 - sampleWtPosition };
@@ -823,9 +822,9 @@ public:
 
   inline double WrapPhase(double phase)
   {
-    while (phase < 0)
+    while (phase < 0.)
       phase++;
-    while (phase > 1)
+    while (phase >= 1.)
       phase--;
     return phase;
   }

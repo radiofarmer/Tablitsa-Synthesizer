@@ -391,8 +391,8 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
     // Static modulators
     pGraphics->AttachControl(new ModSliderControl(masterPanel.GetGridCell(1, 0, 2, 1).GetVPadded(-12.f).GetGridCell(0, 0, 3, 3).GetHPadded(-24.f).GetHShifted(-15.f), kNoParameter, "Velocity", DEFAULT_STYLE, false, EDirection::Horizontal), kCtrlTagVelDepth, "StaticMods");
     pGraphics->AttachControl(new ModSliderControl(masterPanel.GetGridCell(1, 0, 2, 1).GetVPadded(-12.f).GetGridCell(1, 0, 3, 3).GetHPadded(-24.f).GetHShifted(-15.f), kNoParameter, "Keytrack", DEFAULT_STYLE, false, EDirection::Horizontal), kCtrlTagKTkDepth, "StaticMods");
-    pGraphics->AttachControl(new ModSliderControl(masterPanel.GetGridCell(1, 0, 2, 1).GetVPadded(-12.f).GetGridCell(2, 0, 3, 3).GetHPadded(-24.f).GetHShifted(-15.f), kNoParameter, "Trigger Random", DEFAULT_STYLE, false, EDirection::Horizontal), kCtrlTagRndDepth, "StaticMods");
-    pGraphics->AttachControl(new IVGroupControl("Midi Mods", "StaticMods", 10.f, 15.f, 5.f, 12.f));
+    pGraphics->AttachControl(new ModSliderControl(masterPanel.GetGridCell(1, 0, 2, 1).GetVPadded(-12.f).GetGridCell(2, 0, 3, 3).GetHPadded(-24.f).GetHShifted(-15.f), kNoParameter, "Trg. Rnd.", DEFAULT_STYLE, false, EDirection::Horizontal), kCtrlTagRndDepth, "StaticMods");
+    pGraphics->AttachControl(new IVGroupControl("Midi Mods", "StaticMods", 5.f, 15.f, 5.f, 12.f));
     // Polyphony and Portamento
     pGraphics->AttachControl(new IVToggleControl(masterPanel.GetGridCell(3, 1, 12, 6).GetVPadded(-2.f), kParamPortamentoMode, "", DEFAULT_STYLE.WithShowLabel(false), "Rate", "Time"),
       kNoTag, "Master")->SetAnimationEndActionFunction([pGraphics](IControl* pControl) {
