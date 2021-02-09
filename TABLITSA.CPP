@@ -28,6 +28,7 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
   GetParam(kParamNoteGlideRate)->InitDouble("Note Glide Rate", 12., 0.5, 128., 0.1, "St/s");
   GetParam(kParamPortamentoMode)->InitBool("Equal Glide Time", true);
   GetParam(kParamMonophonic)->InitBool("Monophonic", false);
+  GetParam(kParamUnisonVoices)->InitInt("Unison Voices", 1, 0, 8);
   /*Modulators*/
   GetParam(kParamEnv1Attack)->InitDouble("Env1 Attack", 10., 1., 3000., 0.1, "ms", IParam::kFlagsNone, "ADSR", IParam::ShapePowCurve(3.));
   GetParam(kParamEnv1Decay)->InitDouble("Env1 Decay", 10., 1., 3000., 0.1, "ms", IParam::kFlagsNone, "ADSR", IParam::ShapePowCurve(3.));
@@ -407,7 +408,9 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
     pGraphics->AttachControl(new IVToggleControl(masterPanel.GetGridCell(4, 1, 12, 6).GetVPadded(-2.f), kParamMonophonic, "", DEFAULT_STYLE.WithShowLabel(false), "Poly", "Mono"));
     pGraphics->AttachControl(new IVToggleControl(masterPanel.GetGridCell(5, 1, 12, 6).GetVPadded(-2.f), kParamLegato, "", DEFAULT_STYLE.WithShowLabel(false), "Retrigger", "Legato"));
     pGraphics->AttachControl(new IVLEDMeterControl<2>(masterPanel.GetGridCell(0, 5, 2, 6).GetVPadded(-20.f)), kCtrlTagMeter, "Master");
-
+    // Unison and Stereo Width
+    pGraphics->AttachControl(new IVNumberBoxControl(masterPanel.GetGridCell(0, 2, 4, 6).GetVPadded(-16.f), kParamUnisonVoices, nullptr, "Unison"), kNoTag, "Stereo");
+    pGraphics->AttachControl(new IVKnobControl(masterPanel.GetGridCell(0, 3, 4, 6).GetCentredInside(dialSize), kParamUnisonDetune, "Detune"), kNoTag, "Stereo");
 
     /* Effects Panel */
     auto channelLockFunction = IActionFunction([pGraphics, this](IControl* pControl) {
@@ -866,33 +869,44 @@ bool Tablitsa::OnMessage(int msgTag, int ctrlTag, int dataSize, const void* pDat
     const int bendRange = *static_cast<const int*>(pData);
     mDSP.mSynth.SetPitchBendRange(bendRange);
   }
-  else if (msgTag == kMsgWavetable1Changed)
+  else
   {
-    const double wtIdx = *static_cast<const double*>(pData); //Semi-Normalized value (between 1/118 and 1)
-    mDSP.mLoadedWavetables[0] = wtIdx * 118.; // Corresponds to the atomic number (not the 0-indexed vector item)
-    mDSP.UpdateOscillatorWavetable(static_cast<int>(mDSP.mLoadedWavetables[0]) - 1, 0);
-  }
-  else if (msgTag == kMsgWavetable2Changed)
-  {
-    const double wtIdx = *static_cast<const double*>(pData);
-    mDSP.mLoadedWavetables[1] = wtIdx * 118.;
-    mDSP.UpdateOscillatorWavetable(static_cast<int>(mDSP.mLoadedWavetables[1]) - 1, 1);
-  }
-  else if (msgTag == kMsgSeqSliderChanged)
-  {
-    // Read incoming data as a tuple
-    auto* pConverted = reinterpret_cast<const ParamTuple*>(pData);
-    mDSP.mSeqSteps[pConverted->idx] = pConverted->value;
-  }
-  else if (msgTag == kMsgRandomizeSequencer)
-  {
-    auto* pSequencer = dynamic_cast<SequencerControl<kNumSeqSteps>*>(GetUI()->GetControlWithTag(kCtrlTagSequencer));
-    for (auto i{ 0 }; i < kNumSeqSteps; ++i)
+    switch (msgTag)
     {
-      mDSP.mSeqSteps[i] = static_cast<double>(std::rand() % 1000) / 1000.;
-      pSequencer->SetValue(mDSP.mSeqSteps[i], i);
+      case kMsgWavetable1Changed:
+      {
+        const double wtIdx = *static_cast<const double*>(pData); //Semi-Normalized value (between 1/118 and 1)
+        mDSP.mLoadedWavetables[0] = wtIdx * 118.; // Corresponds to the atomic number (not the 0-indexed vector item)
+        mDSP.UpdateOscillatorWavetable(static_cast<int>(mDSP.mLoadedWavetables[0]) - 1, 0);
+        break;
+      }
+      case kMsgWavetable2Changed:
+      {
+        const double wtIdx = *static_cast<const double*>(pData);
+        mDSP.mLoadedWavetables[1] = wtIdx * 118.;
+        mDSP.UpdateOscillatorWavetable(static_cast<int>(mDSP.mLoadedWavetables[1]) - 1, 1);
+        break;
+      }
+      case kMsgSeqSliderChanged:
+      {
+        // Read incoming data as a tuple
+        auto* pConverted = reinterpret_cast<const ParamTuple*>(pData);
+        mDSP.mSeqSteps[pConverted->idx] = pConverted->value;
+      }
+      case kMsgRandomizeSequencer:
+      {
+        auto* pSequencer = dynamic_cast<SequencerControl<kNumSeqSteps>*>(GetUI()->GetControlWithTag(kCtrlTagSequencer));
+        for (auto i{ 0 }; i < kNumSeqSteps; ++i)
+        {
+          mDSP.mSeqSteps[i] = static_cast<double>(std::rand() % 1000) / 1000.;
+          pSequencer->SetValue(mDSP.mSeqSteps[i], i);
+        }
+        pSequencer->SetDirty(true);
+        break;
+      }
+      default:
+        break;
     }
-    pSequencer->SetDirty(true);
   }
   return false;
 }

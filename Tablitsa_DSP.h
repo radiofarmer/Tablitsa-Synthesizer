@@ -499,7 +499,11 @@ public:
     {
       memset(outputs[i], 0, nFrames * sizeof(T));
     }
-
+    /*
+    TODO: When a Sequencer or LFO is set to "free run", remove it from the each voice's modulator list (so that it doesn't get processed for every
+    voice) and instead process it via the master LFO pointer here. Under the current implementation, each voice uses its own LFO objects, but their
+    phases get synced to the corresponding master LFO pointer.
+    */
     mParamSmoother.ProcessBlock(mParamsToSmooth, mModulations.GetList(), nFrames); // Populate modulations list (to be sent to mSynth as inputs)
     Voice::SetTempoAndBeat(qnPos, transportIsRunning, tempo);
     mSynth.ProcessBlock(mModulations.GetList(), outputs, 0, nOutputs, nFrames);

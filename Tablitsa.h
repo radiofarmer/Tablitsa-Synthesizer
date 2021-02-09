@@ -33,6 +33,8 @@ enum EParams
   kParamPortamentoMode,
   kParamMonophonic,
   kParamLegato,
+  kParamUnisonVoices,
+  kParamUnisonDetune,
   kParamAmpEnvAttack,
   kParamAmpEnvDecay,
   kParamAmpEnvSustain,
@@ -356,7 +358,7 @@ enum EMsgTags
   kMsgWavetable1Changed = 0,
   kMsgWavetable2Changed,
   kMsgSeqSliderChanged,
-  kMsgRandomizeSequencer
+  kMsgRandomizeSequencer,
 };
 
 using namespace iplug;

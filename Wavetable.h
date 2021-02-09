@@ -688,7 +688,11 @@ public:
 
 #ifdef VECTOR
     std::array<T, OUTPUT_SIZE> output{ 0. };
-    ProcessOversamplingVec4(output);
+#if VECTOR_SIZE == 8
+    ProcessOversamplingVec<Vec8d, Vec8q>(output);
+#else
+    ProcessOversamplingVec<Vec4d, Vec4q>(output);
+#endif
 #else
     std::array<T, VECTOR_SIZE> output{ 0. };
     ProcessOversampling(output, mProcessOS);
@@ -755,7 +759,8 @@ public:
 
   }
 
-  inline void ProcessOversamplingVec4(std::array<T, OUTPUT_SIZE>& pOutput)
+  template<typename Vd=Vec4d, typename Vi=Vec4q>
+  inline void ProcessOversamplingVec(std::array<T, OUTPUT_SIZE>& pOutput)
   {
     double tableOffset{ mWtPosition * (mWT->mNumTables - 1) };
     tableOffset -= std::max(floor(tableOffset - 0.0001), 0.);
@@ -780,12 +785,13 @@ public:
 
     // Calculate indices for the higher-frequency table
     phaseDouble = mul_add(mIncrVec, phaseIncr, phase) * mNextTableSize;
-    phaseInt = truncatei(phaseDouble);
-    phaseFrac = phaseDouble - to_double(phaseInt);
+    phaseInt = truncatei(phaseDouble); // Poor performance if not AVX512DQ
+    phaseFrac = phaseDouble - to_double(phaseInt); // can also use truncate(phaseDouble) to get a floored double
     phaseInt &= mNextTableSizeM1;
     phaseInt1 = (phaseInt + 1) & mNextTableSizeM1;
 
     // Read from wavetables (higher/smaller table)
+    // `lookup<n>` function requires Vec4q for Vec4d or Vec8q for Vec8d
     Vec4d tb0s0hi = lookup<16384 * 12>(phaseInt, mLUTHi[0]);
     Vec4d tb0s1hi = lookup<16384 * 12>(phaseInt1, mLUTHi[0]);
     Vec4d tb1s0hi = lookup<16384 * 12>(phaseInt, mLUTHi[1]);
