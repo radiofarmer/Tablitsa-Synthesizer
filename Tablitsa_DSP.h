@@ -231,34 +231,39 @@ public:
 
       // Reset LFOs and Sequencer
       if (mLFO1Restart)
+      {
+        mModulators.ReplaceModulator(&mLFO1, 0);
         mLFO1.Reset();
+      }
       else
       {
-        if (Voice::mMasterLFO1)
-          mLFO1.SetPhase(Voice::mMasterLFO1->GetPhase());
-        Voice::mMasterLFO1 = &mLFO1;
+        mModulators.ReplaceModulator(dynamic_cast<FastLFO<T>*>(&TablitsaDSP<T>::mGlobalLFO1), 0);
       }
 
       if (mLFO2Restart)
+      {
+        mModulators.ReplaceModulator(&mLFO2, 1);
         mLFO2.Reset();
+      }
       else
       {
-        if (Voice::mMasterLFO2)
-          mLFO2.SetPhase(Voice::mMasterLFO2->GetPhase());
-        Voice::mMasterLFO2 = &mLFO2;
+        mModulators.ReplaceModulator(dynamic_cast<FastLFO<T>*>(&TablitsaDSP<T>::mGlobalLFO2), 1);
       }
 
       if (mSequencerRestart)
+      {
+        mModulators.ReplaceModulator(dynamic_cast<Sequencer<T>*>(&mSequencer), 0);
         mSequencer.Reset();
+        // Update sequencer display with this voice's phase
+        TablitsaDSP<T>::mActiveSequencer = &mSequencer;
+      }
       else
       {
-        if (Voice::mMasterSeq)
-          mSequencer.SetPhase(Voice::mMasterSeq->GetPhase());
-        Voice::mMasterSeq = &mSequencer;
+        mModulators.ReplaceModulator(&TablitsaDSP<T>::mGlobalSequencer, 0);
+        // Update sequencer display with this voice's phase
+        TablitsaDSP<T>::mActiveSequencer = &TablitsaDSP<T>::mGlobalSequencer;
       }
 
-      // Update sequencer display with this voice's phase
-      TablitsaDSP<T>::mActiveSequencer = &mSequencer;
 
       if (isRetrigger)
       {
@@ -589,11 +594,12 @@ public:
     {
       memset(outputs[i], 0, nFrames * sizeof(T));
     }
-    /*
-    TODO: When a Sequencer or LFO is set to "free run", remove it from the each voice's modulator list (so that it doesn't get processed for every
-    voice) and instead process it via the master LFO pointer here. Under the current implementation, each voice uses its own LFO objects, but their
-    phases get synced to the corresponding master LFO pointer.
-    */
+    // Process global modulators
+    mGlobalLFO1.FillBuffer(nFrames);
+    mGlobalLFO2.FillBuffer(nFrames);
+    mGlobalSequencer.FillBuffer(nFrames);
+
+    // Process voices
     mParamSmoother.ProcessBlock(mParamsToSmooth, mModulations.GetList(), nFrames); // Populate modulations list (to be sent to mSynth as inputs)
     Voice::SetTempoAndBeat(qnPos, transportIsRunning, tempo);
     mSynth.ProcessBlock(mModulations.GetList(), outputs, 0, nOutputs, nFrames);
@@ -620,6 +626,14 @@ public:
       for (auto f : dynamic_cast<TablitsaDSP::Voice&>(voice).mFilters)
         f->UpdateSampleRate(sampleRate);
       });
+
+    // Global modulators
+    mGlobalLFO1.SetSampleRate(sampleRate);
+    mGlobalLFO2.SetSampleRate(sampleRate);
+    mGlobalSequencer.SetSampleRate(sampleRate);
+    mGlobalLFO1.Resize(blockSize);
+    mGlobalLFO2.Resize(blockSize);
+    mGlobalSequencer.Resize(blockSize);
 
     // Param Smoother list
     mModulationsData.Resize(blockSize * kNumModulations);
@@ -801,90 +815,135 @@ public:
         break;
       }
       case kParamLFO1Amp:
+      {
+        mGlobalLFO1.SetScalar(value);
         mSynth.ForEachVoice([value](SynthVoice& voice) {
           dynamic_cast<TablitsaDSP::Voice&>(voice).mLFO1.SetScalar(value);
           });
         break;
+      }
       case kParamLFO1RateTempo:
+      {
+        mGlobalLFO1.FastLFO<T>::SetQNScalarFromDivision(static_cast<int>(value));
         mSynth.ForEachVoice([value](SynthVoice& voice) {
           dynamic_cast<TablitsaDSP::Voice&>(voice).mLFO1.SetQNScalarFromDivision(static_cast<int>(value));
           });
         break;
+      }
       case kParamLFO1RateHz:
+      {
+        mGlobalLFO1.FastLFO<T>::SetFreqCPS(value);
         mSynth.ForEachVoice([value](SynthVoice& voice) {
           dynamic_cast<TablitsaDSP::Voice&>(voice).mLFO1.SetFreqCPS(value);
           });
         break;
+      }
       case kParamLFO1RateMode:
+      {
+        mGlobalLFO1.SetRateMode(value > 0.5);
         mSynth.ForEachVoice([value](SynthVoice& voice) {
           dynamic_cast<TablitsaDSP::Voice&>(voice).mLFO1.SetRateMode(value > 0.5);
           });
         break;
+      }
       case kParamLFO1Shape:
+      {
+        mGlobalLFO1.SetShape(static_cast<int>(value));
         mSynth.ForEachVoice([value](SynthVoice& voice) {
           dynamic_cast<TablitsaDSP::Voice&>(voice).mLFO1.SetShape(static_cast<int>(value));
           });
         break;
+      }
       case kParamLFO1Restart:
         mSynth.ForEachVoice([value](SynthVoice& voice) {
           dynamic_cast<TablitsaDSP::Voice&>(voice).mLFO1Restart = (value > 0.5);
           });
         break;
       case kParamLFO2Amp:
+      {
+        mGlobalLFO2.SetScalar(value);
         mSynth.ForEachVoice([value](SynthVoice& voice) {
           dynamic_cast<TablitsaDSP::Voice&>(voice).mLFO2.SetScalar(value);
           });
         break;
+      }
       case kParamLFO2RateTempo:
+      {
+        mGlobalLFO2.FastLFO<T>::SetQNScalarFromDivision(static_cast<int>(value));
         mSynth.ForEachVoice([value](SynthVoice& voice) {
           dynamic_cast<TablitsaDSP::Voice&>(voice).mLFO2.SetQNScalarFromDivision(static_cast<int>(value));
           });
         break;
+      }
       case kParamLFO2RateHz:
+      {
+        mGlobalLFO2.SetFreqCPS(value);
         mSynth.ForEachVoice([value](SynthVoice& voice) {
           dynamic_cast<TablitsaDSP::Voice&>(voice).mLFO2.SetFreqCPS(value);
           });
         break;
+      }
       case kParamLFO2RateMode:
+      {
+        mGlobalLFO2.SetRateMode(value > 0.5);
         mSynth.ForEachVoice([value](SynthVoice& voice) {
           dynamic_cast<TablitsaDSP::Voice&>(voice).mLFO2.SetRateMode(value > 0.5);
           });
         break;
+      }
       case kParamLFO2Shape:
+      {
+        mGlobalLFO2.SetShape(static_cast<int>(value));
         mSynth.ForEachVoice([value](SynthVoice& voice) {
           dynamic_cast<TablitsaDSP::Voice&>(voice).mLFO2.SetShape(static_cast<int>(value));
           });
         break;
+      }
       case kParamLFO2Restart:
         mSynth.ForEachVoice([value](SynthVoice& voice) {
           dynamic_cast<TablitsaDSP::Voice&>(voice).mLFO2Restart = (value > 0.5);
           });
         break;
       case kParamSequencerAmp:
+      {
+        mGlobalSequencer.SetScalar(value);
         mSynth.ForEachVoice([value](SynthVoice& voice) {
           dynamic_cast<TablitsaDSP::Voice&>(voice).mSequencer.SetScalar(value);
           });
         break;
+      }
       case kParamSequencerSteps:
+      {
+        mGlobalSequencer.SetLength(static_cast<int>(value));
         mSynth.ForEachVoice([value](SynthVoice& voice) {
           dynamic_cast<TablitsaDSP::Voice&>(voice).mSequencer.SetLength(static_cast<int>(value));
           });
         break;
+      }
       case kParamSequencerRateTempo:
+      {
+        mGlobalSequencer.Sequencer<T>::SetQNScalarFromDivision(static_cast<int>(value));
         mSynth.ForEachVoice([value](SynthVoice& voice) {
           dynamic_cast<TablitsaDSP::Voice&>(voice).mSequencer.SetQNScalarFromDivision(static_cast<int>(value));
           });
         break;
+      }
       case kParamSequencerRateHz:
+      {
+        mGlobalSequencer.SetFreqCPS(value);
         mSynth.ForEachVoice([value](SynthVoice& voice) {
           dynamic_cast<TablitsaDSP::Voice&>(voice).mSequencer.SetFreqCPS(value);
           });
         break;
+      }
       case kParamSequencerRateMode:
+      {
+        mGlobalSequencer.SetRateMode(value > 0.5);
         mSynth.ForEachVoice([value](SynthVoice& voice) {
           dynamic_cast<TablitsaDSP::Voice&>(voice).mSequencer.SetRateMode(value > 0.5);
           });
         break;
+      }
       case kParamSequencerRestart:
       {
         mSynth.ForEachVoice([value](SynthVoice& voice) {
@@ -892,6 +951,14 @@ public:
           });
         // Toggle between using a master/static phase to update the Sequencer display, and using the phase of the last-triggered voice
         break;
+      }
+      case kParamSequencerGlide:
+      {
+        T glideNorm = (T)value / 100.;
+        mGlobalSequencer.SetGlide(glideNorm);
+        mSynth.ForEachVoice([glideNorm](SynthVoice& voice) {
+          dynamic_cast<TablitsaDSP::Voice&>(voice).mSequencer.SetGlide(glideNorm);
+          });
       }
       case kParamLegato:
       {
@@ -1434,4 +1501,9 @@ public:
   // Effects
   std::vector<Effect<T>*> mEffects;
   DelayEffect<T> mDelayEffect{ DEFAULT_SAMPLE_RATE, DEFAULT_SAMPLE_RATE * 12. };
+
+  // Global Modulators
+  static inline GlobalModulator<T, FastLFO<T>> mGlobalLFO1;
+  static inline GlobalModulator<T, FastLFO<T>> mGlobalLFO2;
+  static inline GlobalModulator<T, Sequencer<T>> mGlobalSequencer{ mSeqSteps };
 };
