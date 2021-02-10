@@ -858,6 +858,13 @@ public:
     return mPM * mPhaseModAmt * mPhaseModulator.Process() * mCyclesPerLevelRecip;
   }
 
+  // TODO: use enable_if to choose between vector lengths
+  template<typename Vd>
+  inline Vd PhaseModVec()
+  {
+    return Vd(0.);
+  }
+
   inline double RingMod()
   {
     return mRingModulator.Process();
