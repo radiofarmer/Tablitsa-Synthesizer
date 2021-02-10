@@ -92,6 +92,89 @@ enum EVoiceModParams
 
 // See Modulators.h for the enumeration of the number of modulators
 
+#define UNISON_CHORD_LIST "None", "8va", "M7", "D7", "D7 6/5", "D7 4/3", "m7", "ø7", "dim7"
+
+enum EUnisonChords
+{
+  kNoChord = -1,
+  kOctaves = 0,
+  kMaj7,
+  kDom7,
+  kDom7FirstInv,
+  kDom7SecondInv,
+  kMin7,
+  kHalfDim7,
+  kDim7
+};
+
+struct VoiceDetuner
+{
+  int mMaxVoices;
+  double mMaxDetune;
+  int mNVoices{ 1 };
+  int mVoiceIdx{ 0 };
+  int mChord{ EUnisonChords::kNoChord };
+  double* mDetuneBuf;
+
+  const double mUnisonInvervals[8][5]{
+    {0., 1., 0., 2., 0.}, // Octaves
+    {0., 7. / 12, 4. / 12, 11. / 12, 1.}, // Major 7
+    {0., 7. / 12, 4. / 12, 10. / 12, 1.}, // Dominant 7
+    {0., 7. / 12, 4. / 12, -2. / 12, 1.}, // Dominant 7 1st Inversion
+    {0., -5. / 12, -2. / 12, 4. / 12, 1.}, // Dominant 7 2nd Inversion
+    {0., 7. / 12, 3. / 12, 10. / 12, 1.}, // Minor 7
+    {0., 3. / 12., 6. / 12, 10. / 12, 1.}, // Half-Diminished 7
+    {0., 3. / 12., 6. / 12, 9. / 12, 1.} // Full-Diminished 7
+  };
+
+  VoiceDetuner(int maxVoices, double maxDetuneSemitones=1.) : mMaxVoices(maxVoices), mMaxDetune(maxDetuneSemitones)
+  {
+    mDetuneBuf = new double[mMaxVoices] {0.};
+  }
+
+  void SetNVoices(int nVoices)
+  {
+    mNVoices = std::min(nVoices, mMaxVoices);
+  }
+
+  void SetMaxDetune(double maxDetuneSemitones)
+  {
+    mMaxDetune = maxDetuneSemitones / 12;
+  }
+
+  void SetChord(int chord)
+  {
+    mChord = chord;
+  }
+
+  void ResetDetuneValues()
+  {
+    int nVoices = std::max(2, mNVoices);
+    if (mChord == EUnisonChords::kNoChord)
+    {
+      for (auto i{ 0 }; i < mNVoices; ++i)
+        mDetuneBuf[i] = mMaxDetune * static_cast<double>(-i % mNVoices) / (nVoices - 1) * -1;
+    }
+    else
+    {
+      for (auto i{ 0 }; i < mNVoices; ++i)
+        mDetuneBuf[i] = mUnisonInvervals[mChord][i % 5] + mMaxDetune * (static_cast<double>(std::rand() % 100) / 100 - 0.5);
+    }
+  }
+
+  double DetuneNext()
+  {
+    int next = mVoiceIdx++ % mNVoices;
+    mVoiceIdx %= mNVoices;
+    return mDetuneBuf[next];
+  }
+
+  ~VoiceDetuner()
+  {
+    delete[] mDetuneBuf;
+  }
+};
+
 template<typename T>
 class TablitsaDSP
 {
@@ -137,6 +220,8 @@ public:
 
       mVelocity = level; // TODO: Handling of different velocity settings (i.e. which envelopes are affected by velocity)
       mTriggerRand = static_cast<double>(std::rand()) / static_cast<double>(RAND_MAX);
+
+      mDetune = Voice::mDetuner.DetuneNext();
 
       for (auto f : mFilters)
       {
@@ -236,7 +321,7 @@ public:
     {
       // inputs to the synthesizer can just fetch a value every block, like this:
 //      double gate = mInputs[kVoiceControlGate].endValue;
-      double pitch = mInputs[kVoiceControlPitch].endValue; // pitch = (MidiKey - 69) / 12
+      double pitch = mInputs[kVoiceControlPitch].endValue + mDetune; // pitch = (MidiKey - 69) / 12
 //      double pitchBend = mInputs[kVoiceControlPitchBend].endValue;
       // or write the entire control ramp to a buffer, like this, to get sample-accurate ramps:
 //      mInputs[kVoiceControlTimbre].Write(mTimbreBuffer.Get(), startIdx, nFrames);
@@ -396,6 +481,8 @@ public:
     T mVelocity{ 1. };
     T mTriggerRand{ 0.5 };
 
+    static inline VoiceDetuner mDetuner{ kMaxUnisonVoices };
+
     // Dynamic Modulators
     ADSREnvelope<T> mEnv1;
     ADSREnvelope<T> mEnv2;
@@ -450,6 +537,8 @@ public:
       new ParameterModulator(0., 1., "Phase Mod Depth"),
       new ParameterModulator(-24., 24., "Ring Mod Freq"),
       new ParameterModulator(0., 1., "Ring Mod Depth") };
+
+    double mDetune{ 0. };
 
     // Sample and Beat data
     static inline double mTempo{ 120. };
@@ -552,7 +641,7 @@ public:
       });
   }
 
-  void ProcessMidiMsg(const IMidiMsg& msg)
+  void ProcessMidiMsg(const IMidiMsg& msg, float detune=0.f)
   {
     if (!mConstantGlideTime && msg.StatusMsg() == IMidiMsg::EStatusMsg::kNoteOn)
     {
@@ -585,6 +674,11 @@ public:
       WavetableOscillator<T>::NotifyLoaded(oscIdx);
     }
     tableLoading[oscIdx] = false;
+  }
+
+  void ResetDetune()
+  {
+    TablitsaDSP<T>::Voice::mDetuner.ResetDetuneValues();
   }
 
   int GetSequencerStep()
@@ -809,10 +903,33 @@ public:
         }
         break;
       }
-      case kParamWavetable1:
+      case kParamUnisonVoices:
       {
+        int voices = static_cast<int>(value);
+        // If the unison voice number has increased, start new voices
+        if (voices > mUnisonVoices)
+        {
+          for (int i{ mUnisonVoices }; i < voices; ++i)
+          {
+            // TODO
+          }
+        }
+        else
+        {
+          // TODO: When the unison number is descreased, only stop any excess voices. (Will probably require keeping track of unison voices in the VoiceAllocator)
+          mSynth.Reset();
+        }
+        mUnisonVoices = voices;
+        TablitsaDSP<T>::Voice::mDetuner.SetNVoices(voices);
+        mSynth.SetMonoUnison(voices);
         break;
       }
+      case kParamUnisonDetune:
+        TablitsaDSP<T>::Voice::mDetuner.SetMaxDetune(value);
+        break;
+      case kParamUnisonChord:
+        TablitsaDSP<T>::Voice::mDetuner.SetChord(static_cast<int>(value) + EUnisonChords::kNoChord);
+        break;
       case kParamWavetable1Pitch:
         mParamsToSmooth[kModWavetable1PitchSmoother] = value;
         break;
@@ -1287,6 +1404,8 @@ public:
 
   // Polyphonic/Monophonic
   static inline bool mMono{ false };
+  int mUnisonVoices{ 1 };
+  float mUnisonDetune{ 0.f };
 
   // Portamento Parameters
   bool mConstantGlideTime{ true };

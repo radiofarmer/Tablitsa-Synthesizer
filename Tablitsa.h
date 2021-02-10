@@ -13,6 +13,7 @@
 
 const int kNumPresets = 1;
 constexpr int kNumVoices = 16;
+constexpr int kMaxUnisonVoices = 8;
 constexpr int kNumSeqSteps = 16;
 
 enum EParams
@@ -35,6 +36,7 @@ enum EParams
   kParamLegato,
   kParamUnisonVoices,
   kParamUnisonDetune,
+  kParamUnisonChord,
   kParamAmpEnvAttack,
   kParamAmpEnvDecay,
   kParamAmpEnvSustain,

@@ -5,7 +5,7 @@
 #include <Shlwapi.h>
 #include <tchar.h>
 
-#define FFT
+//#define FFT
 #define FFT_MAX_SIZE 32768
 
 #ifndef VST3_API

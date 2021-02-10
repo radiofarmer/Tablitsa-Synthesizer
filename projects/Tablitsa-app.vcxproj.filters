@@ -357,14 +357,14 @@
     <Filter Include="IPlug\APP\RTAudioMidi\include">
       <UniqueIdentifier>{649c5de3-b4c2-4de9-8d57-3b1762646259}</UniqueIdentifier>
     </Filter>
-    <Filter Include="IPlug\Extras\Synth">
-      <UniqueIdentifier>{fc763cd3-cc76-4d31-9ba4-a4e7361e4adf}</UniqueIdentifier>
-    </Filter>
     <Filter Include="WDL">
       <UniqueIdentifier>{1d5697de-a2c0-4d43-ae40-82eaeb6570dd}</UniqueIdentifier>
     </Filter>
     <Filter Include="utils">
       <UniqueIdentifier>{cb01cd43-d600-4b5a-81c4-3372b6dfbcf1}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="IPlug\Extras\Synth">
+      <UniqueIdentifier>{fc763cd3-cc76-4d31-9ba4-a4e7361e4adf}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>

@@ -28,7 +28,9 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
   GetParam(kParamNoteGlideRate)->InitDouble("Note Glide Rate", 12., 0.5, 128., 0.1, "St/s");
   GetParam(kParamPortamentoMode)->InitBool("Equal Glide Time", true);
   GetParam(kParamMonophonic)->InitBool("Monophonic", false);
-  GetParam(kParamUnisonVoices)->InitInt("Unison Voices", 1, 0, 8);
+  GetParam(kParamUnisonVoices)->InitInt("Unison Voices", 1, 1, 8);
+  GetParam(kParamUnisonDetune)->InitDouble("Unison Detune", 0., 0., 12., 0.01, "St.");
+  GetParam(kParamUnisonChord)->InitEnum("Chord", 0, { UNISON_CHORD_LIST });
   /*Modulators*/
   GetParam(kParamEnv1Attack)->InitDouble("Env1 Attack", 10., 1., 3000., 0.1, "ms", IParam::kFlagsNone, "ADSR", IParam::ShapePowCurve(3.));
   GetParam(kParamEnv1Decay)->InitDouble("Env1 Decay", 10., 1., 3000., 0.1, "ms", IParam::kFlagsNone, "ADSR", IParam::ShapePowCurve(3.));
@@ -390,9 +392,9 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
     pGraphics->AttachControl(new IVKnobControl(masterPanel.GetGridCell(0, 0, 4, 6).GetCentredInside(dialSize), kParamGain, "Gain"), kNoTag, "Master");
     pGraphics->AttachControl(new IVModKnobControl(masterPanel.GetGridCell(0, 1, 4, 6).GetCentredInside(dialSize), kParamPan, "Pan"), kNoTag, "Master");
     // Static modulators
-    pGraphics->AttachControl(new ModSliderControl(masterPanel.GetGridCell(1, 0, 2, 1).GetVPadded(-12.f).GetGridCell(0, 0, 3, 3).GetHPadded(-24.f).GetHShifted(-15.f), kNoParameter, "Velocity", DEFAULT_STYLE, false, EDirection::Horizontal), kCtrlTagVelDepth, "StaticMods");
-    pGraphics->AttachControl(new ModSliderControl(masterPanel.GetGridCell(1, 0, 2, 1).GetVPadded(-12.f).GetGridCell(1, 0, 3, 3).GetHPadded(-24.f).GetHShifted(-15.f), kNoParameter, "Keytrack", DEFAULT_STYLE, false, EDirection::Horizontal), kCtrlTagKTkDepth, "StaticMods");
-    pGraphics->AttachControl(new ModSliderControl(masterPanel.GetGridCell(1, 0, 2, 1).GetVPadded(-12.f).GetGridCell(2, 0, 3, 3).GetHPadded(-24.f).GetHShifted(-15.f), kNoParameter, "Trg. Rnd.", DEFAULT_STYLE, false, EDirection::Horizontal), kCtrlTagRndDepth, "StaticMods");
+    pGraphics->AttachControl(new ModSliderControl(masterPanel.GetGridCell(1, 0, 2, 1).GetVPadded(-16.f).GetGridCell(0, 0, 3, 3).GetHPadded(-24.f).GetHShifted(-15.f), kNoParameter, "Velocity", DEFAULT_STYLE, false, EDirection::Horizontal), kCtrlTagVelDepth, "StaticMods");
+    pGraphics->AttachControl(new ModSliderControl(masterPanel.GetGridCell(1, 0, 2, 1).GetVPadded(-16.f).GetGridCell(1, 0, 3, 3).GetHPadded(-24.f).GetHShifted(-15.f), kNoParameter, "Keytrack", DEFAULT_STYLE, false, EDirection::Horizontal), kCtrlTagKTkDepth, "StaticMods");
+    pGraphics->AttachControl(new ModSliderControl(masterPanel.GetGridCell(1, 0, 2, 1).GetVPadded(-16.f).GetGridCell(2, 0, 3, 3).GetHPadded(-24.f).GetHShifted(-15.f), kNoParameter, "Trg. Rnd.", DEFAULT_STYLE, false, EDirection::Horizontal), kCtrlTagRndDepth, "StaticMods");
     pGraphics->AttachControl(new IVGroupControl("Midi Mods", "StaticMods", 5.f, 15.f, 5.f, 12.f));
     // Polyphony and Portamento
     pGraphics->AttachControl(new IVToggleControl(masterPanel.GetGridCell(3, 1, 12, 6).GetVPadded(-2.f), kParamPortamentoMode, "", DEFAULT_STYLE.WithShowLabel(false), "Rate", "Time"),
@@ -409,8 +411,9 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
     pGraphics->AttachControl(new IVToggleControl(masterPanel.GetGridCell(5, 1, 12, 6).GetVPadded(-2.f), kParamLegato, "", DEFAULT_STYLE.WithShowLabel(false), "Retrigger", "Legato"));
     pGraphics->AttachControl(new IVLEDMeterControl<2>(masterPanel.GetGridCell(0, 5, 2, 6).GetVPadded(-20.f)), kCtrlTagMeter, "Master");
     // Unison and Stereo Width
-    pGraphics->AttachControl(new IVNumberBoxControl(masterPanel.GetGridCell(0, 2, 4, 6).GetVPadded(-16.f), kParamUnisonVoices, nullptr, "Unison"), kNoTag, "Stereo");
+    pGraphics->AttachControl(new IVNumberBoxControl(masterPanel.GetGridCell(0, 2, 4, 6).GetHPadded(-10.f).GetVPadded(-18.f), kParamUnisonVoices, nullptr, "Unison", DEFAULT_STYLE.WithValueText(IText(18.f))), kNoTag, "Stereo");
     pGraphics->AttachControl(new IVKnobControl(masterPanel.GetGridCell(0, 3, 4, 6).GetCentredInside(dialSize), kParamUnisonDetune, "Detune"), kNoTag, "Stereo");
+    pGraphics->AttachControl(new IVKnobControl(masterPanel.GetGridCell(0, 4, 4, 6).GetCentredInside(dialSize), kParamUnisonChord, "Chord"), kNoTag, "Stereo");
 
     /* Effects Panel */
     auto channelLockFunction = IActionFunction([pGraphics, this](IControl* pControl) {
@@ -854,6 +857,18 @@ void Tablitsa::ProcessMidiMsg(const IMidiMsg& msg)
 handle:
   mDSP.ProcessMidiMsg(msg);
   SendMidiMsg(msg);
+
+  // Send additional messages for unison voices
+  mDSP.ResetDetune();
+  for (int i{ 1 }; i < mDSP.mUnisonVoices; ++i)
+  {
+    IMidiMsg copy_msg = IMidiMsg(msg);
+    if (status == kNoteOnAction)
+      copy_msg.MakeNoteOnMsg(msg.NoteNumber(), msg.Velocity(), msg.mOffset + 1, msg.Channel());
+    else if (status == kNoteOffAction)
+      copy_msg.MakeNoteOffMsg(msg.NoteNumber(), msg.mOffset + 1, msg.Channel());
+    mDSP.ProcessMidiMsg(msg);
+  }
 }
 
 void Tablitsa::OnParamChange(int paramIdx)
@@ -892,6 +907,7 @@ bool Tablitsa::OnMessage(int msgTag, int ctrlTag, int dataSize, const void* pDat
         // Read incoming data as a tuple
         auto* pConverted = reinterpret_cast<const ParamTuple*>(pData);
         mDSP.mSeqSteps[pConverted->idx] = pConverted->value;
+        break;
       }
       case kMsgRandomizeSequencer:
       {
