@@ -36,14 +36,15 @@
 #include "Modulators.h"
 
 #ifndef _DEBUG
-  #define OVERSAMPLING
-  #define VECTOR_SIZE 4
-  #define OUTPUT_SIZE 2
+  #define OVERSAMPLING 2
+  #define VECTOR_SIZE 8
+  #define OUTPUT_SIZE VECTOR_SIZE / OVERSAMPLING
   #define VECTOR
 #else
   #define VECTOR_SIZE 1
-  #define OUTPUT_SIZE 1
+  #define OUTPUT_SIZE VECTOR_SIZE
 #endif
+
 
 #if MULTITHREAD_TEST
 #include <mutex>
@@ -706,13 +707,13 @@ public:
     ProcessOversamplingVec<Vec4d, Vec4q>(output);
 #endif
 #else
-    std::array<T, VECTOR_SIZE> output{ 0. };
+    std::array<T, OUTPUT_SIZE> output{ 0. };
     ProcessOversampling(output, mProcessOS);
 #endif
     return output;
   }
 
-  inline void ProcessOversampling(std::array<T, VECTOR_SIZE>& pOutput, int nFrames)
+  inline void ProcessOversampling(std::array<T, OUTPUT_SIZE>& pOutput, int nFrames)
   {
 
     double phase; // integer phase
@@ -751,7 +752,7 @@ public:
       T lowerTable = (f1 + frac * (f2 - f1));
 #ifdef OVERSAMPLING
       oversampled[s] = lowerTable + mTableInterp * ((f3 + frac2 * (f4 - f3)) - lowerTable);
-      oversampled[s] += mRM * mRingModAmt * (RingMod() * oversampeld[s] - oversampled[s]);
+      oversampled[s] += mRM * mRingModAmt * (RingMod() * oversampled[s] - oversampled[s]);
 #else
       const T output = lowerTable + mTableInterp * ((f3 + frac2 * (f4 - f3)) - lowerTable);
       pOutput[s] = output + mRM * mRingModAmt * (RingMod() * output - output);
@@ -777,23 +778,23 @@ public:
     double tableOffset{ mWtPosition * (mWT->mNumTables - 1) };
     tableOffset -= std::max(floor(tableOffset - 0.0001), 0.);
 
-    const double phaseIncr = IOscillator<T>::mPhaseIncr * mPhaseIncrFactor;
-    double phase = SamplePhaseShift(IOscillator<T>::mPhase);
-    Vec4d phaseMod = Vec4d(PhaseMod(), PhaseMod(), PhaseMod(), PhaseMod()); // TODO: Make vector-lookup-capable version of FastSinOscillator
-    Vec4d phaseDouble = mul_add(mIncrVec, phaseIncr, phase + phaseMod) * mTableSize; // Next four phase positions in samples, including fractional position
-    Vec4q phaseInt = truncatei(phaseDouble); // Indices of the (left) samples to read
-    Vec4d phaseFrac = phaseDouble - to_double(phaseInt);
+    const double phaseIncr = mPhaseIncr * mPhaseIncrFactor * mProcessOS;
+    Vd phaseMod = Vd(PhaseMod()); // TODO: Make vector-lookup-capable version of FastSinOscillator
+    Vd phase = phaseMod + SamplePhaseShift(IOscillator<T>::mPhase);
+    Vd phaseDouble = mul_add(mIncrVec, phaseIncr, phase) * mTableSize; // Next four phase positions in samples, including fractional position
+    Vi phaseInt = truncatei(phaseDouble); // Indices of the (left) samples to read
+    Vd phaseFrac = phaseDouble - to_double(phaseInt);
     phaseInt &= mTableSizeM1;
-    Vec4q phaseInt1 = (phaseInt + 1) & mTableSizeM1;
+    Vi phaseInt1 = (phaseInt + 1) & mTableSizeM1;
 
     // Read from wavetables (lower/larger table)
-    Vec4d tb0s0lo = lookup<16384 * 12>(phaseInt, mLUTLo[0]);
-    Vec4d tb0s1lo = lookup<16384 * 12>(phaseInt1, mLUTLo[0]);
-    Vec4d tb1s0lo = lookup<16384 * 12>(phaseInt, mLUTLo[1]);
-    Vec4d tb1s1lo = lookup<16384 * 12>(phaseInt1, mLUTLo[1]);
+    Vd tb0s0lo = lookup<16384 * 12>(phaseInt, mLUTLo[0]);
+    Vd tb0s1lo = lookup<16384 * 12>(phaseInt1, mLUTLo[0]);
+    Vd tb1s0lo = lookup<16384 * 12>(phaseInt, mLUTLo[1]);
+    Vd tb1s1lo = lookup<16384 * 12>(phaseInt1, mLUTLo[1]);
     // Interpolate samples
-    Vec4d tb0lo = mul_add((tb0s1lo - tb0s0lo), phaseFrac, tb0s0lo);
-    Vec4d tb1lo = mul_add((tb1s1lo - tb1s0lo), phaseFrac, tb1s0lo);
+    Vd tb0lo = mul_add((tb0s1lo - tb0s0lo), phaseFrac, tb0s0lo);
+    Vd tb1lo = mul_add((tb1s1lo - tb1s0lo), phaseFrac, tb1s0lo);
 
     // Calculate indices for the higher-frequency table
     phaseDouble = mul_add(mIncrVec, phaseIncr, phase) * mNextTableSize;
@@ -804,27 +805,27 @@ public:
 
     // Read from wavetables (higher/smaller table)
     // `lookup<n>` function requires Vec4q for Vec4d or Vec8q for Vec8d
-    Vec4d tb0s0hi = lookup<16384 * 12>(phaseInt, mLUTHi[0]);
-    Vec4d tb0s1hi = lookup<16384 * 12>(phaseInt1, mLUTHi[0]);
-    Vec4d tb1s0hi = lookup<16384 * 12>(phaseInt, mLUTHi[1]);
-    Vec4d tb1s1hi = lookup<16384 * 12>(phaseInt1, mLUTHi[1]);
+    Vd tb0s0hi = lookup<16384 * 12>(phaseInt, mLUTHi[0]);
+    Vd tb0s1hi = lookup<16384 * 12>(phaseInt1, mLUTHi[0]);
+    Vd tb1s0hi = lookup<16384 * 12>(phaseInt, mLUTHi[1]);
+    Vd tb1s1hi = lookup<16384 * 12>(phaseInt1, mLUTHi[1]);
     // Interpolate samples
-    Vec4d tb0hi = mul_add(tb0s1hi - tb0s0hi, phaseFrac, tb0s0hi);
-    Vec4d tb1hi = mul_add(tb1s1hi - tb1s0hi, phaseFrac, tb1s0hi);
+    Vd tb0hi = mul_add(tb0s1hi - tb0s0hi, phaseFrac, tb0s0hi);
+    Vd tb1hi = mul_add(tb1s1hi - tb1s0hi, phaseFrac, tb1s0hi);
 
     // Interpolate mipmap levels
-    Vec4d tb0 = mul_add(tb0hi - tb0lo, mTableInterp, tb0lo);
-    Vec4d tb1 = mul_add(tb1hi - tb1lo, mTableInterp, tb1lo);
+    Vd tb0 = mul_add(tb0hi - tb0lo, mTableInterp, tb0lo);
+    Vd tb1 = mul_add(tb1hi - tb1lo, mTableInterp, tb1lo);
     
     // Mix wavetables
-    Vec4d ringMod{ RingMod(), RingMod(), RingMod(), RingMod() };
-    Vec4d mixed = mul_add(tb1 - tb0, 1 - tableOffset, tb0);
+    Vd ringMod(RingMod());
+    Vd mixed = mul_add(tb1 - tb0, 1 - tableOffset, tb0);
     mixed = mul_add(ringMod - 1., mRM * mRingModAmt * mixed, mixed);
 
     IOscillator<T>::mPhase += phaseIncr * (double)VECTOR_SIZE;
     IOscillator<T>::mPhase -= floor(IOscillator<T>::mPhase);
 
-    T oversampled[4];
+    T oversampled[VECTOR_SIZE];
     mixed.store(oversampled);
 
     for (auto s = 0; s < VECTOR_SIZE / mProcessOS; ++s)
@@ -973,7 +974,11 @@ private:
   static inline bool mWtReady[2]{ false, false };
 
   // Vectors
+#if VECTOR_SIZE == 4
   const Vec4d mIncrVec{ 0., 1., 2., 3. };
+#else
+  const Vec8d mIncrVec{ 0., 1., 2., 3., 4., 5., 6., 7. };
+#endif
 
   // Modulation
   double mPM{ 0. };

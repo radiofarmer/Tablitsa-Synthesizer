@@ -14,11 +14,12 @@
   #define VECTOR
 #endif
 #ifdef VECTOR
-  #ifdef OVERSAMPLING
+ #define FRAME_INTERVAL OUTPUT_SIZE
+ /* #ifdef OVERSAMPLING
     #define FRAME_INTERVAL 2
   #else
     #define FRAME_INTERVAL 4
-  #endif
+  #endif*/
 #else
   #define FRAME_INTERVAL 1
 #endif
@@ -158,7 +159,7 @@ struct VoiceDetuner
     else
     {
       for (auto i{ 0 }; i < mNVoices; ++i)
-        mDetuneBuf[i] = mUnisonInvervals[mChord][i % 5] + mMaxDetune * (static_cast<double>(std::rand() % 100) / 100 - 0.5);
+        mDetuneBuf[i] = mUnisonInvervals[mChord][i % 5] + mMaxDetune * (static_cast<double>(std::rand() % 100) / 50 - 1.);
     }
   }
 
