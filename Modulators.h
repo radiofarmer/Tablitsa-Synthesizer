@@ -304,19 +304,20 @@ public:
     IOscillator<T>::mPhase = newPhase;
   }
 
-  inline T Process(double freqHz)
+
+  virtual inline T Process()
+  {
+    return ProcessSynced(mQNPos, mTransportIsRunning, mTempo);
+  }
+
+  inline T Process(double freqHz) override
   {
     IOscillator<T>::SetFreqCPS(freqHz);
 
-    return Process(mQNPos, mTransportIsRunning, mTempo);
+    return ProcessSynced(mQNPos, mTransportIsRunning, mTempo);
   }
 
-  inline T DoProcess()
-  {
-    return Process(mQNPos, mTransportIsRunning, mTempo);
-  }
-
-  inline T Process(double qnPos = 0., bool transportIsRunning = false, double tempo = 120.)
+  inline T ProcessSynced(double qnPos = 0., bool transportIsRunning = false, double tempo = 120.)
   {
     T oneOverQNScalar = 1. / LFO<T>::mQNScalar;
     T phase = IOscillator<T>::mPhase;
@@ -365,7 +366,7 @@ protected:
 };
 
 template <typename T, int NSteps=16>
-class Sequencer final : public FastLFO<T>
+class Sequencer : public FastLFO<T>
 {
   enum ERateMode
   {
@@ -389,12 +390,27 @@ public:
     mQNScalar = GetQNScalar(static_cast<ETempoDivision>(Clip(division, 0, (int)kNumDivisions))) / NSteps; // Tempo-synced rate indicates the length of one step
   }
 
-  inline T DoProcess() 
+  /* Set the glide time, as a fraction of the time from one step to the next. (i.e. the fraction of the step-time required to reach the next step's value)
+  */
+  void SetGlide(double glideNorm)
   {
-    return Process(FastLFO<T>::mQNPos, mTransportIsRunning, mTempo);
+    mGlide = glideNorm;
   }
 
-  inline T Process(double qnPos = 0., bool transportIsRunning = false, double tempo = 120.) 
+  inline T Process() override 
+  {
+    return ProcessSynced(FastLFO<T>::mQNPos, FastLFO<T>::mTransportIsRunning, FastLFO<T>::mTempo);
+  }
+
+  inline T GetStepValueWithGlide()
+  {
+    T prevValue = GetStepValue(std::abs((mStepPos - 1) % mLength));
+    T targValue = GetStepValue(mStepPos);
+    T stepPhase = mPhase * NSteps - static_cast<T>(mStepPos);
+    return prevValue + (1. - mGlide * stepPhase) * (targValue - prevValue);
+  }
+
+  inline T ProcessSynced(double qnPos = 0., bool transportIsRunning = false, double tempo = 120.)
   {
     T oneOverQNScalar = 1. / LFO<T>::mQNScalar;
     T phase = IOscillator<T>::mPhase;
@@ -416,8 +432,9 @@ public:
     }
 
     mStepPos = static_cast<int>(phase * NSteps) % mLength;
-    T s_out = GetStepValue(mStepPos);
-    IOscillator<T>::mPhase = FastLFO<T>::WrapPhase(IOscillator<T>::mPhase + phaseIncr, 0., static_cast<double>(mTableSize));
+    T s_out = GetStepValue(mStepPos);//GetStepValueWithGlide();
+    IOscillator<T>::mPhase = FastLFO<T>::WrapPhase(IOscillator<T>::mPhase + phaseIncr, 0., 1.);
+    mPrevValue = s_out;
     return s_out * mLevelScalar;
   }
 
@@ -431,11 +448,48 @@ public:
     return mStepPos;
   }
 
-private:
+protected:
   T* mStepValues;
+  T mPrevValue{ 0. };
   int mStepPos{ 0 };
+  int mPrevStepPos{ NSteps };
   int mPrevStep{ -1 };
   int mLength{ NSteps };
+  T mGlide{ 0. };
+};
+
+template<typename T, class M>
+class GlobalModulator : public Sequencer<T>
+{
+public:
+  GlobalModulator() : GlobalModulator(nullptr) {}
+  GlobalModulator(T* stepValues) : Sequencer<T>(stepValues) {}
+  GlobalModulator(Sequencer<T>& sequencer) : Sequencer<T>(sequencer.mStepValues) {}
+
+  inline T Process() override
+  {
+    return mBuffer.Get()[(mBlockPos++) % mBlockLength];
+  }
+
+  void Resize(int blockSize)
+  {
+    mBuffer.Resize(blockSize);
+  }
+
+  void FillBuffer(int nFrames)
+  {
+    mBlockPos = 0;
+    mBlockLength = nFrames;
+    for (int i{ 0 }; i < nFrames; ++i)
+    {
+      mBuffer.Get()[i] = M::Process();
+    }
+  }
+
+private:
+  WDL_TypedBuf<T> mBuffer;
+  int mBlockPos{ 0 };
+  int mBlockLength;
 };
 
 /*
@@ -456,11 +510,6 @@ public:
     mNumEnvs += 1;
   }
 
-  void ReplaceModulator(EnvType<T>* env, size_t idx)
-  {
-    mEnvPtrs[idx] = env;
-  }
-  
   void AddModulator(FastLFO<T>* lfo)
   {
     mLFOPtrs.push_back(lfo);
@@ -473,6 +522,21 @@ public:
     mNumSeqs += 1;
   }
 
+  void ReplaceModulator(EnvType<T>* env, size_t idx)
+  {
+    mEnvPtrs[idx] = env;
+  }
+
+  void ReplaceModulator(LFOType<T>* lfo, size_t idx)
+  {
+    mLFOPtrs[idx] = lfo;
+  }
+
+  void ReplaceModulator(Sequencer<T>* seq, size_t idx)
+  {
+    mSequencerPtrs[idx] = seq;
+  }
+
   /* Write modulation values to a buffer */
   void ProcessBlock(T** inputs, int nFrames)
   {
@@ -481,9 +545,9 @@ public:
       for(auto e{0}; e < mEnvPtrs.size(); ++e)
         mModulators.GetList()[e][i] = mEnvPtrs[e]->Process(inputs[e][i]);
       for (auto l{ 0 }; l < mLFOPtrs.size(); ++l)
-        mModulators.GetList()[l + mEnvPtrs.size()][i] = mLFOPtrs[l]->DoProcess();
+        mModulators.GetList()[l + mEnvPtrs.size()][i] = mLFOPtrs[l]->Process();
       for (auto s{ 0 }; s < mSequencerPtrs.size(); ++s)
-        mModulators.GetList()[s + mEnvPtrs.size() + mLFOPtrs.size()][i] = mSequencerPtrs[s]->DoProcess();
+        mModulators.GetList()[s + mEnvPtrs.size() + mLFOPtrs.size()][i] = mSequencerPtrs[s]->Process();
     }
   }
 
