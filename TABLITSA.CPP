@@ -638,9 +638,7 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
       pGraphics->SetAllControlsDirty();
     });
     pGraphics->AttachControl(new IVToggleControl(lfoPanel.GetGridCell(2, 1, 9, 5).GetVPadded(-6.f).GetVShifted(-15.f), kParamLFO1Restart, "Restart", DEFAULT_STYLE.WithShowLabel(false), "Free Run", "Retrigger"), kNoTag, "LFO1");
-    pGraphics->AttachControl(new IVDisplayControl(lfoPanel.GetGridCell(0, 3, 3, 5).GetVPadded(-20.f)));
     pGraphics->AttachControl(new ModSliderControl(lfoPanel.GetGridCell(0, 4, 3, 5).GetVPadded(-15.f), kNoParameter, "Depth"), kCtrlTagLFO1Depth, "LFO1");
-    //pGraphics->AttachControl(new IVDisplayControl(lfoPanel.GetGridCell(1, 1, 2, 3).Union(lfoPanel.GetGridCell(1, 2, 2, 3)), "", DEFAULT_STYLE, EDirection::Horizontal, 0.f, 1.f, 0.f, 1024), kCtrlTagLFOVis, "LFO");
     pGraphics->AttachControl(new IVGroupControl("LFO 1", "LFO1", 0.f, 10.f, 0.f, 0.f));
 
     // LFO 2
@@ -656,7 +654,7 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
         pGraphics->SetAllControlsDirty();
         });
     pGraphics->AttachControl(new IVToggleControl(lfoPanel.GetGridCell(5, 1, 9, 5).GetVPadded(-6.f).GetVShifted(-15.f), kParamLFO2Restart, "Restart", DEFAULT_STYLE.WithShowLabel(false), "Free Run", "Retrigger"), kNoTag, "LFO2");
-    pGraphics->AttachControl(new IVDisplayControl(lfoPanel.GetGridCell(1, 3, 3, 5).GetVPadded(-20.f)));
+//    pGraphics->AttachControl(new IVPlotControl(lfoPanel.GetGridCell(1, 3, 3, 5).GetVPadded(-20.f), ...), kCtrlTagLFO2Vis, "LFO2");
     pGraphics->AttachControl(new ModSliderControl(lfoPanel.GetGridCell(1, 4, 3, 5).GetVPadded(-15.f), kNoParameter, "Depth"), kCtrlTagLFO2Depth, "LFO2");
     pGraphics->AttachControl(new IVGroupControl("LFO 2", "LFO2", 0.f, 10.f, 0.f, 0.f));
 
@@ -802,13 +800,15 @@ void Tablitsa::ProcessBlock(sample** inputs, sample** outputs, int nFrames)
 {
   mDSP.ProcessBlock(nullptr, outputs, 2, nFrames, mTimeInfo.mPPQPos, mTimeInfo.mTransportIsRunning);
   mMeterSender.ProcessBlock(outputs, nFrames, kCtrlTagMeter);
-  // mLFOVisSender.PushData({kCtrlTagLFOVis, {float(mDSP.mLFO.GetLastOutput())}});
-  // TODO: If no voices are active, increment the phases of free-run modulators
+//  mLFO1VisSender.PushData({ kCtrlTagLFO1Vis, {float(mDSP.mGlobalLFO1.GetLastOutput())}});
+//  mLFO2VisSender.PushData({ kCtrlTagLFO2Vis, {float(TablitsaDSP<sample>::mGlobalLFO2.GetLastOutput())} });
 }
 
 void Tablitsa::OnIdle()
 {
   mMeterSender.TransmitData(*this);
+//  mLFO1VisSender.TransmitData(*this);
+//  mLFO2VisSender.TransmitData(*this);
 
   // Send time signature to DSP class
   GetTimeSig(mDSP.mTSNum, mDSP.mTSDenom);
@@ -820,7 +820,6 @@ void Tablitsa::OnIdle()
     SendControlMsgFromDelegate(kCtrlTagSequencer, IVMultiSliderControl<>::kMsgTagSetHighlight, sizeof(int), &mDSP.mPrevPos);
   }
 
-  //mLFOVisSender.TransmitData(*this);
   // Update Sequencer Position
   if (mDSP.GetSequencerStep() != mDSP.mSeqPos)
   {

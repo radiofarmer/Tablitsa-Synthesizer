@@ -340,7 +340,13 @@ public:
 
     T s_out = Lookup(phase);
     IOscillator<T>::mPhase = WrapPhase(IOscillator<T>::mPhase + phaseIncr * mTableSize, 0., static_cast<double>(mTableSize));
+    mLastOutput = s_out;
     return s_out * mLevelScalar;
+  }
+
+  T GetLastOuput() const
+  {
+    return mLastOutput;
   }
 
   static inline T WrapPhase(T x, T lo = 0., T hi = 1.)
@@ -511,10 +517,15 @@ public:
     }
   }
 
+  T GetLastOutput() const
+  {
+    return M::mLastOutput;
+  }
+
 private:
   WDL_TypedBuf<T> mBuffer;
   int mBlockPos{ 0 };
-  int mBlockLength;
+  int mBlockLength{ 0 };
 };
 
 /*
