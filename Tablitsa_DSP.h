@@ -10,7 +10,7 @@
 #include "Filter.h"
 #include "PeriodicTable.h"
 
-#ifndef _DEBUG
+#if !_DEBUG
   #define VECTOR
 #endif
 #ifdef VECTOR
@@ -333,7 +333,11 @@ public:
       // Write ramps for modulators
       mModulators.ProcessBlock(&(inputs[kModEnv1SustainSmoother]), nFrames);
       // Apply modulation ramps to all modulated parameters
+#ifndef _DEBUG
+      mVoiceModParams.ProcessBlockVec4d(&inputs[kModWavetable1PitchSmoother], mModulators.GetList(), mVModulations.GetList(), nFrames);
+#else
       mVoiceModParams.ProcessBlock(&inputs[kModWavetable1PitchSmoother], mModulators.GetList(), mVModulations.GetList(), nFrames);
+#endif // !_DEBUG
 
       const double phaseModFreqFact = pow(2., mVModulations.GetList()[kVPhaseModFreq][0] / 12.);
       const double ringModFreqFact = pow(2., mVModulations.GetList()[kVRingModFreq][0] / 12.);

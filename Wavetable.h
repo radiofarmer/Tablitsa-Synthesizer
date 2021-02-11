@@ -35,9 +35,9 @@
 #include "Oscillator.h"
 #include "Modulators.h"
 
-#ifndef _DEBUG
+#if !_DEBUG
   #define OVERSAMPLING 2
-  #define VECTOR_SIZE 8
+  #define VECTOR_SIZE 4
   #define OUTPUT_SIZE VECTOR_SIZE / OVERSAMPLING
   #define VECTOR
 #else
@@ -45,10 +45,6 @@
   #define OUTPUT_SIZE VECTOR_SIZE
 #endif
 
-
-#if MULTITHREAD_TEST
-#include <mutex>
-#endif
 
 void fft_lp_filter(WDL_FFT_REAL* samples, const int length, int max_bin, int decimation=1)
 {
@@ -722,7 +718,7 @@ public:
     // Get the normalized offset of the current wavetable block
     double tableOffset{ mWtPosition * (mWT->mNumTables - 1) };
     tableOffset -= std::max(floor(tableOffset - 0.0001), 0.);
-#ifdef OVERSAMPLING
+#if OVERSAMPLING > 1
     // Temporary array to be downsampled
     T* oversampled = new T[nFrames]{ 0. };
 #endif

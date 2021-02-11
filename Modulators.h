@@ -200,24 +200,24 @@ public:
     {
       for (auto p{ 0 }; p < NParams; ++p)
       {
-        /* For calculating per-sample modulation for single samples in parallel
+        // For calculating per-sample modulation for single samples in parallel
         Vec4d modDepths;
         modDepths.load(mParams[p]->Depths()); // Modulation depths for the current parameters (constant for entire sample block)
         Vec4d modVals(mod_inputs[0][i], mod_inputs[1][i], mod_inputs[2][i], mod_inputs[3][i]); // Values of the modulators themselves for the current samples
-        outputs[p][i] = mParams[p]->ClipToRange(horizontal_add(modDepths * modVals) + param_inputs[p][i]);*/
+        outputs[p][i] = mParams[p]->ClipToRange(horizontal_add(modDepths * modVals) + param_inputs[p][i]);
 
         // For calculating per-sample modulation for multiple samples in parallel
-        Vec4d modSum(0.);
+        /*Vec4d modSum(0.);
         Vec4d initVals;
         initVals.load(param_inputs[p]);
         for (auto m{ 0 }; m < 4; ++m)
         {
           Vec4d modSamples;
-          modSamples.load(mod_inputs[m][i]);
-          modSum += modSamples * mParams[p][m];
+          modSamples.load(&mod_inputs[m][i]);
+          modSum = mul_add(modSamples, mParams.at(p)[m], modSum);
         }
         Vec4d outputV = Params[p]->ClipToRange(initVals + modSum);
-        outputV.store(&outputs[p][i]);
+        outputV.store(&outputs[p][i]);*/
 
       }
     }
