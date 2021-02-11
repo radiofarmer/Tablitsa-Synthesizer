@@ -390,11 +390,25 @@ public:
     mQNScalar = GetQNScalar(static_cast<ETempoDivision>(Clip(division, 0, (int)kNumDivisions))) / NSteps; // Tempo-synced rate indicates the length of one step
   }
 
+  inline void SetFreqCPS(double freqHz)
+  {
+    FastLFO<T>::SetFreqCPS(freqHz);
+    CalculateGlideSamples();
+  }
+
   /* Set the glide time, as a fraction of the time from one step to the next. (i.e. the fraction of the step-time required to reach the next step's value)
   */
   void SetGlide(double glideNorm)
   {
     mGlide = glideNorm;
+    CalculateGlideSamples();
+  }
+
+  inline void CalculateGlideSamples()
+  {
+    mSamplesPerStep = 1. / mPhaseIncr / static_cast<double>(NSteps); // (cycles/sample) ^ -1 / (steps/cycle) = samples step^-1
+    double samplesToTarget = mGlide * mSamplesPerStep;
+    mGlidePerSample = 1. / samplesToTarget;
   }
 
   inline T Process() override 
@@ -404,37 +418,46 @@ public:
 
   inline T GetStepValueWithGlide()
   {
-    T prevValue = GetStepValue(std::abs((mStepPos - 1) % mLength));
+    T prevValue = mPrevValue;
     T targValue = GetStepValue(mStepPos);
-    T stepPhase = mPhase * NSteps - static_cast<T>(mStepPos);
-    return prevValue + (1. - mGlide * stepPhase) * (targValue - prevValue);
+    T stepPhase = mPhase * NSteps - std::floor(mPhase * NSteps);
+    return prevValue + std::min(mGlidePerSample * stepPhase * mSamplesPerStep, 1.) * (targValue - prevValue);
   }
 
   inline T ProcessSynced(double qnPos = 0., bool transportIsRunning = false, double tempo = 120.)
   {
     T oneOverQNScalar = 1. / LFO<T>::mQNScalar;
     T phase = IOscillator<T>::mPhase;
+    bool tempoSync = FastLFO<T>::mRateMode == FastLFO<T>::ERateMode::kBPM;
 
-    if (FastLFO<T>::mRateMode == FastLFO<T>::ERateMode::kBPM && !transportIsRunning)
+    if (tempoSync && !transportIsRunning)
       IOscillator<T>::SetFreqCPS(tempo / 60.);
 
     double samplesPerBeat = IOscillator<T>::mSampleRate * (60.0 / (tempo == 0.0 ? 1.0 : tempo)); // samples per beat
 
     T phaseIncr = IOscillator<T>::mPhaseIncr;
 
-    double sampleAccurateQnPos = qnPos + (phase / samplesPerBeat);
-
-    if (FastLFO<T>::mRateMode == FastLFO<T>::ERateMode::kBPM)
+    if (tempoSync)
     {
+      double sampleAccurateQnPos = qnPos + (phase / samplesPerBeat);
       phaseIncr *= LFO<T>::mQNScalar;
       if (transportIsRunning)
         phase = std::fmod(sampleAccurateQnPos, oneOverQNScalar) * LFO<T>::mQNScalar;
     }
 
+    T tempValue = GetStepValue(mStepPos);
     mStepPos = static_cast<int>(phase * NSteps) % mLength;
-    T s_out = GetStepValue(mStepPos);//GetStepValueWithGlide();
+    T s_out = GetStepValueWithGlide();
+
+    // When the step changes, save the previous step value (for glide calculations)
+    if (mStepPos != mPrevStepPos)
+    {
+      mPrevValue = tempValue;
+      mPrevStepPos = mStepPos;
+    }
+
+    // Increment phase
     IOscillator<T>::mPhase = FastLFO<T>::WrapPhase(IOscillator<T>::mPhase + phaseIncr, 0., 1.);
-    mPrevValue = s_out;
     return s_out * mLevelScalar;
   }
 
@@ -456,6 +479,8 @@ protected:
   int mPrevStep{ -1 };
   int mLength{ NSteps };
   T mGlide{ 0. };
+  T mGlidePerSample{ 0. };
+  T mSamplesPerStep;
 };
 
 template<typename T, class M>
