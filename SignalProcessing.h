@@ -3,7 +3,7 @@
 class DelayLine
 {
 public:
-  DelayLine(int length) : mLength(length)
+  DelayLine(const int length) : mLength(length)
   {
     assert (mLength > 1);
     mBuffer = new double[mLength]{};
@@ -25,7 +25,7 @@ public:
     mLength = d;
   }
 
-  inline void push(double s)
+  inline void push(const double s)
   {
     mRead = mWrite;
     mBuffer[mWrite++] = s;
@@ -33,7 +33,7 @@ public:
       mWrite = 0;
   }
 
-  inline double at(int offset = 0)
+  inline double at(const int offset = 0)
   {
     int readPoint{ mRead - offset };
     if (readPoint < 0)
@@ -46,7 +46,7 @@ public:
     return mBuffer;
   }
 
-  inline double operator[](int idx)
+  inline double operator[](const int idx)
   {
     return at(idx);
   }
@@ -89,7 +89,7 @@ class DelayEffect final : public Effect<T>
 
 public:
   DelayEffect(double sampleRate, double maxDelayMS = 5000.) :
-    Effect(sampleRate),
+    Effect<T>(sampleRate),
     mMaxDelayMS(maxDelayMS),
     mMaxDelay(static_cast<int>((mMaxDelayMS / 1000. + 1.) * mSampleRate)),
     mDelayL(mMaxDelay),
@@ -149,12 +149,12 @@ public:
     }
   }
 
-  void SetFeedback(T fb)
+  void SetFeedback(const T fb)
   {
     mFeedback = fb;
   }
 
-  void SetGain(T gain)
+  void SetGain(const T gain)
   {
     mDelayLGain = gain;
     mDelayRGain = gain;
@@ -169,14 +169,25 @@ public:
     return left_out * mDelayLGain + right_out * mDelayRGain;
   }
 
-  T* ProcessStereo(T sl, T sr)
+  T* ProcessStereo(const T sl, const T sr)
   {
-    T left_out = mDelayL[mDelayLTime];
-    T right_out = mDelayR[mDelayRTime];
+    const T left_out = mDelayL[mDelayLTime];
+    const T right_out = mDelayR[mDelayRTime];
     mDelayL.push(sl + left_out * mFeedback);
     mDelayR.push(sr + right_out * mFeedback);
     T output[2]{ left_out * mDelayLGain, right_out * mDelayRGain };
     return output;
+  }
+
+  T* ProcessStereo(T inputs[2])
+  {
+    const T left_out = mDelayL[mDelayLTime];
+    const T right_out = mDelayR[mDelayRTime];
+    mDelayL.push(inputs[0] + left_out * mFeedback);
+    mDelayR.push(inputs[1] + right_out * mFeedback);
+    inputs[0] = left_out * mDelayLGain;
+    inputs[1] = right_out* mDelayRGain;
+    return inputs;
   }
 
 private:

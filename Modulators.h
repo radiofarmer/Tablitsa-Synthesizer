@@ -495,44 +495,44 @@ private:
 /*
 A container class that holds all per-voice modulators.
 */
-template<typename T, template<typename> class EnvType=ADSREnvelope, template<typename> class LFOType=FastLFO, template<typename> class SequencerType=Sequencer>
+template<typename T, class EnvType, class LFOType, class SequencerType>
 class ModulatorList
 {
 public:
   ModulatorList() {}
 
-  ModulatorList(EnvType<T>** envPtrs, LFOType<T>** lfoPtrs) : mEnvPtrs(envPtrs), mLFOPtrs(lfoPtrs)
+  ModulatorList(EnvType** envPtrs, LFOType** lfoPtrs) : mEnvPtrs(envPtrs), mLFOPtrs(lfoPtrs)
   {}
 
-  void AddModulator(EnvType<T>* env)
+  void AddModulator(EnvType* env)
   {
     mEnvPtrs.push_back(env);
     mNumEnvs += 1;
   }
 
-  void AddModulator(FastLFO<T>* lfo)
+  void AddModulator(LFOType* lfo)
   {
     mLFOPtrs.push_back(lfo);
     mNumLFOs += 1;
   }
 
-  void AddModulator(Sequencer<T>* seq)
+  void AddModulator(SequencerType* seq)
   {
     mSequencerPtrs.push_back(seq);
     mNumSeqs += 1;
   }
 
-  void ReplaceModulator(EnvType<T>* env, size_t idx)
+  void ReplaceModulator(EnvType* env, size_t idx)
   {
     mEnvPtrs[idx] = env;
   }
 
-  void ReplaceModulator(LFOType<T>* lfo, size_t idx)
+  void ReplaceModulator(LFOType* lfo, size_t idx)
   {
     mLFOPtrs[idx] = lfo;
   }
 
-  void ReplaceModulator(Sequencer<T>* seq, size_t idx)
+  void ReplaceModulator(SequencerType* seq, size_t idx)
   {
     mSequencerPtrs[idx] = seq;
   }
@@ -570,9 +570,9 @@ public:
   }
 
 private:
-  std::vector<EnvType<T>*> mEnvPtrs;
-  std::vector<LFOType<T>*> mLFOPtrs;
-  std::vector<SequencerType<T>*> mSequencerPtrs;
+  std::vector<EnvType*> mEnvPtrs;
+  std::vector<LFOType*> mLFOPtrs;
+  std::vector<SequencerType*> mSequencerPtrs;
   int mNumMods{ 0 };
   int mNumEnvs{ 0 };
   int mNumLFOs{ 0 };

@@ -41,6 +41,7 @@
   #define OUTPUT_SIZE VECTOR_SIZE / OVERSAMPLING
   #define VECTOR
 #else
+  #define OVERSAMPLING 1
   #define VECTOR_SIZE 1
   #define OUTPUT_SIZE VECTOR_SIZE
 #endif
@@ -333,11 +334,11 @@ public:
     //mValues = source.mValues;
   }
 
-  T* GetLevel(int length, int& tableSize)
+  T* GetLevel(const int length, int& tableSize)
   {
-    int curOffset{ 0 };
-    int curLevel{ mMaxLevel };
-    size_t levelIdx{ 0 };
+    const int curOffset{ 0 };
+    const int curLevel{ mMaxLevel };
+    const size_t levelIdx{ 0 };
     // Select the mipmap level as if all wavetables had one cycle and no size floor
     while (curLevel > length)
     {
@@ -459,7 +460,7 @@ public:
     return samples;
   }
 
-  T* GetLevel(int length, int& tableSize)
+  T* GetLevel(const int length, int& tableSize)
   {
     int curOffset{ 0 };
     int curLevel{ mMaxLevel };
@@ -475,7 +476,7 @@ public:
     return mValues + curOffset;
   }
 
-  T* GetLevelAt(int idx, int& tableSize)
+  T* GetLevelAt(const int idx, int& tableSize)
   {
     idx = std::min(idx, (int)mLevelIndices.size() - 2);
     tableSize = mLevelSizes[idx];
@@ -534,7 +535,7 @@ public:
     }
   }
 
-  inline T* GetMipmapLevel_ByIndex(std::size_t tableIdx, int idx, int& tableSize)
+  inline T* GetMipmapLevel_ByIndex(const std::size_t tableIdx, const int idx, int& tableSize)
   {
     return mWaveforms.at(tableIdx).GetLevelAt(idx, tableSize);
   }
@@ -588,8 +589,16 @@ class WavetableOscillator final : public iplug::IOscillator<T>
   } ALIGNED(8);
 
 public:
-  WavetableOscillator(int id, WtFile& table, double startPhase = 0., double startFreq = 1.)
-    : mID(id), IOscillator<T>(startPhase* mTableSizeM1, startFreq), mPrevFreq(static_cast<int>(startFreq))
+  WavetableOscillator(const int id, const char* tableName, const double startPhase = 0., const double startFreq = 1.) :
+    mID(id), IOscillator<T>(startPhase), mPrevFreq(static_cast<int>(startFreq))
+  {
+    WtFile table(tableName);
+    WavetableOscillator<T>::LoadNewTable(table, mID);
+    WavetableOscillator<T>::SetWavetable(WavetableOscillator<T>::LoadedTables[mID]);
+  }
+
+  WavetableOscillator(const int id, const WtFile& table, double startPhase = 0., double startFreq = 1.)
+    : mID(id), IOscillator<T>(startPhase, startFreq), mPrevFreq(static_cast<int>(startFreq))
   {
     WavetableOscillator<T>::LoadNewTable(table, mID);
     WavetableOscillator<T>::SetWavetable(WavetableOscillator<T>::LoadedTables[mID]);
@@ -628,13 +637,13 @@ public:
     const double samplesPerCycle{ 1. / IOscillator<T>::mPhaseIncr };
 
     // Select by Index
-    double tableFact{ std::log2(mWT->GetMaxSize() / (samplesPerCycle * mTableOS)) };
+    const double tableFact{ std::log2(mWT->GetMaxSize() / (samplesPerCycle * mTableOS)) };
     mTableInterp = tableFact - std::floor(tableFact);
     mWtIdx = std::max(static_cast<int>(std::floor(tableFact)), 0);
     SetMipmapLevel_ByIndex(mWtIdx);
   }
 
-  inline void SetMipmapLevel_ByIndex(int idx)
+  inline void SetMipmapLevel_ByIndex(const int idx)
   {
     std::unique_lock<std::mutex> lock(mWtMutex);
     mCV.wait(lock, [this] { return mWtReady[mID]; });
@@ -695,18 +704,20 @@ public:
   {
     AdjustWavetable(freqCPS);
 
-#ifdef VECTOR
     std::array<T, OUTPUT_SIZE> output{ 0. };
 #if VECTOR_SIZE == 8
     ProcessOversamplingVec<Vec8d, Vec8q>(output);
-#else
+#elif VECTOR_SIZE == 4
     ProcessOversamplingVec<Vec4d, Vec4q>(output);
-#endif
 #else
-    std::array<T, OUTPUT_SIZE> output{ 0. };
     ProcessOversampling(output, mProcessOS);
 #endif
     return output;
+  }
+
+  inline T Process(double freqHz)
+  {
+    return 0.;
   }
 
   inline void ProcessOversampling(std::array<T, OUTPUT_SIZE>& pOutput, int nFrames)
@@ -746,7 +757,7 @@ public:
       const T f4 = addr[2][1] * sampleWtPosition + addr[3][1] * sampleWtPositionInv;
       // Send output
       T lowerTable = (f1 + frac * (f2 - f1));
-#ifdef OVERSAMPLING
+#if OVERSAMPLING > 1
       oversampled[s] = lowerTable + mTableInterp * ((f3 + frac2 * (f4 - f3)) - lowerTable);
       oversampled[s] += mRM * mRingModAmt * (RingMod() * oversampled[s] - oversampled[s]);
 #else
@@ -758,7 +769,7 @@ public:
       IOscillator<T>::mPhase += mPhaseIncr * mPhaseIncrFactor;
       IOscillator<T>::mPhase -= std::floor(IOscillator<T>::mPhase);
     }
-#ifdef OVERSAMPLING
+#if OVERSAMPLING > 1
     for (auto s = 0; s < nFrames / mProcessOS; ++s)
     {
       mLastOutput = pOutput[s] = mAAFilter.ProcessAndDownsample(oversampled + (s * mProcessOS));
@@ -936,7 +947,7 @@ public:
   T mLastOutput = 0.;
 
 private:
-#ifdef OVERSAMPLING
+#if OVERSAMPLING == 2
   inline static int mProcessOS{ 2 }; // Sample processing oversampling level (number of samples processed per sample output)
 #else
   inline static int mProcessOS{ 1 };

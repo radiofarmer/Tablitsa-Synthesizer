@@ -1,11 +1,5 @@
 #pragma once
 
-#if MULTITHREAD_TEST
-#include <boost/asio/io_service.hpp>
-#include <boost/bind.hpp>
-#include <boost/thread.hpp>
-#endif
-
 #include "IPlug_include_in_plug_hdr.h"
 #include "IControls.h"
 #include <vectorclass.h>

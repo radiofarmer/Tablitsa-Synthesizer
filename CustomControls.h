@@ -381,13 +381,15 @@ public:
     };
 
     // Draw current wavetable icons
-    DrawElement(g, mRECT.GetFromRight(80.f).GetGridCell(0, 0, 2, 1).GetCentredInside(70.f, 80.f), mSelectedElements[0], 0);
-    DrawElement(g, mRECT.GetFromRight(80.f).GetGridCell(1, 0, 2, 1).GetCentredInside(70.f, 80.f), mSelectedElements[1], 1);
+    const IRECT activeElem1 = mRECT.GetFromRight(80.f).GetGridCell(0, 0, 2, 1).GetCentredInside(70.f, 80.f);
+    const IRECT activeElem2 = mRECT.GetFromRight(80.f).GetGridCell(1, 0, 2, 1).GetCentredInside(70.f, 80.f);
+    DrawElement(g, activeElem1, mSelectedElements[0], 0);
+    DrawElement(g, activeElem2, mSelectedElements[1], 1);
 
     g.DrawSVG(mSVG, mRECT);
   }
 
-  void DrawElement(IGraphics& g, IRECT& bounds, int atomicNumber, int idx)
+  void DrawElement(IGraphics& g, const IRECT& bounds, int atomicNumber, int idx)
   {
     assert(atomicNumber > 0);
     IColor col{ TablitsaDSP<double>::tableLoading[idx] ? ElementIconColor[idx].WithOpacity(0.5f) : ElementIconColor[idx] };
