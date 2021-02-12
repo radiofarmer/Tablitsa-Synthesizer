@@ -4,13 +4,15 @@
 #include <ShlObj.h>
 #include <Shlwapi.h>
 #include <tchar.h>
+#include <string>
 
 //#define FFT
 #define FFT_MAX_SIZE 32768
 
-#ifndef VST3_API
+#if _DEBUG
 #define WT_DIR "..\\resources\\data\\wavetables\\"
 #else
+#define USE_APPDATA_PATH
 #define WT_DIR "\\Tablitsa\\wavetables\\"
 #endif
 
@@ -112,7 +114,7 @@ class WtFile
 
 public:
   WtFile(std::string fname) :
-#ifndef VST3_API
+#ifdef USE_APPDATA_PATH
     mPath(WT_DIR + fname + ".wt")
 #else
     mPath(fname + ".wt")
@@ -122,14 +124,14 @@ public:
     int headerSize{ sizeof(mHeader) }; // Size of WAV header
     constexpr int byteInc = 8;
     
-#ifdef VST3_API
+#ifdef USE_APPDATA_PATH
     TCHAR szPath[MAX_PATH];
     if (SUCCEEDED(SHGetFolderPath(NULL, CSIDL_APPDATA, NULL, 0, szPath)))
     {
       PathAppend(szPath, _T(WT_DIR));
     }
-    std::wstring wpath(&szPath[0]);
-    std::string path(wpath.begin(), wpath.end());
+    //std::wstring wpath(static_cast<char*>(szPath));
+    std::string path = szPath;
     mPath = path + fname + ".wt";
 #endif
     FILE* wt = fopen(mPath.c_str(), "rb");
