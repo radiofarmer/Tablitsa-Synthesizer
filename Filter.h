@@ -56,19 +56,19 @@ public:
     mSampleRate = sampleRate;
   }
 
-  virtual void SetCutoff(double cutoffNorm)
+  virtual inline void SetCutoff(double cutoffNorm)
   {
     mFc = cutoffNorm;
   }
 
-  virtual void SetQ(double q)
+  virtual inline void SetQ(double q)
   {
     mQ = q;
   }
 
-  virtual void SetDrive(double drive) {}
+  virtual inline void SetDrive(double drive) { mDrive = drive; }
 
-  virtual void CalculateCoefficients() {}
+  virtual inline void CalculateCoefficients() {}
 
   virtual void SetMode(int mode)
   {
@@ -84,6 +84,7 @@ protected:
   T mSampleRate;
   T mFc;
   T mQ;
+  T mDrive{ 0. };
   int mMode{ 0 };
 };
 
@@ -198,6 +199,8 @@ public:
   inline T Process(double s)
   {
     CalculateCoefficients();
+    T overdrive = SoftClip(s, 1. + mDrive * 2.);
+    s += mDrive * (overdrive - s);
     return (this->*mProcessFunctions[mMode])(s);
   }
 
@@ -274,7 +277,7 @@ public:
     mFc = cutoffNorm * pi;
   }
 
-  inline void SetDrive(double drive) 
+  inline void SetDrive(double drive) override
   {
     mGComp = drive;
   }
@@ -494,12 +497,12 @@ public:
     SetDelay(mDelayLength);
   }
 
-  inline virtual void SetCutoff(T cutoffNorm)
+  inline void SetCutoff(T cutoffNorm) override
   {
     mFc = cutoffNorm * 2;
   }
 
-  inline virtual void SetDrive(T delayLength)
+  inline void SetDrive(T delayLength) override
   {
     SetDelay(std::min(static_cast<int>(delayLength), mMaxDelay));
   }
@@ -530,13 +533,13 @@ template<typename T, bool LowShelf=true>
 class ShelvingFilter : public Filter<T>
 {
 public:
-  ShelvingFilter(double sampleRate=41000., double cutoff=0.5, double resonance=0., double gain=0., bool cutoffIsNormalized = true) :
-    Filter<T>(mSampleRate, cutoff, resonance, cutoffIsNormalized), mGain(gain)
+  ShelvingFilter(double sampleRate=41000., double cutoff=0.1, double gain=0., bool cutoffIsNormalized = true) :
+    Filter<T>(mSampleRate, cutoff, 0., cutoffIsNormalized), mGain(gain)
   {
     if (LowShelf)
-      mCoefficientsFunc = [this](double& k, double& v0, double& slope) { return LowShelfCoefficients(k, v0, slope); };
+      mCoefficientsFunc = [this](double& k, double& v0) { return LowShelfCoefficients(k, v0); };
     else
-      mCoefficientsFunc = [this](double& k, double& v0, double& slope) { return HighShelfCoefficients(k, v0, slope); };
+      mCoefficientsFunc = [this](double& k, double& v0) { return HighShelfCoefficients(k, v0); };
 
     CalculateCoefficients();
   }
@@ -547,51 +550,54 @@ public:
     CalculateCoefficients();
   }
 
+  inline void SetCutoff(double cutoffNorm) override
+  {
+    mFc = std::min(cutoffNorm, 0.4);
+  }
+
+  inline void ShiftCutoff(double shiftNorm)
+  {
+    SetCutoff(std::max(0.001, mFc + shiftNorm));
+  }
+
   inline void CalculateCoefficients() override
   {
     double k = std::tan(Filter<T>::pi * mFc);
     double v0 = std::pow(10., mGain / 20.);
-    double slope = 1. / (1. - std::min(0.99, mQ));
 
-    mCoefficientsFunc(k, v0, slope);
+    mCoefficientsFunc(k, v0);
   }
 
-  inline void LowShelfCoefficients(double& k, double& v0, double& slope)
+  inline void LowShelfCoefficients(double& k, double& v0)
   {
-    double kSqr = k * k;
-    double vkSqr = v0 * kSqr;
-    double denom = 1 + slope * k + kSqr;
-
-    // Biquad Coefficients (low shelf)
-    mB[0] = 1. + (std::sqrt(v0) * slope * k + vkSqr) / denom;
-    mB[1] = 2. * (vkSqr - 1.) / denom;
-    mB[2] = (1. - std::sqrt(v0) * slope * k + vkSqr) / denom;
-    mA[0] = 2. * (kSqr - 1.) / denom;
-    mA[1] = (1 - slope * k * kSqr) / denom;
+    // Boost
+    mA = (k - 1.) / (k + 1.);
+    mH0d2 = (v0 - 1.) / 2.;
+    mSign = 1.;
   }
 
-  inline void HighShelfCoefficients(double& k, double& v0, double& slope)
+  inline void HighShelfCoefficients(double& k, double& v0)
   {
-
+    mA = (k - 1.) / (k + 1.);
+    mH0d2 = (v0 - 1.) / 2.;
+    mSign = -1.;
   }
 
   inline T Process(T s) override
   {
-    return ProcessBiquadII(s, mA, mB, mZ);
-  }
-
-  inline T ProcessLowShelf(T s)
-  {
-    T sum = s - mA[0] * mZ[0] - mA[1] * mZ[1];
-    T out = sum * mB[0] + mZ[0] * mB[1] + mZ[1] * mB[2];
-    mZ.push(sum);
+    T sum = mA * s + mX_prev - mA * mY_prev;
+    T out = mH0d2 * (s + mSign * sum) + s;
+    mX_prev = s;
+    mY_prev = sum;
     return out;
   }
 
 private:
-  double mGain;
-  double mA[2]{ 0. };
-  double mB[3]{ 0. };
-  DelayLine mZ{ 2 };
-  std::function<void(double&, double&, double&)> mCoefficientsFunc;
+  double mGain; // Gain in decibels
+  double mA{ 0. };
+  double mH0d2{ -1. };
+  double mSign{ 1. };
+  T mX_prev{ 0. };
+  T mY_prev{ 0. };
+  std::function<void(double&, double&)> mCoefficientsFunc;
 };

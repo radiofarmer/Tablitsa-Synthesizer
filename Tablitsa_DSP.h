@@ -45,9 +45,11 @@ enum EModulations
   kModFilter1CutoffSmoother,
   kModFilter1ResonanceSmoother,
   kModFilter1DriveSmoother,
+  kModFilter1CombDelaySmoother,
   kModFilter2CutoffSmoother,
   kModFilter2ResonanceSmoother,
   kModFilter2DriveSmoother,
+  kModFilter2CombDelaySmoother,
   kModPhaseModFreqSmoother,
   kModPhaseModAmtSmoother,
   kModRingModFreqSmoother,
@@ -77,9 +79,11 @@ enum EVoiceModParams
   kVFilter1Cutoff,
   kVFilter1Resonance,
   kVFilter1Drive,
+  kVFilter1Delay,
   kVFilter2Cutoff,
   kVFilter2Resonance,
   kVFilter2Drive,
+  kVFilter2Delay,
   kVPhaseModFreq,
   kVPhaseModAmt,
   kVRingModFreq,
@@ -330,6 +334,7 @@ public:
 
     void ProcessSamplesAccumulating(T** inputs, T** outputs, int nInputs, int nOutputs, int startIdx, int nFrames) override
     {
+      constexpr double ktShelfIncr{ 0.001 };
       // inputs to the synthesizer can just fetch a value every block, like this:
 //      double gate = mInputs[kVoiceControlGate].endValue;
       double pitch = mInputs[kVoiceControlPitch].endValue + mDetune; // pitch = (MidiKey - 69) / 12
@@ -338,7 +343,8 @@ public:
 //      mInputs[kVoiceControlTimbre].Write(mTimbreBuffer.Get(), startIdx, nFrames);
 
       // Set the static (note-constant) modulator values
-      T staticMods[]{ mVelocity, (pitch * 12. + 69.) / 128., mTriggerRand };
+      T keytrack = (pitch * 12. + 69.) / 128.;
+      T staticMods[]{ mVelocity, keytrack, mTriggerRand };
       mVoiceModParams.SetStaticModulation(staticMods);
       // Write ramps for modulators
       mModulators.ProcessBlock(&(inputs[kModEnv1SustainSmoother]), nFrames);
@@ -363,14 +369,14 @@ public:
         double osc1Freq = 440. * pow(2., pitch + mVModulations.GetList()[kVWavetable1PitchOffset][bufferIdx] / 12.);
         mOsc1.SetWtPosition(1 - mVModulations.GetList()[kVWavetable1Position][bufferIdx]); // Wavetable 1 Position
         mOsc1.SetWtBend(mVModulations.GetList()[kVWavetable1Bend][bufferIdx]); // Wavetable 1 Bend
-        mOsc1Sub.SetLevel(mVModulations.GetList()[kVWavetable1Sub][bufferIdx]);
+        mOsc1Sat.SetLevel(mVModulations.GetList()[kVWavetable1Sub][bufferIdx], keytrack * ktShelfIncr);
         mOsc1.SetPhaseModulation(mVModulations.GetList()[kVPhaseModAmt][bufferIdx], osc1Freq * phaseModFreqFact);
         mOsc1.SetRingModulation(mVModulations.GetList()[kVRingModAmt][bufferIdx], osc1Freq * ringModFreqFact);
 
         double osc2Freq = 440. * pow(2., pitch + mVModulations.GetList()[kVWavetable2PitchOffset][bufferIdx] / 12.);
         mOsc2.SetWtPosition(1 - mVModulations.GetList()[kVWavetable2Position][bufferIdx]); // Wavetable 2 Position
         mOsc2.SetWtBend(mVModulations.GetList()[kVWavetable2Bend][bufferIdx]); // Wavetable 2 Bend
-        mOsc2Sub.SetLevel(mVModulations.GetList()[kVWavetable2Sub][bufferIdx]);
+        mOsc2Sat.SetLevel(mVModulations.GetList()[kVWavetable2Sub][bufferIdx], keytrack * ktShelfIncr);
         mOsc2.SetPhaseModulation(mVModulations.GetList()[kVPhaseModAmt][bufferIdx], osc2Freq * phaseModFreqFact);
         mOsc2.SetRingModulation(mVModulations.GetList()[kVRingModAmt][bufferIdx], osc2Freq * ringModFreqFact);
         
@@ -390,7 +396,8 @@ public:
        {
          osc1Output[j] *= mVModulations.GetList()[kVWavetable1Amp][bufferIdx];
          osc2Output[j] *= mVModulations.GetList()[kVWavetable2Amp][bufferIdx];
-         osc1Output[j] = mOsc1Sub.Process(osc1Output[j]);
+         osc1Output[j] = mOsc1Sat.Process(osc1Output[j]);
+         osc2Output[j] = mOsc2Sat.Process(osc2Output[j]);
          double filter1Output = mFilters.at(0)->Process(osc1Output[j]);
          double filter2Output = mFilters.at(1)->Process(osc2Output[j]);
          double output_summed = filter1Output + filter2Output;
@@ -413,8 +420,8 @@ public:
       mFilters[0]->SetSampleRate(sampleRate);
       mFilters[1]->SetSampleRate(sampleRate);
 
-      mOsc1Sub.SetSampleRate(sampleRate);
-      mOsc2Sub.SetSampleRate(sampleRate);
+      mOsc1Sat.SetSampleRate(sampleRate);
+      mOsc2Sat.SetSampleRate(sampleRate);
       
       mVModulationsData.Resize(blockSize * kNumModulations);
       mVModulations.Empty();
@@ -494,8 +501,8 @@ public:
   public:
     WavetableOscillator<T> mOsc1{ 0, "Hydrogen" };
     WavetableOscillator<T> mOsc2{ 1, "Helium" };
-    SaturationEQ<T> mOsc1Sub;
-    SaturationEQ<T> mOsc2Sub;
+    SaturationEQ<T> mOsc1Sat;
+    SaturationEQ<T> mOsc2Sat;
 
     // Static Modulators
     T mKey{ 69. };
@@ -551,9 +558,11 @@ public:
       new ParameterModulator<>(0.001, 0.5, "Flt1 Cutoff", true),
       new ParameterModulator<>(0., 1., "Flt1 Resonance"),
       new ParameterModulator<>(0., 1., "Flt1 Drive"),
+      new ParameterModulator<>(0., (double)COMB_MAX_DELAY, "Flt1 Comb Delay"),
       new ParameterModulator<>(0.001, 0.5, "Flt2 Cutoff", true),
       new ParameterModulator<>(0., 1., "Flt2 Resonance"),
       new ParameterModulator<>(0., 1., "Flt2 Drive"),
+      new ParameterModulator<>(0., (double)COMB_MAX_DELAY, "Flt2 Comb Delay"),
       new ParameterModulator<>(-24., 24., "Phase Mod Freq"),
       new ParameterModulator<>(0., 1., "Phase Mod Depth"),
       new ParameterModulator<>(-24., 24., "Ring Mod Freq"),
@@ -590,6 +599,7 @@ public:
 #pragma mark -
   TablitsaDSP(int nVoices)
   {
+    assert((int)kNumVoiceModulations == (int)(kNumModulations - kModWavetable1PitchSmoother));
     for (auto i = 0; i < nVoices; i++)
     {
       // add a voice to Zone 0.
@@ -1252,9 +1262,7 @@ public:
         break;
       }
       case kParamFilter1Drive:
-        value /= 100.;
-      case kParamFilter1Delay:
-        mParamsToSmooth[kModFilter1DriveSmoother] = value;
+        mParamsToSmooth[kModFilter1DriveSmoother] = value / 100.;
         break;
       case kParamFilter1DriveEnv1:
       case kParamFilter1DriveEnv2:
@@ -1269,6 +1277,25 @@ public:
         const int modIdx = paramIdx - kParamFilter1Drive;
         mSynth.ForEachVoice([paramIdx, modIdx, value](SynthVoice& voice) {
           dynamic_cast<TablitsaDSP::Voice&>(voice).UpdateVoiceParam(kVFilter1Drive, modIdx, value);
+          });
+        break;
+      }
+      case kParamFilter1Delay:
+        mParamsToSmooth[kModFilter1CombDelaySmoother] = value / 100.;
+        break;
+      case kParamFilter1DelayEnv1:
+      case kParamFilter1DelayEnv2:
+      case kParamFilter1DelayAmpEnv:
+      case kParamFilter1DelayLFO1:
+      case kParamFilter1DelayLFO2:
+      case kParamFilter1DelaySeq:
+      case kParamFilter1DelayVel:
+      case kParamFilter1DelayKTk:
+      case kParamFilter1DelayRnd:
+      {
+        const int modIdx = paramIdx - kParamFilter1Delay;
+        mSynth.ForEachVoice([paramIdx, modIdx, value](SynthVoice& voice) {
+          dynamic_cast<TablitsaDSP::Voice&>(voice).UpdateVoiceParam(kVFilter1Delay, modIdx, value);
           });
         break;
       }
@@ -1329,9 +1356,7 @@ public:
         break;
       }
       case kParamFilter2Drive:
-        value /= 100.;
-      case kParamFilter2Delay:
-        mParamsToSmooth[kModFilter2DriveSmoother] = value;
+        mParamsToSmooth[kModFilter2DriveSmoother] = value / 100.;
         break;
       case kParamFilter2DriveEnv1:
       case kParamFilter2DriveEnv2:
@@ -1345,7 +1370,26 @@ public:
       {
         const int modIdx = paramIdx - kParamFilter2Drive;
         mSynth.ForEachVoice([paramIdx, modIdx, value](SynthVoice& voice) {
-          dynamic_cast<TablitsaDSP::Voice&>(voice).UpdateVoiceParam(kVFilter2Drive, modIdx, value / 100.);
+          dynamic_cast<TablitsaDSP::Voice&>(voice).UpdateVoiceParam(kVFilter2Drive, modIdx, value);
+          });
+        break;
+      }
+      case kParamFilter2Delay:
+        mParamsToSmooth[kModFilter2CombDelaySmoother] = value / 100.;
+        break;
+      case kParamFilter2DelayEnv1:
+      case kParamFilter2DelayEnv2:
+      case kParamFilter2DelayAmpEnv:
+      case kParamFilter2DelayLFO1:
+      case kParamFilter2DelayLFO2:
+      case kParamFilter2DelaySeq:
+      case kParamFilter2DelayVel:
+      case kParamFilter2DelayKTk:
+      case kParamFilter2DelayRnd:
+      {
+        const int modIdx = paramIdx - kParamFilter2Delay;
+        mSynth.ForEachVoice([paramIdx, modIdx, value](SynthVoice& voice) {
+          dynamic_cast<TablitsaDSP::Voice&>(voice).UpdateVoiceParam(kVFilter2Delay, modIdx, value);
           });
         break;
       }

@@ -1,6 +1,8 @@
 #pragma once
 
-//#include <assert.h>
+#include <cmath>
+
+double SoftClip(double s, double gain = 3.);
 
 class DelayLine
 {

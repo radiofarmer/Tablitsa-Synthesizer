@@ -162,7 +162,7 @@ template <typename T>
 class SaturationEQ
 {
 public:
-  SaturationEQ(double sampleRate=41000.) : mLowShelf(sampleRate, 0.02, 0., 5.)
+  SaturationEQ(double sampleRate=41000., double boostFc=0.05, double lowEndGain_dB=5.) : mLowShelf(sampleRate, boostFc, lowEndGain_dB)
   {
   }
 
@@ -177,9 +177,15 @@ public:
     mLowShelf.SetGain(lvl * 10.);
   }
 
+  inline void SetLevel(T lvl, T cutoffShift)
+  {
+    SetLevel(lvl);
+    mLowShelf.ShiftCutoff(cutoffShift);
+  }
+
   inline T Process(T s)
   {
-    return std::tanh(mLowShelf.Process(s));
+    return std::tanh(mLowShelf.Process(s) * mGain) / mGain;
   }
 
 private:
