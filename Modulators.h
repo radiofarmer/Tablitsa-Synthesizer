@@ -6,54 +6,13 @@
 #include "LFO.h"
 #include "ADSREnvelope.h"
 
-enum EModulators
-{
-  kEnv1=0,
-  kEnv2,
-  kAmpEnv,
-  kLFO1,
-  kLFO2,
-  kSequencer,
-  kVelocity,
-  kKeytrack,
-  kTriggerRandom,
-  kNumMods
-};
+#include <cstdarg>
 
-BEGIN_IPLUG_NAMESPACE
-/*
-Shaping object for modulation depth sliders that provides finer control for parameters
-with large ranges, such as filter cutoff frequencies.
-*/
-struct ModShapePowCurve : public IParam::ShapePowCurve
-{
-  ModShapePowCurve(double shape) : IParam::ShapePowCurve(shape) {}
-
-  Shape* Clone() const override { return new ModShapePowCurve(*this); }
-
-  double NormalizedToValue(double value, const IParam& param) const
-  {
-    double sign = value >= 0.5 ? 1. : -1.;
-    value = std::abs(0.5 - value) * 2.;
-    return std::pow(value, mShape) * sign;
-  }
-
-  double ValueToNormalized(double value, const IParam& param) const
-  {
-    double sign = value >= 0. ? 1. : -1.;
-    value = std::abs(value);
-    return 0.5 + std::pow(value, 1.0 / mShape) / 2. * sign;
-  }
-
-};
-
-END_IPLUG_NAMESPACE
-
-template<int DynMods=6, int StatMods=3>
+template<int DynMods = 6, int StatMods = 3>
 class ParameterModulator
 {
 public:
-  ParameterModulator(double min, double max, const char* name="", bool exponential=false) : mMin(min), mMax(max), mName(name), mIsExponential(exponential)
+  ParameterModulator(double min, double max, const char* name = "", bool exponential = false) : mMin(min), mMax(max), mName(name), mIsExponential(exponential)
   {
     if (mIsExponential)
     {
@@ -87,6 +46,16 @@ public:
     mModDepths[idx] = value * mRange;
   }
 
+  static inline void SetModValues(double* modPtr)
+  {
+    memcpy(ParameterModulator::mModValues, modPtr, DynMods * sizeof(double));
+  }
+
+  virtual void SetInitialValue(const double value)
+  {
+    mInitial = value;
+  }
+
   /*
   Write a buffer of modulation buffers. Can be called directly by a ParameterModulator, or indirectly by a ParameterModulatorList.
   @param inputs The initival values (parameter values) for the parameter
@@ -99,6 +68,11 @@ public:
     {
       outputs[i] = AddModulation(inputs[i]);
     }
+  }
+
+  inline double AddModulation()
+  {
+    return AddModulation(mInitial);
   }
 
   /* TODO: This may be better implemented with virtual functions (see ParameterModulationExp implementation below) */
@@ -136,115 +110,94 @@ public:
     return mModDepths;
   }
 
-  static inline void SetModValues(double* modPtr)
-  {
-    memcpy(ParameterModulator::mModValues, modPtr, DynMods * sizeof(double));
-  }
 
 protected:
-  static inline double mModValues[EModulators::kNumMods]{ 0. };
+  static inline double mModValues[DynMods + StatMods]{ 0. };
   double mStaticModulation{};
 
+  double mInitial{ 0. };
   double mModDepths[DynMods + StatMods]{ 0. };
 
   double mMin{ 0. };
   double mMax{ 1. };
   double mRange{ 1. };
-  WDL_String mName;
+  std::string mName;
   const bool mIsExponential{ false };
 
   Vec4d mMinV = Vec4d(0.);
   Vec4d mMaxV = Vec4d(0.);
 };
 
-template<typename T, int NParams = 1, int DynamicMods=6, int StaticMods=3, int VectorSize=4>
-class ModulatedParameterList
+template<typename T>
+class GenericModulator
 {
 public:
-  ModulatedParameterList(std::initializer_list<ParameterModulator<DynamicMods, StaticMods>*> params) : mParams(params), mParamBlocks(NParams / 4)
-  {}
+  GenericModulator() {}
 
-  inline void SetStaticModulation(T* staticMods)
-  {
-    for (auto& p : mParams)
-      p->SetStaticModulation(staticMods);
-  }
+  virtual inline T Process() = 0;
 
-  /** Write a buffer for each of several ParameterModulator objects.
-  @param inputs_params Pointers to the buffers of initial (unmodulated) parameter values, e.g. from the inputs buffer in the block-processing function that calls this one. (NParams, nFrames)
-  @param inputs_mods Pointers to the modulation values for the block (kNumMods, nFrames)
-  @param outputs Pointers to the output buffers, of dimensions (NParams, nFrames)
-  @params nFrames Length of the buffer, in samples
-  */
-  void ProcessBlock(T** param_inputs, T** mod_inputs, T** outputs, int nFrames, const int offset=0)
-  {
-    for (auto i{ 0 }; i < nFrames; ++i)
-    {
-      T modDepths[NParams]{ 0. };
-      for (auto m{ 0 }; m < DynamicMods; ++m)
-        modDepths[m] = mod_inputs[m][i];
-      ParameterModulator<DynamicMods, StaticMods>::SetModValues(modDepths);
-      for (auto p{ offset }; p < NParams; ++p)
-      {
-        outputs[p][i] = mParams[p]->AddModulation(param_inputs[p][i]);
-      }
-    }
-  }
-
-  /* Vector processing of each block of parameter values.
-
-  TODO: Pad the modulation matrix with extra rows of zeros so that its rows are always divisible by the vector length. (See ModulatorList)
-  TODO: Support for exponentially-scaled moduation
-  */
-  void ProcessBlockVec4d(T** param_inputs, T** mod_inputs, T** outputs, int nFrames)
-  {
-    for (auto i{ 0 }; i < nFrames; i+=4)
-    {
-      for (auto p{ 0 }; p < NParams; ++p)
-      {
-        // For calculating per-sample modulation for single samples in parallel
-        Vec4d modDepths;
-        modDepths.load(mParams[p]->Depths()); // Modulation depths for the current parameters (constant for entire sample block)
-        Vec4d modVals(mod_inputs[0][i], mod_inputs[1][i], mod_inputs[2][i], mod_inputs[3][i]); // Values of the modulators themselves for the current samples
-        outputs[p][i] = mParams[p]->ClipToRange(horizontal_add(modDepths * modVals) + param_inputs[p][i]);
-
-        // For calculating per-sample modulation for multiple samples in parallel
-        /*Vec4d modSum(0.);
-        Vec4d initVals;
-        initVals.load(param_inputs[p]);
-        for (auto m{ 0 }; m < 4; ++m)
-        {
-          Vec4d modSamples;
-          modSamples.load(&mod_inputs[m][i]);
-          modSum = mul_add(modSamples, mParams.at(p)[m], modSum);
-        }
-        Vec4d outputV = Params[p]->ClipToRange(initVals + modSum);
-        outputV.store(&outputs[p][i]);*/
-
-      }
-    }
-    // Process the last few parameters, which don't fit exactly into the vector length
-    ProcessBlock(param_inputs, mod_inputs, outputs, nFrames, NParams - (NParams % 4));
-  }
-
-  ParameterModulator<DynamicMods, StaticMods>& operator[](int idx)
-  {
-    return *(mParams[idx]);
-  }
-
-private:
-  std::vector<ParameterModulator<DynamicMods, StaticMods>*> mParams;
-  const int mParamBlocks;
-  T mStaticScalar{ 0. };
-} WDL_FIXALIGN;
+  virtual inline void SetParams(T* params) = 0;
+};
 
 BEGIN_IPLUG_NAMESPACE
+/*
+Shaping object for modulation depth sliders that provides finer control for parameters
+with large ranges, such as filter cutoff frequencies.
+*/
+struct ModShapePowCurve : public IParam::ShapePowCurve
+{
+  ModShapePowCurve(double shape) : IParam::ShapePowCurve(shape) {}
+
+  Shape* Clone() const override { return new ModShapePowCurve(*this); }
+
+  double NormalizedToValue(double value, const IParam& param) const
+  {
+    double sign = value >= 0.5 ? 1. : -1.;
+    value = std::abs(0.5 - value) * 2.;
+    return std::pow(value, mShape) * sign;
+  }
+
+  double ValueToNormalized(double value, const IParam& param) const
+  {
+    double sign = value >= 0. ? 1. : -1.;
+    value = std::abs(value);
+    return 0.5 + std::pow(value, 1.0 / mShape) / 2. * sign;
+  }
+
+};
+
+template<typename T>
+class Envelope : public GenericModulator<T>, public ADSREnvelope<T>
+{
+public:
+  Envelope(const char* name = "", std::function<void()> resetFunc = nullptr, bool sustainEnabled = true) :
+    ADSREnvelope<T>(name, resetFunc, sustainEnabled), GenericModulator<T>()
+  {}
+
+  inline void SetParams(T* params) override
+  {
+    SetSustain(params[0]);
+  }
+
+  inline void SetSustain(T susLvl)
+  {
+    mSustainLevel = susLvl;
+  }
+
+  inline T Process() override
+  {
+    return ADSREnvelope<T>::Process(mSustainLevel);
+  }
+
+protected:
+  T mSustainLevel{ 0.5 };
+};
 
 /*
 A fast LFO using lookup tables
 */
 template<typename T = double>
-class FastLFO : public LFO<T>
+class FastLFO : public LFO<T>, public GenericModulator<T>
 {
   union tabfudge
   {
@@ -253,7 +206,7 @@ class FastLFO : public LFO<T>
   } ALIGNED(8);
 
 public:
-  FastLFO(T initialValue=0.) : LFO<T>(), mLastOutput(initialValue)
+  FastLFO(T initialValue=0.) : LFO<T>(), GenericModulator<T>(), mLastOutput(initialValue)
   {
     WriteLUTs();
   }
@@ -360,6 +313,11 @@ public:
     return x;
   };
 
+  inline void SetParams(T* params) override
+  {
+    SetScalar(params[1]);
+  }
+
 protected:
   static inline constexpr int mTableSize{ 1024 };
   static inline constexpr int mTableSizeM1{ 1023 };
@@ -416,7 +374,7 @@ public:
   {
     mSamplesPerStep = 1. / mPhaseIncr / static_cast<double>(NSteps); // (cycles/sample) ^ -1 / (steps/cycle) = samples step^-1
     double samplesToTarget = mGlide * mSamplesPerStep;
-    mGlidePerSample = 1. / samplesToTarget;
+    mGlidePerSample = std::min(1. / samplesToTarget, 1.);
   }
 
   inline T Process() override 
@@ -528,96 +486,6 @@ private:
   WDL_TypedBuf<T> mBuffer;
   int mBlockPos{ 0 };
   int mBlockLength{ 0 };
-};
-
-/*
-A container class that holds all per-voice modulators.
-*/
-template<typename T, class EnvType, class LFOType, class SequencerType>
-class ModulatorList
-{
-public:
-  ModulatorList() {}
-
-  ModulatorList(EnvType** envPtrs, LFOType** lfoPtrs) : mEnvPtrs(envPtrs), mLFOPtrs(lfoPtrs)
-  {}
-
-  void AddModulator(EnvType* env)
-  {
-    mEnvPtrs.push_back(env);
-    mNumEnvs += 1;
-  }
-
-  void AddModulator(LFOType* lfo)
-  {
-    mLFOPtrs.push_back(lfo);
-    mNumLFOs += 1;
-  }
-
-  void AddModulator(SequencerType* seq)
-  {
-    mSequencerPtrs.push_back(seq);
-    mNumSeqs += 1;
-  }
-
-  void ReplaceModulator(EnvType* env, size_t idx)
-  {
-    mEnvPtrs[idx] = env;
-  }
-
-  void ReplaceModulator(LFOType* lfo, size_t idx)
-  {
-    mLFOPtrs[idx] = lfo;
-  }
-
-  void ReplaceModulator(SequencerType* seq, size_t idx)
-  {
-    mSequencerPtrs[idx] = seq;
-  }
-
-  /* Write modulation values to a buffer */
-  void ProcessBlock(T** inputs, int nFrames)
-  {
-    for (auto i{ 0 }; i < nFrames; ++i)
-    {
-      for(auto e{0}; e < mEnvPtrs.size(); ++e)
-        mModulators.GetList()[e][i] = mEnvPtrs[e]->Process(inputs[e][i]);
-      for (auto l{ 0 }; l < mLFOPtrs.size(); ++l)
-        mModulators.GetList()[l + mEnvPtrs.size()][i] = mLFOPtrs[l]->Process();
-      for (auto s{ 0 }; s < mSequencerPtrs.size(); ++s)
-        mModulators.GetList()[s + mEnvPtrs.size() + mLFOPtrs.size()][i] = mSequencerPtrs[s]->Process();
-    }
-  }
-
-  inline T** GetList()
-  {
-    return mModulators.GetList();
-  }
-
-  void EmptyAndResize(int newLength, int numMods)
-  {
-    mNumMods = numMods;
-
-    mModulatorRamps.Resize(newLength * mNumMods);
-    mModulators.Empty();
-
-    for (auto i = 0; i < mNumMods; i++)
-    {
-      mModulators.Add(mModulatorRamps.Get() + static_cast<size_t>(newLength) * i);
-    }
-  }
-
-private:
-  std::vector<EnvType*> mEnvPtrs;
-  std::vector<LFOType*> mLFOPtrs;
-  std::vector<SequencerType*> mSequencerPtrs;
-  int mNumMods{ 0 };
-  int mNumEnvs{ 0 };
-  int mNumLFOs{ 0 };
-  int mNumSeqs{ 0 };
-
-  WDL_PtrList<T> mModulators;
-  WDL_TypedBuf<T> mModulatorRamps;
 };
 
 END_IPLUG_NAMESPACE

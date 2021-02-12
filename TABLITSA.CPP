@@ -32,33 +32,112 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
   GetParam(kParamUnisonDetune)->InitDouble("Unison Detune", 0., 0., 12., 0.01, "St.");
   GetParam(kParamUnisonChord)->InitEnum("Chord", 0, { UNISON_CHORD_LIST });
   /*Modulators*/
+  // Envelope 1
   GetParam(kParamEnv1Attack)->InitDouble("Env1 Attack", 10., 1., 3000., 0.1, "ms", IParam::kFlagsNone, "ADSR", IParam::ShapePowCurve(3.));
   GetParam(kParamEnv1Decay)->InitDouble("Env1 Decay", 10., 1., 3000., 0.1, "ms", IParam::kFlagsNone, "ADSR", IParam::ShapePowCurve(3.));
   GetParam(kParamEnv1Sustain)->InitDouble("Env1 Sustain", 50., 0., 100., 1, "%", IParam::kFlagsNone, "ADSR");
   GetParam(kParamEnv1Release)->InitDouble("Env1 Release", 10., 2., 3000., 0.1, "ms", IParam::kFlagsNone, "ADSR");
   GetParam(kParamEnv1Velocity)->InitDouble("Env1 Velocity Mod", 0., 0., 1., 0.01);
+  // Env1 Meta-Modulation
+  GetParam(kParamEnv1SustainEnv1)->InitDouble("Env1 Sustain Env1 Depth", 0., -1., 1., 0.01);
+  GetParam(kParamEnv1SustainEnv2)->InitDouble("Env1 Sustain Env2 Depth", 0., -1., 1., 0.01);
+  GetParam(kParamEnv1SustainAmpEnv)->InitDouble("Env1 Sustain AmpEnv Depth", 0., -1., 1., 0.01);
+  GetParam(kParamEnv1SustainLFO1)->InitDouble("Env1 Sustain LFO1 Depth", 0., -1., 1., 0.01);
+  GetParam(kParamEnv1SustainLFO2)->InitDouble("Env1 Sustain LFO2 Depth", 0., -1., 1., 0.01);
+  GetParam(kParamEnv1SustainSeq)->InitDouble("Env1 Sustain Sequencer Depth", 0., -1., 1., 0.01);
+  GetParam(kParamEnv1SustainVel)->InitDouble("Env1 Sustain Velocity Depth", 0., -1., 1., 0.01);
+  GetParam(kParamEnv1SustainKTk)->InitDouble("Env1 Sustain Keytrack Depth", 0., -1., 1., 0.01);
+  GetParam(kParamEnv1SustainRnd)->InitDouble("Env1 Sustain Depth", 0., -1., 1., 0.01);
+  // Envelope 2
   GetParam(kParamEnv2Attack)->InitDouble("Env2 Attack", 10., 1., 3000., 0.1, "ms", IParam::kFlagsNone, "ADSR", IParam::ShapePowCurve(3.));
   GetParam(kParamEnv2Decay)->InitDouble("Env2 Decay", 10., 1., 3000., 0.1, "ms", IParam::kFlagsNone, "ADSR", IParam::ShapePowCurve(3.));
   GetParam(kParamEnv2Sustain)->InitDouble("Env2 Sustain", 50., 0., 100., 1, "%", IParam::kFlagsNone, "ADSR");
   GetParam(kParamEnv2Release)->InitDouble("Env2 Release", 10., 2., 3000., 0.1, "ms", IParam::kFlagsNone, "ADSR");
   GetParam(kParamEnv2Velocity)->InitDouble("Env2 Velocity Mod", 0., 0., 1., 0.01);
+  // Env2 Meta-Modulation
+  GetParam(kParamEnv2SustainEnv1)->InitDouble("Env2 Sustain Env1 Depth", 0., -1., 1., 0.01);
+  GetParam(kParamEnv2SustainEnv2)->InitDouble("Env2 Sustain Env2 Depth", 0., -1., 1., 0.01);
+  GetParam(kParamEnv2SustainAmpEnv)->InitDouble("Env2 Sustain AmpEnv Depth", 0., -1., 1., 0.01);
+  GetParam(kParamEnv2SustainLFO1)->InitDouble("Env2 Sustain LFO1 Depth", 0., -1., 1., 0.01);
+  GetParam(kParamEnv2SustainLFO2)->InitDouble("Env2 Sustain LFO2 Depth", 0., -1., 1., 0.01);
+  GetParam(kParamEnv2SustainSeq)->InitDouble("Env2 Sustain Sequencer Depth", 0., -1., 1., 0.01);
+  GetParam(kParamEnv2SustainVel)->InitDouble("Env2 Sustain Velocity Depth", 0., -1., 1., 0.01);
+  GetParam(kParamEnv2SustainKTk)->InitDouble("Env2 Sustain Keytrack Depth", 0., -1., 1., 0.01);
+  GetParam(kParamEnv2SustainRnd)->InitDouble("Env2 Sustain Depth", 0., -1., 1., 0.01);
+  // Amplitude Envelopoe
   GetParam(kParamAmpEnvAttack)->InitDouble("AmpEnv Attack", 10., 1., 3000., 0.1, "ms", IParam::kFlagsNone, "ADSR", IParam::ShapePowCurve(3.));
   GetParam(kParamAmpEnvDecay)->InitDouble("AmpEnv Decay", 10., 1., 3000., 0.1, "ms", IParam::kFlagsNone, "ADSR", IParam::ShapePowCurve(3.));
   GetParam(kParamAmpEnvSustain)->InitDouble("AmpEnv Sustain", 50., 0., 100., 1, "%", IParam::kFlagsNone, "ADSR");
   GetParam(kParamAmpEnvRelease)->InitDouble("AmpEnv Release", 10., 2., 3000., 0.1, "ms", IParam::kFlagsNone, "ADSR");
   GetParam(kParamAmpEnvVelocity)->InitDouble("AmpEnv Velocity Mod", 1., 0., 1., 0.01);
+  // Amp Envelope Meta-Modulation
+  GetParam(kParamAmpEnvSustainEnv1)->InitDouble("AmpEnv Sustain Env1 Depth", 0., -1., 1., 0.01);
+  GetParam(kParamAmpEnvSustainEnv2)->InitDouble("AmpEnv Sustain Env2 Depth", 0., -1., 1., 0.01);
+  GetParam(kParamAmpEnvSustainAmpEnv)->InitDouble("AmpEnv Sustain AmpEnv Depth", 0., -1., 1., 0.01);
+  GetParam(kParamAmpEnvSustainLFO1)->InitDouble("AmpEnv Sustain LFO1 Depth", 0., -1., 1., 0.01);
+  GetParam(kParamAmpEnvSustainLFO2)->InitDouble("AmpEnv Sustain LFO2 Depth", 0., -1., 1., 0.01);
+  GetParam(kParamAmpEnvSustainSeq)->InitDouble("AmpEnv Sustain Sequencer Depth", 0., -1., 1., 0.01);
+  GetParam(kParamAmpEnvSustainVel)->InitDouble("AmpEnv Sustain Velocity Depth", 0., -1., 1., 0.01);
+  GetParam(kParamAmpEnvSustainKTk)->InitDouble("AmpEnv Sustain Keytrack Depth", 0., -1., 1., 0.01);
+  GetParam(kParamAmpEnvSustainRnd)->InitDouble("AmpEnv Sustain Depth", 0., -1., 1., 0.01);
+  // LFO1 Meta-Modulation
+  GetParam(kParamLFO1RateHzEnv1)->InitDouble("LFO1 Amp Env1 Depth", 0., -1., 1., 0.01);
+  GetParam(kParamLFO1RateHzEnv2)->InitDouble("LFO1 Amp Env2 Depth", 0., -1., 1., 0.01);
+  GetParam(kParamLFO1RateHzAmpEnv)->InitDouble("LFO1 Amp AmpEnv Depth", 0., -1., 1., 0.01);
+  GetParam(kParamLFO1RateHzLFO1)->InitDouble("LFO1 Amp LFO1 Depth", 0., -1., 1., 0.01);
+  GetParam(kParamLFO1RateHzLFO2)->InitDouble("LFO1 Amp LFO2 Depth", 0., -1., 1., 0.01);
+  GetParam(kParamLFO1RateHzVel)->InitDouble("LFO1 Amp Velocity Depth", 0., -1., 1., 0.01);
+  GetParam(kParamLFO1RateHzKTk)->InitDouble("LFO1 Amp Keytrack Depth", 0., -1., 1., 0.01);
+  GetParam(kParamLFO1RateHzRnd)->InitDouble("LFO1 Amp Depth", 0., -1., 1., 0.01);
+  // LFO 1
   GetParam(kParamLFO1Shape)->InitEnum("LFO1 Shape", LFO<>::kTriangle, {LFO_SHAPE_VALIST});
   GetParam(kParamLFO1RateHz)->InitFrequency("LFO1 Rate", 1., 0.01, 40.);
   GetParam(kParamLFO1RateTempo)->InitEnum("LFO1 Rate", LFO<>::k1, {LFO_TEMPODIV_VALIST});
   GetParam(kParamLFO1RateMode)->InitBool("LFO1 Sync", false);
   GetParam(kParamLFO1Restart)->InitBool("LFO1 Retrigger", false);
   GetParam(kParamLFO1Amp)->InitDouble("LFO Amp", 1., -1., 1., 0.01, "", IParam::kFlagsNone, "LFO");
+  // LFO1 Meta-Modulation
+  GetParam(kParamLFO1RateHzEnv1)->InitDouble("LFO1 Rate (Hz) Env1 Depth", 0., -1., 1., 0.01);
+  GetParam(kParamLFO1RateHzEnv2)->InitDouble("LFO1 Rate (Hz) Env2 Depth", 0., -1., 1., 0.01);
+  GetParam(kParamLFO1RateHzAmpEnv)->InitDouble("LFO1 Rate (Hz) AmpEnv Depth", 0., -1., 1., 0.01);
+  GetParam(kParamLFO1RateHzLFO1)->InitDouble("LFO1 Rate (Hz) LFO1 Depth", 0., -1., 1., 0.01);
+  GetParam(kParamLFO1RateHzLFO2)->InitDouble("LFO1 Rate (Hz) LFO2 Depth", 0., -1., 1., 0.01);
+  GetParam(kParamLFO1RateHzVel)->InitDouble("LFO1 Rate (Hz) Velocity Depth", 0., -1., 1., 0.01);
+  GetParam(kParamLFO1RateHzKTk)->InitDouble("LFO1 Rate (Hz) Keytrack Depth", 0., -1., 1., 0.01);
+  GetParam(kParamLFO1RateHzRnd)->InitDouble("LFO1 Rate (Hz) Random Depth", 0., -1., 1., 0.01);
+  GetParam(kParamLFO1AmpEnv1)->InitDouble("LFO1 Amp Env1 Depth", 0., -1., 1., 0.01);
+  GetParam(kParamLFO1AmpEnv2)->InitDouble("LFO1 Amp Env2 Depth", 0., -1., 1., 0.01);
+  GetParam(kParamLFO1AmpAmpEnv)->InitDouble("LFO1 Amp AmpEnv Depth", 0., -1., 1., 0.01);
+  GetParam(kParamLFO1AmpLFO1)->InitDouble("LFO1 Amp LFO1 Depth", 0., -1., 1., 0.01);
+  GetParam(kParamLFO1AmpLFO2)->InitDouble("LFO1 Amp LFO2 Depth", 0., -1., 1., 0.01);
+  GetParam(kParamLFO1AmpVel)->InitDouble("LFO1 Amp Velocity Depth", 0., -1., 1., 0.01);
+  GetParam(kParamLFO1AmpKTk)->InitDouble("LFO1 Amp Keytrack Depth", 0., -1., 1., 0.01);
+  GetParam(kParamLFO1AmpRnd)->InitDouble("LFO1 Amp Random Depth", 0., -1., 1., 0.01);
+  // LFO 2
   GetParam(kParamLFO2Shape)->InitEnum("LFO2 Shape", LFO<>::kTriangle, { LFO_SHAPE_VALIST });
   GetParam(kParamLFO2RateHz)->InitFrequency("LFO2 Rate", 1., 0.01, 40.);
   GetParam(kParamLFO2RateTempo)->InitEnum("LFO2 Rate", LFO<>::k1, { LFO_TEMPODIV_VALIST });
   GetParam(kParamLFO2RateMode)->InitBool("LFO2 Sync", false);
   GetParam(kParamLFO2Restart)->InitBool("LFO2 Retrigger", false);
   GetParam(kParamLFO2Amp)->InitDouble("LFO Amp", 1., -1., 1., 0.01, "", IParam::kFlagsNone, "LFO");
+  // LFO2 Meta-Modulation
+  GetParam(kParamLFO2RateHzEnv1)->InitDouble("LFO2 Amp Env1 Depth", 0., -1., 1., 0.01);
+  GetParam(kParamLFO2RateHzEnv2)->InitDouble("LFO2 Amp Env2 Depth", 0., -1., 1., 0.01);
+  GetParam(kParamLFO2RateHzAmpEnv)->InitDouble("LFO2 Amp AmpEnv Depth", 0., -1., 1., 0.01);
+  GetParam(kParamLFO2RateHzLFO1)->InitDouble("LFO2 Amp LFO1 Depth", 0., -1., 1., 0.01);
+  GetParam(kParamLFO2RateHzLFO2)->InitDouble("LFO2 Amp LFO2 Depth", 0., -1., 1., 0.01);
+  GetParam(kParamLFO2RateHzVel)->InitDouble("LFO2 Amp Velocity Depth", 0., -1., 1., 0.01);
+  GetParam(kParamLFO2RateHzKTk)->InitDouble("LFO2 Amp Keytrack Depth", 0., -1., 1., 0.01);
+  GetParam(kParamLFO2RateHzRnd)->InitDouble("LFO2 Amp Depth", 0., -1., 1., 0.01);
+  GetParam(kParamLFO2AmpEnv1)->InitDouble("LFO2 Amp Env1 Depth", 0., -1., 1., 0.01);
+  GetParam(kParamLFO2AmpEnv2)->InitDouble("LFO2 Amp Env2 Depth", 0., -1., 1., 0.01);
+  GetParam(kParamLFO2AmpAmpEnv)->InitDouble("LFO2 Amp AmpEnv Depth", 0., -1., 1., 0.01);
+  GetParam(kParamLFO2AmpLFO1)->InitDouble("LFO2 Amp LFO1 Depth", 0., -1., 1., 0.01);
+  GetParam(kParamLFO2AmpLFO2)->InitDouble("LFO2 Amp LFO2 Depth", 0., -1., 1., 0.01);
+  GetParam(kParamLFO2AmpVel)->InitDouble("LFO2 Amp Velocity Depth", 0., -1., 1., 0.01);
+  GetParam(kParamLFO2AmpKTk)->InitDouble("LFO2 Amp Keytrack Depth", 0., -1., 1., 0.01);
+  GetParam(kParamLFO2AmpRnd)->InitDouble("LFO2 Amp Random Depth", 0., -1., 1., 0.01);
+  // Sequencer
   GetParam(kParamSequencerRateHz)->InitFrequency("Sequencer Rate", 1., 0.01, 40.);
   GetParam(kParamSequencerRateTempo)->InitEnum("Sequencer Rate", LFO<>::k4th, { LFO_TEMPODIV_VALIST });
   GetParam(kParamSequencerRateMode)->InitBool("Sequencer Sync", true);
@@ -82,9 +161,9 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
   GetParam(kParamWavetable1PitchLFO1)->InitDouble("WT1 Pitch LFO1 Mod", 0., -1., 1., 0.01);
   GetParam(kParamWavetable1PitchLFO2)->InitDouble("WT1 Pitch LFO2 Mod", 0., -1., 1., 0.01);
   GetParam(kParamWavetable1PitchSeq)->InitDouble("WT1 Pitch Seq Mod", 0., -1., 1., 0.01);
-  GetParam(kParamWavetable1PitchVel)->InitDouble("WT1 Pitch Vel Mod", 0., -1., 1., 0.01);
-  GetParam(kParamWavetable1PitchKTk)->InitDouble("WT1 Pitch LFO2 Mod", 0., -1., 1., 0.01);
-  GetParam(kParamWavetable1PitchRnd)->InitDouble("WT1 Pitch Seq Mod", 0., -1., 1., 0.01);
+  GetParam(kParamWavetable1PitchVel)->InitDouble("WT1 Pitch Velocity Mod", 0., -1., 1., 0.01);
+  GetParam(kParamWavetable1PitchKTk)->InitDouble("WT1 Pitch Ketrack Mod", 0., -1., 1., 0.01);
+  GetParam(kParamWavetable1PitchRnd)->InitDouble("WT1 Pitch Random Mod", 0., -1., 1., 0.01);
   // Wavetable 1 Position
   GetParam(kParamWavetable1Pos)->InitDouble("WT1 Pos", 0., 0., 1., 0.01);
   GetParam(kParamWavetable1PosEnv1)->InitDouble("WT1 Pos Env1 Mod", 0., -1., 1., 0.01);
@@ -93,9 +172,9 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
   GetParam(kParamWavetable1PosLFO1)->InitDouble("WT1 Pos LFO1 Mod", 0., -1., 1., 0.01);
   GetParam(kParamWavetable1PosLFO2)->InitDouble("WT1 Pos L Mod", 0., -1., 1., 0.01);
   GetParam(kParamWavetable1PosSeq)->InitDouble("WT1 Pos Seq Mod", 0., -1., 1., 0.01);
-  GetParam(kParamWavetable1PosVel)->InitDouble("WT1 Pos Vel Mod", 0., -1., 1., 0.01);
-  GetParam(kParamWavetable1PosKTk)->InitDouble("WT1 Pos KTk Mod", 0., -1., 1., 0.01);
-  GetParam(kParamWavetable1PosRnd)->InitDouble("WT1 Pos Rnd Mod", 0., -1., 1., 0.01);
+  GetParam(kParamWavetable1PosVel)->InitDouble("WT1 Pos Velocity Mod", 0., -1., 1., 0.01);
+  GetParam(kParamWavetable1PosKTk)->InitDouble("WT1 Pos Keytrack Mod", 0., -1., 1., 0.01);
+  GetParam(kParamWavetable1PosRnd)->InitDouble("WT1 Pos Random Mod", 0., -1., 1., 0.01);
   // Wavetable 1 Bend
   GetParam(kParamWavetable1Bend)->InitDouble("WT1 Bend", 0., -1., 1., 0.01);
   GetParam(kParamWavetable1BendEnv1)->InitDouble("WT1 Bend Env1 Mod", 0., -1., 1., 0.01);
@@ -599,7 +678,7 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
     // Envelope 1
     pGraphics->AttachControl(new IVKnobControl(envPanel.GetGridCell(0, 0, 3, 6).GetCentredInside(dialSize), kParamEnv1Attack, "Att", modKnobStyle), kNoTag, "Env1");
     pGraphics->AttachControl(new IVKnobControl(envPanel.GetGridCell(0, 1, 3, 6).GetCentredInside(dialSize), kParamEnv1Decay, "Dec", modKnobStyle), kNoTag, "Env1");
-    pGraphics->AttachControl(new IVKnobControl(envPanel.GetGridCell(0, 2, 3, 6).GetCentredInside(dialSize), kParamEnv1Sustain, "Sus", modKnobStyle), kNoTag, "Env1");
+    pGraphics->AttachControl(new IVModKnobControl(envPanel.GetGridCell(0, 2, 3, 6).GetCentredInside(dialSize), kParamEnv1Sustain, kParamEnv1SustainEnv1, "Sus", modKnobStyle), kNoTag, "Env1");
     pGraphics->AttachControl(new IVKnobControl(envPanel.GetGridCell(0, 3, 3, 6).GetCentredInside(dialSize), kParamEnv1Release, "Rel", modKnobStyle), kNoTag, "Env1");
     pGraphics->AttachControl(new IVSliderControl(envPanel.GetGridCell(0, 4, 3, 6).GetVPadded(-15.f), kParamEnv1Velocity, "Velocity", modKnobStyle, false, EDirection::Vertical, 4.f, 8.f, 2.f, true), kNoTag, "Env1");
     pGraphics->AttachControl(new ModSliderControl(envPanel.GetGridCell(0, 5, 3, 6).GetVPadded(-15.f), kNoParameter, "Depth", modKnobStyle), kCtrlTagEnv1Depth, "Env1");
@@ -607,7 +686,7 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
     // Envelope 2
     pGraphics->AttachControl(new IVKnobControl(envPanel.GetGridCell(1, 0, 3, 6).GetCentredInside(dialSize), kParamEnv2Attack, "Att", modKnobStyle), kNoTag, "Env2");
     pGraphics->AttachControl(new IVKnobControl(envPanel.GetGridCell(1, 1, 3, 6).GetCentredInside(dialSize), kParamEnv2Decay, "Dec", modKnobStyle), kNoTag, "Env2");
-    pGraphics->AttachControl(new IVKnobControl(envPanel.GetGridCell(1, 2, 3, 6).GetCentredInside(dialSize), kParamEnv2Sustain, "Sus", modKnobStyle), kNoTag, "Env2");
+    pGraphics->AttachControl(new IVModKnobControl(envPanel.GetGridCell(1, 2, 3, 6).GetCentredInside(dialSize), kParamEnv2Sustain, kParamEnv2SustainEnv1, "Sus", modKnobStyle), kNoTag, "Env2");
     pGraphics->AttachControl(new IVKnobControl(envPanel.GetGridCell(1, 3, 3, 6).GetCentredInside(dialSize), kParamEnv2Release, "Rel", modKnobStyle), kNoTag, "Env2");
     pGraphics->AttachControl(new IVSliderControl(envPanel.GetGridCell(1, 4, 3, 6).GetVPadded(-15.f), kParamEnv2Velocity, "Velocity", modKnobStyle, false, EDirection::Vertical, 4.f, 8.f, 2.f, true), kNoTag, "Env2");
     pGraphics->AttachControl(new ModSliderControl(envPanel.GetGridCell(1, 5, 3, 6).GetVPadded(-15.f), kNoParameter, "Depth", modKnobStyle), kCtrlTagEnv2Depth, "Env2");
@@ -615,7 +694,7 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
     // Amplitude Envelope
     pGraphics->AttachControl(new IVKnobControl(envPanel.GetGridCell(2, 0, 3, 6).GetCentredInside(dialSize), kParamAmpEnvAttack, "Att", modKnobStyle), kNoTag, "AmpEnv");
     pGraphics->AttachControl(new IVKnobControl(envPanel.GetGridCell(2, 1, 3, 6).GetCentredInside(dialSize), kParamAmpEnvDecay, "Dec", modKnobStyle), kNoTag, "AmpEnv");
-    pGraphics->AttachControl(new IVKnobControl(envPanel.GetGridCell(2, 2, 3, 6).GetCentredInside(dialSize), kParamAmpEnvSustain, "Sus", modKnobStyle), kNoTag, "AmpEnv");
+    pGraphics->AttachControl(new IVModKnobControl(envPanel.GetGridCell(2, 2, 3, 6).GetCentredInside(dialSize), kParamAmpEnvSustain, kParamAmpEnvSustainEnv1, "Sus", modKnobStyle), kNoTag, "AmpEnv");
     pGraphics->AttachControl(new IVKnobControl(envPanel.GetGridCell(2, 3, 3, 6).GetCentredInside(dialSize), kParamAmpEnvRelease, "Rel", modKnobStyle), kNoTag, "AmpEnv");
     pGraphics->AttachControl(new IVSliderControl(envPanel.GetGridCell(2, 4, 3, 6).GetVPadded(-15.f), kParamAmpEnvVelocity, "Velocity", modKnobStyle, false, EDirection::Vertical, 4.f, 8.f, 2.f, true), kNoTag, "AmpEnv");
     pGraphics->AttachControl(new ModSliderControl(envPanel.GetGridCell(2, 5, 3, 6).GetVPadded(-15.f), kNoParameter, "Depth", modKnobStyle), kCtrlTagAmpEnvDepth, "AmpEnv");
@@ -628,7 +707,7 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
     // LFO1
     pGraphics->AttachControl(new IVKnobControl(lfoPanel.GetGridCell(0, 0, 3, 5).GetCentredInside(dialSize), kParamLFO1RateHz, "Rate"), kNoTag, "LFO1");
     pGraphics->AttachControl(new IVKnobControl(lfoPanel.GetGridCell(0, 0, 3, 5).GetCentredInside(dialSize), kParamLFO1RateTempo, "Rate"), kNoTag, "LFO1")->Hide(true);
-    pGraphics->AttachControl(new IVKnobControl(lfoPanel.GetGridCell(0, 2, 3, 5).GetCentredInside(dialSize), kParamLFO1Amp, "Amp"), kNoTag, "LFO1");
+    pGraphics->AttachControl(new IVModKnobControl(lfoPanel.GetGridCell(0, 2, 3, 5).GetCentredInside(dialSize), kParamLFO1Amp, "Amp"), kNoTag, "LFO1");
     pGraphics->AttachControl(new ICaptionControl(lfoPanel.GetGridCell(0, 1, 6, 5).GetVPadded(-20.f), kParamLFO1Shape), kNoTag, "LFO1")->DisablePrompt(false);
     pGraphics->AttachControl(new IVToggleControl(lfoPanel.GetGridCell(1, 1, 9, 5).GetVPadded(-6.f), kParamLFO1RateMode, "", DEFAULT_STYLE.WithShowLabel(false), "Sync Off", "Sync On"),
       kNoTag, "LFO1")->SetAnimationEndActionFunction([pGraphics](IControl* pControl) {
@@ -644,7 +723,7 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
     // LFO 2
     pGraphics->AttachControl(new IVKnobControl(lfoPanel.GetGridCell(1, 0, 3, 5).GetCentredInside(dialSize), kParamLFO2RateHz, "Rate"), kNoTag, "LFO2");
     pGraphics->AttachControl(new IVKnobControl(lfoPanel.GetGridCell(1, 0, 3, 5).GetCentredInside(dialSize), kParamLFO2RateTempo, "Rate"), kNoTag, "LFO2")->Hide(true);
-    pGraphics->AttachControl(new IVKnobControl(lfoPanel.GetGridCell(1, 2, 3, 5).GetCentredInside(dialSize), kParamLFO2Amp, "Amp"), kNoTag, "LFO2");
+    pGraphics->AttachControl(new IVModKnobControl(lfoPanel.GetGridCell(1, 2, 3, 5).GetCentredInside(dialSize), kParamLFO2Amp, "Amp"), kNoTag, "LFO2");
     pGraphics->AttachControl(new ICaptionControl(lfoPanel.GetGridCell(2, 1, 6, 5).GetVPadded(-20.f), kParamLFO2Shape), kNoTag, "LFO2")->DisablePrompt(false);
     pGraphics->AttachControl(new IVToggleControl(lfoPanel.GetGridCell(4, 1, 9, 5).GetVPadded(-6.f), kParamLFO2RateMode, "", DEFAULT_STYLE.WithShowLabel(false), "Sync Off", "Sync On"),
       kNoTag, "LFO2")->SetAnimationEndActionFunction([pGraphics](IControl* pControl) {

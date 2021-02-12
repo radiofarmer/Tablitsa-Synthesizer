@@ -324,6 +324,7 @@
     <ClInclude Include="..\VoiceThread.h" />
     <ClInclude Include="..\VectorFunctions.h" />
     <ClInclude Include="..\Effects.h" />
+    <ClInclude Include="..\Modulation.h" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="resources">

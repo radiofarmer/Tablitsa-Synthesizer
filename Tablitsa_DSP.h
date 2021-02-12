@@ -5,6 +5,7 @@
 #include "Wavetable.h"
 
 
+#include "Modulation.h"
 #include "IPlugConstants.h"
 #include "Oscillator.h"
 #include "MidiSynth.h"
@@ -89,6 +90,20 @@ enum EVoiceModParams
   kVRingModFreq,
   kVRingModAmt,
   kNumVoiceModulations
+};
+
+enum EVoiceMetaModParams
+{
+  kVEnv1Sustain,
+  kVEnv2Sustain,
+  kVAmpEnvSustain,
+  kVLFO1RateHz,
+  kVLFO1Amp,
+  kVLFO2RateHz,
+  kVLFO2Amp,
+  kVSequencerRateHz,
+  kVSequencerAmp,
+  kNumVoiceMetaModulations
 };
 
 // See Modulators.h for the enumeration of the number of modulators
@@ -195,12 +210,21 @@ public:
       mSequencer(TablitsaDSP::mSeqSteps) // capture ok on RT thread?
     {
 //      DBGMSG("new Voice: %i control inputs.\n", static_cast<int>(mInputs.size()));
-      mModulators.AddModulator(&mEnv1);
-      mModulators.AddModulator(&mEnv2);
-      mModulators.AddModulator(&mAmpEnv);
-      mModulators.AddModulator(&mLFO1);
-      mModulators.AddModulator(&mLFO2);
-      mModulators.AddModulator(&mSequencer);
+
+      // Meta-Modulation Parameters
+      std::vector<ParameterModulator<6, 3>*> env1Mods{ &mVoiceMetaModParams[kVEnv1Sustain] };
+      std::vector<ParameterModulator<6, 3>*> env2Mods{ &mVoiceMetaModParams[kVEnv2Sustain] };
+      std::vector<ParameterModulator<6, 3>*> ampEnvMods{ &mVoiceMetaModParams[kVAmpEnvSustain] };
+      std::vector<ParameterModulator<6, 3>*> lfo1Mods{ &mVoiceMetaModParams[kVLFO1RateHz], &mVoiceMetaModParams[kVLFO1Amp] };
+      std::vector<ParameterModulator<6, 3>*> lfo2Mods{ &mVoiceMetaModParams[kVLFO2RateHz], &mVoiceMetaModParams[kVLFO2Amp] };
+      std::vector<ParameterModulator<6, 3>*> seqMods{ &mVoiceMetaModParams[kVSequencerRateHz], &mVoiceMetaModParams[kVSequencerAmp] };
+
+      mModulators.AddModulator(&mEnv1, env1Mods);
+      mModulators.AddModulator(&mEnv2, env2Mods);
+      mModulators.AddModulator(&mAmpEnv, ampEnvMods);
+      mModulators.AddModulator(&mLFO1, lfo1Mods);
+      mModulators.AddModulator(&mLFO2, lfo2Mods);
+      mModulators.AddModulator(&mSequencer, seqMods);
       mAmpEnv.Kill(true); // Force amplitude envelopes to start in the "Idle" stage
 
       // Fill the envelope queues for legato mode with null pointers
@@ -281,9 +305,9 @@ public:
       else
       {
         // Check for currently active envelopes
-        ADSREnvelope<T>* masterAmpEnv = nullptr;
-        ADSREnvelope<T>* masterEnv1 = nullptr;
-        ADSREnvelope<T>* masterEnv2 = nullptr;
+        Envelope<T>* masterAmpEnv = nullptr;
+        Envelope<T>* masterEnv1 = nullptr;
+        Envelope<T>* masterEnv2 = nullptr;
         for (auto i{ 0 }; i < Voice::AmpEnvQueue.size(); ++i)
         {
           if (Voice::AmpEnvQueue[i])
@@ -347,7 +371,11 @@ public:
       T staticMods[]{ mVelocity, keytrack, mTriggerRand };
       mVoiceModParams.SetStaticModulation(staticMods);
       // Write ramps for modulators
-      mModulators.ProcessBlock(&(inputs[kModEnv1SustainSmoother]), nFrames);
+      mVoiceMetaModParams[kVEnv1Sustain].SetInitialValue(inputs[kModEnv1SustainSmoother][0]);
+      mVoiceMetaModParams[kVEnv2Sustain].SetInitialValue(inputs[kModEnv1SustainSmoother][0]);
+      mVoiceMetaModParams[kVAmpEnvSustain].SetInitialValue(inputs[kModAmpEnvSustainSmoother][0]);
+      mModulators.MetaProcessBlock(&(inputs[kModEnv1SustainSmoother]), nFrames);
+      // mModulators.ProcessBlock(&(inputs[kModEnv1SustainSmoother]), nFrames);
       // Apply modulation ramps to all modulated parameters
 #if 0
       mVoiceModParams.ProcessBlockVec4d(&inputs[kModWavetable1PitchSmoother], mModulators.GetList(), mVModulations.GetList(), nFrames);
@@ -493,9 +521,19 @@ public:
       }
     }
 
+    /* Update polyphonic modulation depths */
     void UpdateVoiceParam(int voiceParam, int modIdx, double value)
     {
       mVoiceModParams[voiceParam].SetValue(modIdx - 1, value); // Eventually adjust the value of modIdx in the SetParam switch statement rather than here
+    }
+
+    /* Update meta-modulation depths */
+    void UpdateVoiceModulatorParam(int paramIdx, int modIdx, double value)
+    {
+      if (modIdx == 0)
+        mVoiceMetaModParams[paramIdx].SetInitialValue(value);
+      else
+        mVoiceMetaModParams[paramIdx].SetValue(modIdx - 1, value);
     }
 
   public:
@@ -512,18 +550,18 @@ public:
     static inline VoiceDetuner mDetuner{ kMaxUnisonVoices };
 
     // Dynamic Modulators
-    ADSREnvelope<T> mEnv1;
-    ADSREnvelope<T> mEnv2;
-    ADSREnvelope<T> mAmpEnv;
+    Envelope<T> mEnv1;
+    Envelope<T> mEnv2;
+    Envelope<T> mAmpEnv;
     FastLFO<T> mLFO1;
     FastLFO<T> mLFO2;
     Sequencer<T, kNumSeqSteps> mSequencer;
-    ModulatorList<T, ADSREnvelope<T>, FastLFO<T>, Sequencer<T>> mModulators;
+    ModulatorList<T, Envelope<T>, FastLFO<T>, Sequencer<T>, 6, 3> mModulators;
 
     // Pointers to master modulators, for free-run and legato modes
-    static inline std::vector<ADSREnvelope<T>*> Env1Queue;
-    static inline std::vector<ADSREnvelope<T>*> Env2Queue;
-    static inline std::vector<ADSREnvelope<T>*> AmpEnvQueue;
+    static inline std::vector<Envelope<T>*> Env1Queue;
+    static inline std::vector<Envelope<T>*> Env2Queue;
+    static inline std::vector<Envelope<T>*> AmpEnvQueue;
     static inline FastLFO<T>* mMasterLFO1{ nullptr }; // The last-triggered `mLFO1`, which "owns" the master phase
     static inline FastLFO<T>* mMasterLFO2{ nullptr }; // The last-triggered `mLFO2`, which "owns" the master phase
     static inline Sequencer<T>* mMasterSeq{ nullptr }; // The last-triggered `mSequencer`, which "owns" the master phase
@@ -567,6 +605,20 @@ public:
       new ParameterModulator<>(0., 1., "Phase Mod Depth"),
       new ParameterModulator<>(-24., 24., "Ring Mod Freq"),
       new ParameterModulator<>(0., 1., "Ring Mod Depth") };
+
+    // Modulator parameters that can themselves be modulated
+    ModulatedParameterList<T, kNumVoiceMetaModulations> mVoiceMetaModParams{
+      new ParameterModulator<>(-1., 1., "Env1 Sustain"),
+      new ParameterModulator<>(-1., 1., "Env2 Sustain"),
+      new ParameterModulator<>(-1., 1., "AmpEnv Sustain"),
+      new ParameterModulator<>(-1., 1., "LFO1 Rate Hz"),
+      new ParameterModulator<>(-1., 1., "LFO1 Amp"),
+      new ParameterModulator<>(-1., 1., "LFO2 Rate Hz"),
+      new ParameterModulator<>(-1., 1., "LFO2 Amp"),
+      new ParameterModulator<>(-1., 1., "Sequencer Rate Hz"),
+      new ParameterModulator<>(-1., 1., "Sequencer Amp"),
+
+    };
 
     double mDetune{ 0. };
 
@@ -798,8 +850,29 @@ public:
         break;
       }
       case kParamEnv1Sustain:
+      {
         mParamsToSmooth[kModEnv1SustainSmoother] = (T)value / 100.;
+        SendParam([paramIdx, value](Voice* voice) {
+          voice->UpdateVoiceModulatorParam(kVEnv1Sustain, 0, (T)value / 100.);
+          });
         break;
+      }
+      case kParamEnv1SustainEnv1:
+      case kParamEnv1SustainEnv2:
+      case kParamEnv1SustainAmpEnv:
+      case kParamEnv1SustainLFO1:
+      case kParamEnv1SustainLFO2:
+      case kParamEnv1SustainSeq:
+      case kParamEnv1SustainVel:
+      case kParamEnv1SustainKTk:
+      case kParamEnv1SustainRnd:
+      {
+        const int modIdx = paramIdx - kParamEnv1Velocity;
+        SendParam([paramIdx, modIdx, value](Voice* voice) {
+          voice->UpdateVoiceModulatorParam(kVEnv1Sustain, modIdx, value);
+          });
+        break;
+      }
       case kParamEnv1Attack:
       case kParamEnv1Decay:
       case kParamEnv1Release:
@@ -813,9 +886,6 @@ public:
       case kParamEnv1Velocity:
         Voice::mEnv1VelocityMod = value;
         break;
-      case kParamEnv2Sustain:
-        mParamsToSmooth[kModEnv2SustainSmoother] = (T)value / 100.;
-        break;
       case kParamEnv2Attack:
       case kParamEnv2Decay:
       case kParamEnv2Release:
@@ -826,21 +896,65 @@ public:
           });
         break;
       }
+      case kParamEnv2Sustain:
+      {
+        mParamsToSmooth[kModEnv2SustainSmoother] = (T)value / 100.;
+        SendParam([paramIdx, value](Voice* voice) {
+          voice->UpdateVoiceModulatorParam(kVEnv2Sustain, 0, (T)value / 100.);
+          });
+        break;
+      }
+      case kParamEnv2SustainEnv1:
+      case kParamEnv2SustainEnv2:
+      case kParamEnv2SustainAmpEnv:
+      case kParamEnv2SustainLFO1:
+      case kParamEnv2SustainLFO2:
+      case kParamEnv2SustainSeq:
+      case kParamEnv2SustainVel:
+      case kParamEnv2SustainKTk:
+      case kParamEnv2SustainRnd:
+      {
+        const int modIdx = paramIdx - kParamEnv2Velocity;
+        SendParam([paramIdx, modIdx, value](Voice* voice) {
+          voice->UpdateVoiceModulatorParam(kVEnv2Sustain, modIdx, value);
+          });
+        break;
+      }
       case kParamEnv2Velocity:
         Voice::mEnv2VelocityMod = value;
-        break;
-      case kParamAmpEnvSustain:
-        mParamsToSmooth[kModAmpEnvSustainSmoother] = (T) value / 100.;
         break;
       case kParamAmpEnvAttack:
       case kParamAmpEnvDecay:
       case kParamAmpEnvRelease:
       {
-        // Polyphonic envelopes (owned by voices)
         EEnvStage stage = static_cast<EEnvStage>(EEnvStage::kAttack + (paramIdx - kParamAmpEnvAttack));
         mSynth.ForEachVoice([stage, value](SynthVoice& voice) {
           dynamic_cast<TablitsaDSP::Voice&>(voice).mAmpEnv.SetStageTime(stage, value);
-        });
+          });
+        break;
+      }
+      case kParamAmpEnvSustain:
+      {
+        mParamsToSmooth[kModAmpEnvSustainSmoother] = (T)value / 100.;
+        SendParam([paramIdx, value](Voice* voice) {
+          voice->UpdateVoiceModulatorParam(kVAmpEnvSustain, 0, (T)value / 100.);
+          });
+        break;
+      }
+      case kParamAmpEnvSustainEnv1:
+      case kParamAmpEnvSustainEnv2:
+      case kParamAmpEnvSustainAmpEnv:
+      case kParamAmpEnvSustainLFO1:
+      case kParamAmpEnvSustainLFO2:
+      case kParamAmpEnvSustainSeq:
+      case kParamAmpEnvSustainVel:
+      case kParamAmpEnvSustainKTk:
+      case kParamAmpEnvSustainRnd:
+      {
+        const int modIdx = paramIdx - kParamAmpEnvVelocity;
+        SendParam([paramIdx, modIdx, value](Voice* voice) {
+          voice->UpdateVoiceModulatorParam(kVAmpEnvSustain, modIdx, value);
+          });
         break;
       }
       case kParamAmpEnvVelocity:
@@ -851,6 +965,21 @@ public:
         mGlobalLFO1.SetScalar(value);
         mSynth.ForEachVoice([value](SynthVoice& voice) {
           dynamic_cast<TablitsaDSP::Voice&>(voice).mLFO1.SetScalar(value);
+          });
+        [[fallthrough]];
+      }
+      case kParamLFO1AmpEnv1:
+      case kParamLFO1AmpEnv2:
+      case kParamLFO1AmpAmpEnv:
+      case kParamLFO1AmpLFO2:
+      case kParamLFO1AmpSeq:
+      case kParamLFO1AmpVel:
+      case kParamLFO1AmpKTk:
+      case kParamLFO1AmpRnd:
+      {
+        const int modIdx = paramIdx - kParamLFO1Amp;
+        SendParam([paramIdx, modIdx, value](Voice* voice) {
+          voice->UpdateVoiceModulatorParam(kVLFO1Amp, modIdx, value);
           });
         break;
       }
@@ -897,6 +1026,20 @@ public:
         mSynth.ForEachVoice([value](SynthVoice& voice) {
           dynamic_cast<TablitsaDSP::Voice&>(voice).mLFO2.SetScalar(value);
           });
+      }
+      case kParamLFO2AmpEnv1:
+      case kParamLFO2AmpEnv2:
+      case kParamLFO2AmpAmpEnv:
+      case kParamLFO2AmpLFO1:
+      case kParamLFO2AmpSeq:
+      case kParamLFO2AmpVel:
+      case kParamLFO2AmpKTk:
+      case kParamLFO2AmpRnd:
+      {
+        const int modIdx = paramIdx - kParamLFO2Amp;
+        SendParam([paramIdx, modIdx, value](Voice* voice) {
+          voice->UpdateVoiceModulatorParam(kVLFO2Amp, modIdx, value);
+          });
         break;
       }
       case kParamLFO2RateTempo:
@@ -941,6 +1084,15 @@ public:
         mGlobalSequencer.SetScalar(value);
         mSynth.ForEachVoice([value](SynthVoice& voice) {
           dynamic_cast<TablitsaDSP::Voice&>(voice).mSequencer.SetScalar(value);
+          });
+      }
+      case kParamSequencerAmpEnv1:
+      case kParamSequencerAmpEnv2:
+      case kParamSequencerAmpAmpEnv:
+      {
+        const int modIdx = paramIdx - kParamSequencerAmp;
+        SendParam([paramIdx, modIdx, value](Voice* voice) {
+          voice->UpdateVoiceModulatorParam(kVSequencerAmp, modIdx, value);
           });
         break;
       }
