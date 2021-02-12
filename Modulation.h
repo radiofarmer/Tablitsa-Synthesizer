@@ -169,24 +169,26 @@ public:
   /* Write modulation values to a buffer */
   void ProcessBlock(T** inputs, int nFrames)
   {
+    T** modList = mModulators.GetList();
     for (auto i{ 0 }; i < nFrames; ++i)
     {
       for (auto e{ 0 }; e < mEnvPtrs.size(); ++e)
-        mModulators.GetList()[e][i] = mEnvPtrs[e]->Process(inputs[e][i]);
+        modList[e][i] = mEnvPtrs[e]->Process(inputs[e][i]);
       for (auto l{ 0 }; l < mLFOPtrs.size(); ++l)
-        mModulators.GetList()[l + mEnvPtrs.size()][i] = mLFOPtrs[l]->Process();
+        modList[l + mEnvPtrs.size()][i] = mLFOPtrs[l]->Process();
       for (auto s{ 0 }; s < mSequencerPtrs.size(); ++s)
-        mModulators.GetList()[s + mEnvPtrs.size() + mLFOPtrs.size()][i] = mSequencerPtrs[s]->Process();
+        modList[s + mEnvPtrs.size() + mLFOPtrs.size()][i] = mSequencerPtrs[s]->Process();
     }
   }
 
   /* Write meta-modulated modulation values to a buffer */
   void MetaProcessBlock(T** inputs, int nFrames)
   {
+    T metaModParams[2]{ 0. };
+    T** modList = mModulators.GetList();
     for (auto i{ 0 }; i < nFrames; ++i)
     {
       ParameterModulator<DynMods, StatMods>::SetModValues(mPrevValues);
-      T metaModParams[2]{ 0. };
       for (auto m{ 0 }; m < mModPtrs.size(); ++m)
       {
         for (auto mm{ 0 }; mm < mMetaParams[m].size(); ++mm)
@@ -194,7 +196,7 @@ public:
           metaModParams[mm] = mMetaParams[m][mm]->AddModulation();
         }
         mModPtrs[m]->SetParams(metaModParams);
-        mPrevValues[m] = mModulators.GetList()[m][i] = mModPtrs[m]->Process();
+        mPrevValues[m] = modList[m][i] = mModPtrs[m]->Process();
       }
     }
   }

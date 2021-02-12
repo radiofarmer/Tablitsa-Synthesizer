@@ -121,7 +121,7 @@ protected:
   double mMin{ 0. };
   double mMax{ 1. };
   double mRange{ 1. };
-  WDL_String mName;
+  std::string mName;
   const bool mIsExponential{ false };
 
   Vec4d mMinV = Vec4d(0.);

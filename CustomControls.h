@@ -11,7 +11,13 @@ class IVModKnobControl : public IVKnobControl
 public:
   /* Create a knob control with a modulatable value */
   IVModKnobControl(const IRECT& bounds, int paramIdx, const char* label = "", const IVStyle& style = DEFAULT_STYLE, bool valueIsEditable = false, double gearing = DEFAULT_GEARING)
-    : IVKnobControl(bounds, paramIdx, label, style, valueIsEditable), mDefaultColor{ GetColor(kFG) }, mGearing(gearing), mModParamIdx(paramIdx)
+    : IVModKnobControl(bounds, paramIdx, paramIdx + 1, label, style, valueIsEditable, gearing)
+  {
+    GetMouseDblAsSingleClick();
+  }
+
+  IVModKnobControl(const IRECT& bounds, int paramIdx, int modStartIdx, const char* label = "", const IVStyle& style = DEFAULT_STYLE, bool valueIsEditable = false, double gearing = DEFAULT_GEARING)
+    : IVKnobControl(bounds, paramIdx, label, style, valueIsEditable), mDefaultColor{ GetColor(kFG) }, mGearing(gearing), mModParamIdx(modStartIdx)
   {
     GetMouseDblAsSingleClick();
   }
@@ -19,7 +25,7 @@ public:
   /* Get modulator values from a different parameter. (For mutually-exclusive parameters) */
   void GetModulationFrom(int paramIdx)
   {
-    mModParamIdx = paramIdx;
+    mModParamIdx = paramIdx + 1;
   }
 
   void OnMouseDown(float x, float y, const IMouseMod& mod) override
@@ -50,6 +56,7 @@ public:
 
   void LoadModParams()
   {
+    // TODO make a list of Control Tags that can be looped through
     if (mActive && mActiveIdx == GetParamIdx())
     {
       GetUI()->GetControlWithTag(kCtrlTagEnv1Depth)->SetParamIdx(kNoParameter);
@@ -67,15 +74,15 @@ public:
     else
     {
       // Set all modulator sliders to the values of the currently-selected modulated parameter
-      GetUI()->GetControlWithTag(kCtrlTagEnv1Depth)->SetParamIdx(mModParamIdx + 1);
-      GetUI()->GetControlWithTag(kCtrlTagEnv2Depth)->SetParamIdx(mModParamIdx + 2);
-      GetUI()->GetControlWithTag(kCtrlTagAmpEnvDepth)->SetParamIdx(mModParamIdx + 3);
-      GetUI()->GetControlWithTag(kCtrlTagLFO1Depth)->SetParamIdx(mModParamIdx + 4);
-      GetUI()->GetControlWithTag(kCtrlTagLFO2Depth)->SetParamIdx(mModParamIdx + 5);
-      GetUI()->GetControlWithTag(kCtrlTagSequencerDepth)->SetParamIdx(mModParamIdx + 6);
-      GetUI()->GetControlWithTag(kCtrlTagVelDepth)->SetParamIdx(mModParamIdx + 7);
-      GetUI()->GetControlWithTag(kCtrlTagKTkDepth)->SetParamIdx(mModParamIdx + 8);
-      GetUI()->GetControlWithTag(kCtrlTagRndDepth)->SetParamIdx(mModParamIdx + 9);
+      GetUI()->GetControlWithTag(kCtrlTagEnv1Depth)->SetParamIdx(mModParamIdx);
+      GetUI()->GetControlWithTag(kCtrlTagEnv2Depth)->SetParamIdx(mModParamIdx + 1);
+      GetUI()->GetControlWithTag(kCtrlTagAmpEnvDepth)->SetParamIdx(mModParamIdx + 2);
+      GetUI()->GetControlWithTag(kCtrlTagLFO1Depth)->SetParamIdx(mModParamIdx + 3);
+      GetUI()->GetControlWithTag(kCtrlTagLFO2Depth)->SetParamIdx(mModParamIdx + 4);
+      GetUI()->GetControlWithTag(kCtrlTagSequencerDepth)->SetParamIdx(mModParamIdx + 5);
+      GetUI()->GetControlWithTag(kCtrlTagVelDepth)->SetParamIdx(mModParamIdx + 6);
+      GetUI()->GetControlWithTag(kCtrlTagKTkDepth)->SetParamIdx(mModParamIdx + 7);
+      GetUI()->GetControlWithTag(kCtrlTagRndDepth)->SetParamIdx(mModParamIdx + 8);
       mActiveIdx = GetParamIdx();
       mActive = true;
     }
@@ -126,41 +133,41 @@ public:
       g.DrawArc(IColor(100, 0, 0, 0), cx, cy, radius, angle >= mAnchorAngle ? mAnchorAngle : mAnchorAngle - (mAnchorAngle - angle), angle >= mAnchorAngle ? angle : mAnchorAngle, &mBlend, mTrackSize);
 
       // Envelope 1
-      float modAngle = std::max(std::min(static_cast<float>(GetDelegate()->GetParam(mModParamIdx + 1)->Value()) * (mAngle2 - mAngle1) + angle, mAngle2), mAngle1);
+      float modAngle = std::max(std::min(static_cast<float>(GetDelegate()->GetParam(mModParamIdx)->Value()) * (mAngle2 - mAngle1) + angle, mAngle2), mAngle1);
       g.DrawArc(mModArcColor[0], cx, cy, radius, modAngle >= angle ? angle : modAngle, modAngle >= angle ? modAngle : angle, &mBlend, mTrackSize * 3);
       // Envelope 2
       radius -= mTrackToHandleDistance / 2.f;
-      modAngle = std::max(std::min(static_cast<float>(GetDelegate()->GetParam(mModParamIdx + 2)->Value()) * (mAngle2 - mAngle1) + angle, mAngle2), mAngle1);
+      modAngle = std::max(std::min(static_cast<float>(GetDelegate()->GetParam(mModParamIdx + 1)->Value()) * (mAngle2 - mAngle1) + angle, mAngle2), mAngle1);
       g.DrawArc(mModArcColor[1], cx, cy, radius, modAngle >= angle ? angle : modAngle, modAngle >= angle ? modAngle : angle, &mBlend, mTrackSize * 2);
       // AmpEnv
       radius -= mTrackToHandleDistance / 4.f;
-      modAngle = std::max(std::min(static_cast<float>(GetDelegate()->GetParam(mModParamIdx + 3)->Value()) * (mAngle2 - mAngle1) + angle, mAngle2), mAngle1);
+      modAngle = std::max(std::min(static_cast<float>(GetDelegate()->GetParam(mModParamIdx + 2)->Value()) * (mAngle2 - mAngle1) + angle, mAngle2), mAngle1);
       g.DrawArc(mModArcColor[2], cx, cy, radius, modAngle >= angle ? angle : modAngle, modAngle >= angle ? modAngle : angle, &mBlend, mTrackSize);
       // LFO 1
       radius -= 3.f * mTrackToHandleDistance / 4.f;
-      modAngle = std::max(std::min(static_cast<float>(GetDelegate()->GetParam(mModParamIdx + 4)->Value()) * (mAngle2 - mAngle1) + angle, mAngle2), mAngle1);
+      modAngle = std::max(std::min(static_cast<float>(GetDelegate()->GetParam(mModParamIdx + 3)->Value()) * (mAngle2 - mAngle1) + angle, mAngle2), mAngle1);
       g.DrawArc(mModArcColor[3], cx, cy, radius, modAngle >= angle ? angle : modAngle, modAngle >= angle ? modAngle : angle, &mBlend, mTrackSize * 3);
-      modAngle = std::max(std::min(static_cast<float>(-1. * GetDelegate()->GetParam(mModParamIdx + 4)->Value()) * (mAngle2 - mAngle1) + angle, mAngle2), mAngle1);
+      modAngle = std::max(std::min(static_cast<float>(-1. * GetDelegate()->GetParam(mModParamIdx + 3)->Value()) * (mAngle2 - mAngle1) + angle, mAngle2), mAngle1);
       g.DrawArc(IColor::LinearInterpolateBetween(mModArcColor[3], IColor(200, 255, 255, 255), 0.4), cx, cy, radius, modAngle >= angle ? angle : modAngle, modAngle >= angle ? modAngle : angle, &mBlend, mTrackSize * 2);
       // LFO 2
       radius += mTrackToHandleDistance / 4.f;
-      modAngle = std::max(std::min(static_cast<float>(GetDelegate()->GetParam(mModParamIdx + 5)->Value()) * (mAngle2 - mAngle1) + angle, mAngle2), mAngle1);
+      modAngle = std::max(std::min(static_cast<float>(GetDelegate()->GetParam(mModParamIdx + 4)->Value()) * (mAngle2 - mAngle1) + angle, mAngle2), mAngle1);
       g.DrawArc(mModArcColor[4], cx, cy, radius, modAngle >= angle ? angle : modAngle, modAngle >= angle ? modAngle : angle, &mBlend, mTrackSize * 2);
-      modAngle = std::max(std::min(static_cast<float>(-1. * GetDelegate()->GetParam(mModParamIdx + 5)->Value()) * (mAngle2 - mAngle1) + angle, mAngle2), mAngle1);
+      modAngle = std::max(std::min(static_cast<float>(-1. * GetDelegate()->GetParam(mModParamIdx + 4)->Value()) * (mAngle2 - mAngle1) + angle, mAngle2), mAngle1);
       g.DrawArc(IColor::LinearInterpolateBetween(mModArcColor[4], IColor(200, 255, 255, 255), 0.4), cx, cy, radius, modAngle >= angle ? angle : modAngle, modAngle >= angle ? modAngle : angle, &mBlend, mTrackSize);
       // Sequencer
       radius += mTrackToHandleDistance / 4.f;
-      modAngle = std::max(std::min(static_cast<float>(GetDelegate()->GetParam(mModParamIdx + 6)->Value()) * (mAngle2 - mAngle1) + angle, mAngle2), mAngle1);
+      modAngle = std::max(std::min(static_cast<float>(GetDelegate()->GetParam(mModParamIdx + 5)->Value()) * (mAngle2 - mAngle1) + angle, mAngle2), mAngle1);
       g.DrawArc(mModArcColor[5], cx, cy, radius, modAngle >= angle ? angle : modAngle, modAngle >= angle ? modAngle : angle, &mBlend, mTrackSize);
       // Velocity
       radius -= mTrackToHandleDistance / 4.f;
-      modAngle = std::max(std::min(static_cast<float>(GetDelegate()->GetParam(mModParamIdx + 7)->Value()) * (mAngle2 - mAngle1) + angle, mAngle2), mAngle1);
+      modAngle = std::max(std::min(static_cast<float>(GetDelegate()->GetParam(mModParamIdx + 6)->Value()) * (mAngle2 - mAngle1) + angle, mAngle2), mAngle1);
       g.DrawArc(mModArcColor[6], cx, cy, radius, modAngle >= angle ? angle : modAngle, modAngle >= angle ? modAngle : angle, &mBlend, mTrackSize);
       // Keytrack
-      modAngle = std::max(std::min(static_cast<float>(GetDelegate()->GetParam(mModParamIdx + 8)->Value()) * (mAngle2 - mAngle1) + angle, mAngle2), mAngle1);
+      modAngle = std::max(std::min(static_cast<float>(GetDelegate()->GetParam(mModParamIdx + 7)->Value()) * (mAngle2 - mAngle1) + angle, mAngle2), mAngle1);
       g.DrawArc(mModArcColor[7], cx, cy, radius, modAngle >= angle ? angle : modAngle, modAngle >= angle ? modAngle : angle, &mBlend, mTrackSize);
       // Trigger Random
-      modAngle = std::max(std::min(static_cast<float>(GetDelegate()->GetParam(mModParamIdx + 9)->Value()) * (mAngle2 - mAngle1) + angle, mAngle2), mAngle1);
+      modAngle = std::max(std::min(static_cast<float>(GetDelegate()->GetParam(mModParamIdx + 8)->Value()) * (mAngle2 - mAngle1) + angle, mAngle2), mAngle1);
       g.DrawArc(mModArcColor[8], cx, cy, radius, modAngle >= angle ? angle : modAngle, modAngle >= angle ? modAngle : angle, &mBlend, mTrackSize);
     }
   }

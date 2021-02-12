@@ -606,6 +606,7 @@ public:
       new ParameterModulator<>(-24., 24., "Ring Mod Freq"),
       new ParameterModulator<>(0., 1., "Ring Mod Depth") };
 
+    // Modulator parameters that can themselves be modulated
     ModulatedParameterList<T, kNumVoiceMetaModulations> mVoiceMetaModParams{
       new ParameterModulator<>(-1., 1., "Env1 Sustain"),
       new ParameterModulator<>(-1., 1., "Env2 Sustain"),
@@ -849,8 +850,29 @@ public:
         break;
       }
       case kParamEnv1Sustain:
+      {
         mParamsToSmooth[kModEnv1SustainSmoother] = (T)value / 100.;
+        SendParam([paramIdx, value](Voice* voice) {
+          voice->UpdateVoiceModulatorParam(kVEnv1Sustain, 0, (T)value / 100.);
+          });
         break;
+      }
+      case kParamEnv1SustainEnv1:
+      case kParamEnv1SustainEnv2:
+      case kParamEnv1SustainAmpEnv:
+      case kParamEnv1SustainLFO1:
+      case kParamEnv1SustainLFO2:
+      case kParamEnv1SustainSeq:
+      case kParamEnv1SustainVel:
+      case kParamEnv1SustainKTk:
+      case kParamEnv1SustainRnd:
+      {
+        const int modIdx = paramIdx - kParamEnv1Velocity;
+        SendParam([paramIdx, modIdx, value](Voice* voice) {
+          voice->UpdateVoiceModulatorParam(kVEnv1Sustain, modIdx, value);
+          });
+        break;
+      }
       case kParamEnv1Attack:
       case kParamEnv1Decay:
       case kParamEnv1Release:
@@ -864,9 +886,6 @@ public:
       case kParamEnv1Velocity:
         Voice::mEnv1VelocityMod = value;
         break;
-      case kParamEnv2Sustain:
-        mParamsToSmooth[kModEnv2SustainSmoother] = (T)value / 100.;
-        break;
       case kParamEnv2Attack:
       case kParamEnv2Decay:
       case kParamEnv2Release:
@@ -877,21 +896,65 @@ public:
           });
         break;
       }
+      case kParamEnv2Sustain:
+      {
+        mParamsToSmooth[kModEnv2SustainSmoother] = (T)value / 100.;
+        SendParam([paramIdx, value](Voice* voice) {
+          voice->UpdateVoiceModulatorParam(kVEnv2Sustain, 0, (T)value / 100.);
+          });
+        break;
+      }
+      case kParamEnv2SustainEnv1:
+      case kParamEnv2SustainEnv2:
+      case kParamEnv2SustainAmpEnv:
+      case kParamEnv2SustainLFO1:
+      case kParamEnv2SustainLFO2:
+      case kParamEnv2SustainSeq:
+      case kParamEnv2SustainVel:
+      case kParamEnv2SustainKTk:
+      case kParamEnv2SustainRnd:
+      {
+        const int modIdx = paramIdx - kParamEnv2Velocity;
+        SendParam([paramIdx, modIdx, value](Voice* voice) {
+          voice->UpdateVoiceModulatorParam(kVEnv2Sustain, modIdx, value);
+          });
+        break;
+      }
       case kParamEnv2Velocity:
         Voice::mEnv2VelocityMod = value;
-        break;
-      case kParamAmpEnvSustain:
-        mParamsToSmooth[kModAmpEnvSustainSmoother] = (T) value / 100.;
         break;
       case kParamAmpEnvAttack:
       case kParamAmpEnvDecay:
       case kParamAmpEnvRelease:
       {
-        // Polyphonic envelopes (owned by voices)
         EEnvStage stage = static_cast<EEnvStage>(EEnvStage::kAttack + (paramIdx - kParamAmpEnvAttack));
         mSynth.ForEachVoice([stage, value](SynthVoice& voice) {
           dynamic_cast<TablitsaDSP::Voice&>(voice).mAmpEnv.SetStageTime(stage, value);
-        });
+          });
+        break;
+      }
+      case kParamAmpEnvSustain:
+      {
+        mParamsToSmooth[kModAmpEnvSustainSmoother] = (T)value / 100.;
+        SendParam([paramIdx, value](Voice* voice) {
+          voice->UpdateVoiceModulatorParam(kVAmpEnvSustain, 0, (T)value / 100.);
+          });
+        break;
+      }
+      case kParamAmpEnvSustainEnv1:
+      case kParamAmpEnvSustainEnv2:
+      case kParamAmpEnvSustainAmpEnv:
+      case kParamAmpEnvSustainLFO1:
+      case kParamAmpEnvSustainLFO2:
+      case kParamAmpEnvSustainSeq:
+      case kParamAmpEnvSustainVel:
+      case kParamAmpEnvSustainKTk:
+      case kParamAmpEnvSustainRnd:
+      {
+        const int modIdx = paramIdx - kParamAmpEnvVelocity;
+        SendParam([paramIdx, modIdx, value](Voice* voice) {
+          voice->UpdateVoiceModulatorParam(kVAmpEnvSustain, modIdx, value);
+          });
         break;
       }
       case kParamAmpEnvVelocity:
@@ -903,7 +966,7 @@ public:
         mSynth.ForEachVoice([value](SynthVoice& voice) {
           dynamic_cast<TablitsaDSP::Voice&>(voice).mLFO1.SetScalar(value);
           });
-        // No `break` for meta mod params!
+        [[fallthrough]];
       }
       case kParamLFO1AmpEnv1:
       case kParamLFO1AmpEnv2:
@@ -963,6 +1026,20 @@ public:
         mSynth.ForEachVoice([value](SynthVoice& voice) {
           dynamic_cast<TablitsaDSP::Voice&>(voice).mLFO2.SetScalar(value);
           });
+      }
+      case kParamLFO2AmpEnv1:
+      case kParamLFO2AmpEnv2:
+      case kParamLFO2AmpAmpEnv:
+      case kParamLFO2AmpLFO1:
+      case kParamLFO2AmpSeq:
+      case kParamLFO2AmpVel:
+      case kParamLFO2AmpKTk:
+      case kParamLFO2AmpRnd:
+      {
+        const int modIdx = paramIdx - kParamLFO2Amp;
+        SendParam([paramIdx, modIdx, value](Voice* voice) {
+          voice->UpdateVoiceModulatorParam(kVLFO2Amp, modIdx, value);
+          });
         break;
       }
       case kParamLFO2RateTempo:
@@ -1007,6 +1084,15 @@ public:
         mGlobalSequencer.SetScalar(value);
         mSynth.ForEachVoice([value](SynthVoice& voice) {
           dynamic_cast<TablitsaDSP::Voice&>(voice).mSequencer.SetScalar(value);
+          });
+      }
+      case kParamSequencerAmpEnv1:
+      case kParamSequencerAmpEnv2:
+      case kParamSequencerAmpAmpEnv:
+      {
+        const int modIdx = paramIdx - kParamSequencerAmp;
+        SendParam([paramIdx, modIdx, value](Voice* voice) {
+          voice->UpdateVoiceModulatorParam(kVSequencerAmp, modIdx, value);
           });
         break;
       }
