@@ -26,6 +26,15 @@ enum EFilters
   kNumFilters,
 };
 
+/* General function for processing a biquad filter in direct form II*/
+template<typename T>
+inline T ProcessBiquadII(T s, T* a, T* b, DelayLine& z)
+{
+  T sum = s - a[0] * z[0] - a[1] * z[1];
+  T out = sum * b[0] + z[0] * b[1] + z[1] * b[2];
+  z.push(sum);
+  return out;
+}
 
 template<typename T>
 class Filter
@@ -500,7 +509,7 @@ public:
     mDelayLength = samples;
   }
 
-  inline T Process(T s)
+  inline T Process(T s) override
   {
     T out = s + mFF * mDelayIn[mDelayLength] - mFB * mDelayOut[mDelayLength / 2];
     mDelayIn.push(s);
@@ -524,13 +533,12 @@ public:
   ShelvingFilter(double sampleRate=41000., double cutoff=0.5, double resonance=0., double gain=0., bool cutoffIsNormalized = true) :
     Filter<T>(mSampleRate, cutoff, resonance, cutoffIsNormalized), mGain(gain)
   {
-    CalculateCoefficients();
-
-    // this should probably switch the coefficient calculation function rather than the process one
     if (LowShelf)
-      mProcessFunction = [this](T s) { return ProcessLowShelf(s); };
+      mCoefficientsFunc = [this](double& k, double& v0, double& slope) { return LowShelfCoefficients(k, v0, slope); };
     else
-      mProcessFunction = [this](T s) { return ProcessHighShelf(s); };
+      mCoefficientsFunc = [this](double& k, double& v0, double& slope) { return HighShelfCoefficients(k, v0, slope); };
+
+    CalculateCoefficients();
   }
 
   inline void SetGain(T gain)
@@ -545,6 +553,11 @@ public:
     double v0 = std::pow(10., mGain / 20.);
     double slope = 1. / (1. - std::min(0.99, mQ));
 
+    mCoefficientsFunc(k, v0, slope);
+  }
+
+  inline void LowShelfCoefficients(double& k, double& v0, double& slope)
+  {
     double kSqr = k * k;
     double vkSqr = v0 * kSqr;
     double denom = 1 + slope * k + kSqr;
@@ -557,9 +570,14 @@ public:
     mA[1] = (1 - slope * k * kSqr) / denom;
   }
 
+  inline void HighShelfCoefficients(double& k, double& v0, double& slope)
+  {
+
+  }
+
   inline T Process(T s) override
   {
-    return mProcessFunction(s);
+    return ProcessBiquadII(s, mA, mB, mZ);
   }
 
   inline T ProcessLowShelf(T s)
@@ -570,15 +588,10 @@ public:
     return out;
   }
 
-  inline T ProcessHighShelf(T s)
-  {
-    return s;
-  }
-
 private:
   double mGain;
   double mA[2]{ 0. };
   double mB[3]{ 0. };
   DelayLine mZ{ 2 };
-  std::function<T(T)> mProcessFunction;
+  std::function<void(double&, double&, double&)> mCoefficientsFunc;
 };

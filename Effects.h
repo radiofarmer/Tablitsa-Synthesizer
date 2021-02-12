@@ -105,7 +105,7 @@ public:
     mDelayRGain = gain;
   }
 
-  T Process(T s) override
+  inline T Process(T s) override
   {
     T left_out = mDelayL[mDelayLTime];
     T right_out = mDelayR[mDelayRTime];
@@ -114,7 +114,7 @@ public:
     return left_out * mDelayLGain + right_out * mDelayRGain;
   }
 
-  T* ProcessStereo(const T sl, const T sr)
+  inline T* ProcessStereo(const T sl, const T sr)
   {
     const T left_out = mDelayL[mDelayLTime];
     const T right_out = mDelayR[mDelayRTime];
@@ -124,7 +124,7 @@ public:
     return output;
   }
 
-  T* ProcessStereo(T inputs[2])
+  inline T* ProcessStereo(T inputs[2])
   {
     const T left_out = mDelayL[mDelayLTime];
     const T right_out = mDelayR[mDelayRTime];
@@ -162,7 +162,7 @@ template <typename T>
 class SaturationEQ
 {
 public:
-  SaturationEQ(double sampleRate=41000.) : mLowShelf(sampleRate, 0.05, 0., 1.5)
+  SaturationEQ(double sampleRate=41000.) : mLowShelf(sampleRate, 0.02, 0., 5.)
   {
   }
 
@@ -173,13 +173,13 @@ public:
 
   inline void SetLevel(T lvl)
   {
-    mGain = 1. + lvl;
+    mGain = 1. + lvl / 2.;
     mLowShelf.SetGain(lvl * 10.);
   }
 
   inline T Process(T s)
   {
-    return std::tanh(mLowShelf.Process(s) * mGain);
+    return std::tanh(mLowShelf.Process(s));
   }
 
 private:

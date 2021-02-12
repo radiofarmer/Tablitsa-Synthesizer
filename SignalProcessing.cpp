@@ -18,16 +18,3 @@ void DelayLine::SetDelay(const int d)
 {
   mLength = d;
 }
-
-inline double DelayLine::at(const int offset)
-{
-  int readPoint{ mRead - offset };
-  if (readPoint < 0)
-    readPoint += mLength;
-  return mBuffer[readPoint];
-}
-
-double DelayLine::operator[](const int idx)
-{
-  return at(idx);
-}

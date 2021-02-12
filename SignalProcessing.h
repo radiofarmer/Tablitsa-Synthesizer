@@ -17,6 +17,10 @@ public:
 
   void SetDelay(const int d);
 
+  /* Get a pointer to the start of the delay line */
+  const double* GetPointer() {return mBuffer;}
+
+  /* Add a new sample to the first (most recent) position on the delay line, and adjust the read/write positions accordingly. */
   inline void push(const double s)
   {
     mRead = mWrite;
@@ -25,14 +29,19 @@ public:
       mWrite = 0;
   }
 
-  inline double at(const int offset = 0);
-
-  const double* GetPointer()
+  /* The the value in the delay line `offset` samples ago. (same as `operator[]`) */
+  inline double at(const int offset = 0)
   {
-    return mBuffer;
+    int readPoint{ mRead - offset };
+    if (readPoint < 0)
+      readPoint += mLength;
+    return mBuffer[readPoint];
   }
-
-  double operator[](const int idx);
+  /* The the value in the delay line `offset` samples ago. (same as `at`) */
+  inline double operator[](const int idx)
+  {
+    return at(idx);
+  }
 
 private:
   int mLength;
