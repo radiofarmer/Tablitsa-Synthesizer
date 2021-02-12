@@ -344,6 +344,7 @@
     <ClInclude Include="..\CustomControls.h" />
     <ClInclude Include="..\Effects.h" />
     <ClInclude Include="..\Filter.h" />
+    <ClInclude Include="..\Modulation.h" />
     <ClInclude Include="..\Modulators.h" />
     <ClInclude Include="..\PeriodicTable.h" />
     <ClInclude Include="..\SignalProcessing.h" />

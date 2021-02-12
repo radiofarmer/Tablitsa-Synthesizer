@@ -33,7 +33,6 @@
 
 #include "Filter.h"
 #include "Oscillator.h"
-#include "Modulators.h"
 
 #if !_DEBUG
   #define OVERSAMPLING 2

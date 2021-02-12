@@ -5,6 +5,7 @@
 #include "Wavetable.h"
 
 
+#include "Modulation.h"
 #include "IPlugConstants.h"
 #include "Oscillator.h"
 #include "MidiSynth.h"
@@ -209,12 +210,21 @@ public:
       mSequencer(TablitsaDSP::mSeqSteps) // capture ok on RT thread?
     {
 //      DBGMSG("new Voice: %i control inputs.\n", static_cast<int>(mInputs.size()));
-      mModulators.AddModulator(&mEnv1);
-      mModulators.AddModulator(&mEnv2);
-      mModulators.AddModulator(&mAmpEnv);
-      mModulators.AddModulator(&mLFO1);
-      mModulators.AddModulator(&mLFO2);
-      mModulators.AddModulator(&mSequencer);
+
+      // Meta-Modulation Parameters
+      std::vector<ParameterModulator<6, 3>*> env1Mods{ &mVoiceMetaModParams[kVEnv1Sustain] };
+      std::vector<ParameterModulator<6, 3>*> env2Mods{ &mVoiceMetaModParams[kVEnv2Sustain] };
+      std::vector<ParameterModulator<6, 3>*> ampEnvMods{ &mVoiceMetaModParams[kVAmpEnvSustain] };
+      std::vector<ParameterModulator<6, 3>*> lfo1Mods{ &mVoiceMetaModParams[kVLFO1RateHz], &mVoiceMetaModParams[kVLFO1Amp] };
+      std::vector<ParameterModulator<6, 3>*> lfo2Mods{ &mVoiceMetaModParams[kVLFO2RateHz], &mVoiceMetaModParams[kVLFO2Amp] };
+      std::vector<ParameterModulator<6, 3>*> seqMods{ &mVoiceMetaModParams[kVSequencerRateHz], &mVoiceMetaModParams[kVSequencerAmp] };
+
+      mModulators.AddModulator(&mEnv1, env1Mods);
+      mModulators.AddModulator(&mEnv2, env2Mods);
+      mModulators.AddModulator(&mAmpEnv, ampEnvMods);
+      mModulators.AddModulator(&mLFO1, lfo1Mods);
+      mModulators.AddModulator(&mLFO2, lfo2Mods);
+      mModulators.AddModulator(&mSequencer, seqMods);
       mAmpEnv.Kill(true); // Force amplitude envelopes to start in the "Idle" stage
 
       // Fill the envelope queues for legato mode with null pointers
@@ -295,9 +305,9 @@ public:
       else
       {
         // Check for currently active envelopes
-        ADSREnvelope<T>* masterAmpEnv = nullptr;
-        ADSREnvelope<T>* masterEnv1 = nullptr;
-        ADSREnvelope<T>* masterEnv2 = nullptr;
+        Envelope<T>* masterAmpEnv = nullptr;
+        Envelope<T>* masterEnv1 = nullptr;
+        Envelope<T>* masterEnv2 = nullptr;
         for (auto i{ 0 }; i < Voice::AmpEnvQueue.size(); ++i)
         {
           if (Voice::AmpEnvQueue[i])
@@ -361,7 +371,10 @@ public:
       T staticMods[]{ mVelocity, keytrack, mTriggerRand };
       mVoiceModParams.SetStaticModulation(staticMods);
       // Write ramps for modulators
-      mModulators.MetaProcessBlock<kNumVoiceMetaModulations>(&(inputs[kModEnv1SustainSmoother]), nFrames, mVoiceMetaModParams);
+      mVoiceMetaModParams[kVEnv1Sustain].SetInitialValue(inputs[kModEnv1SustainSmoother][0]);
+      mVoiceMetaModParams[kVEnv2Sustain].SetInitialValue(inputs[kModEnv1SustainSmoother][0]);
+      mVoiceMetaModParams[kVAmpEnvSustain].SetInitialValue(inputs[kModAmpEnvSustainSmoother][0]);
+      mModulators.MetaProcessBlock(&(inputs[kModEnv1SustainSmoother]), nFrames);
       // mModulators.ProcessBlock(&(inputs[kModEnv1SustainSmoother]), nFrames);
       // Apply modulation ramps to all modulated parameters
 #if 0
@@ -537,18 +550,18 @@ public:
     static inline VoiceDetuner mDetuner{ kMaxUnisonVoices };
 
     // Dynamic Modulators
-    ADSREnvelope<T> mEnv1;
-    ADSREnvelope<T> mEnv2;
-    ADSREnvelope<T> mAmpEnv;
+    Envelope<T> mEnv1;
+    Envelope<T> mEnv2;
+    Envelope<T> mAmpEnv;
     FastLFO<T> mLFO1;
     FastLFO<T> mLFO2;
     Sequencer<T, kNumSeqSteps> mSequencer;
-    ModulatorList<T, ADSREnvelope<T>, FastLFO<T>, Sequencer<T>> mModulators;
+    ModulatorList<T, Envelope<T>, FastLFO<T>, Sequencer<T>, 6, 3> mModulators;
 
     // Pointers to master modulators, for free-run and legato modes
-    static inline std::vector<ADSREnvelope<T>*> Env1Queue;
-    static inline std::vector<ADSREnvelope<T>*> Env2Queue;
-    static inline std::vector<ADSREnvelope<T>*> AmpEnvQueue;
+    static inline std::vector<Envelope<T>*> Env1Queue;
+    static inline std::vector<Envelope<T>*> Env2Queue;
+    static inline std::vector<Envelope<T>*> AmpEnvQueue;
     static inline FastLFO<T>* mMasterLFO1{ nullptr }; // The last-triggered `mLFO1`, which "owns" the master phase
     static inline FastLFO<T>* mMasterLFO2{ nullptr }; // The last-triggered `mLFO2`, which "owns" the master phase
     static inline Sequencer<T>* mMasterSeq{ nullptr }; // The last-triggered `mSequencer`, which "owns" the master phase

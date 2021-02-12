@@ -385,6 +385,20 @@ enum EMsgTags
   kMsgRandomizeSequencer,
 };
 
+enum EModulators
+{
+  kEnv1 = 0,
+  kEnv2,
+  kAmpEnv,
+  kLFO1,
+  kLFO2,
+  kSequencer,
+  kVelocity,
+  kKeytrack,
+  kTriggerRandom,
+  kNumMods
+};
+
 using namespace iplug;
 using namespace igraphics;
 

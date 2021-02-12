@@ -1,6 +1,7 @@
 #pragma once
 #include "Tablitsa.h"
 #include "PeriodicTable.h"
+#include "Modulation.h"
 
 /* A clone of the normal knob control, but with the ability to receive modulation parameters. */
 class IVModKnobControl : public IVKnobControl
