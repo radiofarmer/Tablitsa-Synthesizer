@@ -1,8 +1,10 @@
 #pragma once
 
+#include "VectorFunctions.h"
+
 #include "IPlugParameter.h"
 #include "LFO.h"
-#include "VectorFunctions.h"
+#include "ADSREnvelope.h"
 
 enum EModulators
 {

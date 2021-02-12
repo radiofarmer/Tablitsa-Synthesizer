@@ -38,7 +38,7 @@ public:
 
   virtual void Reset() {}
 
-  virtual void UpdateSampleRate(double sampleRate)
+  virtual void SetSampleRate(double sampleRate)
   {
     SetCutoff(mFc * mSampleRate / sampleRate);
     mSampleRate = sampleRate;
@@ -337,56 +337,6 @@ private:
   double mZ{ 0 };
 };
 
-
-template <typename T>
-class BassBoost
-{
-public:
-  BassBoost(T slope = 0., T boost = 1., T gainComp = 1.) : mSlope(slope), mRatio(boost), mGComp(gainComp)
-  {
-    Recalculate();
-  }
-
-  inline void SetLevel(T lvl)
-  {
-    SetSlope(lvl);
-    SetBoost(2 * lvl);
-  }
-
-  inline void SetSlope(T slope)
-  {
-    mSlope = slope;
-    Recalculate();
-  }
-
-  inline void SetBoost(T boost)
-  {
-    mRatio = boost;
-    Recalculate();
-  }
-
-  inline void Recalculate()
-  {
-    mGain = 1. / (mSlope + 1.);
-    mGComp = mGain / 2.;
-  }
-
-  inline T Process(T s)
-  {
-    mCap = (s + mCap * mSlope) * mGain;
-    return tanh(s + mCap * mRatio) * mGain;
-  }
-
-
-private:
-  T mSlope;
-  T mRatio;
-  T mGComp;
-  T mGain;
-  T mCap{ 0 };
-};
-
-
 template <typename T>
 class ChebyshevBL
 {
@@ -562,4 +512,70 @@ private:
   T& mFB{ mQ };
   DelayLine mDelayIn{ COMB_MAX_DELAY + 1 };
   DelayLine mDelayOut{ COMB_MAX_DELAY + 1 };
+};
+
+template<typename T, bool LowShelf=true>
+class ShelvingFilter : public Filter<T>
+{
+public:
+  ShelvingFilter(double sampleRate=41000., double cutoff=0.5, double resonance=0., double gain=0., bool cutoffIsNormalized = true) :
+    Filter<T>(mSampleRate, cutoff, resonance, cutoffIsNormalized), mGain(gain)
+  {
+    CalculateCoefficients();
+
+    // this should probably switch the coefficient calculation function rather than the process one
+    if (LowShelf)
+      mProcessFunction = [this](T s) { return ProcessLowShelf(s); };
+    else
+      mProcessFunction = [this](T s) { return ProcessHighShelf(s); };
+  }
+
+  inline void SetGain(T gain)
+  {
+    mGain = gain;
+    CalculateCoefficients();
+  }
+
+  inline void CalculateCoefficients() override
+  {
+    double k = std::tan(Filter<T>::pi * mFc);
+    double v0 = std::pow(10., mGain / 20.);
+    double slope = 1. / (1. - std::min(0.99, mQ));
+
+    double kSqr = k * k;
+    double vkSqr = v0 * kSqr;
+    double denom = 1 + slope * k + kSqr;
+
+    // Biquad Coefficients (low shelf)
+    mB[0] = 1. + (std::sqrt(v0) * slope * k + vkSqr) / denom;
+    mB[1] = 2. * (vkSqr - 1.) / denom;
+    mB[2] = (1. - std::sqrt(v0) * slope * k + vkSqr) / denom;
+    mA[0] = 2. * (kSqr - 1.) / denom;
+    mA[1] = (1 - slope * k * kSqr) / denom;
+  }
+
+  inline T Process(T s) override
+  {
+    return mProcessFunction(s);
+  }
+
+  inline T ProcessLowShelf(T s)
+  {
+    T sum = s - mA[0] * mZ[0] - mA[1] * mZ[1];
+    T out = sum * mB[0] + mZ[0] * mB[1] + mZ[1] * mB[2];
+    mZ.push(sum);
+    return out;
+  }
+
+  inline T ProcessHighShelf(T s)
+  {
+    return s;
+  }
+
+private:
+  double mGain;
+  double mA[2]{ 0. };
+  double mB[3]{ 0. };
+  DelayLine mZ{ 2 };
+  std::function<T(T)> mProcessFunction;
 };

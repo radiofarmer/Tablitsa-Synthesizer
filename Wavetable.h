@@ -598,6 +598,8 @@ public:
   void SetSampleRate(double sampleRate)
   {
     mSampleRate = sampleRate * mProcessOS;
+    mPhaseModulator.SetSampleRate(mSampleRate);
+    mRingModulator.SetSampleRate(mSampleRate);
   }
 
   /* Load a new wavetable as a static variable */

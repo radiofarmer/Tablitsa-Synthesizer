@@ -565,7 +565,6 @@ public:
             g.PathMoveTo(trackBounds.L + 1, trackBounds.B - step * stepSpan);
             g.PathLineTo(trackBounds.R - 1, trackBounds.B - step * stepSpan);
             g.PathStroke(mStepMarkerColor, 1.f);
-            int a = step % 2;
             if (step % 2 == 0)
               g.DrawText(labelText, std::to_string(nSteps - step - 1).c_str(), stepBounds);
           }
