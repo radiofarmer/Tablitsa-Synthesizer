@@ -1,27 +1,33 @@
 #include "SignalProcessing.h"
 
-template<typename T>
-DelayLine<T>::~DelayLine()
-{
-  delete mBuffer;
-};
+#include <assert.h>
 
-/*
-Push a new value onto the delay line and adjust the read and write heads
-*/
-template<typename T>
-void DelayLine<T>::push(T s)
+DelayLine::DelayLine(const int length) : mLength(length)
 {
-  mWrite++ = s;
-  mRead++;
-  if (mWrite == mLength)
-    mWrite = mBuffer;
-  if (mRead == mLength)
-    mRead = mBuffer;
+  assert(mLength > 1);
+  mBuffer = new double[mLength] {};
 }
 
-template<typename T>
-T DelayLine<T>::at(size_t offset)
+void DelayLine::reset()
 {
-  return (mRead - mBuffer)[offset];
+  delete[] mBuffer;
+  mBuffer = new double[mLength] {};
+}
+
+void DelayLine::SetDelay(const int d)
+{
+  mLength = d;
+}
+
+inline double DelayLine::at(const int offset)
+{
+  int readPoint{ mRead - offset };
+  if (readPoint < 0)
+    readPoint += mLength;
+  return mBuffer[readPoint];
+}
+
+double DelayLine::operator[](const int idx)
+{
+  return at(idx);
 }

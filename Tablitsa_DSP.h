@@ -1,8 +1,9 @@
 #pragma once
 
 #include "PeriodicTable.h"
-#include "Wavetable.h"
 #include "Effects.h"
+#include "Wavetable.h"
+
 
 #include "IPlugConstants.h"
 #include "Oscillator.h"

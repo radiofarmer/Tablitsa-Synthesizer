@@ -1,10 +1,13 @@
 #pragma once
 
-#include <vector>
-#include <cmath>
+#include "SignalProcessing.h"
 
 #include "vectorclass.h"
-#include "SignalProcessing.h"
+
+#include <vector>
+#include <cmath>
+#include <functional>
+
 
 #define FILTER_TYPE_LIST "None", "VSF", "Moog Ladder", "Comb"
 #define FILTER_MODE_LIST_VSF  "Lowpass", "Highpass", "Bandpass", "Allpass"
@@ -508,8 +511,8 @@ public:
 private:
   const int mMaxDelay{ COMB_MAX_DELAY };
   int mDelayLength;
-  T& mFF{ mFc };
-  T& mFB{ mQ };
+  T& mFF{ mFc }; // Feedforward used as alias for cutoff
+  T& mFB{ mQ }; // Feedback used as alias for resonance
   DelayLine mDelayIn{ COMB_MAX_DELAY + 1 };
   DelayLine mDelayOut{ COMB_MAX_DELAY + 1 };
 };
