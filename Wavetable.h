@@ -607,6 +607,8 @@ public:
   void SetSampleRate(double sampleRate)
   {
     mSampleRate = sampleRate * mProcessOS;
+    mPhaseModulator.SetSampleRate(mSampleRate);
+    mRingModulator.SetSampleRate(mSampleRate);
   }
 
   /* Load a new wavetable as a static variable */
@@ -625,7 +627,7 @@ public:
   {
     std::unique_lock<std::mutex> lock(mWtMutex);
     mWtReady[mID] = false;
-    if (tab != nullptr)
+    if (tab != nullptr) // TODO: Check for nan's in the wavetable. They appear to break everything (including after new tables are loaded)
       mWT = tab;
     mPhaseIncrFactor = (1. / (mWT->mCyclesPerLevel * mProcessOS));
     mCyclesPerLevelRecip = 1. / mWT->mCyclesPerLevel;

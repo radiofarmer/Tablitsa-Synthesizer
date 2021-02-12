@@ -46,22 +46,22 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
   GetParam(kParamAmpEnvDecay)->InitDouble("AmpEnv Decay", 10., 1., 3000., 0.1, "ms", IParam::kFlagsNone, "ADSR", IParam::ShapePowCurve(3.));
   GetParam(kParamAmpEnvSustain)->InitDouble("AmpEnv Sustain", 50., 0., 100., 1, "%", IParam::kFlagsNone, "ADSR");
   GetParam(kParamAmpEnvRelease)->InitDouble("AmpEnv Release", 10., 2., 3000., 0.1, "ms", IParam::kFlagsNone, "ADSR");
-  GetParam(kParamAmpEnvVelocity)->InitDouble("AmpEnv Velocity Mod", 0., 0., 1., 0.01);
+  GetParam(kParamAmpEnvVelocity)->InitDouble("AmpEnv Velocity Mod", 1., 0., 1., 0.01);
   GetParam(kParamLFO1Shape)->InitEnum("LFO1 Shape", LFO<>::kTriangle, {LFO_SHAPE_VALIST});
   GetParam(kParamLFO1RateHz)->InitFrequency("LFO1 Rate", 1., 0.01, 40.);
   GetParam(kParamLFO1RateTempo)->InitEnum("LFO1 Rate", LFO<>::k1, {LFO_TEMPODIV_VALIST});
-  GetParam(kParamLFO1RateMode)->InitBool("LFO1 Sync", true);
+  GetParam(kParamLFO1RateMode)->InitBool("LFO1 Sync", false);
   GetParam(kParamLFO1Restart)->InitBool("LFO1 Retrigger", false);
   GetParam(kParamLFO1Amp)->InitDouble("LFO Amp", 1., -1., 1., 0.01, "", IParam::kFlagsNone, "LFO");
   GetParam(kParamLFO2Shape)->InitEnum("LFO2 Shape", LFO<>::kTriangle, { LFO_SHAPE_VALIST });
   GetParam(kParamLFO2RateHz)->InitFrequency("LFO2 Rate", 1., 0.01, 40.);
   GetParam(kParamLFO2RateTempo)->InitEnum("LFO2 Rate", LFO<>::k1, { LFO_TEMPODIV_VALIST });
-  GetParam(kParamLFO2RateMode)->InitBool("LFO2 Sync", true);
+  GetParam(kParamLFO2RateMode)->InitBool("LFO2 Sync", false);
   GetParam(kParamLFO2Restart)->InitBool("LFO2 Retrigger", false);
   GetParam(kParamLFO2Amp)->InitDouble("LFO Amp", 1., -1., 1., 0.01, "", IParam::kFlagsNone, "LFO");
   GetParam(kParamSequencerRateHz)->InitFrequency("Sequencer Rate", 1., 0.01, 40.);
   GetParam(kParamSequencerRateTempo)->InitEnum("Sequencer Rate", LFO<>::k4th, { LFO_TEMPODIV_VALIST });
-  GetParam(kParamSequencerRateMode)->InitBool("Sequencer Sync", false);
+  GetParam(kParamSequencerRateMode)->InitBool("Sequencer Sync", true);
   GetParam(kParamSequencerRestart)->InitBool("Sequencer Retrigger", false);
   GetParam(kParamSequencerSteps)->InitInt("Sequencer Length", 16, 1, 16);
   GetParam(kParamSequencerGlide)->InitPercentage("Sequencer Glide");
@@ -601,24 +601,24 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
     pGraphics->AttachControl(new IVKnobControl(envPanel.GetGridCell(0, 1, 3, 6).GetCentredInside(dialSize), kParamEnv1Decay, "Dec", modKnobStyle), kNoTag, "Env1");
     pGraphics->AttachControl(new IVKnobControl(envPanel.GetGridCell(0, 2, 3, 6).GetCentredInside(dialSize), kParamEnv1Sustain, "Sus", modKnobStyle), kNoTag, "Env1");
     pGraphics->AttachControl(new IVKnobControl(envPanel.GetGridCell(0, 3, 3, 6).GetCentredInside(dialSize), kParamEnv1Release, "Rel", modKnobStyle), kNoTag, "Env1");
-    pGraphics->AttachControl(new IVSliderControl(envPanel.GetGridCell(0, 4, 3, 6).GetVPadded(-15.f), kParamEnv1Velocity, "Velocity", modKnobStyle), kNoTag, "Env1");
-    pGraphics->AttachControl(new ModSliderControl(envPanel.GetGridCell(0, 5, 3, 6).GetVPadded(-15.f).GetHPadded(-10.f), kNoParameter, "Depth", modKnobStyle), kCtrlTagEnv1Depth, "Env1");
+    pGraphics->AttachControl(new IVSliderControl(envPanel.GetGridCell(0, 4, 3, 6).GetVPadded(-15.f), kParamEnv1Velocity, "Velocity", modKnobStyle, false, EDirection::Vertical, 4.f, 8.f, 2.f, true), kNoTag, "Env1");
+    pGraphics->AttachControl(new ModSliderControl(envPanel.GetGridCell(0, 5, 3, 6).GetVPadded(-15.f), kNoParameter, "Depth", modKnobStyle), kCtrlTagEnv1Depth, "Env1");
     pGraphics->AttachControl(new IVGroupControl("Env 1", "Env1", -2.f, 10.f, 0.f, 0.f));
     // Envelope 2
     pGraphics->AttachControl(new IVKnobControl(envPanel.GetGridCell(1, 0, 3, 6).GetCentredInside(dialSize), kParamEnv2Attack, "Att", modKnobStyle), kNoTag, "Env2");
     pGraphics->AttachControl(new IVKnobControl(envPanel.GetGridCell(1, 1, 3, 6).GetCentredInside(dialSize), kParamEnv2Decay, "Dec", modKnobStyle), kNoTag, "Env2");
     pGraphics->AttachControl(new IVKnobControl(envPanel.GetGridCell(1, 2, 3, 6).GetCentredInside(dialSize), kParamEnv2Sustain, "Sus", modKnobStyle), kNoTag, "Env2");
     pGraphics->AttachControl(new IVKnobControl(envPanel.GetGridCell(1, 3, 3, 6).GetCentredInside(dialSize), kParamEnv2Release, "Rel", modKnobStyle), kNoTag, "Env2");
-    pGraphics->AttachControl(new IVSliderControl(envPanel.GetGridCell(1, 4, 3, 6).GetVPadded(-15.f), kParamEnv2Velocity, "Velocity", modKnobStyle), kNoTag, "Env2");
-    pGraphics->AttachControl(new ModSliderControl(envPanel.GetGridCell(1, 5, 3, 6).GetVPadded(-15.f).GetHPadded(-10.f), kNoParameter, "Depth", modKnobStyle), kCtrlTagEnv2Depth, "Env2");
+    pGraphics->AttachControl(new IVSliderControl(envPanel.GetGridCell(1, 4, 3, 6).GetVPadded(-15.f), kParamEnv2Velocity, "Velocity", modKnobStyle, false, EDirection::Vertical, 4.f, 8.f, 2.f, true), kNoTag, "Env2");
+    pGraphics->AttachControl(new ModSliderControl(envPanel.GetGridCell(1, 5, 3, 6).GetVPadded(-15.f), kNoParameter, "Depth", modKnobStyle), kCtrlTagEnv2Depth, "Env2");
     pGraphics->AttachControl(new IVGroupControl("Env 2", "Env2", -2.f, 10.f, 0.f, 0.f));
     // Amplitude Envelope
     pGraphics->AttachControl(new IVKnobControl(envPanel.GetGridCell(2, 0, 3, 6).GetCentredInside(dialSize), kParamAmpEnvAttack, "Att", modKnobStyle), kNoTag, "AmpEnv");
     pGraphics->AttachControl(new IVKnobControl(envPanel.GetGridCell(2, 1, 3, 6).GetCentredInside(dialSize), kParamAmpEnvDecay, "Dec", modKnobStyle), kNoTag, "AmpEnv");
     pGraphics->AttachControl(new IVKnobControl(envPanel.GetGridCell(2, 2, 3, 6).GetCentredInside(dialSize), kParamAmpEnvSustain, "Sus", modKnobStyle), kNoTag, "AmpEnv");
     pGraphics->AttachControl(new IVKnobControl(envPanel.GetGridCell(2, 3, 3, 6).GetCentredInside(dialSize), kParamAmpEnvRelease, "Rel", modKnobStyle), kNoTag, "AmpEnv");
-    pGraphics->AttachControl(new IVSliderControl(envPanel.GetGridCell(2, 4, 3, 6).GetVPadded(-15.f), kParamAmpEnvVelocity, "Velocity", modKnobStyle), kNoTag, "AmpEnv");
-    pGraphics->AttachControl(new ModSliderControl(envPanel.GetGridCell(2, 5, 3, 6).GetVPadded(-15.f).GetHPadded(-10.f), kNoParameter, "Depth", modKnobStyle), kCtrlTagAmpEnvDepth, "AmpEnv");
+    pGraphics->AttachControl(new IVSliderControl(envPanel.GetGridCell(2, 4, 3, 6).GetVPadded(-15.f), kParamAmpEnvVelocity, "Velocity", modKnobStyle, false, EDirection::Vertical, 4.f, 8.f, 2.f, true), kNoTag, "AmpEnv");
+    pGraphics->AttachControl(new ModSliderControl(envPanel.GetGridCell(2, 5, 3, 6).GetVPadded(-15.f), kNoParameter, "Depth", modKnobStyle), kCtrlTagAmpEnvDepth, "AmpEnv");
     pGraphics->AttachControl(new IVGroupControl("Amp Env", "AmpEnv", -2.f, 10.f, 0.f, 0.f));
 
     /*
@@ -626,8 +626,8 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
     */
     const IRECT lfoPanel = lowerPanel.GetGridCell(0, 2, 1, 3).GetPadded(-4.f);
     // LFO1
-    pGraphics->AttachControl(new IVKnobControl(lfoPanel.GetGridCell(0, 0, 3, 5).GetCentredInside(dialSize), kParamLFO1RateHz, "Rate"), kNoTag, "LFO1")->Hide(true);
-    pGraphics->AttachControl(new IVKnobControl(lfoPanel.GetGridCell(0, 0, 3, 5).GetCentredInside(dialSize), kParamLFO1RateTempo, "Rate"), kNoTag, "LFO1")->DisablePrompt(false);
+    pGraphics->AttachControl(new IVKnobControl(lfoPanel.GetGridCell(0, 0, 3, 5).GetCentredInside(dialSize), kParamLFO1RateHz, "Rate"), kNoTag, "LFO1");
+    pGraphics->AttachControl(new IVKnobControl(lfoPanel.GetGridCell(0, 0, 3, 5).GetCentredInside(dialSize), kParamLFO1RateTempo, "Rate"), kNoTag, "LFO1")->Hide(true);
     pGraphics->AttachControl(new IVKnobControl(lfoPanel.GetGridCell(0, 2, 3, 5).GetCentredInside(dialSize), kParamLFO1Amp, "Amp"), kNoTag, "LFO1");
     pGraphics->AttachControl(new ICaptionControl(lfoPanel.GetGridCell(0, 1, 6, 5).GetVPadded(-20.f), kParamLFO1Shape), kNoTag, "LFO1")->DisablePrompt(false);
     pGraphics->AttachControl(new IVToggleControl(lfoPanel.GetGridCell(1, 1, 9, 5).GetVPadded(-6.f), kParamLFO1RateMode, "", DEFAULT_STYLE.WithShowLabel(false), "Sync Off", "Sync On"),
@@ -639,12 +639,11 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
     });
     pGraphics->AttachControl(new IVToggleControl(lfoPanel.GetGridCell(2, 1, 9, 5).GetVPadded(-6.f).GetVShifted(-15.f), kParamLFO1Restart, "Restart", DEFAULT_STYLE.WithShowLabel(false), "Free Run", "Retrigger"), kNoTag, "LFO1");
     pGraphics->AttachControl(new ModSliderControl(lfoPanel.GetGridCell(0, 4, 3, 5).GetVPadded(-15.f), kNoParameter, "Depth"), kCtrlTagLFO1Depth, "LFO1");
-    //pGraphics->AttachControl(new IVDisplayControl(lfoPanel.GetGridCell(1, 1, 2, 3).Union(lfoPanel.GetGridCell(1, 2, 2, 3)), "", DEFAULT_STYLE, EDirection::Horizontal, 0.f, 1.f, 0.f, 1024), kCtrlTagLFOVis, "LFO");
     pGraphics->AttachControl(new IVGroupControl("LFO 1", "LFO1", 0.f, 10.f, 0.f, 0.f));
 
     // LFO 2
-    pGraphics->AttachControl(new IVKnobControl(lfoPanel.GetGridCell(1, 0, 3, 5).GetCentredInside(dialSize), kParamLFO2RateHz, "Rate"), kNoTag, "LFO2")->Hide(true);
-    pGraphics->AttachControl(new IVKnobControl(lfoPanel.GetGridCell(1, 0, 3, 5).GetCentredInside(dialSize), kParamLFO2RateTempo, "Rate"), kNoTag, "LFO2")->DisablePrompt(false);
+    pGraphics->AttachControl(new IVKnobControl(lfoPanel.GetGridCell(1, 0, 3, 5).GetCentredInside(dialSize), kParamLFO2RateHz, "Rate"), kNoTag, "LFO2");
+    pGraphics->AttachControl(new IVKnobControl(lfoPanel.GetGridCell(1, 0, 3, 5).GetCentredInside(dialSize), kParamLFO2RateTempo, "Rate"), kNoTag, "LFO2")->Hide(true);
     pGraphics->AttachControl(new IVKnobControl(lfoPanel.GetGridCell(1, 2, 3, 5).GetCentredInside(dialSize), kParamLFO2Amp, "Amp"), kNoTag, "LFO2");
     pGraphics->AttachControl(new ICaptionControl(lfoPanel.GetGridCell(2, 1, 6, 5).GetVPadded(-20.f), kParamLFO2Shape), kNoTag, "LFO2")->DisablePrompt(false);
     pGraphics->AttachControl(new IVToggleControl(lfoPanel.GetGridCell(4, 1, 9, 5).GetVPadded(-6.f), kParamLFO2RateMode, "", DEFAULT_STYLE.WithShowLabel(false), "Sync Off", "Sync On"),
@@ -655,6 +654,7 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
         pGraphics->SetAllControlsDirty();
         });
     pGraphics->AttachControl(new IVToggleControl(lfoPanel.GetGridCell(5, 1, 9, 5).GetVPadded(-6.f).GetVShifted(-15.f), kParamLFO2Restart, "Restart", DEFAULT_STYLE.WithShowLabel(false), "Free Run", "Retrigger"), kNoTag, "LFO2");
+//    pGraphics->AttachControl(new IVPlotControl(lfoPanel.GetGridCell(1, 3, 3, 5).GetVPadded(-20.f), ...), kCtrlTagLFO2Vis, "LFO2");
     pGraphics->AttachControl(new ModSliderControl(lfoPanel.GetGridCell(1, 4, 3, 5).GetVPadded(-15.f), kNoParameter, "Depth"), kCtrlTagLFO2Depth, "LFO2");
     pGraphics->AttachControl(new IVGroupControl("LFO 2", "LFO2", 0.f, 10.f, 0.f, 0.f));
 
@@ -669,8 +669,8 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
     };
 
     pGraphics->AttachControl(new IVKnobControl(sequencerParamsPanel.GetGridCell(0, 0, 2, 3).GetCentredInside(dialSize), kParamSequencerSteps, "Steps"), kNoTag, "SequencerParams");
-    pGraphics->AttachControl(new IVKnobControl(sequencerParamsPanel.GetGridCell(0, 1, 2, 3).GetCentredInside(dialSize), kParamSequencerRateHz, "Rate"), kNoTag, "SequencerParams");
-    pGraphics->AttachControl(new IVKnobControl(sequencerParamsPanel.GetGridCell(0, 1, 2, 3).GetCentredInside(dialSize), kParamSequencerRateTempo, "Rate"), kNoTag, "SequencerParams")->Hide(true);
+    pGraphics->AttachControl(new IVKnobControl(sequencerParamsPanel.GetGridCell(0, 1, 2, 3).GetCentredInside(dialSize), kParamSequencerRateHz, "Rate"), kNoTag, "SequencerParams")->Hide(true);
+    pGraphics->AttachControl(new IVKnobControl(sequencerParamsPanel.GetGridCell(0, 1, 2, 3).GetCentredInside(dialSize), kParamSequencerRateTempo, "Rate"), kNoTag, "SequencerParams");
     pGraphics->AttachControl(new IVKnobControl(sequencerParamsPanel.GetGridCell(0, 2, 2, 3).GetCentredInside(dialSize), kParamSequencerAmp, "Amp"), kNoTag, "SequencerParams");
     pGraphics->AttachControl(new IVKnobControl(sequencerParamsPanel.GetGridCell(1, 0, 2, 3).GetCentredInside(dialSize), kParamSequencerGlide, "Glide"), kNoTag, "SequencerParams");
     pGraphics->AttachControl(new IVToggleControl(sequencerParamsPanel.GetGridCell(4, 1, 7, 3).GetHPadded(-5.f), kParamSequencerRateMode, "", DEFAULT_STYLE.WithShowLabel(false), "Sync Off", "Sync On"),
@@ -800,13 +800,15 @@ void Tablitsa::ProcessBlock(sample** inputs, sample** outputs, int nFrames)
 {
   mDSP.ProcessBlock(nullptr, outputs, 2, nFrames, mTimeInfo.mPPQPos, mTimeInfo.mTransportIsRunning);
   mMeterSender.ProcessBlock(outputs, nFrames, kCtrlTagMeter);
-  // mLFOVisSender.PushData({kCtrlTagLFOVis, {float(mDSP.mLFO.GetLastOutput())}});
-  // TODO: If no voices are active, increment the phases of free-run modulators
+//  mLFO1VisSender.PushData({ kCtrlTagLFO1Vis, {float(mDSP.mGlobalLFO1.GetLastOutput())}});
+//  mLFO2VisSender.PushData({ kCtrlTagLFO2Vis, {float(TablitsaDSP<sample>::mGlobalLFO2.GetLastOutput())} });
 }
 
 void Tablitsa::OnIdle()
 {
   mMeterSender.TransmitData(*this);
+//  mLFO1VisSender.TransmitData(*this);
+//  mLFO2VisSender.TransmitData(*this);
 
   // Send time signature to DSP class
   GetTimeSig(mDSP.mTSNum, mDSP.mTSDenom);
@@ -818,7 +820,6 @@ void Tablitsa::OnIdle()
     SendControlMsgFromDelegate(kCtrlTagSequencer, IVMultiSliderControl<>::kMsgTagSetHighlight, sizeof(int), &mDSP.mPrevPos);
   }
 
-  //mLFOVisSender.TransmitData(*this);
   // Update Sequencer Position
   if (mDSP.GetSequencerStep() != mDSP.mSeqPos)
   {

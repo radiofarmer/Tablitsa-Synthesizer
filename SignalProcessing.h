@@ -1,5 +1,7 @@
 #pragma once
 
+#include "Filter.h"
+
 class DelayLine
 {
 public:

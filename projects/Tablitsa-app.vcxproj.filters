@@ -322,6 +322,7 @@
     <ClInclude Include="..\PeriodicTable.h" />
     <ClInclude Include="..\VoiceThread.h" />
     <ClInclude Include="..\VectorFunctions.h" />
+    <ClInclude Include="..\Effects.h" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="resources">

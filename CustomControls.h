@@ -258,8 +258,8 @@ public:
   {
     const float extra = mHandleInsideTrack ? mHandleSize : 0.f;
     const IRECT adjustedTrackBounds = mDirection == EDirection::Vertical ? mTrackBounds.GetVPadded(extra) : mTrackBounds.GetHPadded(extra);
-    const IRECT adjustedFillBounds = filledArea;
-    //const IRECT adjustedFillBounds = mDirection == EDirection::Vertical ? filledArea.GetVPadded(extra) : filledArea.GetHPadded(extra);
+    //const IRECT adjustedFillBounds = filledArea;
+    const IRECT adjustedFillBounds = mDirection == EDirection::Vertical ? filledArea.GetVPadded(extra) : filledArea.GetHPadded(extra);
     const float cr = GetRoundedCornerRadius(mTrackBounds);
 
     g.FillRoundRect(GetColor(kSH), adjustedTrackBounds, cr, &mBlend);
@@ -567,7 +567,6 @@ public:
             g.PathMoveTo(trackBounds.L + 1, trackBounds.B - step * stepSpan);
             g.PathLineTo(trackBounds.R - 1, trackBounds.B - step * stepSpan);
             g.PathStroke(mStepMarkerColor, 1.f);
-            int a = step % 2;
             if (step % 2 == 0)
               g.DrawText(labelText, std::to_string(nSteps - step - 1).c_str(), stepBounds);
           }

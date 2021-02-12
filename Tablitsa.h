@@ -307,7 +307,8 @@ enum EControlTags
 {
   kCtrlTagPeriodicTable = 0,
   kCtrlTagMeter,
-  kCtrlTagLFOVis,
+  kCtrlTagLFO1Vis,
+  kCtrlTagLFO2Vis,
   kCtrlTagScope,
   kCtrlTagRTText,
   kCtrlTagKeyboard,
@@ -382,7 +383,8 @@ public:
 private:
   TablitsaDSP<sample> mDSP {kNumVoices}; // sample is an alias for double
   IPeakSender<2> mMeterSender;
-  ISender<1> mLFOVisSender;
+  ISender<1> mLFO1VisSender;
+  ISender<1> mLFO2VisSender;
   IControl* mActiveControl{};
 #endif
 };
