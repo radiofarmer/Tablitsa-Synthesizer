@@ -11,16 +11,8 @@
 #include "Smoothers.h"
 #include "LFO.h"
 
-#if !_DEBUG
-  #define VECTOR
-#endif
 #ifdef VECTOR
  #define FRAME_INTERVAL OUTPUT_SIZE
- /* #ifdef OVERSAMPLING
-    #define FRAME_INTERVAL 2
-  #else
-    #define FRAME_INTERVAL 4
-  #endif*/
 #else
   #define FRAME_INTERVAL 1
 #endif
@@ -350,11 +342,11 @@ public:
       // Write ramps for modulators
       mModulators.ProcessBlock(&(inputs[kModEnv1SustainSmoother]), nFrames);
       // Apply modulation ramps to all modulated parameters
-#ifndef _DEBUG
+#if 0
       mVoiceModParams.ProcessBlockVec4d(&inputs[kModWavetable1PitchSmoother], mModulators.GetList(), mVModulations.GetList(), nFrames);
 #else
       mVoiceModParams.ProcessBlock(&inputs[kModWavetable1PitchSmoother], mModulators.GetList(), mVModulations.GetList(), nFrames);
-#endif // !_DEBUG
+#endif
 
       const double phaseModFreqFact = pow(2., mVModulations.GetList()[kVPhaseModFreq][0] / 12.);
       const double ringModFreqFact = pow(2., mVModulations.GetList()[kVRingModFreq][0] / 12.);
@@ -499,8 +491,8 @@ public:
     }
 
   public:
-    WavetableOscillator<T> mOsc1{ 0, WtFile("Hydrogen") };
-    WavetableOscillator<T> mOsc2{ 1, WtFile("Helium") };
+    WavetableOscillator<T> mOsc1{ 0, "Hydrogen" };
+    WavetableOscillator<T> mOsc2{ 1, "Helium" };
     SaturationEQ<T> mOsc1Sub;
     SaturationEQ<T> mOsc2Sub;
 
@@ -518,7 +510,7 @@ public:
     FastLFO<T> mLFO1;
     FastLFO<T> mLFO2;
     Sequencer<T, kNumSeqSteps> mSequencer;
-    ModulatorList<T, ADSREnvelope, FastLFO> mModulators;
+    ModulatorList<T, ADSREnvelope<T>, FastLFO<T>, Sequencer<T>> mModulators;
 
     // Pointers to master modulators, for free-run and legato modes
     static inline std::vector<ADSREnvelope<T>*> Env1Queue;
@@ -545,26 +537,26 @@ public:
   private:
 //    WDL_TypedBuf<float> mTimbreBuffer;
     ModulatedParameterList<T, kNumVoiceModulations> mVoiceModParams{
-      new ParameterModulator(-24., 24., "Wt1 Pitch Offset"),
-      new ParameterModulator(0., 1., "Wt1 Position"),
-      new ParameterModulator(-1., 1., "Wt1 Bend"),
-      new ParameterModulator(0., 1., "Wt1 Sub"),
-      new ParameterModulator(0., 1., "Wt1 Amp"),
-      new ParameterModulator(-24., 24., "Wt1 Pitch Offset"),
-      new ParameterModulator(0., 1., "Wt2 Position"),
-      new ParameterModulator(-1., 1., "Wt2 Bend"),
-      new ParameterModulator(0., 1., "Wt2 Sub"),
-      new ParameterModulator(0., 1., "Wt2 Amp"),
-      new ParameterModulator(0.001, 0.5, "Flt1 Cutoff", true),
-      new ParameterModulator(0., 1., "Flt1 Resonance"),
-      new ParameterModulator(0., 1., "Flt1 Drive"),
-      new ParameterModulator(0.001, 0.5, "Flt2 Cutoff", true),
-      new ParameterModulator(0., 1., "Flt2 Resonance"),
-      new ParameterModulator(0., 1., "Flt2 Drive"),
-      new ParameterModulator(-24., 24., "Phase Mod Freq"), 
-      new ParameterModulator(0., 1., "Phase Mod Depth"),
-      new ParameterModulator(-24., 24., "Ring Mod Freq"),
-      new ParameterModulator(0., 1., "Ring Mod Depth") };
+      new ParameterModulator<>(-24., 24., "Wt1 Pitch Offset"),
+      new ParameterModulator<>(0., 1., "Wt1 Position"),
+      new ParameterModulator<>(-1., 1., "Wt1 Bend"),
+      new ParameterModulator<>(0., 1., "Wt1 Sub"),
+      new ParameterModulator<>(0., 1., "Wt1 Amp"),
+      new ParameterModulator<>(-24., 24., "Wt1 Pitch Offset"),
+      new ParameterModulator<>(0., 1., "Wt2 Position"),
+      new ParameterModulator<>(-1., 1., "Wt2 Bend"),
+      new ParameterModulator<>(0., 1., "Wt2 Sub"),
+      new ParameterModulator<>(0., 1., "Wt2 Amp"),
+      new ParameterModulator<>(0.001, 0.5, "Flt1 Cutoff", true),
+      new ParameterModulator<>(0., 1., "Flt1 Resonance"),
+      new ParameterModulator<>(0., 1., "Flt1 Drive"),
+      new ParameterModulator<>(0.001, 0.5, "Flt2 Cutoff", true),
+      new ParameterModulator<>(0., 1., "Flt2 Resonance"),
+      new ParameterModulator<>(0., 1., "Flt2 Drive"),
+      new ParameterModulator<>(-24., 24., "Phase Mod Freq"),
+      new ParameterModulator<>(0., 1., "Phase Mod Depth"),
+      new ParameterModulator<>(-24., 24., "Ring Mod Freq"),
+      new ParameterModulator<>(0., 1., "Ring Mod Depth") };
 
     double mDetune{ 0. };
 
@@ -628,9 +620,15 @@ public:
 
     for(int s=0; s < nFrames;s++)
     {
-      T smoothedGain = mModulations.GetList()[kModGainSmoother][s];
+      const T smoothedGain = mModulations.GetList()[kModGainSmoother][s];
       // Master effects processing
-      T* delay = mDelayEffect.ProcessStereo(outputs[0][s], outputs[0][s]);
+#if _DEBUG
+      const T* delay = mDelayEffect.ProcessStereo(outputs[0][s], outputs[0][s]); // This gets optimized out in the release build apparently???
+#else
+      T delay_in[2]{ outputs[0][s], outputs[1][s] };
+      const T* delay = mDelayEffect.ProcessStereo(delay_in);
+      //const T delay[2]{ mDelayEffect.Process(outputs[0][s]), mDelayEffect.Process(outputs[0][s]) };
+#endif
       outputs[0][s] += delay[0];
       outputs[1][s] += delay[1];
 
