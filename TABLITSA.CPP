@@ -32,33 +32,40 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
   GetParam(kParamUnisonDetune)->InitDouble("Unison Detune", 0., 0., 12., 0.01, "St.");
   GetParam(kParamUnisonChord)->InitEnum("Chord", 0, { UNISON_CHORD_LIST });
   /*Modulators*/
+  // Envelope 1
   GetParam(kParamEnv1Attack)->InitDouble("Env1 Attack", 10., 1., 3000., 0.1, "ms", IParam::kFlagsNone, "ADSR", IParam::ShapePowCurve(3.));
   GetParam(kParamEnv1Decay)->InitDouble("Env1 Decay", 10., 1., 3000., 0.1, "ms", IParam::kFlagsNone, "ADSR", IParam::ShapePowCurve(3.));
   GetParam(kParamEnv1Sustain)->InitDouble("Env1 Sustain", 50., 0., 100., 1, "%", IParam::kFlagsNone, "ADSR");
   GetParam(kParamEnv1Release)->InitDouble("Env1 Release", 10., 2., 3000., 0.1, "ms", IParam::kFlagsNone, "ADSR");
   GetParam(kParamEnv1Velocity)->InitDouble("Env1 Velocity Mod", 0., 0., 1., 0.01);
+  // Envelope 2
   GetParam(kParamEnv2Attack)->InitDouble("Env2 Attack", 10., 1., 3000., 0.1, "ms", IParam::kFlagsNone, "ADSR", IParam::ShapePowCurve(3.));
   GetParam(kParamEnv2Decay)->InitDouble("Env2 Decay", 10., 1., 3000., 0.1, "ms", IParam::kFlagsNone, "ADSR", IParam::ShapePowCurve(3.));
   GetParam(kParamEnv2Sustain)->InitDouble("Env2 Sustain", 50., 0., 100., 1, "%", IParam::kFlagsNone, "ADSR");
   GetParam(kParamEnv2Release)->InitDouble("Env2 Release", 10., 2., 3000., 0.1, "ms", IParam::kFlagsNone, "ADSR");
   GetParam(kParamEnv2Velocity)->InitDouble("Env2 Velocity Mod", 0., 0., 1., 0.01);
+  // Amplitude Envelopoe
   GetParam(kParamAmpEnvAttack)->InitDouble("AmpEnv Attack", 10., 1., 3000., 0.1, "ms", IParam::kFlagsNone, "ADSR", IParam::ShapePowCurve(3.));
   GetParam(kParamAmpEnvDecay)->InitDouble("AmpEnv Decay", 10., 1., 3000., 0.1, "ms", IParam::kFlagsNone, "ADSR", IParam::ShapePowCurve(3.));
   GetParam(kParamAmpEnvSustain)->InitDouble("AmpEnv Sustain", 50., 0., 100., 1, "%", IParam::kFlagsNone, "ADSR");
   GetParam(kParamAmpEnvRelease)->InitDouble("AmpEnv Release", 10., 2., 3000., 0.1, "ms", IParam::kFlagsNone, "ADSR");
   GetParam(kParamAmpEnvVelocity)->InitDouble("AmpEnv Velocity Mod", 1., 0., 1., 0.01);
+  // LFO 1
   GetParam(kParamLFO1Shape)->InitEnum("LFO1 Shape", LFO<>::kTriangle, {LFO_SHAPE_VALIST});
   GetParam(kParamLFO1RateHz)->InitFrequency("LFO1 Rate", 1., 0.01, 40.);
   GetParam(kParamLFO1RateTempo)->InitEnum("LFO1 Rate", LFO<>::k1, {LFO_TEMPODIV_VALIST});
   GetParam(kParamLFO1RateMode)->InitBool("LFO1 Sync", false);
   GetParam(kParamLFO1Restart)->InitBool("LFO1 Retrigger", false);
   GetParam(kParamLFO1Amp)->InitDouble("LFO Amp", 1., -1., 1., 0.01, "", IParam::kFlagsNone, "LFO");
+  GetParam(kParamLFO1AmpEnv1)->InitDouble("LFO1 Amp Env1 Depth", 0., -1., 1., 0.01);
+  // LFO 2
   GetParam(kParamLFO2Shape)->InitEnum("LFO2 Shape", LFO<>::kTriangle, { LFO_SHAPE_VALIST });
   GetParam(kParamLFO2RateHz)->InitFrequency("LFO2 Rate", 1., 0.01, 40.);
   GetParam(kParamLFO2RateTempo)->InitEnum("LFO2 Rate", LFO<>::k1, { LFO_TEMPODIV_VALIST });
   GetParam(kParamLFO2RateMode)->InitBool("LFO2 Sync", false);
   GetParam(kParamLFO2Restart)->InitBool("LFO2 Retrigger", false);
   GetParam(kParamLFO2Amp)->InitDouble("LFO Amp", 1., -1., 1., 0.01, "", IParam::kFlagsNone, "LFO");
+  // Sequencer
   GetParam(kParamSequencerRateHz)->InitFrequency("Sequencer Rate", 1., 0.01, 40.);
   GetParam(kParamSequencerRateTempo)->InitEnum("Sequencer Rate", LFO<>::k4th, { LFO_TEMPODIV_VALIST });
   GetParam(kParamSequencerRateMode)->InitBool("Sequencer Sync", true);
@@ -628,7 +635,7 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
     // LFO1
     pGraphics->AttachControl(new IVKnobControl(lfoPanel.GetGridCell(0, 0, 3, 5).GetCentredInside(dialSize), kParamLFO1RateHz, "Rate"), kNoTag, "LFO1");
     pGraphics->AttachControl(new IVKnobControl(lfoPanel.GetGridCell(0, 0, 3, 5).GetCentredInside(dialSize), kParamLFO1RateTempo, "Rate"), kNoTag, "LFO1")->Hide(true);
-    pGraphics->AttachControl(new IVKnobControl(lfoPanel.GetGridCell(0, 2, 3, 5).GetCentredInside(dialSize), kParamLFO1Amp, "Amp"), kNoTag, "LFO1");
+    pGraphics->AttachControl(new IVModKnobControl(lfoPanel.GetGridCell(0, 2, 3, 5).GetCentredInside(dialSize), kParamLFO1Amp, "Amp"), kNoTag, "LFO1");
     pGraphics->AttachControl(new ICaptionControl(lfoPanel.GetGridCell(0, 1, 6, 5).GetVPadded(-20.f), kParamLFO1Shape), kNoTag, "LFO1")->DisablePrompt(false);
     pGraphics->AttachControl(new IVToggleControl(lfoPanel.GetGridCell(1, 1, 9, 5).GetVPadded(-6.f), kParamLFO1RateMode, "", DEFAULT_STYLE.WithShowLabel(false), "Sync Off", "Sync On"),
       kNoTag, "LFO1")->SetAnimationEndActionFunction([pGraphics](IControl* pControl) {

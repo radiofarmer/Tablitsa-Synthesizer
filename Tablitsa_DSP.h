@@ -91,6 +91,20 @@ enum EVoiceModParams
   kNumVoiceModulations
 };
 
+enum EVoiceMetaModParams
+{
+  kVEnv1Sustain,
+  kVEnv2Sustain,
+  kVAmpEnvSustain,
+  kVLFO1RateHz,
+  kVLFO1Amp,
+  kVLFO2RateHz,
+  kVLFO2Amp,
+  kVSequencerRateHz,
+  kVSequencerAmp,
+  kNumVoiceMetaModulations
+};
+
 // See Modulators.h for the enumeration of the number of modulators
 
 #define UNISON_CHORD_LIST "None", "8va", "M7", "D7", "D7 6/5", "D7 4/3", "m7", "ø7", "dim7"
@@ -347,7 +361,8 @@ public:
       T staticMods[]{ mVelocity, keytrack, mTriggerRand };
       mVoiceModParams.SetStaticModulation(staticMods);
       // Write ramps for modulators
-      mModulators.ProcessBlock(&(inputs[kModEnv1SustainSmoother]), nFrames);
+      mModulators.MetaProcessBlock<kNumVoiceMetaModulations>(&(inputs[kModEnv1SustainSmoother]), nFrames, mVoiceMetaModParams);
+      // mModulators.ProcessBlock(&(inputs[kModEnv1SustainSmoother]), nFrames);
       // Apply modulation ramps to all modulated parameters
 #if 0
       mVoiceModParams.ProcessBlockVec4d(&inputs[kModWavetable1PitchSmoother], mModulators.GetList(), mVModulations.GetList(), nFrames);
@@ -493,9 +508,19 @@ public:
       }
     }
 
+    /* Update polyphonic modulation depths */
     void UpdateVoiceParam(int voiceParam, int modIdx, double value)
     {
       mVoiceModParams[voiceParam].SetValue(modIdx - 1, value); // Eventually adjust the value of modIdx in the SetParam switch statement rather than here
+    }
+
+    /* Update meta-modulation depths */
+    void UpdateVoiceModulatorParam(int paramIdx, int modIdx, double value)
+    {
+      if (modIdx == 0)
+        mVoiceMetaModParams[paramIdx].SetInitialValue(value);
+      else
+        mVoiceMetaModParams[paramIdx].SetValue(modIdx - 1, value);
     }
 
   public:
@@ -567,6 +592,19 @@ public:
       new ParameterModulator<>(0., 1., "Phase Mod Depth"),
       new ParameterModulator<>(-24., 24., "Ring Mod Freq"),
       new ParameterModulator<>(0., 1., "Ring Mod Depth") };
+
+    ModulatedParameterList<T, kNumVoiceMetaModulations> mVoiceMetaModParams{
+      new ParameterModulator<>(-1., 1., "Env1 Sustain"),
+      new ParameterModulator<>(-1., 1., "Env2 Sustain"),
+      new ParameterModulator<>(-1., 1., "AmpEnv Sustain"),
+      new ParameterModulator<>(-1., 1., "LFO1 Rate Hz"),
+      new ParameterModulator<>(-1., 1., "LFO1 Amp"),
+      new ParameterModulator<>(-1., 1., "LFO2 Rate Hz"),
+      new ParameterModulator<>(-1., 1., "LFO2 Amp"),
+      new ParameterModulator<>(-1., 1., "Sequencer Rate Hz"),
+      new ParameterModulator<>(-1., 1., "Sequencer Amp"),
+
+    };
 
     double mDetune{ 0. };
 
@@ -851,6 +889,21 @@ public:
         mGlobalLFO1.SetScalar(value);
         mSynth.ForEachVoice([value](SynthVoice& voice) {
           dynamic_cast<TablitsaDSP::Voice&>(voice).mLFO1.SetScalar(value);
+          });
+        // No `break` for meta mod params!
+      }
+      case kParamLFO1AmpEnv1:
+      case kParamLFO1AmpEnv2:
+      case kParamLFO1AmpAmpEnv:
+      case kParamLFO1AmpLFO2:
+      case kParamLFO1AmpSeq:
+      case kParamLFO1AmpVel:
+      case kParamLFO1AmpKTk:
+      case kParamLFO1AmpRnd:
+      {
+        const int modIdx = paramIdx - kParamLFO1Amp;
+        SendParam([paramIdx, modIdx, value](Voice* voice) {
+          voice->UpdateVoiceModulatorParam(kVLFO1Amp, modIdx, value);
           });
         break;
       }

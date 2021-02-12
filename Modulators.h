@@ -87,6 +87,11 @@ public:
     mModDepths[idx] = value * mRange;
   }
 
+  virtual void SetInitialValue(const double value)
+  {
+    mInitial = value;
+  }
+
   /*
   Write a buffer of modulation buffers. Can be called directly by a ParameterModulator, or indirectly by a ParameterModulatorList.
   @param inputs The initival values (parameter values) for the parameter
@@ -99,6 +104,11 @@ public:
     {
       outputs[i] = AddModulation(inputs[i]);
     }
+  }
+
+  inline double AddModulation()
+  {
+    return AddModulation(mInitial);
   }
 
   /* TODO: This may be better implemented with virtual functions (see ParameterModulationExp implementation below) */
@@ -145,6 +155,7 @@ protected:
   static inline double mModValues[EModulators::kNumMods]{ 0. };
   double mStaticModulation{};
 
+  double mInitial{ 0. };
   double mModDepths[DynMods + StatMods]{ 0. };
 
   double mMin{ 0. };
@@ -546,18 +557,24 @@ public:
   {
     mEnvPtrs.push_back(env);
     mNumEnvs += 1;
+    mNumMods += 1;
+    ResizeHistoryBuffer();
   }
 
   void AddModulator(LFOType* lfo)
   {
     mLFOPtrs.push_back(lfo);
     mNumLFOs += 1;
+    mNumMods += 1;
+    ResizeHistoryBuffer();
   }
 
   void AddModulator(SequencerType* seq)
   {
     mSequencerPtrs.push_back(seq);
     mNumSeqs += 1;
+    mNumMods += 1;
+    ResizeHistoryBuffer();
   }
 
   void ReplaceModulator(EnvType* env, size_t idx)
@@ -589,9 +606,41 @@ public:
     }
   }
 
+  /* Write meta-modulated modulation values to a buffer */
+  template<int NMetaParams>
+  void MetaProcessBlock(T** inputs, int nFrames, ModulatedParameterList<T, NMetaParams>& metaMods)
+  {
+    for (auto i{ 0 }; i < nFrames; ++i)
+    {
+      // Envelopes
+      for (auto e{ 0 }; e < mEnvPtrs.size(); ++e)
+      {
+        mPrevValues[e] = mModulators.GetList()[e][i] = mEnvPtrs[e]->Process(inputs[e][i]);
+      }
+      // LFOs
+      for (auto l{ 0 }; l < mLFOPtrs.size(); ++l)
+      {
+        int absIdx = l + mEnvPtrs.size();
+        mLFOPtrs[l]->SetScalar(metaMods[absIdx + l + 1].AddModulation());
+        mPrevValues[absIdx] = mModulators.GetList()[absIdx][i] = mLFOPtrs[l]->Process();
+      }
+      // Sequencers
+      for (auto s{ 0 }; s < mSequencerPtrs.size(); ++s)
+      {
+        int absIdx = s + mEnvPtrs.size() + mLFOPtrs.size();
+        mPrevValues[absIdx] = mModulators.GetList()[absIdx][i] = mSequencerPtrs[s]->Process();
+      }
+    }
+  }
+
   inline T** GetList()
   {
     return mModulators.GetList();
+  }
+
+  void EmptyAndResize(int newLength)
+  {
+    EmptyAndResize(newLength, mNumMods);
   }
 
   void EmptyAndResize(int newLength, int numMods)
@@ -607,6 +656,13 @@ public:
     }
   }
 
+  void ResizeHistoryBuffer()
+  {
+    if (mPrevValues)
+      delete[] mPrevValues;
+    mPrevValues = new T[mNumMods];
+  }
+
 private:
   std::vector<EnvType*> mEnvPtrs;
   std::vector<LFOType*> mLFOPtrs;
@@ -615,6 +671,7 @@ private:
   int mNumEnvs{ 0 };
   int mNumLFOs{ 0 };
   int mNumSeqs{ 0 };
+  T* mPrevValues{ nullptr };
 
   WDL_PtrList<T> mModulators;
   WDL_TypedBuf<T> mModulatorRamps;
