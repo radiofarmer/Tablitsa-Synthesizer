@@ -1,14 +1,15 @@
 #pragma once
 
+#include "PeriodicTable.h"
+#include "Wavetable.h"
+#include "Effects.h"
+
 #include "IPlugConstants.h"
 #include "Oscillator.h"
 #include "MidiSynth.h"
 #include "ADSREnvelope.h"
 #include "Smoothers.h"
-#include "Wavetable.h"
 #include "LFO.h"
-#include "Filter.h"
-#include "PeriodicTable.h"
 
 #if !_DEBUG
   #define VECTOR
@@ -404,6 +405,12 @@ public:
       mEnv2.SetSampleRate(sampleRate);
       mLFO1.SetSampleRate(sampleRate);
       mLFO2.SetSampleRate(sampleRate);
+
+      mFilters[0]->SetSampleRate(sampleRate);
+      mFilters[1]->SetSampleRate(sampleRate);
+
+      mOsc1Sub.SetSampleRate(sampleRate);
+      mOsc2Sub.SetSampleRate(sampleRate);
       
       mVModulationsData.Resize(blockSize * kNumModulations);
       mVModulations.Empty();
@@ -483,8 +490,8 @@ public:
   public:
     WavetableOscillator<T> mOsc1{ 0, WtFile("Hydrogen") };
     WavetableOscillator<T> mOsc2{ 1, WtFile("Helium") };
-    BassBoost<T> mOsc1Sub;
-    BassBoost<T> mOsc2Sub;
+    SaturationEQ<T> mOsc1Sub;
+    SaturationEQ<T> mOsc2Sub;
 
     // Static Modulators
     T mKey{ 69. };
@@ -628,7 +635,7 @@ public:
     ResetAllVoices();
     mSynth.ForEachVoice([sampleRate](SynthVoice& voice) {
       for (auto f : dynamic_cast<TablitsaDSP::Voice&>(voice).mFilters)
-        f->UpdateSampleRate(sampleRate);
+        f->SetSampleRate(sampleRate);
       });
 
     // Global modulators
