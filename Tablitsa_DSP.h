@@ -25,6 +25,8 @@
   #define FRAME_INTERVAL 1
 #endif
 
+constexpr double kMaxEnvTimeScalar = 0.5;
+
 using namespace iplug;
 
 /*
@@ -269,14 +271,15 @@ public:
       if (isRetrigger)
       {
         mAmpEnv.Retrigger(level);
-        mEnv1.Retrigger(1.);
+        mEnv1.Retrigger(1., 1. - Voice::mEnv1VelocityMod);
         mEnv2.Retrigger(1.);
       }
       else if (!Voice::mLegato)
       {
-        mAmpEnv.Start(level);
-        mEnv1.Start(1.);
-        mEnv2.Start(1.);
+        double velSubtr = 1. - level;
+        mAmpEnv.Start(1. - velSubtr * Voice::mAmpEnvVelocityMod, 1. - Voice::mAmpEnvVelocityMod * kMaxEnvTimeScalar * level);
+        mEnv1.Start(1. - velSubtr * Voice::mEnv1VelocityMod, 1. - Voice::mEnv1VelocityMod * kMaxEnvTimeScalar * level);
+        mEnv2.Start(1. - velSubtr * Voice::mEnv2VelocityMod, 1. - Voice::mEnv2VelocityMod * kMaxEnvTimeScalar * level);
       }
       else
       {
@@ -293,18 +296,26 @@ public:
             masterEnv2 = Env2Queue[i];
           }
         }
-        //if (Voice::mMasterAmpEnv && !Voice::mMasterAmpEnv->GetReleased() && Voice::mMasterAmpEnv->GetStage() >= 0)
+
         if (masterAmpEnv)
         {
-          mAmpEnv.StartAt(level, masterAmpEnv->GetValue(), masterAmpEnv->GetPrevResult(), masterAmpEnv->GetStage());
-          mEnv1.StartAt(level, masterEnv1->GetValue(), masterEnv1->GetPrevResult(), masterEnv1->GetStage());
-          mEnv2.StartAt(level, masterEnv2->GetValue(), masterEnv2->GetPrevResult(), masterEnv2->GetStage());
+          double velSubtr = 1. - level;
+          mAmpEnv.StartAt(1. - velSubtr * Voice::mAmpEnvVelocityMod,
+            masterAmpEnv->GetValue(), masterAmpEnv->GetPrevResult(), masterAmpEnv->GetStage(),
+            1. - Voice::mAmpEnvVelocityMod * kMaxEnvTimeScalar * level);
+          mEnv1.StartAt(1. - velSubtr * Voice::mEnv1VelocityMod,
+            masterEnv1->GetValue(), masterEnv1->GetPrevResult(), masterEnv1->GetStage(),
+            1. - Voice::mEnv1VelocityMod * kMaxEnvTimeScalar * level);
+          mEnv2.StartAt(1. - velSubtr * Voice::mEnv2VelocityMod,
+            masterEnv2->GetValue(), masterEnv2->GetPrevResult(), masterEnv2->GetStage(),
+            1. - Voice::mEnv2VelocityMod * kMaxEnvTimeScalar * level);
         }
         else
         {
-          mAmpEnv.Start(level);
-          mEnv1.Start(1.);
-          mEnv2.Start(1.);
+          double velSubtr = 1. - level;
+          mAmpEnv.Start(1. - velSubtr * Voice::mAmpEnvVelocityMod, 1. - Voice::mAmpEnvVelocityMod * kMaxEnvTimeScalar * level);
+          mEnv1.Start(1. - velSubtr * Voice::mEnv1VelocityMod, 1. - Voice::mEnv1VelocityMod * kMaxEnvTimeScalar * level);
+          mEnv2.Start(1. - velSubtr * Voice::mEnv2VelocityMod, 1. - Voice::mEnv2VelocityMod * kMaxEnvTimeScalar * level);
         }
         // Sync the master envelopes to this voice's envelopes
         Voice::Env1Queue[mID] = &mEnv1;
@@ -791,13 +802,8 @@ public:
         break;
       }
       case kParamEnv1Velocity:
-      {
         Voice::mEnv1VelocityMod = value;
-        mSynth.ForEachVoice([value](SynthVoice& voice) {
-          dynamic_cast<TablitsaDSP::Voice&>(voice);
-          });
         break;
-      }
       case kParamEnv2Sustain:
         mParamsToSmooth[kModEnv2SustainSmoother] = (T)value / 100.;
         break;
@@ -811,6 +817,9 @@ public:
           });
         break;
       }
+      case kParamEnv2Velocity:
+        Voice::mEnv2VelocityMod = value;
+        break;
       case kParamAmpEnvSustain:
         mParamsToSmooth[kModAmpEnvSustainSmoother] = (T) value / 100.;
         break;
@@ -825,6 +834,9 @@ public:
         });
         break;
       }
+      case kParamAmpEnvVelocity:
+        Voice::mAmpEnvVelocityMod = value;
+        break;
       case kParamLFO1Amp:
       {
         mGlobalLFO1.SetScalar(value);

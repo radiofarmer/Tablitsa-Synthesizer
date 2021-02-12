@@ -258,8 +258,8 @@ public:
   {
     const float extra = mHandleInsideTrack ? mHandleSize : 0.f;
     const IRECT adjustedTrackBounds = mDirection == EDirection::Vertical ? mTrackBounds.GetVPadded(extra) : mTrackBounds.GetHPadded(extra);
-    const IRECT adjustedFillBounds = filledArea;
-    //const IRECT adjustedFillBounds = mDirection == EDirection::Vertical ? filledArea.GetVPadded(extra) : filledArea.GetHPadded(extra);
+    //const IRECT adjustedFillBounds = filledArea;
+    const IRECT adjustedFillBounds = mDirection == EDirection::Vertical ? filledArea.GetVPadded(extra) : filledArea.GetHPadded(extra);
     const float cr = GetRoundedCornerRadius(mTrackBounds);
 
     g.FillRoundRect(GetColor(kSH), adjustedTrackBounds, cr, &mBlend);
