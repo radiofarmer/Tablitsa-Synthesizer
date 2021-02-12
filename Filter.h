@@ -11,7 +11,7 @@
 
 #define FILTER_TYPE_LIST "None", "VSF", "Moog Ladder", "Comb"
 #define FILTER_MODE_LIST_VSF  "Lowpass", "Highpass", "Bandpass", "Allpass"
-#define FILTER_MODE_LIST_MOOG  "Lowpass", "Highpass", "Bandpass"
+#define FILTER_MODE_LIST_MOOG  "Lowpass I", "Highpass I", "Bandpass I", "Lowpass II", "Highpass II", "Bandpass II"
 #define FILTER_MODE_LIST_COMB  "N/A"
 
 #define COMB_MAX_DELAY 512
@@ -296,10 +296,21 @@ public:
       mD = mE = 0.;
       break;
     case kBandpass12db:
-      mA = mD = mE = 0;
-      mB = 2;
-      mC = -2;
+      mA = mD = mE = 0.;
+      mB = 2.;
+      mC = -2.;
       break;
+    case kLowpass24db:
+      mA = mB = mC = mD = 0.;
+      mE = 1.;
+    case kHighpass24db:
+      mA = mE = 1.;
+      mB = mD = -4.;
+      mC = 6.;
+    case kBandpass24db:
+      mA = mB = 0.;
+      mC = mE = 4.;
+      mD = -8.;
     default:
       break;
     }
