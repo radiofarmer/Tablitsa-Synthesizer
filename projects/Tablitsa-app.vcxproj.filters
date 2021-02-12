@@ -102,6 +102,7 @@
       <Filter>WDL</Filter>
     </ClCompile>
     <ClCompile Include="..\VectorFunctions.cpp" />
+    <ClCompile Include="..\SignalProcessing.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\Tablitsa.h" />

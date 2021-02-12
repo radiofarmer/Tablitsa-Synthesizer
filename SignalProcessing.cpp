@@ -1,27 +1,30 @@
 #include "SignalProcessing.h"
 
-template<typename T>
-DelayLine<T>::~DelayLine()
-{
-  delete mBuffer;
-};
+#include <assert.h>
 
-/*
-Push a new value onto the delay line and adjust the read and write heads
-*/
-template<typename T>
-void DelayLine<T>::push(T s)
+double SoftClip(double s, double gain)
 {
-  mWrite++ = s;
-  mRead++;
-  if (mWrite == mLength)
-    mWrite = mBuffer;
-  if (mRead == mLength)
-    mRead = mBuffer;
+  /*double s_abs = std::abs(s);
+  double s2 = (2 - 3 * std::tanh(s_abs * gain));
+  double sum = (2 * s_abs * std::tanh(s_abs * gain) + (3 - s2 * s2) / 3 + std::tanh(s_abs * gain * gain)) / 3.;*/
+  double s_abs = std::tanh(std::abs(s * gain));
+  double nonlin = 2. - 3 * s_abs * s_abs;
+  return std::copysign((3. - nonlin * nonlin) / 4., s);
 }
 
-template<typename T>
-T DelayLine<T>::at(size_t offset)
+DelayLine::DelayLine(const int length) : mLength(length)
 {
-  return (mRead - mBuffer)[offset];
+  assert(mLength > 1);
+  mBuffer = new double[mLength] {};
+}
+
+void DelayLine::reset()
+{
+  delete[] mBuffer;
+  mBuffer = new double[mLength] {};
+}
+
+void DelayLine::SetDelay(const int d)
+{
+  mLength = d;
 }

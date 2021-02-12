@@ -152,6 +152,8 @@
     <ClCompile Include="..\..\..\WDL\fft.c">
       <Filter>WDL</Filter>
     </ClCompile>
+    <ClCompile Include="..\SignalProcessing.cpp" />
+    <ClCompile Include="..\VectorFunctions.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="../config.h" />
