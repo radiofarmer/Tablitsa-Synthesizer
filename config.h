@@ -1,12 +1,12 @@
 #define PLUG_NAME "Tablitsa"
 #define PLUG_MFR "RadioFarmer"
-#define PLUG_VERSION_HEX 0x00010000
-#define PLUG_VERSION_STR "1.0.0"
+#define PLUG_VERSION_HEX 0x00000001
+#define PLUG_VERSION_STR "0.0.1"
 #define PLUG_UNIQUE_ID 'BWcP'
 #define PLUG_MFR_ID 'Acme'
-#define PLUG_URL_STR "https://iplug2.github.io"
+#define PLUG_URL_STR "https://github.com/radiofarmer/Tablitsa-Synthesizer"
 #define PLUG_EMAIL_STR "spam@me.com"
-#define PLUG_COPYRIGHT_STR "Copyright 2020 Acme Inc"
+#define PLUG_COPYRIGHT_STR "Copyright 2021 Bram Osterhout"
 #define PLUG_CLASS_NAME Tablitsa
 
 #define BUNDLE_NAME "Tablitsa"

@@ -448,7 +448,7 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
     pGraphics->AttachControl(new PeriodicTable(globalControls.GetReducedFromBottom(globalControls.H() * 0.5f).GetFromLeft(720.f).GetPadded(-30.f).GetVShifted(20.f), tableImg, { kParamWavetable1, kParamWavetable2 }),
       kCtrlTagPeriodicTable); // TODO: Set action function to store non-modulatable parameter value
     dynamic_cast<PeriodicTable*>(pGraphics->GetControlWithTag(kCtrlTagPeriodicTable))->LoadValues();
-    pGraphics->AttachControl(new IBitmapControl(globalControls.GetFromTop(250.f).GetReducedFromLeft(104.f).GetFromLeft(300.f), logoImg));
+    pGraphics->AttachControl(new IBitmapControl(globalControls.GetReducedFromTop(90.f).GetReducedFromLeft(115.f).GetFromTLHC(280.f, 80.), logoImg));
 
     const IRECT appControls = b.GetFromTop(30.f);
 
@@ -1039,4 +1039,10 @@ bool Tablitsa::OnMessage(int msgTag, int ctrlTag, int dataSize, const void* pDat
   }
   return false;
 }
+
+/* implement this and return true to trigger your custom about box, when someone clicks about in the menu of a standalone app or VST3 plugin */
+bool OnHostRequestingAboutBox() { return false; } // See IPlugAPP_dialog.cpp
+
+/* implement this and return true to trigger your custom help info, when someone clicks help in the menu of a standalone app or VST3 plugin */
+bool OnHostRequestingProductHelp() { return false; }
 #endif

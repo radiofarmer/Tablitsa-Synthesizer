@@ -290,6 +290,7 @@ class PeriodicTable : public IControl
   char* ElementSymbols[118]{ ELEMENT_SYMBOLS };
   static constexpr float TableWidth{ 753.f };
   static constexpr float TableHeight{ 290.f };
+  static constexpr float LaTLHC[2]{120.33f, 351.62f };
   static constexpr float LaAcWidth{ 626.26f };
   static constexpr float LaAcHeight{ 79.86f };
 
@@ -305,12 +306,8 @@ public:
     SetParamIdx(paramIdx);
   }
 
-  PeriodicTable(const IRECT& bounds, const ISVG& svg, const std::initializer_list<int> params) :
-    PeriodicTable(bounds, svg)
+  PeriodicTable(const IRECT& bounds, const ISVG& svg, const std::initializer_list<int> params) : PeriodicTable(bounds, svg)
   {
-    LaTLHC[0] = 75.33f + bounds.L;
-    LaTLHC[1] = 291.62f + bounds.T;
-
     SetNVals(static_cast<int>(params.size()));
     int valIdx = 0;
     for (auto param : params)
@@ -534,9 +531,6 @@ private:
   IRECT mTableBounds;
   IRECT mLaAcBounds;
   int mIsDragging{ -1 };
-
-  // Coordinates
-  float LaTLHC[2];
 };
 
 template <int MAXNC = 1>
