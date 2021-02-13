@@ -545,29 +545,31 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
     pGraphics->AttachControl(new ICaptionControl(oscModPanel.GetVPadded(-10.f).GetGridCell(0, 0, 3, 3).GetVShifted(10.f), kParamOscModulator), kNoTag, "OscMod")->SetActionFunction(
       [pGraphics](IControl* pControl) {
         bool phaseMod = pControl->GetValue() < 0.5;
+        // Update parameter index
         pGraphics->GetControlWithTag(kCtrlTagOscModFreq)->SetParamIdx(phaseMod ? kParamPhaseModFreq : kParamRingModFreq);
         pGraphics->GetControlWithTag(kCtrlTagOscModAmt)->SetParamIdx(phaseMod ? kParamPhaseModAmount : kParamRingModAmount);
+        // Update modulation index
+        dynamic_cast<IVModKnobControl*>(pGraphics->GetControlWithTag(kCtrlTagOscModFreq))->GetModulationFrom(phaseMod ? kParamPhaseModFreq : kParamRingModFreq);
+        dynamic_cast<IVModKnobControl*>(pGraphics->GetControlWithTag(kCtrlTagOscModAmt))->GetModulationFrom(phaseMod ? kParamPhaseModAmount : kParamRingModAmount);
         IControl* pOsc1Switch = pGraphics->GetControlWithTag(kCtrlTagOsc1ModSwitch);
         pOsc1Switch->SetParamIdx(phaseMod ? kParamOsc1PM : kParamOsc1RM);
         IControl* pOsc2Switch = pGraphics->GetControlWithTag(kCtrlTagOsc2ModSwitch);
         pOsc2Switch->SetParamIdx(phaseMod ? kParamOsc2PM : kParamOsc2RM);
         // Update controls
         pControl->GetDelegate()->SendCurrentParamValuesFromDelegate();
-        pOsc2Switch->SetDirty(true);
-        pOsc1Switch->SetDirty(true);
-      }
-      );
+        pOsc2Switch->SetDirty(false);
+        pOsc1Switch->SetDirty(false);
+      });
     pGraphics->AttachControl(new IVToggleControl(oscModPanel.GetVPadded(-10.f).GetVPadded(-10.f).GetGridCell(1, 0, 3, 3).GetMidHPadded(35.f), kParamOsc1PM, "Osc1", DEFAULT_STYLE.WithShowLabel(false), "Osc 1 OFF", "Osc 1 ON"), kCtrlTagOsc1ModSwitch, "OscMod");
     pGraphics->AttachControl(new IVToggleControl(oscModPanel.GetVPadded(-10.f).GetVPadded(-10.f).GetGridCell(2, 0, 3, 3).GetMidHPadded(35.f), kParamOsc2PM, "Osc1", DEFAULT_STYLE.WithShowLabel(false), "Osc 2 OFF", "Osc 2 ON"), kCtrlTagOsc2ModSwitch, "OscMod");
     pGraphics->AttachControl(new IVModKnobControl(oscModPanel.GetVPadded(-10.f).GetGridCell(0, 1, 1, 3).GetCentredInside(dialSize).GetCentredInside(dialSize), kParamPhaseModFreq, "Pitch"), kCtrlTagOscModFreq, "OscMod");
     pGraphics->AttachControl(new IVModKnobControl(oscModPanel.GetGridCell(0, 2, 1, 3).GetCentredInside(dialSize).GetCentredInside(dialSize), kParamPhaseModAmount, "Amount"), kCtrlTagOscModAmt, "OscMod");
     pGraphics->AttachControl(new IVGroupControl("Oscillator Modulation", "OscMod", 0.f, 10.f, 0.f, 0.f));
     
-    /*
-    Filter Panel
+    /* Filter Panel
     */
-    const IRECT filter1Panel = lowerPanel.GetGridCell(1, 0, 3, 3).GetPadded(-2.f);
     /* Filter 1 */
+    const IRECT filter1Panel = lowerPanel.GetGridCell(1, 0, 3, 3).GetPadded(-2.f);
     pGraphics->AttachControl(new ICaptionControl(filter1Panel.GetGridCell(0, 0, 3, 4).GetVShifted(20.f), kParamFilter1Type), kCtrlTagFilter1Type, "Flt1")->SetActionFunction(
       [pGraphics, this](IControl* pControl) {
         IControl* filterModeControl{ pGraphics->GetControlWithTag(kCtrlTagFilter1Mode) }; // Control containing list of filter modes for a given type
@@ -586,6 +588,7 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
           pGraphics->HideControl(kParamFilter1FF, false);
           pGraphics->HideControl(kParamFilter1Resonance, true);
           pGraphics->HideControl(kParamFilter1FB, false);
+          // Drive/delay switch
           pGraphics->HideControl(kParamFilter1Drive, true);
           pGraphics->HideControl(kParamFilter1Delay, false);
         }
@@ -596,6 +599,7 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
           pGraphics->HideControl(kParamFilter1FF, true);
           pGraphics->HideControl(kParamFilter1Resonance, false);
           pGraphics->HideControl(kParamFilter1FB, true);
+          // Drive/delay switch
           pGraphics->HideControl(kParamFilter1Drive, false);
           pGraphics->HideControl(kParamFilter1Delay, true);
         }

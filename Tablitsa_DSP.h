@@ -46,11 +46,9 @@ enum EModulations
   kModFilter1CutoffSmoother,
   kModFilter1ResonanceSmoother,
   kModFilter1DriveSmoother,
-  kModFilter1CombDelaySmoother,
   kModFilter2CutoffSmoother,
   kModFilter2ResonanceSmoother,
   kModFilter2DriveSmoother,
-  kModFilter2CombDelaySmoother,
   kModPhaseModFreqSmoother,
   kModPhaseModAmtSmoother,
   kModRingModFreqSmoother,
@@ -80,11 +78,9 @@ enum EVoiceModParams
   kVFilter1Cutoff,
   kVFilter1Resonance,
   kVFilter1Drive,
-  kVFilter1Delay,
   kVFilter2Cutoff,
   kVFilter2Resonance,
   kVFilter2Drive,
-  kVFilter2Delay,
   kVPhaseModFreq,
   kVPhaseModAmt,
   kVRingModFreq,
@@ -372,7 +368,7 @@ public:
       mVoiceModParams.SetStaticModulation(staticMods);
       // Write ramps for modulators
       mVoiceMetaModParams[kVEnv1Sustain].SetInitialValue(inputs[kModEnv1SustainSmoother][0]);
-      mVoiceMetaModParams[kVEnv2Sustain].SetInitialValue(inputs[kModEnv1SustainSmoother][0]);
+      mVoiceMetaModParams[kVEnv2Sustain].SetInitialValue(inputs[kModEnv2SustainSmoother][0]);
       mVoiceMetaModParams[kVAmpEnvSustain].SetInitialValue(inputs[kModAmpEnvSustainSmoother][0]);
       mModulators.MetaProcessBlock(&(inputs[kModEnv1SustainSmoother]), nFrames);
       // mModulators.ProcessBlock(&(inputs[kModEnv1SustainSmoother]), nFrames);
@@ -489,28 +485,25 @@ public:
       switch (filterType) {
       case kVSF:
       {
-        TablitsaDSP<T>::mCombOn = false;
         mVoiceModParams[filter ? kVFilter2Cutoff : kVFilter1Cutoff].SetMinMax(0.001, 0.49);
         mVoiceModParams[filter ? kVFilter2Resonance : kVFilter1Resonance].SetMinMax(0., 1.);
-        mVoiceModParams[filter ? kVFilter2Drive : kVFilter1Drive].SetMinMax(0., 1);
+        mVoiceModParams[filter ? kVFilter2Drive : kVFilter1Drive].SetMinMax(0., 1.);
         mFilters.at(filter) = new SVF2<T>(mOsc1.GetSampleRate());
         break;
       }
       case kMoog:
       {
-        TablitsaDSP<T>::mCombOn = false;
         mVoiceModParams[filter ? kVFilter2Cutoff : kVFilter1Cutoff].SetMinMax(0.001, 0.49);
         mVoiceModParams[filter ? kVFilter2Resonance : kVFilter1Resonance].SetMinMax(0., 1.);
-        mVoiceModParams[filter ? kVFilter2Drive : kVFilter1Drive].SetMinMax(0., 1);
+        mVoiceModParams[filter ? kVFilter2Drive : kVFilter1Drive].SetMinMax(0., 1.);
         mFilters.at(filter) = new MoogLadder<T>(mOsc1.GetSampleRate());
         break;
       }
       case kComb:
       {
-        TablitsaDSP<T>::mCombOn = true;
         mVoiceModParams[filter ? kVFilter2Cutoff : kVFilter1Cutoff].SetMinMax(0., 1.);
         mVoiceModParams[filter ? kVFilter2Resonance : kVFilter1Resonance].SetMinMax(0., 1.);
-        mVoiceModParams[filter ? kVFilter2Drive : kVFilter1Drive].SetMinMax(0., (double)COMB_MAX_DELAY);
+        mVoiceModParams[filter ? kVFilter2Drive : kVFilter1Drive].SetMinMax(0., 1.);
         mFilters.at(filter) = new CombFilter<T>(mOsc1.GetSampleRate());
         break;
       }
@@ -596,11 +589,9 @@ public:
       new ParameterModulator<>(0.001, 0.5, "Flt1 Cutoff", true),
       new ParameterModulator<>(0., 1., "Flt1 Resonance"),
       new ParameterModulator<>(0., 1., "Flt1 Drive"),
-      new ParameterModulator<>(0., (double)COMB_MAX_DELAY, "Flt1 Comb Delay"),
       new ParameterModulator<>(0.001, 0.5, "Flt2 Cutoff", true),
       new ParameterModulator<>(0., 1., "Flt2 Resonance"),
       new ParameterModulator<>(0., 1., "Flt2 Drive"),
-      new ParameterModulator<>(0., (double)COMB_MAX_DELAY, "Flt2 Comb Delay"),
       new ParameterModulator<>(-24., 24., "Phase Mod Freq"),
       new ParameterModulator<>(0., 1., "Phase Mod Depth"),
       new ParameterModulator<>(-24., 24., "Ring Mod Freq"),
@@ -1358,10 +1349,13 @@ public:
         break;
       }
       case kParamFilter1Type:
+      {
+        mFilter1Comb = static_cast<int>(value) == kComb;
         SendParam([value](Voice* voice) {
           voice->SetFilterType(0, static_cast<int>(value));
           });
         break;
+      }
       case kParamFilter1ModeVSF:
       case kParamFilter1ModeMoog:
         mSynth.ForEachVoice([value](SynthVoice& voice) {
@@ -1373,7 +1367,7 @@ public:
         break;
       case kParamFilter1FF:
       {
-        if (mCombOn)
+        if (mFilter1Comb)
           mParamsToSmooth[kModFilter1CutoffSmoother] = value / 100.;
         break;
       }
@@ -1394,9 +1388,14 @@ public:
         break;
       }
       case kParamFilter1Resonance:
-      case kParamFilter1FB:
         mParamsToSmooth[kModFilter1ResonanceSmoother] = value / 100.;
         break;
+      case kParamFilter1FB:
+      {
+        if (mFilter1Comb)
+          mParamsToSmooth[kModFilter1ResonanceSmoother] = value / 100.;
+        break;
+      }
       case kParamFilter1ResonanceEnv1:
       case kParamFilter1ResonanceEnv2:
       case kParamFilter1ResonanceAmpEnv:
@@ -1414,8 +1413,11 @@ public:
         break;
       }
       case kParamFilter1Drive:
-        mParamsToSmooth[kModFilter1DriveSmoother] = value / 100.;
+      case kParamFilter1Delay:
+      {
+        mParamsToSmooth[kModFilter1DriveSmoother] = value / (mFilter1Comb ? (double)COMB_MAX_DELAY : 100.);
         break;
+      }
       case kParamFilter1DriveEnv1:
       case kParamFilter1DriveEnv2:
       case kParamFilter1DriveAmpEnv:
@@ -1432,30 +1434,14 @@ public:
           });
         break;
       }
-      case kParamFilter1Delay:
-        mParamsToSmooth[kModFilter1CombDelaySmoother] = value / 100.;
-        break;
-      case kParamFilter1DelayEnv1:
-      case kParamFilter1DelayEnv2:
-      case kParamFilter1DelayAmpEnv:
-      case kParamFilter1DelayLFO1:
-      case kParamFilter1DelayLFO2:
-      case kParamFilter1DelaySeq:
-      case kParamFilter1DelayVel:
-      case kParamFilter1DelayKTk:
-      case kParamFilter1DelayRnd:
-      {
-        const int modIdx = paramIdx - kParamFilter1Delay;
-        mSynth.ForEachVoice([paramIdx, modIdx, value](SynthVoice& voice) {
-          dynamic_cast<TablitsaDSP::Voice&>(voice).UpdateVoiceParam(kVFilter1Delay, modIdx, value);
-          });
-        break;
-      }
       case kParamFilter2Type:
+      {
+        mFilter2Comb = static_cast<int>(value) == kComb;
         SendParam([value](Voice* voice) {
           voice->SetFilterType(1, static_cast<int>(value));
           });
         break;
+      }
       case kParamFilter2ModeVSF:
       case kParamFilter2ModeMoog:
         mSynth.ForEachVoice([value](SynthVoice& voice) {
@@ -1463,12 +1449,12 @@ public:
           });
         break;
       case kParamFilter2Cutoff:
-        mParamsToSmooth[kModFilter2CutoffSmoother] = value / mSampleRate;
+        mParamsToSmooth[kModFilter2CutoffSmoother] = value / (mFilter2Comb ? 100. : mSampleRate);
         break;
       case kParamFilter2FF:
       {
-        if (mCombOn)
-          mParamsToSmooth[kModFilter2CutoffSmoother] = value / 100.;
+        if (mFilter2Comb)
+          mParamsToSmooth[kModFilter2CutoffSmoother] = value / (mFilter2Comb ? 100. : mSampleRate);
         break;
       }
       case kParamFilter2CutoffEnv1:
@@ -1488,9 +1474,14 @@ public:
         break;
       }
       case kParamFilter2Resonance:
-      case kParamFilter2FB:
         mParamsToSmooth[kModFilter2ResonanceSmoother] = value / 100.;
         break;
+      case kParamFilter2FB:
+      {
+        if (mFilter2Comb)
+          mParamsToSmooth[kModFilter2ResonanceSmoother] = value / 100.;
+        break;
+      }
       case kParamFilter2ResonanceEnv1:
       case kParamFilter2ResonanceEnv2:
       case kParamFilter2ResonanceAmpEnv:
@@ -1508,7 +1499,8 @@ public:
         break;
       }
       case kParamFilter2Drive:
-        mParamsToSmooth[kModFilter2DriveSmoother] = value / 100.;
+      case kParamFilter2Delay:
+        mParamsToSmooth[kModFilter2DriveSmoother] = value / (mFilter2Comb ? (double)COMB_MAX_DELAY : 100.);
         break;
       case kParamFilter2DriveEnv1:
       case kParamFilter2DriveEnv2:
@@ -1523,25 +1515,6 @@ public:
         const int modIdx = paramIdx - kParamFilter2Drive;
         mSynth.ForEachVoice([paramIdx, modIdx, value](SynthVoice& voice) {
           dynamic_cast<TablitsaDSP::Voice&>(voice).UpdateVoiceParam(kVFilter2Drive, modIdx, value);
-          });
-        break;
-      }
-      case kParamFilter2Delay:
-        mParamsToSmooth[kModFilter2CombDelaySmoother] = value / 100.;
-        break;
-      case kParamFilter2DelayEnv1:
-      case kParamFilter2DelayEnv2:
-      case kParamFilter2DelayAmpEnv:
-      case kParamFilter2DelayLFO1:
-      case kParamFilter2DelayLFO2:
-      case kParamFilter2DelaySeq:
-      case kParamFilter2DelayVel:
-      case kParamFilter2DelayKTk:
-      case kParamFilter2DelayRnd:
-      {
-        const int modIdx = paramIdx - kParamFilter2Delay;
-        mSynth.ForEachVoice([paramIdx, modIdx, value](SynthVoice& voice) {
-          dynamic_cast<TablitsaDSP::Voice&>(voice).UpdateVoiceParam(kVFilter2Delay, modIdx, value);
           });
         break;
       }
@@ -1706,9 +1679,10 @@ public:
 
   // Status Variables
   static inline bool tableLoading[2]{ true, true };
-  static inline bool mCombOn{ false };
   int mSeqPos{ 0 };
   static inline Sequencer<T, kNumSeqSteps>* mActiveSequencer{ nullptr };
+  bool mFilter1Comb{ false }; // Set to `true` when Filter 1 is a comb filter. Used for scaling delay/drive values by the proper amount.
+  bool mFilter2Comb{ false }; // Set to `true` when Filter 2 is a comb filter. Used for scaling delay/drive values by the proper amount.
 
   // Non-modulatable parameters
   double mLoadedWavetables[2]{ 1., 2. }; // Integer indices of current wavetables

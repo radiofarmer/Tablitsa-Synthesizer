@@ -515,7 +515,7 @@ public:
 
   inline void SetDrive(T delayLength) override
   {
-    SetDelay(std::min(static_cast<int>(delayLength), mMaxDelay));
+    SetDelay(std::min(static_cast<int>(delayLength * mMaxDelay), mMaxDelay));
   }
 
   inline void SetDelay(int samples)

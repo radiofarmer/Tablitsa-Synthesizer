@@ -6,6 +6,7 @@
 #include <tchar.h>
 #include <string>
 
+
 //#define FFT
 #define FFT_MAX_SIZE 32768
 
@@ -14,6 +15,10 @@
 #else
 #define USE_APPDATA_PATH
 #define WT_DIR "\\Tablitsa\\wavetables\\"
+#if VST3_API
+#include <locale>
+#include <codecvt>
+#endif
 #endif
 
 #define WT_SIZE 1024
@@ -113,11 +118,10 @@ class WtFile
   };
 
 public:
-  WtFile(std::string fname) :
-#ifdef USE_APPDATA_PATH
-    mPath(WT_DIR + fname + ".wt")
+#ifndef USE_APPDATA_PATH
+  WtFile(std::string fname) : mPath(WT_DIR + fname + ".wt")
 #else
-    mPath(fname + ".wt")
+  WtFile(std::string fname)
 #endif
   {
     std::fstream f;
@@ -130,8 +134,13 @@ public:
     {
       PathAppend(szPath, _T(WT_DIR));
     }
-    //std::wstring wpath(static_cast<char*>(szPath));
+#if VST3_API
+    // In the standalone app builds, `TCHAR` is type `char`. In VST3 builds, it's `wchar_t`, requiring a different conversion method.
+    std::wstring wpath(szPath);
+    std::string path = std::wstring_convert<std::codecvt_utf8<wchar_t>>().to_bytes(wpath);
+#else
     std::string path = szPath;
+#endif
     mPath = path + fname + ".wt";
 #endif
     FILE* wt = fopen(mPath.c_str(), "rb");
