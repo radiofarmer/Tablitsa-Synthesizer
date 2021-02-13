@@ -150,7 +150,8 @@ END
 BEGIN
     "#include ""..\\config.h""\r\n"
     "ROBOTO_FN TTF ROBOTO_FN\r\n"
-    "PERIODIC_TABLE_FN SVG PERIODIC_TABLE_FN\0"
+    "PERIODIC_TABLE_FN SVG PERIODIC_TABLE_FN\r\n"
+    "LOGO_FN PNG LOGO_FN\0"
 END
 
 #endif    // APSTUDIO_INVOKED
@@ -232,6 +233,7 @@ END
 #include "..\config.h"
 ROBOTO_FN TTF ROBOTO_FN
 PERIODIC_TABLE_FN SVG PERIODIC_TABLE_FN
+LOGO_FN PNG LOGO_FN
 /////////////////////////////////////////////////////////////////////////////
 #endif    // not APSTUDIO_INVOKED
 

@@ -430,7 +430,7 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
     pGraphics->LoadFont("Roboto-Regular", ROBOTO_FN);
     const IRECT b = pGraphics->GetBounds().GetPadded(-10.f);
     constexpr float dialSize{ 80.f };
-    IRECT controls = b.GetOffset(0, 0, 0, -KEYBOARD_HEIGHT).GetHPadded(-5.f);
+    IRECT globalControls = b.GetOffset(0, 0, 0, -KEYBOARD_HEIGHT).GetHPadded(-5.f);
 #ifndef VST3_API
     IRECT keyboardBounds = b.GetFromBottom((float)KEYBOARD_HEIGHT).GetPadded(-10.f);
     IRECT wheelsBounds = keyboardBounds.ReduceFromLeft(100.f).GetPadded(-10.f);
@@ -444,12 +444,16 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
 
 #endif
     const ISVG tableImg = pGraphics->LoadSVG(PERIODIC_TABLE_FN);
-    pGraphics->AttachControl(new PeriodicTable(controls.GetReducedFromBottom(controls.H() * 0.5f).GetFromLeft(720.f).GetPadded(-30.f).GetVShifted(20.f), tableImg, { kParamWavetable1, kParamWavetable2 }),
+    const IBitmap logoImg = pGraphics->LoadBitmap(LOGO_FN);
+    pGraphics->AttachControl(new PeriodicTable(globalControls.GetReducedFromBottom(globalControls.H() * 0.5f).GetFromLeft(720.f).GetPadded(-30.f).GetVShifted(20.f), tableImg, { kParamWavetable1, kParamWavetable2 }),
       kCtrlTagPeriodicTable); // TODO: Set action function to store non-modulatable parameter value
     dynamic_cast<PeriodicTable*>(pGraphics->GetControlWithTag(kCtrlTagPeriodicTable))->LoadValues();
+    pGraphics->AttachControl(new IBitmapControl(globalControls.GetFromTop(250.f).GetReducedFromLeft(104.f).GetFromLeft(300.f), logoImg));
+
+    const IRECT appControls = b.GetFromTop(30.f);
 
     // Wavetable controls
-    const IRECT osc1Panel = controls.GetReducedFromLeft(720.f).GetReducedFromBottom(controls.H() / 2.f).GetGridCell(0, 0, 2, 3).GetPadded(-10.f).GetHPadded(-12.f);
+    const IRECT osc1Panel = globalControls.GetReducedFromLeft(720.f).GetReducedFromBottom(globalControls.H() / 2.f).GetGridCell(0, 0, 2, 3).GetPadded(-10.f).GetHPadded(-12.f);
     pGraphics->AttachControl(new IVModKnobControl(osc1Panel.GetGridCell(0, 0, 2, 2).GetCentredInside(dialSize), kParamWavetable1Pitch, "Pitch", DEFAULT_STYLE, true, 0.05), kNoTag, "Osc1");
     pGraphics->AttachControl(new IVModKnobControl(osc1Panel.GetGridCell(0, 1, 2, 2).GetCentredInside(dialSize), kParamWavetable1Amp, "Amp"), kNoTag, "Osc1");
     pGraphics->AttachControl(new IVModKnobControl(osc1Panel.GetGridCell(1, 0, 2, 3).GetCentredInside(dialSize), kParamWavetable1Pos, "Valency"), kNoTag, "Osc1");
@@ -457,7 +461,7 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
     pGraphics->AttachControl(new IVModKnobControl(osc1Panel.GetGridCell(1, 2, 2, 3).GetCentredInside(dialSize), kParamWavetable1Sub, "Mass"), kNoTag, "Osc1");
     pGraphics->AttachControl(new IVGroupControl("Wavetable 1", "Osc1", 0.f, 15.f, 0.f, 2.f));
 
-    const IRECT osc2Panel = controls.GetReducedFromLeft(720.f).GetReducedFromBottom(controls.H() / 2.f).GetGridCell(1, 0, 2, 3).GetPadded(-10.f).GetHPadded(-12.f);
+    const IRECT osc2Panel = globalControls.GetReducedFromLeft(720.f).GetReducedFromBottom(globalControls.H() / 2.f).GetGridCell(1, 0, 2, 3).GetPadded(-10.f).GetHPadded(-12.f);
     pGraphics->AttachControl(new IVModKnobControl(osc2Panel.GetGridCell(0, 0, 2, 2).GetCentredInside(dialSize), kParamWavetable2Pitch, "Pitch", DEFAULT_STYLE, true, 0.05), kNoTag, "Osc2");
     pGraphics->AttachControl(new IVModKnobControl(osc2Panel.GetGridCell(0, 1, 2, 2).GetCentredInside(dialSize), kParamWavetable2Amp, "Amp"), kNoTag, "Osc2");
     pGraphics->AttachControl(new IVModKnobControl(osc2Panel.GetGridCell(1, 0, 2, 3).GetCentredInside(dialSize), kParamWavetable2Pos, "Valency"), kNoTag, "Osc2");
@@ -466,7 +470,7 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
     pGraphics->AttachControl(new IVGroupControl("Wavetable 2", "Osc2", 0.f, 15.f, 0.f, 2.f));
 
     /* Master Controls */
-    const IRECT masterPanel = controls.GetReducedFromLeft(720.f + osc1Panel.W() + 30.f).GetReducedFromBottom(controls.H() / 2.f).GetPadded(-10.f);
+    const IRECT masterPanel = globalControls.GetReducedFromLeft(720.f + osc1Panel.W() + 30.f).GetReducedFromBottom(globalControls.H() / 2.f).GetPadded(-10.f);
     // Gain, Pan, and Volume Meter
     pGraphics->AttachControl(new IVKnobControl(masterPanel.GetGridCell(0, 0, 4, 6).GetCentredInside(dialSize), kParamGain, "Gain"), kNoTag, "Master");
     pGraphics->AttachControl(new IVModKnobControl(masterPanel.GetGridCell(0, 1, 4, 6).GetCentredInside(dialSize), kParamPan, "Pan"), kNoTag, "Master");
@@ -542,7 +546,7 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
     pGraphics->AttachControl(new IVGroupControl("Delay", "Delay", -10.f, 15.f, 0.f, 0.f));
 
     /* Waveform Modulation Panel */
-    const IRECT lowerPanel = controls.GetReducedFromTop(controls.H() * 0.5f).GetPadded(-10.f).GetReducedFromRight(250.f);
+    const IRECT lowerPanel = globalControls.GetReducedFromTop(globalControls.H() * 0.5f).GetPadded(-10.f).GetReducedFromRight(250.f);
     const IRECT oscModPanel = lowerPanel.GetGridCell(0, 0, 3, 3).GetPadded(-2.f);
     pGraphics->AttachControl(new ICaptionControl(oscModPanel.GetVPadded(-10.f).GetGridCell(0, 0, 3, 3).GetVShifted(10.f), kParamOscModulator), kNoTag, "OscMod")->SetActionFunction(
       [pGraphics](IControl* pControl) {
@@ -677,7 +681,7 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
     dynamic_cast<IVModKnobControl*>(pGraphics->GetControlWithTag(kCtrlTagFilter2FB))->GetModulationFrom(kParamFilter2Resonance);
     dynamic_cast<IVModKnobControl*>(pGraphics->GetControlWithTag(kCtrlTagFilter2Delay))->GetModulationFrom(kParamFilter2Drive);
 
-#pragma mark Modulation controls -
+#pragma mark Modulation globalControls -
 
     // Envelope Sliders
     const IRECT envPanel = lowerPanel.GetGridCell(0, 1, 1, 3).GetPadded(-2.f);
@@ -745,7 +749,7 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
 
     /* Sequencer */
     const IRECT sequencerDisplayPanel = lowerPanel.GetGridCell(2, 2, 3, 3).GetFromLeft(PLUG_WIDTH - lfoPanel.L).GetPadded(0.f, 10.f, 0.f, 0.f);
-    const IRECT sequencerParamsPanel = controls.GetFromBottom(PLUG_HEIGHT - lfoPanel.T).GetFromRight(PLUG_WIDTH - lfoPanel.R).GetReducedFromBottom(lowerPanel.H() / 3).GetPadded(-20.f, -15.f, -20.f, -15.f);
+    const IRECT sequencerParamsPanel = globalControls.GetFromBottom(PLUG_HEIGHT - lfoPanel.T).GetFromRight(PLUG_WIDTH - lfoPanel.R).GetReducedFromBottom(lowerPanel.H() / 3).GetPadded(-20.f, -15.f, -20.f, -15.f);
 
     // Sequencer Action Functions
     auto stepRandomizeAction = [pGraphics](IControl* pCaller) {
@@ -794,7 +798,7 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
 #ifndef VST3_API
     pGraphics->AttachControl(new IVButtonControl(keyboardBounds.GetFromTRHC(200, 30).GetTranslated(0, -30.f), SplashClickActionFunc,
       "Show/Hide Keyboard", DEFAULT_STYLE.WithColor(kFG, COLOR_WHITE).WithLabelText({15.f, EVAlign::Middle})))->SetAnimationEndActionFunction(
-      [pGraphics, controls](IControl* pCaller) {
+      [pGraphics, globalControls](IControl* pCaller) {
         static bool hide = false;
         pGraphics->GetControlWithTag(kCtrlTagKeyboard)->Hide(hide = !hide);
         pGraphics->Resize((float)PLUG_WIDTH, hide ? (float)PLUG_HEIGHT : (float)PLUG_HEIGHT + (float)KEYBOARD_HEIGHT, pGraphics->GetDrawScale());
