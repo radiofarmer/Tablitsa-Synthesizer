@@ -2,7 +2,7 @@
 #include "Tablitsa.h"
 #include "IPlug_include_in_plug_src.h"
 #include "LFO.h"
-#include "CustomControls.h"
+#include "TablitsaControls.h"
 
 #define UI_NROWS 4
 #define UI_NCOLS 3
@@ -477,7 +477,7 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
     pGraphics->AttachControl(new IVGroupControl("Midi Mods", "StaticMods", 5.f, 15.f, 5.f, 12.f));
     // Polyphony and Portamento
     pGraphics->AttachControl(new IVToggleControl(masterPanel.GetGridCell(3, 1, 12, 6).GetVPadded(-2.f), kParamPortamentoMode, "", DEFAULT_STYLE.WithShowLabel(false), "Rate", "Time"),
-      kNoTag, "Master")->SetAnimationEndActionFunction([pGraphics](IControl* pControl) {
+      kCtrlTagGlideMode, "Master")->SetAnimationEndActionFunction([pGraphics](IControl* pControl) {
         bool constantTime = pControl->GetValue() > 0.5;
         pGraphics->HideControl(kParamNoteGlideTime, !constantTime);
         pGraphics->HideControl(kParamNoteGlideRate, constantTime);
@@ -507,9 +507,11 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
     pGraphics->AttachControl(new IVKnobControl(masterPanel.GetGridCell(2, 3, 4, 7).GetVShifted(5.f).GetVPadded(-12.f).GetCentredInside(dialSize), kParamDelayTimeRBeats, "Right"), kCtrlTagDelayRBeats, "Delay")->Hide(true);
     pGraphics->AttachControl(new IVKnobControl(masterPanel.GetGridCell(2, 4, 4, 7).GetVShifted(5.f).GetVPadded(-12.f).GetCentredInside(dialSize), kParamDelayFeedback, "Feedback"), kNoTag, "Delay");
     pGraphics->AttachControl(new IVKnobControl(masterPanel.GetGridCell(2, 5, 4, 7).GetVShifted(5.f).GetVPadded(-12.f).GetCentredInside(dialSize), kParamDelayMix, "Mix"), kNoTag, "Delay");
-    pGraphics->AttachControl(new IVToggleControl(masterPanel.GetGridCell(2, 6, 4, 7).GetVPadded(-8.f).SubRect(EDirection::Vertical, 2, 0).GetVPadded(-2.f), kParamDelayTimeMode, "", DEFAULT_STYLE.WithShowLabel(false), "Time", "Tempo"), kNoTag, "Delay")->SetActionFunction(
-      [pGraphics](IControl* pControl) {
-        bool isTempoSync = pControl->GetValue() > 0.5;
+    pGraphics->AttachControl(new IVToggleControl(masterPanel.GetGridCell(2, 6, 4, 7).GetVPadded(-8.f).SubRect(EDirection::Vertical, 2, 0).GetVPadded(-2.f), kParamDelayTimeMode, "", DEFAULT_STYLE.WithShowLabel(false), "Time", "Tempo"),
+      kCtrlTagDelayTempoSync, "Delay")->SetActionFunction(
+      [pGraphics, this](IControl* pControl) {
+        mDelayIsSynced = pControl->GetValue();
+        bool isTempoSync = mDelayIsSynced > 0.5;
         pGraphics->HideControl(kParamDelayTimeLMilliseconds, isTempoSync);
         pGraphics->HideControl(kParamDelayTimeRMilliseconds, isTempoSync);
         pGraphics->HideControl(kParamDelayTimeLBeats, !isTempoSync);
@@ -714,7 +716,7 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
     pGraphics->AttachControl(new IVModKnobControl(lfoPanel.GetGridCell(0, 2, 3, 5).GetCentredInside(dialSize), kParamLFO1Amp, "Amp"), kNoTag, "LFO1");
     pGraphics->AttachControl(new ICaptionControl(lfoPanel.GetGridCell(0, 1, 6, 5).GetVPadded(-20.f), kParamLFO1Shape), kNoTag, "LFO1")->DisablePrompt(false);
     pGraphics->AttachControl(new IVToggleControl(lfoPanel.GetGridCell(1, 1, 9, 5).GetVPadded(-6.f), kParamLFO1RateMode, "", DEFAULT_STYLE.WithShowLabel(false), "Sync Off", "Sync On"),
-      kNoTag, "LFO1")->SetAnimationEndActionFunction([pGraphics](IControl* pControl) {
+      kCtrlTagLFO1RateMode, "LFO1")->SetAnimationEndActionFunction([pGraphics](IControl* pControl) {
       bool sync = pControl->GetValue() > 0.5;
       pGraphics->HideControl(kParamLFO1RateHz, sync);
       pGraphics->HideControl(kParamLFO1RateTempo, !sync);
@@ -730,7 +732,7 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
     pGraphics->AttachControl(new IVModKnobControl(lfoPanel.GetGridCell(1, 2, 3, 5).GetCentredInside(dialSize), kParamLFO2Amp, "Amp"), kNoTag, "LFO2");
     pGraphics->AttachControl(new ICaptionControl(lfoPanel.GetGridCell(2, 1, 6, 5).GetVPadded(-20.f), kParamLFO2Shape), kNoTag, "LFO2")->DisablePrompt(false);
     pGraphics->AttachControl(new IVToggleControl(lfoPanel.GetGridCell(4, 1, 9, 5).GetVPadded(-6.f), kParamLFO2RateMode, "", DEFAULT_STYLE.WithShowLabel(false), "Sync Off", "Sync On"),
-      kNoTag, "LFO2")->SetAnimationEndActionFunction([pGraphics](IControl* pControl) {
+      kCtrlTagLFO2RateMode, "LFO2")->SetAnimationEndActionFunction([pGraphics](IControl* pControl) {
         bool sync = pControl->GetValue() > 0.5;
         pGraphics->HideControl(kParamLFO2RateHz, sync);
         pGraphics->HideControl(kParamLFO2RateTempo, !sync);
@@ -757,7 +759,7 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
     pGraphics->AttachControl(new IVKnobControl(sequencerParamsPanel.GetGridCell(0, 2, 2, 3).GetCentredInside(dialSize), kParamSequencerAmp, "Amp"), kNoTag, "SequencerParams");
     pGraphics->AttachControl(new IVKnobControl(sequencerParamsPanel.GetGridCell(1, 0, 2, 3).GetCentredInside(dialSize), kParamSequencerGlide, "Glide"), kNoTag, "SequencerParams");
     pGraphics->AttachControl(new IVToggleControl(sequencerParamsPanel.GetGridCell(4, 1, 7, 3).GetHPadded(-5.f), kParamSequencerRateMode, "", DEFAULT_STYLE.WithShowLabel(false), "Sync Off", "Sync On"),
-      kNoTag, "Sequencer")->SetAnimationEndActionFunction([pGraphics](IControl* pControl) {
+      kCtrlTagSequencerRateMode, "Sequencer")->SetAnimationEndActionFunction([pGraphics](IControl* pControl) {
         bool sync = pControl->GetValue() > 0.5;
         pGraphics->HideControl(kParamSequencerRateTempo, !sync);
         pGraphics->HideControl(kParamSequencerRateHz, sync);
@@ -779,9 +781,10 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
       });
     pGraphics->AttachControl(new IVToggleControl(sequencerParamsPanel.GetGridCell(5, 1, 7, 3).GetHPadded(-5.f), kParamSequencerRestart, "", DEFAULT_STYLE.WithShowLabel(false), "Free Run", "Restart"), kNoTag, "SequencerParams");
     pGraphics->AttachControl(new ModSliderControl(sequencerDisplayPanel.GetGridCell(0, 5, 1, 6).GetVPadded(-2.f).GetVShifted(-5.f).GetMidHPadded(20.f), kNoParameter, "Depth"), kCtrlTagSequencerDepth, "Sequencer");
-    pGraphics->AttachControl(new IVToggleControl(sequencerParamsPanel.GetGridCell(4, 2, 7, 3).GetHPadded(-5.f), kNoParameter, "", DEFAULT_STYLE.WithShowLabel(false), "Quant.", "Cont."), kNoTag, "SequencerParams")->SetActionFunction(
-      [pGraphics](IControl* pControl) {
-        int nSteps = pControl->GetValue() > 0.5 ? 12 : 0;
+    pGraphics->AttachControl(new IVToggleControl(sequencerParamsPanel.GetGridCell(4, 2, 7, 3).GetHPadded(-5.f), kNoParameter, "", DEFAULT_STYLE.WithShowLabel(false), "Cont.", "Quant."), kCtrlTagSequencerQuant, "SequencerParams")->SetActionFunction(
+      [pGraphics, this](IControl* pControl) {
+        mSequencerIsQuantized = pControl->GetValue();
+        int nSteps = mSequencerIsQuantized > 0.5 ? 12 : 0;
         dynamic_cast<IVTrackControlBase*>(pGraphics->GetControlWithTag(kCtrlTagSequencer))->SetNSteps(nSteps);
       });
     pGraphics->AttachControl(new IVButtonControl(sequencerParamsPanel.GetGridCell(5, 2, 7, 3).GetHPadded(-5.f), stepRandomizeAction, "Randomize", DEFAULT_STYLE.WithLabelText(IText(12.f))), kNoTag, "SequencerParams");
@@ -824,6 +827,8 @@ bool Tablitsa::SerializeState(IByteChunk& chunk) const
   }
   chunk.Put(&mDSP.mLoadedWavetables[0]);
   chunk.Put(&mDSP.mLoadedWavetables[1]);
+  chunk.Put(&mSequencerIsQuantized);
+  chunk.Put(&mDelayIsSynced);
   
   return SerializeParams(chunk); // must remember to call SerializeParams at the end
 }
@@ -839,10 +844,18 @@ int Tablitsa::UnserializeState(const IByteChunk& chunk, int startPos)
     startPos = chunk.Get(&v, startPos);
     mDSP.mSeqSteps[i] = v;
   }
+  // Wavetable 1
   startPos = chunk.Get(&v, startPos);
   mDSP.mLoadedWavetables[0] = v;
+  // Wavetable 2
   startPos = chunk.Get(&v, startPos);
   mDSP.mLoadedWavetables[1] = v;
+  // Sequencer quantization
+  startPos = chunk.Get(&v, startPos);
+  mSequencerIsQuantized = v;
+  // Delay tempo sync
+  startPos = chunk.Get(&v, startPos);
+  mDelayIsSynced = v;
 
   // If UI exists
   if (GetUI())
@@ -873,9 +886,21 @@ void Tablitsa::UpdateUIControls()
   pPeriodicTable->SetSelectedElement(static_cast<int>(mDSP.mLoadedWavetables[1]), 1);
   mDSP.UpdateOscillatorWavetable(static_cast<int>(mDSP.mLoadedWavetables[0]) - 1, 0);
   mDSP.UpdateOscillatorWavetable(static_cast<int>(mDSP.mLoadedWavetables[1]) - 1, 1);
+  GetUI()->GetControlWithTag(kCtrlTagSequencerQuant)->SetValue(mSequencerIsQuantized);
 
   SendCurrentParamValuesFromDelegate();
   GetUI()->SetAllControlsDirty();
+
+  // Trigger the ActionFunctions of controls that change the user interface
+  /*GetUI()->GetControlWithTag(kCtrlTagLFO1RateMode)->SetDirty(true);
+  GetUI()->GetControlWithTag(kCtrlTagLFO2RateMode)->SetDirty(true);
+  GetUI()->GetControlWithTag(kCtrlTagSequencerRateMode)->SetDirty(true);
+  GetUI()->GetControlWithTag(kCtrlTagSequencerQuant)->SetDirty(true);
+  GetUI()->GetControlWithTag(kCtrlTagFilter1Type)->SetDirty(true);
+  GetUI()->GetControlWithTag(kCtrlTagFilter2Type)->SetDirty(true);
+  GetUI()->GetControlWithTag(kCtrlTagGlideMode)->SetDirty(true);*/
+  for (auto i{0}; i < std::size(kStartupTriggerControls); ++i)
+    GetUI()->GetControlWithTag(kStartupTriggerControls[i])->SetDirty(true);
 }
 
 #if IPLUG_DSP

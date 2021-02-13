@@ -316,7 +316,6 @@
     </ClInclude>
     <ClInclude Include="..\Tablitsa_DSP.h" />
     <ClInclude Include="..\Wavetable.h" />
-    <ClInclude Include="..\CustomControls.h" />
     <ClInclude Include="..\Modulators.h" />
     <ClInclude Include="..\Filter.h" />
     <ClInclude Include="..\SignalProcessing.h" />
@@ -325,6 +324,7 @@
     <ClInclude Include="..\VectorFunctions.h" />
     <ClInclude Include="..\Effects.h" />
     <ClInclude Include="..\Modulation.h" />
+    <ClInclude Include="..\TablitsaControls.h" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="resources">

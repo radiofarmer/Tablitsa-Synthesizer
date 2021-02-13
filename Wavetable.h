@@ -10,7 +10,7 @@
 //#define FFT
 #define FFT_MAX_SIZE 32768
 
-#if _DEBUG
+#if _DEBUG && !VST3_API
 #define WT_DIR "..\\resources\\data\\wavetables\\"
 #else
 #define USE_APPDATA_PATH
@@ -125,7 +125,7 @@ public:
 #endif
   {
     std::fstream f;
-    int headerSize{ sizeof(mHeader) }; // Size of WAV header
+    int headerSize{ sizeof(mHeader) }; // Size of WT header
     constexpr int byteInc = 8;
     
 #ifdef USE_APPDATA_PATH

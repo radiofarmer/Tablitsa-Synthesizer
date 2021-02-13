@@ -412,6 +412,7 @@ enum EControlTags
   kCtrlTagRTText,
   kCtrlTagKeyboard,
   kCtrlTagBender,
+  kCtrlTagGlideMode,
   kCtrlTagEnv1Depth, // Modulator depths
   kCtrlTagEnv2Depth,
   kCtrlTagAmpEnvDepth,
@@ -421,6 +422,10 @@ enum EControlTags
   kCtrlTagVelDepth,
   kCtrlTagKTkDepth,
   kCtrlTagRndDepth, // !Modulator depths
+  kCtrlTagLFO1RateMode,
+  kCtrlTagLFO2RateMode,
+  kCtrlTagSequencerRateMode,
+  kCtrlTagSequencerQuant,
   kCtrlTagFilter1Cutoff,
   kCtrlTagFilter1Resonance,
   kCtrlTagFilter1Drive,
@@ -446,6 +451,7 @@ enum EControlTags
   kCtrlTagDelayRMilliseconds,
   kCtrlTagDelayLBeats,
   kCtrlTagDelayRBeats,
+  kCtrlTagDelayTempoSync,
   kNumCtrlTags
 };
 
@@ -469,6 +475,17 @@ enum EModulators
   kKeytrack,
   kTriggerRandom,
   kNumMods
+};
+
+constexpr EControlTags kStartupTriggerControls[]{
+  kCtrlTagLFO1RateMode,
+  kCtrlTagLFO2RateMode,
+  kCtrlTagSequencerRateMode,
+  kCtrlTagSequencerQuant,
+  kCtrlTagFilter1Type,
+  kCtrlTagFilter2Type,
+  kCtrlTagGlideMode,
+  kCtrlTagDelayTempoSync
 };
 
 using namespace iplug;
@@ -499,5 +516,8 @@ private:
   ISender<1> mLFO1VisSender;
   ISender<1> mLFO2VisSender;
   IControl* mActiveControl{};
+
+  double mSequencerIsQuantized{ 0. };
+  double mDelayIsSynced{ 0. };
 #endif
 };
