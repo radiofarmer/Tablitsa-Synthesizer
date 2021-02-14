@@ -599,15 +599,15 @@ public:
 
     // Modulator parameters that can themselves be modulated
     ModulatedParameterList<T, kNumVoiceMetaModulations> mVoiceMetaModParams{
-      new ParameterModulator<>(-1., 1., "Env1 Sustain"),
-      new ParameterModulator<>(-1., 1., "Env2 Sustain"),
-      new ParameterModulator<>(-1., 1., "AmpEnv Sustain"),
-      new ParameterModulator<>(-1., 1., "LFO1 Rate Hz"),
+      new ParameterModulator<>(0., 1., "Env1 Sustain"),
+      new ParameterModulator<>(0., 1., "Env2 Sustain"),
+      new ParameterModulator<>(0., 1., "AmpEnv Sustain"),
+      new ParameterModulator<>(0.01, 40., "LFO1 Rate Hz"),
       new ParameterModulator<>(-1., 1., "LFO1 Amp"),
-      new ParameterModulator<>(-1., 1., "LFO2 Rate Hz"),
+      new ParameterModulator<>(0.01, 40., "LFO2 Rate Hz"),
       new ParameterModulator<>(-1., 1., "LFO2 Amp"),
-      new ParameterModulator<>(-1., 1., "Sequencer Rate Hz"),
-      new ParameterModulator<>(-1., 1., "Sequencer Amp"),
+      new ParameterModulator<>(0.01, 40., "Sequencer Rate Hz"),
+      new ParameterModulator<>(0., 1., "Sequencer Amp"),
 
     };
 
@@ -988,6 +988,21 @@ public:
         mSynth.ForEachVoice([value](SynthVoice& voice) {
           dynamic_cast<TablitsaDSP::Voice&>(voice).mLFO1.SetFreqCPS(value);
           });
+      }
+      case kParamLFO1RateHzEnv1:
+      case kParamLFO1RateHzEnv2:
+      case kParamLFO1RateHzAmpEnv:
+      case kParamLFO1RateHzLFO1:
+      case kParamLFO1RateHzLFO2:
+      case kParamLFO1RateHzSeq:
+      case kParamLFO1RateHzVel:
+      case kParamLFO1RateHzKTk:
+      case kParamLFO1RateHzRnd:
+      {
+        const int modIdx = paramIdx - kParamLFO1RateHz;
+        SendParam([paramIdx, modIdx, value](Voice* voice) {
+          voice->UpdateVoiceModulatorParam(kVLFO1RateHz, modIdx, value);
+          });
         break;
       }
       case kParamLFO1RateMode:
@@ -1017,11 +1032,13 @@ public:
         mSynth.ForEachVoice([value](SynthVoice& voice) {
           dynamic_cast<TablitsaDSP::Voice&>(voice).mLFO2.SetScalar(value);
           });
+        [[fallthrough]];
       }
       case kParamLFO2AmpEnv1:
       case kParamLFO2AmpEnv2:
       case kParamLFO2AmpAmpEnv:
       case kParamLFO2AmpLFO1:
+      case kParamLFO2AmpLFO2:
       case kParamLFO2AmpSeq:
       case kParamLFO2AmpVel:
       case kParamLFO2AmpKTk:
@@ -1046,6 +1063,22 @@ public:
         mGlobalLFO2.SetFreqCPS(value);
         mSynth.ForEachVoice([value](SynthVoice& voice) {
           dynamic_cast<TablitsaDSP::Voice&>(voice).mLFO2.SetFreqCPS(value);
+          });
+        [[fallthrough]];
+      }
+      case kParamLFO2RateHzEnv1:
+      case kParamLFO2RateHzEnv2:
+      case kParamLFO2RateHzAmpEnv:
+      case kParamLFO2RateHzLFO1:
+      case kParamLFO2RateHzLFO2:
+      case kParamLFO2RateHzSeq:
+      case kParamLFO2RateHzVel:
+      case kParamLFO2RateHzKTk:
+      case kParamLFO2RateHzRnd:
+      {
+        const int modIdx = paramIdx - kParamLFO2RateHz;
+        SendParam([paramIdx, modIdx, value](Voice* voice) {
+          voice->UpdateVoiceModulatorParam(kVLFO2RateHz, modIdx, value);
           });
         break;
       }
@@ -1076,10 +1109,17 @@ public:
         mSynth.ForEachVoice([value](SynthVoice& voice) {
           dynamic_cast<TablitsaDSP::Voice&>(voice).mSequencer.SetScalar(value);
           });
+        [[fallthrough]];
       }
       case kParamSequencerAmpEnv1:
       case kParamSequencerAmpEnv2:
       case kParamSequencerAmpAmpEnv:
+      case kParamSequencerAmpLFO1:
+      case kParamSequencerAmpLFO2:
+      case kParamSequencerAmpSeq:
+      case kParamSequencerAmpVel:
+      case kParamSequencerAmpKTk:
+      case kParamSequencerAmpRnd:
       {
         const int modIdx = paramIdx - kParamSequencerAmp;
         SendParam([paramIdx, modIdx, value](Voice* voice) {
@@ -1108,6 +1148,22 @@ public:
         mGlobalSequencer.SetFreqCPS(value);
         mSynth.ForEachVoice([value](SynthVoice& voice) {
           dynamic_cast<TablitsaDSP::Voice&>(voice).mSequencer.SetFreqCPS(value);
+          });
+        [[fallthrough]];
+      }
+      case kParamSequencerRateHzEnv1:
+      case kParamSequencerRateHzEnv2:
+      case kParamSequencerRateHzAmpEnv:
+      case kParamSequencerRateHzLFO1:
+      case kParamSequencerRateHzLFO2:
+      case kParamSequencerRateHzSeq:
+      case kParamSequencerRateHzVel:
+      case kParamSequencerRateHzKTk:
+      case kParamSequencerRateHzRnd:
+      {
+        const int modIdx = paramIdx - kParamSequencerRateHz;
+        SendParam([paramIdx, modIdx, value](Voice* voice) {
+          voice->UpdateVoiceModulatorParam(kVSequencerRateHz, modIdx, value);
           });
         break;
       }

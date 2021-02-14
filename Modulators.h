@@ -315,6 +315,7 @@ public:
 
   inline void SetParams(T* params) override
   {
+    SetFreqCPS(params[0]);
     SetScalar(params[1]);
   }
 
