@@ -1434,6 +1434,25 @@ public:
           });
         break;
       }
+      case kParamWavetable2Sub:
+        mParamsToSmooth[kModWavetable2SubSmoother] = value;
+        break;
+      case kParamWavetable2SubEnv1:
+      case kParamWavetable2SubEnv2:
+      case kParamWavetable2SubAmpEnv:
+      case kParamWavetable2SubLFO1:
+      case kParamWavetable2SubLFO2:
+      case kParamWavetable2SubSeq:
+      case kParamWavetable2SubVel:
+      case kParamWavetable2SubKTk:
+      case kParamWavetable2SubRnd:
+      {
+        const int modIdx = paramIdx - kParamWavetable2Sub;
+        mSynth.ForEachVoice([paramIdx, modIdx, value](SynthVoice& voice) {
+          dynamic_cast<TablitsaDSP::Voice&>(voice).UpdateVoiceParam(kVWavetable2Sub, modIdx, value);
+          });
+        break;
+      }
       case kParamFilter1Type:
       {
         mFilter1Comb = static_cast<int>(value) == kComb;
