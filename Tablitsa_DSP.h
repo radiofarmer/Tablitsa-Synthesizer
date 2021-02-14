@@ -602,11 +602,11 @@ public:
       new ParameterModulator<>(0., 1., "Env1 Sustain"),
       new ParameterModulator<>(0., 1., "Env2 Sustain"),
       new ParameterModulator<>(0., 1., "AmpEnv Sustain"),
-      new ParameterModulator<>(0.01, 40., "LFO1 Rate Hz"),
+      new ParameterModulator<>(0.01, 40., "LFO1 Rate Hz", true),
       new ParameterModulator<>(-1., 1., "LFO1 Amp"),
-      new ParameterModulator<>(0.01, 40., "LFO2 Rate Hz"),
+      new ParameterModulator<>(0.01, 40., "LFO2 Rate Hz", true),
       new ParameterModulator<>(-1., 1., "LFO2 Amp"),
-      new ParameterModulator<>(0.01, 40., "Sequencer Rate Hz"),
+      new ParameterModulator<>(0.01, 40., "Sequencer Rate Hz", true),
       new ParameterModulator<>(0., 1., "Sequencer Amp"),
 
     };

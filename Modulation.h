@@ -2,6 +2,151 @@
 
 #include "Modulators.h"
 
+template<int DynMods = 6, int StatMods = 3>
+class ParameterModulator
+{
+public:
+  ParameterModulator(double min, double max, const char* name = "", bool exponential = false) : mMin(min), mMax(max), mName(name), mIsExponential(exponential)
+  {
+    if (mIsExponential)
+    {
+      mMin = std::max(mMin, 1e-6);
+      mRange = std::log(mMax / mMin);
+    }
+    else
+      mRange = mMax - mMin;
+
+    mMinV = Vec4d(mMin);
+    mMaxV = Vec4d(mMax);
+  }
+
+  void SetMinMax(double min, double max)
+  {
+    mMin = min;
+    mMax = max;
+    if (mIsExponential)
+    {
+      mRange = std::log(mMax / std::max(mMin, 1.e-6));
+    }
+    else
+      mRange = mMax - mMin;
+
+    mMinV = Vec4d(mMin);
+    mMaxV = Vec4d(mMax);
+  }
+
+  virtual void SetValue(int idx, double value)
+  {
+    mModDepths[idx] = value * mRange;
+  }
+
+  static inline void SetModValues(double* modPtr)
+  {
+    memcpy(ParameterModulator::mModValues, modPtr, DynMods * sizeof(double));
+  }
+
+  virtual void SetInitialValue(const double value)
+  {
+    mInitial = value;
+  }
+
+  /*
+  Write a buffer of modulation buffers. Can be called directly by a ParameterModulator, or indirectly by a ParameterModulatorList.
+  @param inputs The initival values (parameter values) for the parameter
+  @param outputs A buffer (e.g. WDL_TypedBuf) to write the values to
+  @param nFrames The length of the block
+  */
+  inline void ProcessBlock(double* inputs, double* outputs, int nFrames)
+  {
+    for (auto i{ 0 }; i < nFrames; ++i)
+    {
+      outputs[i] = AddModulation(inputs[i]);
+    }
+  }
+
+  inline double AddModulation()
+  {
+    return AddModulation(mInitial);
+  }
+
+  /* TODO: This may be better implemented with virtual functions (see ParameterModulationExp implementation below) */
+  inline double AddModulation(double initVal)
+  {
+    double modulation{ 0. };
+    for (auto i{ 0 }; i < DynMods; ++i)
+      modulation += mModDepths[i] * ParameterModulator::mModValues[i];
+    modulation += mStaticModulation;
+    if (!mIsExponential)
+      return std::max(std::min(initVal + modulation, mMax), mMin);
+    else
+      return std::max(std::min(initVal * std::exp(modulation), mMax), mMin);
+  }
+
+  inline double AddModulation_Vector(double initVal)
+  {
+    double modulation{ 0. };
+    Vec4d modDepths;
+    Vec4d modValues;
+    constexpr int vectorsize = 4;
+    auto i{ 0 };
+    for (; i < (DynMods & vectorsize); ++i)
+    {
+      modDepths.load(mModDepths);
+      modValues.load(ParameterModulator::mModValues);
+      modulation += horizontal_add(modDepths * modValues);
+    }
+    modDepths.load_partial(DynMods - i, mModDepths + i);
+    modDepths.cutoff(DynMods - i);
+    modValues.load_partial(DynMods - i, ParameterModulator::mModValues + i);
+    // modValues.cutoff(DynMods - i);
+    modulation += horizontal_add(modDepths * modValues);
+    modulation += mStaticModulation;
+    // Clip and return
+    if (!mIsExponential)
+      return std::max(std::min(initVal + modulation, mMax), mMin);
+    else
+      return std::max(std::min(initVal * std::exp(modulation), mMax), mMin);
+  }
+
+  inline void SetStaticModulation(double* staticMods)
+  {
+    mStaticModulation = 0.;
+    for (auto i{ 0 }; i < StatMods; ++i)
+      mStaticModulation += mModDepths[i + DynMods] * staticMods[i];
+  }
+
+  inline double ClipToRange(double value)
+  {
+    return std::max(std::min(value, mMax), mMin);
+  }
+
+  double operator[](int idx)
+  {
+    return mModDepths[idx];
+  }
+
+  const double* Depths()
+  {
+    return mModDepths;
+  }
+
+
+protected:
+  static inline double mModValues[DynMods + StatMods]{ 0. };
+  double mStaticModulation{};
+
+  double mInitial{ 0. };
+  double mModDepths[DynMods + StatMods]{ 0. };
+
+  double mMin{ 0. };
+  double mMax{ 1. };
+  double mRange{ 1. };
+  std::string mName;
+  const bool mIsExponential{ false };
+
+  Vec4d mMinV = Vec4d(0.);
+  Vec4d mMaxV = Vec4d(0.);
+};
 
 template<typename T, int NParams = 1, int DynamicMods = 6, int StaticMods = 3, int VectorSize = 4>
 class ModulatedParameterList
@@ -32,7 +177,11 @@ public:
       ParameterModulator<DynamicMods, StaticMods>::SetModValues(modDepths);
       for (auto p{ offset }; p < NParams; ++p)
       {
+#if _DEBUG
         outputs[p][i] = mParams[p]->AddModulation(param_inputs[p][i]);
+#else
+        outputs[p][i] = mParams[p]->AddModulation_Vector(param_inputs[p][i]);
+#endif
       }
     }
   }

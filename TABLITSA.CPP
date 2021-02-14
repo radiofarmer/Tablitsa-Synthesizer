@@ -153,19 +153,21 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
 //  GetParam(kParamSequencerCurve)->InitEnum()
   GetParam(kParamSequencerAmp)->InitDouble("Seqeuencer Amp", 1., 0., 1., 0.01, "", IParam::kFlagsNone, "Sequencer");
   // Sequencer Meta-Modulation
-  GetParam(kParamSequencerRateHzEnv1)->InitDouble("Sequencer Amp Env1 Depth", 0., -1., 1., 0.01);
-  GetParam(kParamSequencerRateHzEnv2)->InitDouble("Sequencer Amp Env2 Depth", 0., -1., 1., 0.01);
-  GetParam(kParamSequencerRateHzAmpEnv)->InitDouble("Sequencer Amp AmpEnv Depth", 0., -1., 1., 0.01);
-  GetParam(kParamSequencerRateHzLFO1)->InitDouble("Sequencer Amp LFO1 Depth", 0., -1., 1., 0.01);
-  GetParam(kParamSequencerRateHzLFO2)->InitDouble("Sequencer Amp LFO2 Depth", 0., -1., 1., 0.01);
-  GetParam(kParamSequencerRateHzVel)->InitDouble("Sequencer Amp Velocity Depth", 0., -1., 1., 0.01);
-  GetParam(kParamSequencerRateHzKTk)->InitDouble("Sequencer Amp Keytrack Depth", 0., -1., 1., 0.01);
-  GetParam(kParamSequencerRateHzRnd)->InitDouble("Sequencer Amp Depth", 0., -1., 1., 0.01);
+  GetParam(kParamSequencerRateHzEnv1)->InitDouble("Sequencer Rate (Hz) Env1 Depth", 0., -1., 1., 0.01);
+  GetParam(kParamSequencerRateHzEnv2)->InitDouble("Sequencer Rate (Hz) Env2 Depth", 0., -1., 1., 0.01);
+  GetParam(kParamSequencerRateHzAmpEnv)->InitDouble("Sequencer Rate (Hz) AmpEnv Depth", 0., -1., 1., 0.01);
+  GetParam(kParamSequencerRateHzLFO1)->InitDouble("Sequencer Rate (Hz) LFO1 Depth", 0., -1., 1., 0.01);
+  GetParam(kParamSequencerRateHzLFO2)->InitDouble("Sequencer Rate (Hz) LFO2 Depth", 0., -1., 1., 0.01);
+  GetParam(kParamSequencerRateHzSeq)->InitDouble("Sequencer Rate (Hz) Sequencer Depth", 0., -1., 1., 0.01);
+  GetParam(kParamSequencerRateHzVel)->InitDouble("Sequencer Rate (Hz) Velocity Depth", 0., -1., 1., 0.01);
+  GetParam(kParamSequencerRateHzKTk)->InitDouble("Sequencer Rate (Hz) Keytrack Depth", 0., -1., 1., 0.01);
+  GetParam(kParamSequencerRateHzRnd)->InitDouble("Sequencer Rate (Hz) Depth", 0., -1., 1., 0.01);
   GetParam(kParamSequencerAmpEnv1)->InitDouble("Sequencer Amp Env1 Depth", 0., -1., 1., 0.01);
   GetParam(kParamSequencerAmpEnv2)->InitDouble("Sequencer Amp Env2 Depth", 0., -1., 1., 0.01);
   GetParam(kParamSequencerAmpAmpEnv)->InitDouble("Sequencer Amp AmpEnv Depth", 0., -1., 1., 0.01);
   GetParam(kParamSequencerAmpLFO1)->InitDouble("Sequencer Amp LFO1 Depth", 0., -1., 1., 0.01);
   GetParam(kParamSequencerAmpLFO2)->InitDouble("Sequencer Amp LFO2 Depth", 0., -1., 1., 0.01);
+  GetParam(kParamSequencerAmpSeq)->InitDouble("Sequencer Amp Sequencer Depth", 0., -1., 1., 0.01);
   GetParam(kParamSequencerAmpVel)->InitDouble("Sequencer Amp Velocity Depth", 0., -1., 1., 0.01);
   GetParam(kParamSequencerAmpKTk)->InitDouble("Sequencer Amp Keytrack Depth", 0., -1., 1., 0.01);
   GetParam(kParamSequencerAmpRnd)->InitDouble("Sequencer Amp Random Depth", 0., -1., 1., 0.01);
