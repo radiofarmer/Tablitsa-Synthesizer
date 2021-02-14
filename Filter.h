@@ -405,6 +405,20 @@ public:
       return out;
     }
 
+    /* Process four samples simultaneously */
+    inline T ProcessPrecomp(T* s)
+    {
+      Vec4d x = Vec4d().load(s);
+    }
+
+    /* Process one sample and return a vector the sample and the delay line */
+    inline Vec4d __vectorcall ProcessPrecomp_Vector(T s)
+    {
+      T out = ProcessPrecomp(s);
+      mDelayVector = blend4<0, 1, 4, V_DC>(Vec4d(out, sum), mDelayVector);
+      return mDelayVector
+    }
+
     void SetAddendPtr(double* ptr)
     {
       mAddends = ptr;
@@ -420,6 +434,7 @@ public:
     DelayLine mZ{ 2 };
     Vec4d mB;
     Vec4d mA;
+    Vec4d mDelayVector = Vec4d(0.);
 
     double* mAddends = nullptr;
     double* mMatrixDelay = nullptr;
@@ -456,21 +471,22 @@ public:
 
   inline void Precompute()
   {
-    Vec4d flt0_taps = Vec4d().load(mSOS[0].mMatrixDelay);
-    Vec4d flt1_taps = Vec4d().load(mSOS[1].mMatrixDelay);
-    Vec4d flt2_taps = Vec4d().load(mSOS[2].mMatrixDelay);
-    Vec4d flt3_taps = Vec4d().load(mSOS[3].mMatrixDelay);
-    Vec4d flt4_taps = Vec4d().load(mSOS[4].mMatrixDelay);
-    Vec4d flt5_taps = Vec4d().load(mSOS[5].mMatrixDelay);
-    Vec4d flt6_taps = Vec4d().load(mSOS[6].mMatrixDelay);
+    // Get values from the 6x2 delay matrix
+    Vec4d flt01_taps = Vec4d().load(mSOS[0].mMatrixDelay);
+    Vec4d flt23_taps = Vec4d().load(mSOS[2].mMatrixDelay);
+    Vec4d flt45_taps = Vec4d().load(mSOS[4].mMatrixDelay);
+    // Alternatively:
+//  Vec4d z1_0 = blend<0, 0, 4, 4>(mSOS[0].mDelayVector, mSOS[1].mDelayVector);
+    // etc...
+
     // Tap 1
-    Vec4d z1_0 = blend4<0, 0, 4, 4>(flt0_taps, flt1_taps);
-    Vec4d z1_1 = blend4<0, 0, 4, 4>(flt2_taps, flt3_taps);
-    Vec4d z1_2 = blend4<0, 0, 4, 4>(flt4_taps, flt5_taps);
-    // Tap 2s
-    Vec4d z2_0 = blend4<1, 1, 5, 5>(flt0_taps, flt1_taps);
-    Vec4d z2_1 = blend4<1, 1, 5, 5>(flt2_taps, flt3_taps);
-    Vec4d z2_2 = blend4<1, 1, 5, 5>(flt4_taps, flt5_taps);
+    Vec4d z1_0 = permute4<0, 0, 2, 2>(flt01_taps);
+    Vec4d z1_1 = permute4<0, 0, 2, 2>(flt23_taps);
+    Vec4d z1_2 = permute4<0, 0, 2, 2>(flt45_taps);
+    // Tap 2
+    Vec4d z2_0 = permute4<1, 1, 3, 3>(flt01_taps);
+    Vec4d z2_1 = permute4<1, 1, 3, 3>(flt23_taps);
+    Vec4d z2_2 = permute4<1, 1, 3, 3>(flt45_taps);
 
     // First 4 terms
     Vec4d addends1 = (z1_0 * mZ1_Coefs1) + (z2_0 * mZ2_Coefs1);
@@ -497,6 +513,11 @@ public:
     Process(s[0]); // Process and throw away sample
     return Process(s[1]); // Process and return sample
   }
+
+  /*__vectorcall inline Vec4d ProcessAndDownsample_Vector(Vec4d s)
+  {
+
+  }*/
 
 private:
   Biquad<T> mSOS[6]{ { 1.0194978892532574e-05, 2.0389957785065147e-05, 1.0194978892532574e-05, 1.0, -1.6759049412919762, 0.7386853939104704 },

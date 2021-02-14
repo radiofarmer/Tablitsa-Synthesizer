@@ -311,6 +311,7 @@ public:
     T oversampled[VECTOR_SIZE];
     mixed.store(oversampled);
 
+//    mLastOutput = pOutput[s] = mAAFilter.ProcessAndDownsample_Vector(mixed, mProcessOS);
     for (auto s = 0; s < VECTOR_SIZE / mProcessOS; ++s)
     {
       mLastOutput = pOutput[s] = mAAFilter.ProcessAndDownsample(oversampled + (s * mProcessOS));
