@@ -31,6 +31,7 @@ enum EParams
   kParamUnisonVoices,
   kParamUnisonDetune,
   kParamUnisonChord,
+  kParamStereoSpread,
   kParamAmpEnvAttack,
   kParamAmpEnvDecay,
   kParamAmpEnvSustain,
@@ -373,7 +374,7 @@ enum EParams
   kParamPhaseModAmountVel,
   kParamPhaseModAmountKTk,
   kParamPhaseModAmountRnd,
-  kParamRingModFreq,
+  kParamRingModFreq, // Ring Mod
   kParamRingModFreqEnv1,
   kParamRingModFreqEnv2,
   kParamRingModFreqAmpEnv,
@@ -392,14 +393,18 @@ enum EParams
   kParamRingModAmountSeq,
   kParamRingModAmountVel,
   kParamRingModAmountKTk,
-  kParamRingModAmountRnd,
-  kParamDelayTimeLMilliseconds,
+  kParamRingModAmountRnd, // !Ring Mod
+  kParamDelayTimeLMilliseconds, // Delay
   kParamDelayTimeRMilliseconds,
   kParamDelayTimeLBeats,
   kParamDelayTimeRBeats,
   kParamDelayTimeMode,
   kParamDelayFeedback,
-  kParamDelayMix,
+  kParamDelayMix, // !Delay
+  kParamSampleAndHold, // Sample-and-Hold
+  kParamSaHRate,
+  kParamSaHDecay,
+  kParamSaHMix, // !Sample-and-Hold
   kNumParams
 };
 

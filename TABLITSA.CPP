@@ -522,8 +522,10 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
     pGraphics->AttachControl(new IVNumberBoxControl(masterPanel.GetGridCell(0, 2, 4, 6).GetHPadded(-10.f).GetVPadded(-18.f), kParamUnisonVoices, nullptr, "Unison", DEFAULT_STYLE.WithValueText(IText(18.f))), kNoTag, "Stereo");
     pGraphics->AttachControl(new IVKnobControl(masterPanel.GetGridCell(0, 3, 4, 6).GetCentredInside(dialSize), kParamUnisonDetune, "Detune"), kNoTag, "Stereo");
     pGraphics->AttachControl(new IVKnobControl(masterPanel.GetGridCell(0, 4, 4, 6).GetCentredInside(dialSize), kParamUnisonChord, "Chord"), kNoTag, "Stereo");
+    pGraphics->AttachControl(new IVKnobControl(masterPanel.GetGridCell(1, 3, 4, 6).GetCentredInside(dialSize), kParamStereoSpread, "Spread"), kNoTag, "Stereo");
 
     /* Effects Panel */
+    // Delay
     auto channelLockFunction = IActionFunction([pGraphics, this](IControl* pControl) {
       int ctrlTag = pControl->GetTag() == kCtrlTagDelayLMilliseconds || pControl->GetTag() == kCtrlTagDelayLBeats ? pControl->GetTag() + 1 : pControl->GetTag() - 1;
       pGraphics->GetControlWithTag(ctrlTag)->SetValue(pControl->GetValue());
