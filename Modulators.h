@@ -6,127 +6,6 @@
 #include "LFO.h"
 #include "ADSREnvelope.h"
 
-#include <cstdarg>
-
-template<int DynMods = 6, int StatMods = 3>
-class ParameterModulator
-{
-public:
-  ParameterModulator(double min, double max, const char* name = "", bool exponential = false) : mMin(min), mMax(max), mName(name), mIsExponential(exponential)
-  {
-    if (mIsExponential)
-    {
-      mMin = std::max(mMin, 1e-6);
-      mRange = std::log(mMax / mMin);
-    }
-    else
-      mRange = mMax - mMin;
-
-    mMinV = Vec4d(mMin);
-    mMaxV = Vec4d(mMax);
-  }
-
-  void SetMinMax(double min, double max)
-  {
-    mMin = min;
-    mMax = max;
-    if (mIsExponential)
-    {
-      mRange = std::log(mMax / std::max(mMin, 1.e-6));
-    }
-    else
-      mRange = mMax - mMin;
-
-    mMinV = Vec4d(mMin);
-    mMaxV = Vec4d(mMax);
-  }
-
-  virtual void SetValue(int idx, double value)
-  {
-    mModDepths[idx] = value * mRange;
-  }
-
-  static inline void SetModValues(double* modPtr)
-  {
-    memcpy(ParameterModulator::mModValues, modPtr, DynMods * sizeof(double));
-  }
-
-  virtual void SetInitialValue(const double value)
-  {
-    mInitial = value;
-  }
-
-  /*
-  Write a buffer of modulation buffers. Can be called directly by a ParameterModulator, or indirectly by a ParameterModulatorList.
-  @param inputs The initival values (parameter values) for the parameter
-  @param outputs A buffer (e.g. WDL_TypedBuf) to write the values to
-  @param nFrames The length of the block
-  */
-  inline void ProcessBlock(double* inputs, double* outputs, int nFrames)
-  {
-    for (auto i{ 0 }; i < nFrames; ++i)
-    {
-      outputs[i] = AddModulation(inputs[i]);
-    }
-  }
-
-  inline double AddModulation()
-  {
-    return AddModulation(mInitial);
-  }
-
-  /* TODO: This may be better implemented with virtual functions (see ParameterModulationExp implementation below) */
-  inline double AddModulation(double initVal)
-  {
-    double modulation{ 0. };
-    for (auto i{ 0 }; i < DynMods; ++i)
-      modulation += mModDepths[i] * ParameterModulator::mModValues[i];
-    modulation += mStaticModulation;
-    if (!mIsExponential)
-      return std::max(std::min(initVal + modulation, mMax), mMin);
-    else
-      return std::max(std::min(initVal * std::exp(modulation), mMax), mMin);
-  }
-
-  inline void SetStaticModulation(double* staticMods)
-  {
-    mStaticModulation = 0.;
-    for (auto i{ 0 }; i < StatMods; ++i)
-      mStaticModulation += mModDepths[i + DynMods] * staticMods[i];
-  }
-
-  inline double ClipToRange(double value)
-  {
-    return std::max(std::min(value, mMax), mMin);
-  }
-
-  double operator[](int idx)
-  {
-    return mModDepths[idx];
-  }
-
-  const double* Depths()
-  {
-    return mModDepths;
-  }
-
-
-protected:
-  static inline double mModValues[DynMods + StatMods]{ 0. };
-  double mStaticModulation{};
-
-  double mInitial{ 0. };
-  double mModDepths[DynMods + StatMods]{ 0. };
-
-  double mMin{ 0. };
-  double mMax{ 1. };
-  double mRange{ 1. };
-  std::string mName;
-  const bool mIsExponential{ false };
-
-  Vec4d mMinV = Vec4d(0.);
-  Vec4d mMaxV = Vec4d(0.);
-};
 
 template<typename T>
 class GenericModulator
@@ -169,6 +48,10 @@ struct ModShapePowCurve : public IParam::ShapePowCurve
 template<typename T>
 class Envelope : public GenericModulator<T>, public ADSREnvelope<T>
 {
+  static constexpr T DECAY_FLOOR{ 0.00001 };
+  static constexpr T HALF_LIVES_TO_FLOOR{ 16.6096404744 }; // Half-lives elapsed until magnitude is less than the floor value
+  static constexpr T HALF_LIFE_SCALAR{ 1. / HALF_LIVES_TO_FLOOR };
+
 public:
   Envelope(const char* name = "", std::function<void()> resetFunc = nullptr, bool sustainEnabled = true) :
     ADSREnvelope<T>(name, resetFunc, sustainEnabled), GenericModulator<T>()
@@ -184,13 +67,158 @@ public:
     mSustainLevel = susLvl;
   }
 
+  void SetStageTime(int stage, T timeMS)
+  {
+    switch (stage)
+    {
+    case kAttack:
+      mAttackIncr = ADSREnvelope<T>::CalcIncrFromTimeLinear(Clip(timeMS, MIN_ENV_TIME_MS, MAX_ENV_TIME_MS), mSampleRate);
+      break;
+    case kDecay:
+      mDecayIncr = CalcIncrFromTimeExp(Clip(timeMS, MIN_ENV_TIME_MS, MAX_ENV_TIME_MS), mSampleRate);
+      mDecayIncrLinear = CalcIncrFromTimeLinear(Clip(timeMS, MIN_ENV_TIME_MS, MAX_ENV_TIME_MS), mSampleRate);
+      break;
+    case kRelease:
+      mReleaseIncr = CalcIncrFromTimeExp(Clip(timeMS, MIN_ENV_TIME_MS, MAX_ENV_TIME_MS), mSampleRate);
+      mReleaseIncrLinear = CalcIncrFromTimeLinear(Clip(timeMS, MIN_ENV_TIME_MS, MAX_ENV_TIME_MS), mSampleRate);
+      break;
+    default:
+      //error
+      break;
+    }
+  }
+
+  void SetStageCurve(int stage, T expAmt)
+  {
+    switch (stage)
+    {
+    case kDecay:
+      mDecCurve = Clip(expAmt, 0., 1.);
+      break;
+    case kRelease:
+      mRelCurve = Clip(expAmt, 0., 1.);
+      break;
+    default:
+      //error
+      break;
+    }
+  }
+
+  /** Process the envelope, returning the value according to the current envelope stage
+  * @param sustainLevel Since the sustain level could be changed during processing, it is supplied as an argument, so that it can be smoothed extenally if nessecary, to avoid discontinuities */
+  inline T Process(T sustainLevel = 0.)
+  {
+    T result = 0.;
+
+    switch (mStage)
+    {
+    case kIdle:
+      result = mEnvValue;
+      break;
+    case kAttack:
+      mEnvValue += (mAttackIncr * mScalar);
+      if (mEnvValue > ENV_VALUE_HIGH || mAttackIncr == 0.)
+      {
+        mStage = kDecay;
+        mEnvValue = 1.;
+      }
+      result = mEnvValue;
+      break;
+    case kDecay:
+      mEnvValue -= ((mDecayIncrLinear + mDecCurve * (mDecayIncr * mEnvValue - mDecayIncrLinear)) * mScalar);
+      result = (mEnvValue * (1. - sustainLevel)) + sustainLevel;
+      if (mEnvValue < ENV_VALUE_LOW)
+      {
+        if (mSustainEnabled)
+        {
+          mStage = kSustain;
+          mEnvValue = 1.;
+          result = sustainLevel;
+        }
+        else
+          Release();
+      }
+      break;
+    case kSustain:
+      result = sustainLevel;
+      break;
+    case kRelease:
+      mEnvValue -= ((mReleaseIncrLinear + mRelCurve * (mReleaseIncr * mEnvValue - mReleaseIncrLinear)) * mScalar);
+      if (mEnvValue < ENV_VALUE_LOW || mReleaseIncr == 0.)
+      {
+        mStage = kIdle;
+        mEnvValue = 0.;
+
+        if (mEndReleaseFunc)
+          mEndReleaseFunc();
+      }
+      result = mEnvValue * mReleaseLevel;
+      break;
+    case kReleasedToRetrigger:
+      mEnvValue -= mRetriggerReleaseIncr;
+      if (mEnvValue < ENV_VALUE_LOW)
+      {
+        mStage = kAttack;
+        mLevel = mNewStartLevel;
+        mEnvValue = 0.;
+        mPrevResult = 0.;
+        mReleaseLevel = 0.;
+
+        if (mResetFunc)
+          mResetFunc();
+      }
+      result = mEnvValue * mReleaseLevel;
+      break;
+    case kReleasedToEndEarly:
+      mEnvValue -= mEarlyReleaseIncr;
+      if (mEnvValue < ENV_VALUE_LOW)
+      {
+        mStage = kIdle;
+        mLevel = 0.;
+        mEnvValue = 0.;
+        mPrevResult = 0.;
+        mReleaseLevel = 0.;
+        if (mEndReleaseFunc)
+          mEndReleaseFunc();
+      }
+      result = mEnvValue * mReleaseLevel;
+      break;
+    default:
+      result = mEnvValue;
+      break;
+    }
+
+    mPrevResult = result;
+    mPrevOutput = (result * mLevel);
+    return mPrevOutput;
+  }
+
   inline T Process() override
   {
-    return ADSREnvelope<T>::Process(mSustainLevel);
+    return Process(mSustainLevel);
+  }
+
+protected:
+  inline T CalcIncrFromTimeExp(T timeMS, T sr) const
+  {
+    T r;
+
+    if (timeMS <= 0.0) return 0.;
+    else
+    {
+      r = M_LN2 / (timeMS / 1000. * sr * HALF_LIFE_SCALAR);
+      if (!(r < 1.0)) r = 1.0;
+
+      return r;
+    }
   }
 
 protected:
   T mSustainLevel{ 0.5 };
+  T mDecCurve{ 1. }; // Interpolation between linear (0.) and exponential (1.) curves
+  T mRelCurve{ 1. };
+  T mDecayIncrLinear;
+  T mReleaseIncrLinear;
 };
 
 /*
@@ -315,6 +343,7 @@ public:
 
   inline void SetParams(T* params) override
   {
+    SetFreqCPS(params[0]);
     SetScalar(params[1]);
   }
 

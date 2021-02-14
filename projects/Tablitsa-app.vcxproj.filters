@@ -325,6 +325,7 @@
     <ClInclude Include="..\Effects.h" />
     <ClInclude Include="..\Modulation.h" />
     <ClInclude Include="..\TablitsaControls.h" />
+    <ClInclude Include="..\TablitsaOscillators.h" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="resources">
