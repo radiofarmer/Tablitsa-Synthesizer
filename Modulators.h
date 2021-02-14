@@ -169,6 +169,10 @@ struct ModShapePowCurve : public IParam::ShapePowCurve
 template<typename T>
 class Envelope : public GenericModulator<T>, public ADSREnvelope<T>
 {
+  static constexpr T DECAY_FLOOR{ 0.00001 };
+  static constexpr T HALF_LIVES_TO_FLOOR{ 16.6096404744 }; // Half-lives elapsed until magnitude is less than the floor value
+  static constexpr T HALF_LIFE_SCALAR{ 1. / HALF_LIVES_TO_FLOOR };
+
 public:
   Envelope(const char* name = "", std::function<void()> resetFunc = nullptr, bool sustainEnabled = true) :
     ADSREnvelope<T>(name, resetFunc, sustainEnabled), GenericModulator<T>()
@@ -184,13 +188,158 @@ public:
     mSustainLevel = susLvl;
   }
 
+  void SetStageTime(int stage, T timeMS)
+  {
+    switch (stage)
+    {
+    case kAttack:
+      mAttackIncr = ADSREnvelope<T>::CalcIncrFromTimeLinear(Clip(timeMS, MIN_ENV_TIME_MS, MAX_ENV_TIME_MS), mSampleRate);
+      break;
+    case kDecay:
+      mDecayIncr = CalcIncrFromTimeExp(Clip(timeMS, MIN_ENV_TIME_MS, MAX_ENV_TIME_MS), mSampleRate);
+      mDecayIncrLinear = CalcIncrFromTimeLinear(Clip(timeMS, MIN_ENV_TIME_MS, MAX_ENV_TIME_MS), mSampleRate);
+      break;
+    case kRelease:
+      mReleaseIncr = CalcIncrFromTimeExp(Clip(timeMS, MIN_ENV_TIME_MS, MAX_ENV_TIME_MS), mSampleRate);
+      mReleaseIncrLinear = CalcIncrFromTimeLinear(Clip(timeMS, MIN_ENV_TIME_MS, MAX_ENV_TIME_MS), mSampleRate);
+      break;
+    default:
+      //error
+      break;
+    }
+  }
+
+  void SetStageCurve(int stage, T expAmt)
+  {
+    switch (stage)
+    {
+    case kDecay:
+      mDecCurve = Clip(expAmt, 0., 1.);
+      break;
+    case kRelease:
+      mRelCurve = Clip(expAmt, 0., 1.);
+      break;
+    default:
+      //error
+      break;
+    }
+  }
+
+  /** Process the envelope, returning the value according to the current envelope stage
+  * @param sustainLevel Since the sustain level could be changed during processing, it is supplied as an argument, so that it can be smoothed extenally if nessecary, to avoid discontinuities */
+  inline T Process(T sustainLevel = 0.)
+  {
+    T result = 0.;
+
+    switch (mStage)
+    {
+    case kIdle:
+      result = mEnvValue;
+      break;
+    case kAttack:
+      mEnvValue += (mAttackIncr * mScalar);
+      if (mEnvValue > ENV_VALUE_HIGH || mAttackIncr == 0.)
+      {
+        mStage = kDecay;
+        mEnvValue = 1.;
+      }
+      result = mEnvValue;
+      break;
+    case kDecay:
+      mEnvValue -= ((mDecayIncrLinear + mDecCurve * (mDecayIncr * mEnvValue - mDecayIncrLinear)) * mScalar);
+      result = (mEnvValue * (1. - sustainLevel)) + sustainLevel;
+      if (mEnvValue < ENV_VALUE_LOW)
+      {
+        if (mSustainEnabled)
+        {
+          mStage = kSustain;
+          mEnvValue = 1.;
+          result = sustainLevel;
+        }
+        else
+          Release();
+      }
+      break;
+    case kSustain:
+      result = sustainLevel;
+      break;
+    case kRelease:
+      mEnvValue -= ((mReleaseIncrLinear + mRelCurve * (mReleaseIncr * mEnvValue - mReleaseIncrLinear)) * mScalar);
+      if (mEnvValue < ENV_VALUE_LOW || mReleaseIncr == 0.)
+      {
+        mStage = kIdle;
+        mEnvValue = 0.;
+
+        if (mEndReleaseFunc)
+          mEndReleaseFunc();
+      }
+      result = mEnvValue * mReleaseLevel;
+      break;
+    case kReleasedToRetrigger:
+      mEnvValue -= mRetriggerReleaseIncr;
+      if (mEnvValue < ENV_VALUE_LOW)
+      {
+        mStage = kAttack;
+        mLevel = mNewStartLevel;
+        mEnvValue = 0.;
+        mPrevResult = 0.;
+        mReleaseLevel = 0.;
+
+        if (mResetFunc)
+          mResetFunc();
+      }
+      result = mEnvValue * mReleaseLevel;
+      break;
+    case kReleasedToEndEarly:
+      mEnvValue -= mEarlyReleaseIncr;
+      if (mEnvValue < ENV_VALUE_LOW)
+      {
+        mStage = kIdle;
+        mLevel = 0.;
+        mEnvValue = 0.;
+        mPrevResult = 0.;
+        mReleaseLevel = 0.;
+        if (mEndReleaseFunc)
+          mEndReleaseFunc();
+      }
+      result = mEnvValue * mReleaseLevel;
+      break;
+    default:
+      result = mEnvValue;
+      break;
+    }
+
+    mPrevResult = result;
+    mPrevOutput = (result * mLevel);
+    return mPrevOutput;
+  }
+
   inline T Process() override
   {
-    return ADSREnvelope<T>::Process(mSustainLevel);
+    return Process(mSustainLevel);
+  }
+
+protected:
+  inline T CalcIncrFromTimeExp(T timeMS, T sr) const
+  {
+    T r;
+
+    if (timeMS <= 0.0) return 0.;
+    else
+    {
+      r = M_LN2 / (timeMS / 1000. * sr * HALF_LIFE_SCALAR);
+      if (!(r < 1.0)) r = 1.0;
+
+      return r;
+    }
   }
 
 protected:
   T mSustainLevel{ 0.5 };
+  T mDecCurve{ 1. }; // Interpolation between linear (0.) and exponential (1.) curves
+  T mRelCurve{ 1. };
+  T mDecayIncrLinear;
+  T mReleaseIncrLinear;
 };
 
 /*

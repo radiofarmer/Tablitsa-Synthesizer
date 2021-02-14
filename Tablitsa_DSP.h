@@ -877,6 +877,16 @@ public:
       case kParamEnv1Velocity:
         Voice::mEnv1VelocityMod = value;
         break;
+      case kParamEnv1DecayCurve:
+        mSynth.ForEachVoice([value](SynthVoice& voice) {
+          dynamic_cast<TablitsaDSP::Voice&>(voice).mEnv1.SetStageCurve(EEnvStage::kDecay, (T)value / 100.);
+          });
+        break;
+      case kParamEnv1ReleaseCurve:
+        mSynth.ForEachVoice([value](SynthVoice& voice) {
+          dynamic_cast<TablitsaDSP::Voice&>(voice).mEnv1.SetStageCurve(EEnvStage::kRelease, (T)value / 100.);
+          });
+        break;
       case kParamEnv2Attack:
       case kParamEnv2Decay:
       case kParamEnv2Release:
@@ -914,6 +924,16 @@ public:
       case kParamEnv2Velocity:
         Voice::mEnv2VelocityMod = value;
         break;
+      case kParamEnv2DecayCurve:
+        mSynth.ForEachVoice([value](SynthVoice& voice) {
+          dynamic_cast<TablitsaDSP::Voice&>(voice).mEnv2.SetStageCurve(EEnvStage::kDecay, (T)value / 100.);
+          });
+        break;
+      case kParamEnv2ReleaseCurve:
+        mSynth.ForEachVoice([value](SynthVoice& voice) {
+          dynamic_cast<TablitsaDSP::Voice&>(voice).mEnv2.SetStageCurve(EEnvStage::kRelease, (T)value / 100.);
+          });
+        break;
       case kParamAmpEnvAttack:
       case kParamAmpEnvDecay:
       case kParamAmpEnvRelease:
@@ -950,6 +970,16 @@ public:
       }
       case kParamAmpEnvVelocity:
         Voice::mAmpEnvVelocityMod = value;
+        break;
+      case kParamAmpEnvDecayCurve:
+        mSynth.ForEachVoice([value](SynthVoice& voice) {
+          dynamic_cast<TablitsaDSP::Voice&>(voice).mAmpEnv.SetStageCurve(EEnvStage::kDecay, (T)value / 100.);
+          });
+        break;
+      case kParamAmpEnvReleaseCurve:
+        mSynth.ForEachVoice([value](SynthVoice& voice) {
+          dynamic_cast<TablitsaDSP::Voice&>(voice).mAmpEnv.SetStageCurve(EEnvStage::kRelease, (T)value / 100.);
+          });
         break;
       case kParamLFO1Amp:
       {
