@@ -400,16 +400,9 @@ public:
       // Direct Form 2
       T sum = s - mAddends[0]; // SUM1 
       T out = mCoefs[0] * sum + mAddends[1]; // SUM2
-      mZ.push(sum);
+      mMatrixDelay[1] = mMatrixDelay[0];
+      mMatrixDelay[0] = sum;
       return out;
-    }
-
-    inline T Process2V(T s)
-    {
-      mDelay = blend4<4, 0, 1, 2>(mDelay, Vec4d(s, 0., 0., 0.)); // {s, z-1, z-2, z-3}
-      Vec4d sum{ horizontal_add(mDelay * mA), 0., 0., 0. }; // {SUM1, 0., 0., 0.}
-      mDelay = blend4<4, 1, 2, 3>(mDelay, sum); // {SUM1, z-1, z-2, z-3}
-      return horizontal_add(mDelay * mB);
     }
 
     void SetAddendPtr(double* ptr)
@@ -417,13 +410,19 @@ public:
       mAddends = ptr;
     }
 
+    void SetDelayPtr(double* ptr)
+    {
+      mMatrixDelay = ptr;
+    }
+
   protected:
     std::vector<double> mCoefs;
     DelayLine mZ{ 2 };
     Vec4d mB;
     Vec4d mA;
-    Vec4d mDelay{ 0. };
-    double* mAddends;
+
+    double* mAddends = nullptr;
+    double* mMatrixDelay = nullptr;
 
     friend class ChebyshevBL<T>;
   };
@@ -438,7 +437,8 @@ public:
     {
       // Provide each second-order filter with a pointer to the addend terms
       mSOS[i].SetAddendPtr(&mAddendPtrs[2 * i]);
-      // Store the coefficients in the parent filter object
+      mSOS[i].SetDelayPtr(mDelayPtrs[i]);
+      // Store the coefficients in this parent filter object
       z1[2 * i] = mSOS[i].mCoefs[4];
       z1[2 * i + 1] = mSOS[i].mCoefs[1];
       z2[2 * i] = mSOS[i].mCoefs[5];
@@ -446,26 +446,41 @@ public:
     }
 
     mZ1_Coefs1.load(z1);
-    mZ1_Coefs2.load(z1 + 8);
+    mZ1_Coefs2.load(z1 + 4);
+    mZ1_Coefs3.load(z1 + 8);
+
     mZ2_Coefs1.load(z2);
-    mZ2_Coefs2.load(z2 + 8);
+    mZ2_Coefs2.load(z2 + 4);
+    mZ2_Coefs3.load(z2 + 8);
   }
 
   inline void Precompute()
   {
+    Vec4d flt0_taps = Vec4d().load(mSOS[0].mMatrixDelay);
+    Vec4d flt1_taps = Vec4d().load(mSOS[1].mMatrixDelay);
+    Vec4d flt2_taps = Vec4d().load(mSOS[2].mMatrixDelay);
+    Vec4d flt3_taps = Vec4d().load(mSOS[3].mMatrixDelay);
+    Vec4d flt4_taps = Vec4d().load(mSOS[4].mMatrixDelay);
+    Vec4d flt5_taps = Vec4d().load(mSOS[5].mMatrixDelay);
+    Vec4d flt6_taps = Vec4d().load(mSOS[6].mMatrixDelay);
     // Tap 1
-    Vec8d z1_1( mSOS[0].mZ[0], mSOS[0].mZ[0], mSOS[1].mZ[0], mSOS[1].mZ[0], mSOS[2].mZ[0], mSOS[2].mZ[0], mSOS[3].mZ[0], mSOS[3].mZ[0] );
-    Vec4d z1_2( mSOS[4].mZ[0], mSOS[4].mZ[0], mSOS[5].mZ[0], mSOS[5].mZ[0] );
-    // Tap 2
-    Vec8d z2_1( mSOS[0].mZ[1], mSOS[0].mZ[1], mSOS[1].mZ[1], mSOS[1].mZ[1], mSOS[2].mZ[1], mSOS[2].mZ[1], mSOS[3].mZ[1], mSOS[3].mZ[1] );
-    Vec4d z2_2( mSOS[4].mZ[1], mSOS[4].mZ[1], mSOS[5].mZ[1], mSOS[5].mZ[1] );
+    Vec4d z1_0 = blend4<0, 0, 4, 4>(flt0_taps, flt1_taps);
+    Vec4d z1_1 = blend4<0, 0, 4, 4>(flt2_taps, flt3_taps);
+    Vec4d z1_2 = blend4<0, 0, 4, 4>(flt4_taps, flt5_taps);
+    // Tap 2s
+    Vec4d z2_0 = blend4<1, 1, 5, 5>(flt0_taps, flt1_taps);
+    Vec4d z2_1 = blend4<1, 1, 5, 5>(flt2_taps, flt3_taps);
+    Vec4d z2_2 = blend4<1, 1, 5, 5>(flt4_taps, flt5_taps);
 
-    // First 8 terms
-    Vec8d addends1 = (z1_1 * mZ1_Coefs1) + (z2_1 * mZ2_Coefs1);
+    // First 4 terms
+    Vec4d addends1 = (z1_0 * mZ1_Coefs1) + (z2_0 * mZ2_Coefs1);
     addends1.store(mAddendPtrs);
+    // Next 4 terms
+    Vec4d addends2 = (z1_1 * mZ1_Coefs2) + (z2_1 * mZ2_Coefs2);
+    addends2.store(mAddendPtrs + 4);
     // Last 4 terms
-    Vec4d addends2 = (z1_2 * mZ1_Coefs2) + (z2_2 * mZ2_Coefs2);
-    addends2.store(mAddendPtrs + 8);
+    Vec4d addends3 = (z1_2 * mZ1_Coefs3) + (z2_2 * mZ2_Coefs3);
+    addends3.store(mAddendPtrs + 8);
   }
 
   inline T Process(T s)
@@ -490,12 +505,11 @@ private:
     { 1.0, 2.0, 1.0, 1.0, -0.6862027551047557, 0.8794409054482396 },
     { 1.0, 2.0, 1.0, 1.0, -0.4401516515832734, 0.9299883719435977 },
     { 1.0, 2.0, 1.0, 1.0, -0.317836352796945, 0.9768802444563486 } };
-  double mAddendPtrs[12]{};
-  std::vector<DelayLine*> mDelayPtrs;
-  Vec8d mZ1_Coefs1;
-  Vec8d mZ2_Coefs1;
-  Vec4d mZ1_Coefs2;
-  Vec4d mZ2_Coefs2;
+  double mAddendPtrs[12]{ 0. };
+  double mDelayPtrs[6][2]{ 0. };
+
+  Vec4d mZ1_Coefs1, mZ1_Coefs2, mZ1_Coefs3;
+  Vec4d mZ2_Coefs1, mZ2_Coefs2, mZ2_Coefs3;
 };
 
 template<typename T>
