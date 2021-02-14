@@ -2,7 +2,7 @@
 
 #include "PeriodicTable.h"
 #include "Effects.h"
-#include "Wavetable.h"
+#include "TablitsaOscillators.h"
 
 
 #include "Modulation.h"

@@ -69,8 +69,13 @@ public:
     return AddModulation(mInitial);
   }
 
+  inline double AddModulation_Vector()
+  {
+    return AddModulation_Vector(mInitial);
+  }
+
   /* TODO: This may be better implemented with virtual functions (see ParameterModulationExp implementation below) */
-  inline double AddModulation(double initVal)
+  inline double AddModulation(double initVal) const
   {
     double modulation{ 0. };
     for (auto i{ 0 }; i < DynMods; ++i)
@@ -82,14 +87,15 @@ public:
       return std::max(std::min(initVal * std::exp(modulation), mMax), mMin);
   }
 
-  inline double AddModulation_Vector(double initVal)
+  inline double AddModulation_Vector(double initVal) const
   {
+    constexpr int vectorsize = 4;
+
     double modulation{ 0. };
     Vec4d modDepths;
     Vec4d modValues;
-    constexpr int vectorsize = 4;
     auto i{ 0 };
-    for (; i < (DynMods & vectorsize); ++i)
+    for (; i < (DynMods & vectorsize); i+=4)
     {
       modDepths.load(mModDepths);
       modValues.load(ParameterModulator::mModValues);
@@ -129,7 +135,6 @@ public:
   {
     return mModDepths;
   }
-
 
 protected:
   static inline double mModValues[DynMods + StatMods]{ 0. };
@@ -187,35 +192,29 @@ public:
   }
 
   /* Vector processing of each block of parameter values.
-
-  TODO: Pad the modulation matrix with extra rows of zeros so that its rows are always divisible by the vector length. (See ModulatorList)
-  TODO: Support for exponentially-scaled moduation
+  NB: The Clang compiler completely optimizes out the above `ProcessBlock` function, so implementing this function to provide further speed is probably unnecessary.
   */
   void ProcessBlockVec4d(T** param_inputs, T** mod_inputs, T** outputs, int nFrames)
   {
+    constexpr int vectorsize = 4;
+
+    /*
+    TRANSPOSE `mod_inputs`
+    */
+
     for (auto i{ 0 }; i < nFrames; i += 4)
     {
+      // `mod_inputs` is now `nFrames` x N_mods
+      // Add four modulator values at a time
+      auto m{ 0 };
+      for (; m < (-DynamicMods & vectorsize); m+=4)
+      {
+        Vec4d modValues = Vec4d().load(mod_inputs[i] + m);
+      }
       for (auto p{ 0 }; p < NParams; ++p)
       {
-        // For calculating per-sample modulation for single samples in parallel
-        Vec4d modDepths;
-        modDepths.load(mParams[p]->Depths()); // Modulation depths for the current parameters (constant for entire sample block)
-        Vec4d modVals(mod_inputs[0][i], mod_inputs[1][i], mod_inputs[2][i], mod_inputs[3][i]); // Values of the modulators themselves for the current samples
-        outputs[p][i] = mParams[p]->ClipToRange(horizontal_add(modDepths * modVals) + param_inputs[p][i]);
-
-        // For calculating per-sample modulation for multiple samples in parallel
-        /*Vec4d modSum(0.);
-        Vec4d initVals;
-        initVals.load(param_inputs[p]);
-        for (auto m{ 0 }; m < 4; ++m)
-        {
-          Vec4d modSamples;
-          modSamples.load(&mod_inputs[m][i]);
-          modSum = mul_add(modSamples, mParams.at(p)[m], modSum);
-        }
-        Vec4d outputV = Params[p]->ClipToRange(initVals + modSum);
-        outputV.store(&outputs[p][i]);*/
-
+        // TODO
+        outputs[p][i] = param_inputs[p][i];
       }
     }
     // Process the last few parameters, which don't fit exactly into the vector length
@@ -342,7 +341,11 @@ public:
       {
         for (auto mm{ 0 }; mm < mMetaParams[m].size(); ++mm)
         {
+#if _DEBUG
           metaModParams[mm] = mMetaParams[m][mm]->AddModulation();
+#else
+          metaModParams[mm] = mMetaParams[m][mm]->AddModulation_Vector();
+#endif
         }
         mModPtrs[m]->SetParams(metaModParams);
         mPrevValues[m] = modList[m][i] = mModPtrs[m]->Process();
