@@ -1072,16 +1072,22 @@ bool Tablitsa::OnMessage(int msgTag, int ctrlTag, int dataSize, const void* pDat
     {
       case kMsgWavetable1Changed:
       {
+        PeriodicTable* pTableControl = dynamic_cast<PeriodicTable*>(GetUI()->GetControlWithTag(kCtrlTagPeriodicTable));
+        pTableControl->SetTableLoading(true, 0);
         const double wtIdx = *static_cast<const double*>(pData); //Semi-Normalized value (between 1/118 and 1)
         mDSP.mLoadedWavetables[0] = wtIdx * 118.; // Corresponds to the atomic number (not the 0-indexed vector item)
         mDSP.UpdateOscillatorWavetable(static_cast<int>(mDSP.mLoadedWavetables[0]) - 1, 0);
+        pTableControl->SetTableLoading(false, 0);
         break;
       }
       case kMsgWavetable2Changed:
       {
+        PeriodicTable* pTableControl = dynamic_cast<PeriodicTable*>(GetUI()->GetControlWithTag(kCtrlTagPeriodicTable));
+        pTableControl->SetTableLoading(true, 1);
         const double wtIdx = *static_cast<const double*>(pData);
         mDSP.mLoadedWavetables[1] = wtIdx * 118.;
         mDSP.UpdateOscillatorWavetable(static_cast<int>(mDSP.mLoadedWavetables[1]) - 1, 1);
+        pTableControl->SetTableLoading(false, 1);
         break;
       }
       case kMsgSeqSliderChanged:

@@ -26,3 +26,5 @@ Icon?
 *.RPP-bak
 installer*
 dependencies/*
+Tablitsa-Installer/Release*
+Tablitsa-Installer/Debug*
