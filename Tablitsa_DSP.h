@@ -199,11 +199,13 @@ public:
     {
     }
 
-    Voice(int id=0)
-      : mID(id),
+    Voice(TablitsaDSP<T>* master, int id = 0)
+      : mMaster(master), mID(id),
       mAmpEnv("gain", [&]() { mOsc1.Reset(); }),
       mEnv1("env1", [&]() { mOsc1.Reset(); }),
-      mSequencer(TablitsaDSP::mSeqSteps) // capture ok on RT thread?
+      mLFO1(&mMaster->mGlobalMetronome),
+      mLFO2(&mMaster->mGlobalMetronome),
+      mSequencer(&mMaster->mGlobalMetronome, mMaster->mSeqSteps) // capture ok on RT thread?
     {
 //      DBGMSG("new Voice: %i control inputs.\n", static_cast<int>(mInputs.size()));
 
@@ -234,6 +236,11 @@ public:
       return mAmpEnv.GetBusy();
     }
 
+    VoiceDetuner& GetDetuner()
+    {
+      return mMaster->mDetuner;
+    }
+
     void Trigger(double level, bool isRetrigger) override
     {
       mOsc1.Reset();
@@ -242,7 +249,7 @@ public:
       mVelocity = level; // TODO: Handling of different velocity settings (i.e. which envelopes are affected by velocity)
       mTriggerRand = static_cast<double>(std::rand()) / static_cast<double>(RAND_MAX);
 
-      mDetune = Voice::mDetuner.DetuneNext();
+      mDetune = GetDetuner().DetuneNext();
 
       for (auto f : mFilters)
       {
@@ -257,7 +264,7 @@ public:
       }
       else
       {
-        mModulators.ReplaceModulator(dynamic_cast<FastLFO<T>*>(&TablitsaDSP<T>::mGlobalLFO1), 0);
+        mModulators.ReplaceModulator(dynamic_cast<FastLFO<T>*>(&(mMaster->mGlobalLFO1)), 0);
       }
 
       if (mLFO2Restart)
@@ -267,7 +274,7 @@ public:
       }
       else
       {
-        mModulators.ReplaceModulator(dynamic_cast<FastLFO<T>*>(&TablitsaDSP<T>::mGlobalLFO2), 1);
+        mModulators.ReplaceModulator(dynamic_cast<FastLFO<T>*>(&mMaster->mGlobalLFO2), 1);
       }
 
       if (mSequencerRestart)
@@ -275,13 +282,13 @@ public:
         mModulators.ReplaceModulator(dynamic_cast<Sequencer<T>*>(&mSequencer), 0);
         mSequencer.Reset();
         // Update sequencer display with this voice's phase
-        TablitsaDSP<T>::mActiveSequencer = &mSequencer;
+        mMaster->mActiveSequencer = &mSequencer;
       }
       else
       {
-        mModulators.ReplaceModulator(&TablitsaDSP<T>::mGlobalSequencer, 0);
+        mModulators.ReplaceModulator(&mMaster->mGlobalSequencer, 0);
         // Update sequencer display with this voice's phase
-        TablitsaDSP<T>::mActiveSequencer = &TablitsaDSP<T>::mGlobalSequencer;
+        mMaster->mActiveSequencer = &mMaster->mGlobalSequencer;
       }
 
 
@@ -531,6 +538,8 @@ public:
     }
 
   public:
+    TablitsaDSP<T>* mMaster;
+
     WavetableOscillator<T> mOsc1{ 0, "Hydrogen" };
     WavetableOscillator<T> mOsc2{ 1, "Helium" };
     SaturationEQ<T> mOsc1Sat;
@@ -540,8 +549,6 @@ public:
     T mKey{ 69. };
     T mVelocity{ 1. };
     T mTriggerRand{ 0.5 };
-
-    static inline VoiceDetuner mDetuner{ kMaxUnisonVoices };
 
     // Dynamic Modulators
     Envelope<T> mEnv1;
@@ -647,7 +654,7 @@ public:
     for (auto i = 0; i < nVoices; i++)
     {
       // add a voice to Zone 0.
-      mSynthVoices.push_back(new Voice(i));
+      mSynthVoices.push_back(new Voice(this, i));
       mSynth.AddVoice(mSynthVoices.at(i), 0);
     }
 
@@ -749,31 +756,35 @@ public:
   void UpdateOscillatorWavetable(int wtIdx, int oscIdx)
   {
     ResetAllVoices();
-    tableLoading[oscIdx] = true; // NB: this variable lets the PeriodicTable control know whether to display the selected element in the loading (faded) state or not
     WtFile wtFile{ mWavetables.at(wtIdx) };
-    WavetableOscillator<T>::LoadNewTable(wtFile, oscIdx);
+
     if (oscIdx == 0)
     {
+      mSynth.ForEachVoice([&wtFile, oscIdx](SynthVoice& voice) {
+        dynamic_cast<Voice&>(voice).mOsc1.LoadNewTable(wtFile, oscIdx);
+        });
       SendParam([this, oscIdx, &wtFile](Voice* voice) {
-        voice->mOsc1.SetWavetable(WavetableOscillator<T>::LoadedTables[oscIdx]);
+        voice->mOsc1.SetWavetable(oscIdx);
         voice->mOsc1.ReloadLUT();
         });
       WavetableOscillator<T>::NotifyLoaded(oscIdx);
     }
     else
     {
+      mSynth.ForEachVoice([&wtFile, oscIdx](SynthVoice& voice) {
+        dynamic_cast<Voice&>(voice).mOsc2.LoadNewTable(wtFile, oscIdx);
+        });
       SendParam([this, oscIdx, &wtFile](Voice* voice) {
-        voice->mOsc2.SetWavetable(WavetableOscillator<T>::LoadedTables[oscIdx]);
+        voice->mOsc2.SetWavetable(oscIdx);
         voice->mOsc2.ReloadLUT();
         });
       WavetableOscillator<T>::NotifyLoaded(oscIdx);
     }
-    tableLoading[oscIdx] = false;
   }
 
   void ResetDetune()
   {
-    TablitsaDSP<T>::Voice::mDetuner.ResetDetuneValues();
+    mDetuner.ResetDetuneValues();
   }
 
   int GetSequencerStep()
@@ -1255,15 +1266,15 @@ public:
           mSynth.Reset();
         }
         mUnisonVoices = voices;
-        TablitsaDSP<T>::Voice::mDetuner.SetNVoices(voices);
+        mDetuner.SetNVoices(voices);
         mSynth.SetMonoUnison(voices);
         break;
       }
       case kParamUnisonDetune:
-        TablitsaDSP<T>::Voice::mDetuner.SetMaxDetune(value);
+        mDetuner.SetMaxDetune(value);
         break;
       case kParamUnisonChord:
-        TablitsaDSP<T>::Voice::mDetuner.SetChord(static_cast<int>(value) + EUnisonChords::kNoChord);
+        mDetuner.SetChord(static_cast<int>(value) + EUnisonChords::kNoChord);
         break;
       case kParamWavetable1Pitch:
         mParamsToSmooth[kModWavetable1PitchSmoother] = value;
@@ -1437,6 +1448,25 @@ public:
         const int modIdx = paramIdx - kParamWavetable2Bend;
         mSynth.ForEachVoice([paramIdx, modIdx, value](SynthVoice& voice) {
           dynamic_cast<TablitsaDSP::Voice&>(voice).UpdateVoiceParam(kVWavetable2Bend, modIdx, value);
+          });
+        break;
+      }
+      case kParamWavetable2Sub:
+        mParamsToSmooth[kModWavetable2SubSmoother] = value;
+        break;
+      case kParamWavetable2SubEnv1:
+      case kParamWavetable2SubEnv2:
+      case kParamWavetable2SubAmpEnv:
+      case kParamWavetable2SubLFO1:
+      case kParamWavetable2SubLFO2:
+      case kParamWavetable2SubSeq:
+      case kParamWavetable2SubVel:
+      case kParamWavetable2SubKTk:
+      case kParamWavetable2SubRnd:
+      {
+        const int modIdx = paramIdx - kParamWavetable2Sub;
+        mSynth.ForEachVoice([paramIdx, modIdx, value](SynthVoice& voice) {
+          dynamic_cast<TablitsaDSP::Voice&>(voice).UpdateVoiceParam(kVWavetable2Sub, modIdx, value);
           });
         break;
       }
@@ -1754,9 +1784,10 @@ public:
   std::vector<Voice*> mSynthVoices;
 
   // Polyphonic/Monophonic
-  static inline bool mMono{ false };
+  bool mMono{ false };
   int mUnisonVoices{ 1 };
   float mUnisonDetune{ 0.f };
+  VoiceDetuner mDetuner{ kMaxUnisonVoices };
 
   // Portamento Parameters
   bool mConstantGlideTime{ true };
@@ -1770,15 +1801,14 @@ public:
   double mTempo{ DEFAULT_TEMPO };
 
   // Status Variables
-  static inline bool tableLoading[2]{ true, true };
   int mSeqPos{ 0 };
-  static inline Sequencer<T, kNumSeqSteps>* mActiveSequencer{ nullptr };
+  Sequencer<T, kNumSeqSteps>* mActiveSequencer{ nullptr };
   bool mFilter1Comb{ false }; // Set to `true` when Filter 1 is a comb filter. Used for scaling delay/drive values by the proper amount.
   bool mFilter2Comb{ false }; // Set to `true` when Filter 2 is a comb filter. Used for scaling delay/drive values by the proper amount.
 
   // Non-modulatable parameters
-  double mLoadedWavetables[2]{ 1., 2. }; // Integer indices of current wavetables
-  static inline double mSeqSteps[kNumSeqSteps]{}; // Value of each step in the sequencer
+  double mLoadedWavetables[2]{ 1., 2. }; // Integer indices (stored as double) of current wavetables
+  double mSeqSteps[kNumSeqSteps]{}; // Value of each step in the sequencer
   int mStepPos{ 0 };
   int mPrevPos{ -1 };
 
@@ -1787,8 +1817,8 @@ public:
   DelayEffect<T> mDelayEffect{ DEFAULT_SAMPLE_RATE, DEFAULT_SAMPLE_RATE * 12. };
 
   // Global Modulators
-  static inline GlobalModulator<T, FastLFO<T>> mGlobalLFO1;
-  static inline GlobalModulator<T, FastLFO<T>> mGlobalLFO2;
-  static inline GlobalModulator<T, Sequencer<T>> mGlobalSequencer{ mSeqSteps };
   ModMetronome mGlobalMetronome;
+  GlobalModulator<T, FastLFO<T>> mGlobalLFO1{ &mGlobalMetronome };
+  GlobalModulator<T, FastLFO<T>> mGlobalLFO2{ &mGlobalMetronome };
+  GlobalModulator<T, Sequencer<T>> mGlobalSequencer{ &mGlobalMetronome, mSeqSteps };
 };

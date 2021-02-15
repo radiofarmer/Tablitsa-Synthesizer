@@ -400,7 +400,7 @@ public:
   void DrawElement(IGraphics& g, const IRECT& bounds, int atomicNumber, int idx)
   {
     assert(atomicNumber > 0);
-    IColor col{ TablitsaDSP<double>::tableLoading[idx] ? ElementIconColor[idx].WithOpacity(0.5f) : ElementIconColor[idx] };
+    IColor col{ mTableLoading[idx] ? ElementIconColor[idx].WithOpacity(0.5f) : ElementIconColor[idx] };
 
     g.DrawRect(col, bounds);
     g.DrawText(LabelText, (atomicNumber) ? "Wavetable 2" : "Wavetable 1", bounds.GetVShifted(-20.f).GetFromTop(20.f));
@@ -516,6 +516,11 @@ public:
     SetDirty(true);
   }
 
+  void SetTableLoading(const bool isLoading, const int tableIdx)
+  {
+    mTableLoading[tableIdx] = isLoading;
+  }
+
 private:
   ISVG mSVG;
   int* mCurrentElementCoords{ nullptr };
@@ -531,6 +536,7 @@ private:
   IRECT mTableBounds;
   IRECT mLaAcBounds;
   int mIsDragging{ -1 };
+  bool mTableLoading[2]{ false, false };
 };
 
 template <int MAXNC = 1>

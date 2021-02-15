@@ -87,7 +87,7 @@ public:
   }
 
   /* Load a new wavetable as a static variable */
-  static void LoadNewTable(WtFile& wt, int idx)
+  void LoadNewTable(WtFile& wt, int idx)
   {
     if (wt.Success())
     {
@@ -96,6 +96,11 @@ public:
       delete LoadedTables[idx];
       LoadedTables[idx] = new Wavetable<T>(wt);
     }
+  }
+
+  void SetWavetable(int idx)
+  {
+    SetWavetable(LoadedTables[idx]);
   }
 
   void SetWavetable(Wavetable<T>* tab)
@@ -480,7 +485,7 @@ private:
   static inline constexpr double twoPi{ 6.28318530718 };
 
 public:
-  static inline Wavetable<T>* LoadedTables[2]{ nullptr, nullptr };
+  Wavetable<T>* LoadedTables[2]{ nullptr, nullptr };
   iplug::FastSinOscillator<T> mPhaseModulator;
   iplug::FastSinOscillator<T> mRingModulator{ 0.5 }; // Offset start phase by half a cycle
 };
