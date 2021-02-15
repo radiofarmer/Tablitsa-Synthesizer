@@ -470,14 +470,15 @@ public:
       //TODO:
     }
 
-    static inline void SetTempoAndBeat(double qnPos = 0., bool transportIsRunning = false, double tempo = 120.)
+    /*void SetTempoAndBeat(double qnPos = 0., bool transportIsRunning = false, double tempo = 120.)
     {
       mQNPos = qnPos;
       mTransportIsRunning = transportIsRunning;
       mTempo = tempo;
-      FastLFO<T>::SetTempoAndBeat(mQNPos, mTransportIsRunning, mTempo);
-      Sequencer<T>::SetTempoAndBeat(mQNPos, mTransportIsRunning, mTempo);
-    }
+      mLFO1.SetTempoAndBeat(mQNPos, mTransportIsRunning, mTempo);
+      mLFO2.SetTempoAndBeat(mQNPos, mTransportIsRunning, mTempo);
+      mSequencerSetTempoAndBeat(mQNPos, mTransportIsRunning, mTempo);
+    }*/
 
     void SetFilterType(int filter, int filterType)
     {
@@ -669,7 +670,7 @@ public:
 
     // Process voices
     mParamSmoother.ProcessBlock(mParamsToSmooth, mModulations.GetList(), nFrames); // Populate modulations list (to be sent to mSynth as inputs)
-    Voice::SetTempoAndBeat(qnPos, transportIsRunning, tempo);
+    SetTempoAndBeat(qnPos, transportIsRunning, tempo);
     mSynth.ProcessBlock(mModulations.GetList(), outputs, 0, nOutputs, nFrames);
 
     for(int s=0; s < nFrames;s++)
@@ -738,6 +739,11 @@ public:
       mLastNoteOn = static_cast<double>(msg.NoteNumber());
     }
     mSynth.AddMidiMsgToQueue(msg);
+  }
+
+  inline void SetTempoAndBeat(double qnPos, bool transportIsRunning, double tempo)
+  {
+    mGlobalMetronome.Set(qnPos, tempo, transportIsRunning);
   }
 
   void UpdateOscillatorWavetable(int wtIdx, int oscIdx)
@@ -1784,4 +1790,5 @@ public:
   static inline GlobalModulator<T, FastLFO<T>> mGlobalLFO1;
   static inline GlobalModulator<T, FastLFO<T>> mGlobalLFO2;
   static inline GlobalModulator<T, Sequencer<T>> mGlobalSequencer{ mSeqSteps };
+  ModMetronome mGlobalMetronome;
 };

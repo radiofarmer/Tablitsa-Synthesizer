@@ -18,6 +18,22 @@ public:
   virtual inline void SetParams(T* params) = 0;
 };
 
+struct ModMetronome
+{
+  ModMetronome() {}
+
+  void Set(double qnPos, double tempo, bool transportIsRunning)
+  {
+    mQNPos = qnPos;
+    mTempo = tempo;
+    mTransportIsRunning = transportIsRunning;
+  }
+
+  double mQNPos{ 0. };
+  double mTempo{ DEFAULT_TEMPO };
+  bool mTransportIsRunning;
+}
+
 BEGIN_IPLUG_NAMESPACE
 /*
 Shaping object for modulation depth sliders that provides finer control for parameters
@@ -270,13 +286,6 @@ public:
     return f1 + frac * (f2 - f1);
   }
 
-  static inline void SetTempoAndBeat(double qnPos = 0., bool transportIsRunning = false, double tempo = 120.)
-  {
-    mQNPos = qnPos;
-    mTransportIsRunning = transportIsRunning;
-    mTempo = tempo;
-  }
-
   const double GetPhase()
   {
     return IOscillator<T>::mPhase;
@@ -290,14 +299,14 @@ public:
 
   virtual inline T Process()
   {
-    return ProcessSynced(mQNPos, mTransportIsRunning, mTempo);
+    return ProcessSynced(mMetronome->mQNPos, mTransportIsRunning, mTempo);
   }
 
   inline T Process(double freqHz) override
   {
     IOscillator<T>::SetFreqCPS(freqHz);
 
-    return ProcessSynced(mQNPos, mTransportIsRunning, mTempo);
+    return ProcessSynced(mMetronome->mQNPos, mTransportIsRunning, mTempo);
   }
 
   inline T ProcessSynced(double qnPos = 0., bool transportIsRunning = false, double tempo = 120.)
@@ -348,16 +357,14 @@ public:
   }
 
 protected:
+
   static inline constexpr int mTableSize{ 1024 };
   static inline constexpr int mTableSizeM1{ 1023 };
   T mLastOutput;
 
   static inline T mLUT[LFO<T>::EShape::kNumShapes][mTableSize];
 
-  static inline double mStaticPhase{ 0 };
-  static inline double mTempo{ 120. };
-  static inline bool mTransportIsRunning{ false };
-  static inline double mQNPos{ 0. };
+  ModMetronome* mMetronome;
 };
 
 template <typename T, int NSteps=16>
@@ -408,7 +415,7 @@ public:
 
   inline T Process() override 
   {
-    return ProcessSynced(FastLFO<T>::mQNPos, FastLFO<T>::mTransportIsRunning, FastLFO<T>::mTempo);
+    return ProcessSynced(mMetronome->mQNPos, mMetronome->mTransportIsRunning, mMetronome->mTempo);
   }
 
   inline T GetStepValueWithGlide()
