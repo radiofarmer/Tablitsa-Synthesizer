@@ -438,10 +438,10 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
 #endif
 #if IPLUG_EDITOR // http://bit.ly/2S64BDd
   mMakeGraphicsFunc = [&]() {
-    return MakeGraphics(*this, PLUG_WIDTH, PLUG_HEIGHT + KEYBOARD_HEIGHT, PLUG_FPS, GetScaleForScreen(PLUG_WIDTH, PLUG_HEIGHT));
+    return MakeGraphics(*this, PLUG_WIDTH, PLUG_HEIGHT + KEYBOARD_HEIGHT, PLUG_FPS, GetScaleForScreen(PLUG_WIDTH, PLUG_HEIGHT + KEYBOARD_HEIGHT));
   };
-  
   mLayoutFunc = [&](IGraphics* pGraphics) {
+
     pGraphics->AttachCornerResizer(EUIResizerMode::Scale, false);
     pGraphics->AttachPanelBackground(COLOR_GRAY);
     pGraphics->EnableMouseOver(true);
@@ -793,7 +793,7 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
       bool sync = pControl->GetValue() > 0.5;
       pGraphics->HideControl(kParamLFO1RateHz, sync);
       pGraphics->HideControl(kParamLFO1RateTempo, !sync);
-      pGraphics->SetAllControlsDirty();
+      //pGraphics->SetAllControlsDirty();
     });
     pGraphics->AttachControl(new IVToggleControl(lfoPanel.GetGridCell(2, 1, 9, 5).GetVPadded(-6.f).GetVShifted(-15.f), kParamLFO1Restart, "Restart", DEFAULT_STYLE.WithShowLabel(false), "Free Run", "Retrigger"), kNoTag, "LFO1");
     pGraphics->AttachControl(new ModSliderControl(lfoPanel.GetGridCell(0, 4, 3, 5).GetVPadded(-15.f), kNoParameter, "Depth"), kCtrlTagLFO1Depth, "LFO1");
@@ -809,7 +809,7 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
         bool sync = pControl->GetValue() > 0.5;
         pGraphics->HideControl(kParamLFO2RateHz, sync);
         pGraphics->HideControl(kParamLFO2RateTempo, !sync);
-        pGraphics->SetAllControlsDirty();
+        //pGraphics->SetAllControlsDirty();
         });
     pGraphics->AttachControl(new IVToggleControl(lfoPanel.GetGridCell(5, 1, 9, 5).GetVPadded(-6.f).GetVShifted(-15.f), kParamLFO2Restart, "Restart", DEFAULT_STYLE.WithShowLabel(false), "Free Run", "Retrigger"), kNoTag, "LFO2");
 //    pGraphics->AttachControl(new IVPlotControl(lfoPanel.GetGridCell(1, 3, 3, 5).GetVPadded(-20.f), ...), kCtrlTagLFO2Vis, "LFO2");
@@ -886,7 +886,6 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
     }
 #endif
     
-    
   };
 #endif
 }
@@ -929,7 +928,7 @@ int Tablitsa::UnserializeState(const IByteChunk& chunk, int startPos)
   // Delay tempo sync
   startPos = chunk.Get(&v, startPos);
   mDelayIsSynced = v;
-
+  
   // If UI exists
   if (GetUI())
     UpdateUIControls(); 
@@ -1055,7 +1054,9 @@ handle:
 
 void Tablitsa::OnParamChange(int paramIdx)
 {
+  ENTER_PARAMS_MUTEX
   mDSP.SetParam(paramIdx, GetParam(paramIdx)->Value());
+  LEAVE_PARAMS_MUTEX
 }
 
 bool Tablitsa::OnMessage(int msgTag, int ctrlTag, int dataSize, const void* pData)
@@ -1116,8 +1117,18 @@ bool Tablitsa::OnMessage(int msgTag, int ctrlTag, int dataSize, const void* pDat
 }
 
 /* implement this and return true to trigger your custom about box, when someone clicks about in the menu of a standalone app or VST3 plugin */
-bool OnHostRequestingAboutBox() { return false; } // See IPlugAPP_dialog.cpp
+bool Tablitsa::OnHostRequestingAboutBox() { return false; } // See IPlugAPP_dialog.cpp
 
 /* implement this and return true to trigger your custom help info, when someone clicks help in the menu of a standalone app or VST3 plugin */
-bool OnHostRequestingProductHelp() { return false; }
+bool Tablitsa::OnHostRequestingProductHelp() { return false; }
+
+int Tablitsa::GetActiveModIdx() const
+{
+  return mActiveModIdx;
+}
+
+void Tablitsa::SetActiveModIdx(int idx)
+{
+  mActiveModIdx = idx;
+}
 #endif

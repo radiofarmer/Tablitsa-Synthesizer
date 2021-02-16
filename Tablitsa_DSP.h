@@ -199,11 +199,13 @@ public:
     {
     }
 
-    Voice(TablitsaDSP<T>* master, int id=0)
+    Voice(TablitsaDSP<T>* master, int id = 0)
       : mMaster(master), mID(id),
       mAmpEnv("gain", [&]() { mOsc1.Reset(); }),
       mEnv1("env1", [&]() { mOsc1.Reset(); }),
-      mSequencer(mMaster->mSeqSteps) // capture ok on RT thread?
+      mLFO1(&mMaster->mGlobalMetronome),
+      mLFO2(&mMaster->mGlobalMetronome),
+      mSequencer(&mMaster->mGlobalMetronome, mMaster->mSeqSteps) // capture ok on RT thread?
     {
 //      DBGMSG("new Voice: %i control inputs.\n", static_cast<int>(mInputs.size()));
 
@@ -224,9 +226,9 @@ public:
       mAmpEnv.Kill(true); // Force amplitude envelopes to start in the "Idle" stage
 
       // Fill the envelope queues for legato mode with null pointers
-      Voice::AmpEnvQueue.push_back(nullptr);
-      Voice::Env1Queue.push_back(nullptr);
-      Voice::Env2Queue.push_back(nullptr);
+      mMaster->AmpEnvQueue.push_back(nullptr);
+      mMaster->Env1Queue.push_back(nullptr);
+      mMaster->Env2Queue.push_back(nullptr);
     }
 
     bool GetBusy() const override
@@ -293,15 +295,15 @@ public:
       if (isRetrigger)
       {
         mAmpEnv.Retrigger(level);
-        mEnv1.Retrigger(1., 1. - Voice::mEnv1VelocityMod);
+        mEnv1.Retrigger(1., 1. - mEnv1VelocityMod);
         mEnv2.Retrigger(1.);
       }
-      else if (!Voice::mLegato)
+      else if (!mLegato)
       {
         double velSubtr = 1. - level;
-        mAmpEnv.Start(1. - velSubtr * Voice::mAmpEnvVelocityMod, 1. - Voice::mAmpEnvVelocityMod * kMaxEnvTimeScalar * level);
-        mEnv1.Start(1. - velSubtr * Voice::mEnv1VelocityMod, 1. - Voice::mEnv1VelocityMod * kMaxEnvTimeScalar * level);
-        mEnv2.Start(1. - velSubtr * Voice::mEnv2VelocityMod, 1. - Voice::mEnv2VelocityMod * kMaxEnvTimeScalar * level);
+        mAmpEnv.Start(1. - velSubtr * mAmpEnvVelocityMod, 1. - mAmpEnvVelocityMod * kMaxEnvTimeScalar * level);
+        mEnv1.Start(1. - velSubtr * mEnv1VelocityMod, 1. - mEnv1VelocityMod * kMaxEnvTimeScalar * level);
+        mEnv2.Start(1. - velSubtr * mEnv2VelocityMod, 1. - mEnv2VelocityMod * kMaxEnvTimeScalar * level);
       }
       else
       {
@@ -309,40 +311,40 @@ public:
         Envelope<T>* masterAmpEnv = nullptr;
         Envelope<T>* masterEnv1 = nullptr;
         Envelope<T>* masterEnv2 = nullptr;
-        for (auto i{ 0 }; i < Voice::AmpEnvQueue.size(); ++i)
+        for (auto i{ 0 }; i < mMaster->AmpEnvQueue.size(); ++i)
         {
-          if (Voice::AmpEnvQueue[i])
+          if (mMaster->AmpEnvQueue[i])
           {
-            masterAmpEnv = AmpEnvQueue[i];
-            masterEnv1 = Env1Queue[i];
-            masterEnv2 = Env2Queue[i];
+            masterAmpEnv = mMaster->AmpEnvQueue[i];
+            masterEnv1 = mMaster->Env1Queue[i];
+            masterEnv2 = mMaster->Env2Queue[i];
           }
         }
 
         if (masterAmpEnv)
         {
           double velSubtr = 1. - level;
-          mAmpEnv.StartAt(1. - velSubtr * Voice::mAmpEnvVelocityMod,
+          mAmpEnv.StartAt(1. - velSubtr * mAmpEnvVelocityMod,
             masterAmpEnv->GetValue(), masterAmpEnv->GetPrevResult(), masterAmpEnv->GetStage(),
-            1. - Voice::mAmpEnvVelocityMod * kMaxEnvTimeScalar * level);
-          mEnv1.StartAt(1. - velSubtr * Voice::mEnv1VelocityMod,
+            1. - mAmpEnvVelocityMod * kMaxEnvTimeScalar * level);
+          mEnv1.StartAt(1. - velSubtr * mEnv1VelocityMod,
             masterEnv1->GetValue(), masterEnv1->GetPrevResult(), masterEnv1->GetStage(),
-            1. - Voice::mEnv1VelocityMod * kMaxEnvTimeScalar * level);
-          mEnv2.StartAt(1. - velSubtr * Voice::mEnv2VelocityMod,
+            1. - mEnv1VelocityMod * kMaxEnvTimeScalar * level);
+          mEnv2.StartAt(1. - velSubtr * mEnv2VelocityMod,
             masterEnv2->GetValue(), masterEnv2->GetPrevResult(), masterEnv2->GetStage(),
-            1. - Voice::mEnv2VelocityMod * kMaxEnvTimeScalar * level);
+            1. - mEnv2VelocityMod * kMaxEnvTimeScalar * level);
         }
         else
         {
           double velSubtr = 1. - level;
-          mAmpEnv.Start(1. - velSubtr * Voice::mAmpEnvVelocityMod, 1. - Voice::mAmpEnvVelocityMod * kMaxEnvTimeScalar * level);
-          mEnv1.Start(1. - velSubtr * Voice::mEnv1VelocityMod, 1. - Voice::mEnv1VelocityMod * kMaxEnvTimeScalar * level);
-          mEnv2.Start(1. - velSubtr * Voice::mEnv2VelocityMod, 1. - Voice::mEnv2VelocityMod * kMaxEnvTimeScalar * level);
+          mAmpEnv.Start(1. - velSubtr * mAmpEnvVelocityMod, 1. - mAmpEnvVelocityMod * kMaxEnvTimeScalar * level);
+          mEnv1.Start(1. - velSubtr * mEnv1VelocityMod, 1. - mEnv1VelocityMod * kMaxEnvTimeScalar * level);
+          mEnv2.Start(1. - velSubtr * mEnv2VelocityMod, 1. - mEnv2VelocityMod * kMaxEnvTimeScalar * level);
         }
         // Sync the master envelopes to this voice's envelopes
-        Voice::Env1Queue[mID] = &mEnv1;
-        Voice::Env2Queue[mID] = &mEnv2;
-        Voice::AmpEnvQueue[mID] = &mAmpEnv;
+        mMaster->Env1Queue[mID] = &mEnv1;
+        mMaster->Env2Queue[mID] = &mEnv2;
+        mMaster->AmpEnvQueue[mID] = &mAmpEnv;
       }
     }
     
@@ -352,9 +354,9 @@ public:
       mEnv1.Release();
       mEnv2.Release();
       // Remove this voice's envelopes from the envelope queue
-      Voice::AmpEnvQueue[mID] = nullptr;
-      Voice::Env1Queue[mID] = nullptr;
-      Voice::Env2Queue[mID] = nullptr;
+      mMaster->AmpEnvQueue[mID] = nullptr;
+      mMaster->Env1Queue[mID] = nullptr;
+      mMaster->Env2Queue[mID] = nullptr;
     }
 
     void ProcessSamplesAccumulating(T** inputs, T** outputs, int nInputs, int nOutputs, int startIdx, int nFrames) override
@@ -475,14 +477,15 @@ public:
       //TODO:
     }
 
-    static inline void SetTempoAndBeat(double qnPos = 0., bool transportIsRunning = false, double tempo = 120.)
+    /*void SetTempoAndBeat(double qnPos = 0., bool transportIsRunning = false, double tempo = 120.)
     {
       mQNPos = qnPos;
       mTransportIsRunning = transportIsRunning;
       mTempo = tempo;
-      FastLFO<T>::SetTempoAndBeat(mQNPos, mTransportIsRunning, mTempo);
-      Sequencer<T>::SetTempoAndBeat(mQNPos, mTransportIsRunning, mTempo);
-    }
+      mLFO1.SetTempoAndBeat(mQNPos, mTransportIsRunning, mTempo);
+      mLFO2.SetTempoAndBeat(mQNPos, mTransportIsRunning, mTempo);
+      mSequencerSetTempoAndBeat(mQNPos, mTransportIsRunning, mTempo);
+    }*/
 
     void SetFilterType(int filter, int filterType)
     {
@@ -556,22 +559,16 @@ public:
     Sequencer<T, kNumSeqSteps> mSequencer;
     ModulatorList<T, Envelope<T>, FastLFO<T>, Sequencer<T>, 6, 3> mModulators;
 
-    // Pointers to master modulators, for free-run and legato modes
-    static inline std::vector<Envelope<T>*> Env1Queue;
-    static inline std::vector<Envelope<T>*> Env2Queue;
-    static inline std::vector<Envelope<T>*> AmpEnvQueue;
-    static inline FastLFO<T>* mMasterLFO1{ nullptr }; // The last-triggered `mLFO1`, which "owns" the master phase
-    static inline FastLFO<T>* mMasterLFO2{ nullptr }; // The last-triggered `mLFO2`, which "owns" the master phase
-    static inline Sequencer<T>* mMasterSeq{ nullptr }; // The last-triggered `mSequencer`, which "owns" the master phase
-
+    // Status parameters
     bool mLFO1Restart{ false };
     bool mLFO2Restart{ false };
     bool mSequencerRestart{ false };
-    static inline bool mLegato{ false }; // This ought to be a static inline member, but the compiler apparently doesn't like that
-    int mFilterUpdateFreq{ 2 };
-    static inline double mEnv1VelocityMod{ 0. };
-    static inline double mEnv2VelocityMod{ 0. };
-    static inline double mAmpEnvVelocityMod{ 1. };
+    bool mLegato{ false };
+
+    // Static Modulators
+    double mEnv1VelocityMod{ 0. };
+    double mEnv2VelocityMod{ 0. };
+    double mAmpEnvVelocityMod{ 1. };
 
     std::vector<Filter<T>*> mFilters{ new NullFilter<T>(), new NullFilter<T>() };
 
@@ -619,9 +616,9 @@ public:
     double mDetune{ 0. };
 
     // Sample and Beat data
-    static inline double mTempo{ 120. };
-    static inline bool mTransportIsRunning{ false };
-    static inline double mQNPos{ 0. };
+    double mTempo{ 120. };
+    bool mTransportIsRunning{ false };
+    double mQNPos{ 0. };
 
     LogParamSmooth<T> mFilter1Smoother{ 10. };
     LogParamSmooth<T> mFilter2Smoother{ 10. };
@@ -674,7 +671,7 @@ public:
 
     // Process voices
     mParamSmoother.ProcessBlock(mParamsToSmooth, mModulations.GetList(), nFrames); // Populate modulations list (to be sent to mSynth as inputs)
-    Voice::SetTempoAndBeat(qnPos, transportIsRunning, tempo);
+    SetTempoAndBeat(qnPos, transportIsRunning, tempo);
     mSynth.ProcessBlock(mModulations.GetList(), outputs, 0, nOutputs, nFrames);
 
     for(int s=0; s < nFrames;s++)
@@ -745,6 +742,11 @@ public:
     mSynth.AddMidiMsgToQueue(msg);
   }
 
+  inline void SetTempoAndBeat(double qnPos, bool transportIsRunning, double tempo)
+  {
+    mGlobalMetronome.Set(qnPos, tempo, transportIsRunning);
+  }
+
   void UpdateOscillatorWavetable(int wtIdx, int oscIdx)
   {
     ResetAllVoices();
@@ -758,8 +760,8 @@ public:
       SendParam([this, oscIdx, &wtFile](Voice* voice) {
         voice->mOsc1.SetWavetable(oscIdx);
         voice->mOsc1.ReloadLUT();
+        voice->mOsc1.NotifyLoaded();
         });
-      WavetableOscillator<T>::NotifyLoaded(oscIdx);
     }
     else
     {
@@ -769,8 +771,8 @@ public:
       SendParam([this, oscIdx, &wtFile](Voice* voice) {
         voice->mOsc2.SetWavetable(oscIdx);
         voice->mOsc2.ReloadLUT();
+        voice->mOsc2.NotifyLoaded();
         });
-      WavetableOscillator<T>::NotifyLoaded(oscIdx);
     }
   }
 
@@ -884,7 +886,9 @@ public:
         break;
       }
       case kParamEnv1Velocity:
-        Voice::mEnv1VelocityMod = value;
+        mSynth.ForEachVoice([value](SynthVoice& voice) {
+          dynamic_cast<TablitsaDSP::Voice&>(voice).mEnv1VelocityMod = (T)value;
+          });
         break;
       case kParamEnv1DecayCurve:
         mSynth.ForEachVoice([value](SynthVoice& voice) {
@@ -931,7 +935,9 @@ public:
         break;
       }
       case kParamEnv2Velocity:
-        Voice::mEnv2VelocityMod = value;
+        mSynth.ForEachVoice([value](SynthVoice& voice) {
+          dynamic_cast<TablitsaDSP::Voice&>(voice).mEnv2VelocityMod = (T)value;
+          });
         break;
       case kParamEnv2DecayCurve:
         mSynth.ForEachVoice([value](SynthVoice& voice) {
@@ -978,7 +984,9 @@ public:
         break;
       }
       case kParamAmpEnvVelocity:
-        Voice::mAmpEnvVelocityMod = value;
+        mSynth.ForEachVoice([value](SynthVoice& voice) {
+          dynamic_cast<TablitsaDSP::Voice&>(voice).mAmpEnvVelocityMod = (T)value;
+          });
         break;
       case kParamAmpEnvDecayCurve:
         mSynth.ForEachVoice([value](SynthVoice& voice) {
@@ -1232,12 +1240,14 @@ public:
       }
       case kParamLegato:
       {
-        TablitsaDSP::Voice::mLegato = value > 0.5;
+        mSynth.ForEachVoice([value](SynthVoice& voice) {
+          dynamic_cast<TablitsaDSP::Voice&>(voice).mLegato = value > 0.5;
+          });
         if (!(value > 0.5))
         {
-          std::fill(TablitsaDSP::Voice::AmpEnvQueue.begin(), TablitsaDSP::Voice::AmpEnvQueue.end(), nullptr);
-          std::fill(TablitsaDSP::Voice::Env1Queue.begin(), TablitsaDSP::Voice::Env1Queue.end(), nullptr);
-          std::fill(TablitsaDSP::Voice::Env2Queue.begin(), TablitsaDSP::Voice::Env2Queue.end(), nullptr);
+          std::fill(AmpEnvQueue.begin(), AmpEnvQueue.end(), nullptr);
+          std::fill(Env1Queue.begin(), Env1Queue.end(), nullptr);
+          std::fill(Env2Queue.begin(), Env2Queue.end(), nullptr);
         }
         break;
       }
@@ -1808,8 +1818,17 @@ public:
   std::vector<Effect<T>*> mEffects;
   DelayEffect<T> mDelayEffect{ DEFAULT_SAMPLE_RATE, DEFAULT_SAMPLE_RATE * 12. };
 
+  // Pointers to master modulators, for free-run and legato modes
+  std::vector<Envelope<T>*> Env1Queue;
+  std::vector<Envelope<T>*> Env2Queue;
+  std::vector<Envelope<T>*> AmpEnvQueue;
+  FastLFO<T>* mMasterLFO1{ nullptr }; // The last-triggered `mLFO1`, which "owns" the master phase
+  FastLFO<T>* mMasterLFO2{ nullptr }; // The last-triggered `mLFO2`, which "owns" the master phase
+  Sequencer<T>* mMasterSeq{ nullptr }; // The last-triggered `mSequencer`, which "owns" the master phase
+
   // Global Modulators
-  GlobalModulator<T, FastLFO<T>> mGlobalLFO1;
-  GlobalModulator<T, FastLFO<T>> mGlobalLFO2;
-  GlobalModulator<T, Sequencer<T>> mGlobalSequencer{ mSeqSteps };
+  ModMetronome mGlobalMetronome;
+  GlobalModulator<T, FastLFO<T>> mGlobalLFO1{ &mGlobalMetronome };
+  GlobalModulator<T, FastLFO<T>> mGlobalLFO2{ &mGlobalMetronome };
+  GlobalModulator<T, Sequencer<T>> mGlobalSequencer{ &mGlobalMetronome, mSeqSteps };
 };

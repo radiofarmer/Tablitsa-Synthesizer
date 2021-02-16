@@ -18,6 +18,22 @@ public:
   virtual inline void SetParams(T* params) = 0;
 };
 
+struct ModMetronome
+{
+  ModMetronome() {}
+
+  void Set(double qnPos, double tempo, bool transportIsRunning)
+  {
+    mQNPos = qnPos;
+    mTempo = tempo;
+    mTransportIsRunning = transportIsRunning;
+  }
+
+  double mQNPos{ 0. };
+  double mTempo{ iplug::DEFAULT_TEMPO };
+  bool mTransportIsRunning;
+};
+
 BEGIN_IPLUG_NAMESPACE
 /*
 Shaping object for modulation depth sliders that provides finer control for parameters
@@ -234,12 +250,23 @@ class FastLFO : public LFO<T>, public GenericModulator<T>
   } ALIGNED(8);
 
 public:
-  FastLFO(T initialValue=0.) : LFO<T>(), GenericModulator<T>(), mLastOutput(initialValue)
+
+  FastLFO(T initialValue = 0.) : FastLFO<T>(nullptr, initialValue)
   {
-    WriteLUTs();
   }
 
-  static void WriteLUTs()
+  FastLFO<T>(ModMetronome * metronome, T initialValue = 0.) :
+    mMetronome(metronome), mLastOutput(initialValue),
+    LFO<T>(), GenericModulator<T>()
+  {
+    WriteLUTs();
+
+    // If a global metronome was not provided,  create a local metronome
+    if (mMetronome == nullptr)
+      mMetronome = new ModMetronome;
+  }
+
+  void WriteLUTs()
   {
     // Populate lookup tables
     for (int i{ 0 }; i < mTableSize; ++i)
@@ -270,13 +297,6 @@ public:
     return f1 + frac * (f2 - f1);
   }
 
-  static inline void SetTempoAndBeat(double qnPos = 0., bool transportIsRunning = false, double tempo = 120.)
-  {
-    mQNPos = qnPos;
-    mTransportIsRunning = transportIsRunning;
-    mTempo = tempo;
-  }
-
   const double GetPhase()
   {
     return IOscillator<T>::mPhase;
@@ -290,14 +310,14 @@ public:
 
   virtual inline T Process()
   {
-    return ProcessSynced(mQNPos, mTransportIsRunning, mTempo);
+    return ProcessSynced(mMetronome->mQNPos, mMetronome->mTransportIsRunning, mMetronome->mTempo);
   }
 
   inline T Process(double freqHz) override
   {
     IOscillator<T>::SetFreqCPS(freqHz);
 
-    return ProcessSynced(mQNPos, mTransportIsRunning, mTempo);
+    return Process();
   }
 
   inline T ProcessSynced(double qnPos = 0., bool transportIsRunning = false, double tempo = 120.)
@@ -348,16 +368,14 @@ public:
   }
 
 protected:
+
   static inline constexpr int mTableSize{ 1024 };
   static inline constexpr int mTableSizeM1{ 1023 };
   T mLastOutput;
 
-  static inline T mLUT[LFO<T>::EShape::kNumShapes][mTableSize];
+  T mLUT[LFO<T>::EShape::kNumShapes][mTableSize];
 
-  static inline double mStaticPhase{ 0 };
-  static inline double mTempo{ 120. };
-  static inline bool mTransportIsRunning{ false };
-  static inline double mQNPos{ 0. };
+  ModMetronome* mMetronome{ nullptr };
 };
 
 template <typename T, int NSteps=16>
@@ -370,9 +388,10 @@ class Sequencer : public FastLFO<T>
   };
 
 public:
-  Sequencer(T* stepValues) : FastLFO<T>()
+  Sequencer(ModMetronome* metronome, T* stepValues) : FastLFO<T>(metronome, 0.), mStepValues(stepValues) {}
+
+  Sequencer(T* stepValues) : FastLFO<T>(0.), mStepValues(stepValues)
   {
-    mStepValues = stepValues;
   }
 
   void SetLength(const int numSteps)
@@ -408,7 +427,7 @@ public:
 
   inline T Process() override 
   {
-    return ProcessSynced(FastLFO<T>::mQNPos, FastLFO<T>::mTransportIsRunning, FastLFO<T>::mTempo);
+    return ProcessSynced(mMetronome->mQNPos, mMetronome->mTransportIsRunning, mMetronome->mTempo);
   }
 
   inline T GetStepValueWithGlide()
@@ -483,8 +502,9 @@ class GlobalModulator : public Sequencer<T>
 {
 public:
   GlobalModulator() : GlobalModulator(nullptr) {}
-  GlobalModulator(T* stepValues) : Sequencer<T>(stepValues) {}
-  GlobalModulator(Sequencer<T>& sequencer) : Sequencer<T>(sequencer.mStepValues) {}
+  GlobalModulator(ModMetronome* metronome) : Sequencer<T>(metronome, nullptr) {}
+  GlobalModulator(ModMetronome* metronome, T* stepValues) : Sequencer<T>(metronome, stepValues) {}
+  GlobalModulator(Sequencer<T>& sequencer) : Sequencer<T>(sequencer.mMetronome, sequencer.mStepValues) {}
 
   inline T Process() override
   {
