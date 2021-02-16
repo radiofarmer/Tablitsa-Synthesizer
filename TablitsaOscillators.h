@@ -68,15 +68,17 @@ public:
     mID(id), IOscillator<T>(startPhase), mPrevFreq(static_cast<int>(startFreq))
   {
     WtFile table(tableName);
-    WavetableOscillator<T>::LoadNewTable(table, mID);
-    WavetableOscillator<T>::SetWavetable(WavetableOscillator<T>::LoadedTables[mID]);
+    LoadNewTable(table, mID);
+    SetWavetable(WavetableOscillator<T>::LoadedTables[mID]);
+    mWtReady = true;
   }
 
   WavetableOscillator(const int id, const WtFile& table, double startPhase = 0., double startFreq = 1.)
     : mID(id), IOscillator<T>(startPhase, startFreq), mPrevFreq(static_cast<int>(startFreq))
   {
-    WavetableOscillator<T>::LoadNewTable(table, mID);
-    WavetableOscillator<T>::SetWavetable(WavetableOscillator<T>::LoadedTables[mID]);
+    LoadNewTable(table, mID);
+    SetWavetable(WavetableOscillator<T>::LoadedTables[mID]);
+    mWtReady = true;
   }
 
   void SetSampleRate(double sampleRate)
@@ -92,7 +94,7 @@ public:
     if (wt.Success())
     {
       std::unique_lock<std::mutex> lock(mMasterMutex);
-      mWtReady[idx] = false;
+      mWtReady = false;
       delete LoadedTables[idx];
       LoadedTables[idx] = new Wavetable<T>(wt);
     }
@@ -106,7 +108,7 @@ public:
   void SetWavetable(Wavetable<T>* tab)
   {
     std::unique_lock<std::mutex> lock(mWtMutex);
-    mWtReady[mID] = false;
+    mWtReady = false;
     if (tab != nullptr) // TODO: Check for nan's in the wavetable. They appear to break everything (including after new tables are loaded)
       mWT = tab;
     mPhaseIncrFactor = (1. / (mWT->mCyclesPerLevel * mProcessOS));
@@ -128,7 +130,7 @@ public:
   inline void SetMipmapLevel_ByIndex(const int idx)
   {
     std::unique_lock<std::mutex> lock(mWtMutex);
-    mCV.wait(lock, [this] { return mWtReady[mID]; });
+    mCV.wait(lock, [this] { return mWtReady; });
 
     int tableOffset = static_cast<int>((1 - mWtPosition) * (mWT->mNumTables - 1.0001));
     mLUTLo[0] = mWT->GetMipmapLevel_ByIndex(tableOffset, idx, mTableSize);
@@ -418,9 +420,9 @@ public:
     mPrevFreq = -1;
   }
 
-  static void NotifyLoaded(int oscIdx)
+  void NotifyLoaded()
   {
-    mWtReady[oscIdx] = true;
+    mWtReady = true;
     mCV.notify_all();
   }
 
@@ -463,9 +465,9 @@ private:
   // Thread-related members for wavetable updates
   static inline std::mutex mWtMutex; // Mutex used when swapping out the current wavetable in each oscillator object
   static inline std::condition_variable mCV;
-  static inline bool TableLoaded{ false };
+  bool TableLoaded{ false };
   static inline std::mutex mMasterMutex; // Static mutex used when loading a new wavetable from a file
-  static inline bool mWtReady[2]{ false, false };
+  bool mWtReady{ false };
 
   // Vectors
 #if VECTOR_SIZE == 4

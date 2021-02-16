@@ -266,7 +266,7 @@ public:
       mMetronome = new ModMetronome;
   }
 
-  static void WriteLUTs()
+  void WriteLUTs()
   {
     // Populate lookup tables
     for (int i{ 0 }; i < mTableSize; ++i)
@@ -373,7 +373,7 @@ protected:
   static inline constexpr int mTableSizeM1{ 1023 };
   T mLastOutput;
 
-  static inline T mLUT[LFO<T>::EShape::kNumShapes][mTableSize];
+  T mLUT[LFO<T>::EShape::kNumShapes][mTableSize];
 
   ModMetronome* mMetronome{ nullptr };
 };
@@ -388,9 +388,9 @@ class Sequencer : public FastLFO<T>
   };
 
 public:
-  Sequencer(ModMetronome* metronome, T* stepValues) : FastLFO<T>(metronome), mStepValues(stepValues) {}
+  Sequencer(ModMetronome* metronome, T* stepValues) : FastLFO<T>(metronome, 0.), mStepValues(stepValues) {}
 
-  Sequencer(T* stepValues) : FastLFO<T>(), mStepValues(stepValues)
+  Sequencer(T* stepValues) : FastLFO<T>(0.), mStepValues(stepValues)
   {
   }
 

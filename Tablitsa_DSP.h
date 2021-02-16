@@ -760,8 +760,8 @@ public:
       SendParam([this, oscIdx, &wtFile](Voice* voice) {
         voice->mOsc1.SetWavetable(oscIdx);
         voice->mOsc1.ReloadLUT();
+        voice->mOsc1.NotifyLoaded();
         });
-      WavetableOscillator<T>::NotifyLoaded(oscIdx);
     }
     else
     {
@@ -771,8 +771,8 @@ public:
       SendParam([this, oscIdx, &wtFile](Voice* voice) {
         voice->mOsc2.SetWavetable(oscIdx);
         voice->mOsc2.ReloadLUT();
+        voice->mOsc2.NotifyLoaded();
         });
-      WavetableOscillator<T>::NotifyLoaded(oscIdx);
     }
   }
 

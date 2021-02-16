@@ -520,7 +520,14 @@ public:
   bool SerializeState(IByteChunk& chunk) const override;
   int UnserializeState(const IByteChunk& chunk, int startPos) override;
   void UpdateUIControls();
-  
+  /* implement this and return true to trigger your custom about box, when someone clicks about in the menu of a standalone app or VST3 plugin */
+  bool OnHostRequestingAboutBox() override; // See IPlugAPP_dialog.cpp
+  /* implement this and return true to trigger your custom help info, when someone clicks help in the menu of a standalone app or VST3 plugin */
+  bool OnHostRequestingProductHelp() override;
+
+  int GetActiveModIdx() const;
+  void SetActiveModIdx(int idx);
+
 private:
   TablitsaDSP<sample> mDSP {kNumVoices}; // sample is an alias for double
   IPeakSender<2> mMeterSender;
@@ -530,5 +537,7 @@ private:
 
   double mSequencerIsQuantized{ 0. };
   double mDelayIsSynced{ 0. };
+
+  int mActiveModIdx{ -1 };
 #endif
 };
