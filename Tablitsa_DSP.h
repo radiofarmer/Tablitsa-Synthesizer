@@ -119,14 +119,39 @@ enum EUnisonChords
   kDim7
 };
 
-struct VoiceDetuner
+struct ChannelParam
+{
+  double L{ 0. };
+  double R{ 0. };
+  double LR[2]{ 0. };
+
+  void Set(double l, double r)
+  {
+    LR[0] = L = l;
+    LR[1] = R = r;
+  }
+
+  double& operator [](int ch)
+  {
+    return LR[ch];
+  }
+};
+
+struct UnisonVoiceManager
 {
   int mMaxVoices;
-  double mMaxDetune;
+
+  // Detuning
+  double mMaxDetune; // octaves
   int mNVoices{ 1 };
-  int mVoiceIdx{ 0 };
+  int mDetuneVoiceIdx{ 0 };
   int mChord{ EUnisonChords::kNoChord };
   double* mDetuneBuf;
+
+  // Panning
+  int mPanVoiceIdx{ 0 };
+  double mMaxPan; // [-1., 1.]
+  ChannelParam* mPanBuf;
 
   const double mUnisonInvervals[8][5]{
     {0., 1., 0., 2., 0.}, // Octaves
@@ -139,9 +164,11 @@ struct VoiceDetuner
     {0., 3. / 12., 6. / 12, 9. / 12, 1.} // Full-Diminished 7
   };
 
-  VoiceDetuner(int maxVoices, double maxDetuneSemitones=1.) : mMaxVoices(maxVoices), mMaxDetune(maxDetuneSemitones)
+  UnisonVoiceManager(int maxVoices, double maxDetuneSemitones=1.) : mMaxVoices(maxVoices), mMaxDetune(maxDetuneSemitones)
   {
     mDetuneBuf = new double[mMaxVoices] {0.};
+    mPanBuf = new ChannelParam[mMaxVoices]{};
+    mPanBuf[0].Set(1., 1.);
   }
 
   void SetNVoices(int nVoices)
@@ -154,34 +181,80 @@ struct VoiceDetuner
     mMaxDetune = maxDetuneSemitones / 12;
   }
 
+  void SetMaxPan(double maxPanDegrees)
+  {
+    mMaxPan = maxPanDegrees / 180.;
+  }
+
   void SetChord(int chord)
   {
     mChord = chord;
   }
 
-  void ResetDetuneValues()
+  void RefillBuffers()
   {
     int nVoices = std::max(2, mNVoices);
+
+    // Pitch detuning
     if (mChord == EUnisonChords::kNoChord)
     {
       for (auto i{ 0 }; i < mNVoices; ++i)
-        mDetuneBuf[i] = mMaxDetune * static_cast<double>(-i % mNVoices) / (nVoices - 1) * -1;
+        mDetuneBuf[i] = mMaxDetune * static_cast<double>(-i % mNVoices) / (static_cast<double>(nVoices) - 1.) * -1;
     }
     else
     {
       for (auto i{ 0 }; i < mNVoices; ++i)
         mDetuneBuf[i] = mUnisonInvervals[mChord][i % 5] + mMaxDetune * (static_cast<double>(std::rand() % 100) / 50 - 1.);
     }
+
+    // Panning (in progress)
+    double totalPan = std::abs(mMaxPan);
+    if (mNVoices > 1)
+    {
+      double pan = totalPan * static_cast<double>(std::rand() % 100) / 50 - 1.;
+      mPanBuf[0].Set(
+        (1 + pan) / 2.,
+        (1 - pan) / 2.
+      );
+    }
+    else
+      mPanBuf[0].Set(1., 1.);
+    for (auto i{ 0 }; i < mNVoices; ++i)
+    {
+      constexpr double sqrt2{ 1.4 };
+      double pan;
+      if (i % 0)
+        pan = totalPan * static_cast<double>(std::rand() % 100) / 50 - 1.;
+      else
+        pan = totalPan * std::abs(mPanBuf[i - 1][0]);
+      //mPanBuf[i][0] = (1 + mTotalPan * pan) / 2.;
+      //mPanBuf[i][1] = (1 - mTotalPan * pan) / 2.;
+      mPanBuf[i].Set(
+        (1 + std::copysign(pan, 1. - mPanBuf[i - 1][0])) / 2.,
+        (1 - std::copysign(pan, 1. - mPanBuf[i - 1][0])) / 2.
+      );
+
+      if (!(i % 2))
+        totalPan -= pan;
+    }
   }
 
   double DetuneNext()
   {
-    int next = mVoiceIdx++ % mNVoices;
-    mVoiceIdx %= mNVoices;
+    int next = mDetuneVoiceIdx++ % mNVoices;
+    mDetuneVoiceIdx %= mNVoices;
     return mDetuneBuf[next];
   }
 
-  ~VoiceDetuner()
+  void SetNextPan(double* channelPan)
+  {
+    int next = mPanVoiceIdx++ % mNVoices;
+    mPanVoiceIdx %= mNVoices;
+    channelPan[0] = mPanBuf[next][0];
+    channelPan[1] = mPanBuf[next][1];
+  }
+
+  ~UnisonVoiceManager()
   {
     delete[] mDetuneBuf;
   }
@@ -236,7 +309,7 @@ public:
       return mAmpEnv.GetBusy();
     }
 
-    VoiceDetuner& GetDetuner()
+    UnisonVoiceManager& GetDetuner()
     {
       return mMaster->mDetuner;
     }
@@ -250,6 +323,7 @@ public:
       mTriggerRand = static_cast<double>(std::rand()) / static_cast<double>(RAND_MAX);
 
       mDetune = GetDetuner().DetuneNext();
+      GetDetuner().SetNextPan(mPan);
 
       for (auto f : mFilters)
       {
@@ -438,8 +512,9 @@ public:
          double osc1FilterOutput = mFilters.at(osc1Filter)->Process(osc1Output[j]);
          double osc2FilterOutput = mFilters.at(osc2Filter)->Process(osc2Output[j]);
          double output_summed = osc1FilterOutput + osc2FilterOutput;
-         outputs[0][i + j] += output_summed * ampEnvVal * mGain;
-         outputs[1][i + j] = outputs[0][i + j];
+         double output_scaled = output_summed * ampEnvVal * mGain;
+         outputs[0][i + j] += output_scaled * mPan[0];
+         outputs[1][i + j] += output_scaled * mPan[1];
        }
       }
     }
@@ -482,16 +557,6 @@ public:
     {
       //TODO:
     }
-
-    /*void SetTempoAndBeat(double qnPos = 0., bool transportIsRunning = false, double tempo = 120.)
-    {
-      mQNPos = qnPos;
-      mTransportIsRunning = transportIsRunning;
-      mTempo = tempo;
-      mLFO1.SetTempoAndBeat(mQNPos, mTransportIsRunning, mTempo);
-      mLFO2.SetTempoAndBeat(mQNPos, mTransportIsRunning, mTempo);
-      mSequencerSetTempoAndBeat(mQNPos, mTransportIsRunning, mTempo);
-    }*/
 
     void SetFilterType(int filter, int filterType)
     {
@@ -627,7 +692,9 @@ public:
 
     };
 
+    // Unison parameters
     double mDetune{ 0. };
+    double mPan[2]{ 1., 1. };
 
     // Sample and Beat data
     double mTempo{ 120. };
@@ -792,7 +859,7 @@ public:
 
   void ResetDetune()
   {
-    mDetuner.ResetDetuneValues();
+    mDetuner.RefillBuffers();
   }
 
   int GetSequencerStep()
@@ -1299,6 +1366,20 @@ public:
       case kParamUnisonChord:
         mDetuner.SetChord(static_cast<int>(value) + EUnisonChords::kNoChord);
         break;
+      case kParamStereoSpread:
+      {
+        if (mDetuner.mNVoices == 1)
+        {
+          mStereoWidth = (T)value;
+          mDetuner.SetMaxPan(mStereoWidth);
+        }
+        else
+        {
+          mStereoWidth = (T)value;
+          mDetuner.SetMaxPan(mStereoWidth);
+        }
+          break;
+      }
       case kParamWavetable1Pitch:
         mParamsToSmooth[kModWavetable1PitchSmoother] = value;
         break;
@@ -1810,7 +1891,8 @@ public:
   bool mMono{ false };
   int mUnisonVoices{ 1 };
   float mUnisonDetune{ 0.f };
-  VoiceDetuner mDetuner{ kMaxUnisonVoices };
+  UnisonVoiceManager mDetuner{ kMaxUnisonVoices };
+  double mStereoWidth{ 0. };
 
   // Portamento Parameters
   bool mConstantGlideTime{ true };
