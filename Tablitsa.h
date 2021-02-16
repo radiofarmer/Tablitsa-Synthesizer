@@ -445,6 +445,7 @@ enum EControlTags
   kCtrlTagFilter1Delay,
   kCtrlTagFilter1Mode,
   kCtrlTagFilter1Type,
+  kCtrlTagFilter1Osc,
   kCtrlTagFilter2Cutoff,
   kCtrlTagFilter2Resonance,
   kCtrlTagFilter2Drive,
@@ -453,6 +454,7 @@ enum EControlTags
   kCtrlTagFilter2Delay,
   kCtrlTagFilter2Mode,
   kCtrlTagFilter2Type,
+  kCtrlTagFilter2Osc,
   kCtrlTagOscModFreq,
   kCtrlTagOscModAmt,
   kCtrlTagOsc1ModSwitch,
@@ -472,6 +474,7 @@ enum EMsgTags
   kMsgWavetable2Changed,
   kMsgSeqSliderChanged,
   kMsgRandomizeSequencer,
+  kMsgFilterOscChanged,
 };
 
 enum EModulators

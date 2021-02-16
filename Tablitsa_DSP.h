@@ -389,6 +389,9 @@ public:
       const double phaseModFreqFact = pow(2., mVModulations.GetList()[kVPhaseModFreq][0] / 12.);
       const double ringModFreqFact = pow(2., mVModulations.GetList()[kVRingModFreq][0] / 12.);
 
+      const int osc1Filter = mFilterRouting[0];
+      const int osc2Filter = mFilterRouting[1];
+
       // make sound output for each output channel
       for(auto i = startIdx; i < startIdx + nFrames; i += FRAME_INTERVAL)
       {
@@ -425,13 +428,16 @@ public:
         
        for (auto j = 0; j < FRAME_INTERVAL; ++j)
        {
+         // Amp scaling
          osc1Output[j] *= mVModulations.GetList()[kVWavetable1Amp][bufferIdx];
          osc2Output[j] *= mVModulations.GetList()[kVWavetable2Amp][bufferIdx];
+         // Saturation
          osc1Output[j] = mOsc1Sat.Process(osc1Output[j]);
          osc2Output[j] = mOsc2Sat.Process(osc2Output[j]);
-         double filter1Output = mFilters.at(0)->Process(osc1Output[j]);
-         double filter2Output = mFilters.at(1)->Process(osc2Output[j]);
-         double output_summed = filter1Output + filter2Output;
+         // Filters
+         double osc1FilterOutput = mFilters.at(osc1Filter)->Process(osc1Output[j]);
+         double osc2FilterOutput = mFilters.at(osc2Filter)->Process(osc2Output[j]);
+         double output_summed = osc1FilterOutput + osc2FilterOutput;
          outputs[0][i + j] += output_summed * ampEnvVal * mGain;
          outputs[1][i + j] = outputs[0][i + j];
        }
@@ -522,6 +528,12 @@ public:
       }
     }
 
+    /* Route the given oscillator through the given filter */
+    void UpdateFilterSource(int filterIdx, int oscIdx)
+    {
+      mFilterRouting[oscIdx] = filterIdx;
+    }
+
     /* Update polyphonic modulation depths */
     void UpdateVoiceParam(int voiceParam, int modIdx, double value)
     {
@@ -570,7 +582,9 @@ public:
     double mEnv2VelocityMod{ 0. };
     double mAmpEnvVelocityMod{ 1. };
 
+    // Filters
     std::vector<Filter<T>*> mFilters{ new NullFilter<T>(), new NullFilter<T>() };
+    int mFilterRouting[2]{ 0, 1 };
 
     WDL_PtrList<T> mVModulations; // Pointers to modulator buffers
     WDL_TypedBuf<T> mVModulationsData; // Modulator buffer sample data
@@ -787,6 +801,13 @@ public:
       return mActiveSequencer->GetCurrentStep();
     else
       return 0;
+  }
+
+  void UpdateFilterSource(int filterIdx, int oscIdx)
+  {
+    mSynth.ForEachVoice([filterIdx, oscIdx](SynthVoice& voice) {
+      dynamic_cast<TablitsaDSP<T>::Voice&>(voice).UpdateFilterSource(filterIdx, oscIdx);
+      });
   }
 
   inline void SendParam(std::function<void(Voice* voice)> func)
@@ -1805,6 +1826,8 @@ public:
   // Status Variables
   int mSeqPos{ 0 };
   Sequencer<T, kNumSeqSteps>* mActiveSequencer{ nullptr };
+  int mFilter1Osc{ 0 }; // Oscillator which provides the filter's input
+  int mFilter2Osc{ 1 };
   bool mFilter1Comb{ false }; // Set to `true` when Filter 1 is a comb filter. Used for scaling delay/drive values by the proper amount.
   bool mFilter2Comb{ false }; // Set to `true` when Filter 2 is a comb filter. Used for scaling delay/drive values by the proper amount.
 
