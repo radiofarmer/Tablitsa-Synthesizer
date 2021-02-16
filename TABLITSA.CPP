@@ -853,7 +853,7 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
         pGraphics->HideControl(kParamSequencerRateHz, sync);
         pGraphics->SetAllControlsDirty();
         });
-    pGraphics->AttachControl(new SequencerControl<kNumSeqSteps>(sequencerDisplayPanel.GetReducedFromRight(dialSize).GetVPadded(-10.f), ""),
+    pGraphics->AttachControl(new SequencerControl<kNumSeqSteps>(sequencerDisplayPanel.GetReducedFromRight(dialSize).GetPadded(-20.f, -10.f, -20.f, -16.f), ""),
       kCtrlTagSequencer, "Sequencer")->SetActionFunction([pGraphics](IControl* pCaller) {
       // Get all values
       /* NB: In the SnapToMouse() function, values for sliders which fall between MouseMove events are interpolated using the preceeding and following slider.
@@ -868,7 +868,7 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
       }
       });
     pGraphics->AttachControl(new IVToggleControl(sequencerParamsPanel.GetGridCell(5, 1, 7, 3).GetHPadded(-5.f), kParamSequencerRestart, "", DEFAULT_STYLE.WithShowLabel(false), "Free Run", "Restart"), kNoTag, "SequencerParams");
-    pGraphics->AttachControl(new ModSliderControl(sequencerDisplayPanel.GetGridCell(0, 5, 1, 6).GetVPadded(-2.f).GetVShifted(-5.f).GetMidHPadded(20.f), kNoParameter, "Depth"), kCtrlTagSequencerDepth, "Sequencer");
+    pGraphics->AttachControl(new ModSliderControl(sequencerDisplayPanel.GetGridCell(0, 5, 1, 6).GetVPadded(-10.f).GetVShifted(-5.f).GetMidHPadded(20.f), kNoParameter, "Depth"), kCtrlTagSequencerDepth, "Sequencer");
     pGraphics->AttachControl(new IVToggleControl(sequencerParamsPanel.GetGridCell(4, 2, 7, 3).GetHPadded(-5.f), kNoParameter, "", DEFAULT_STYLE.WithShowLabel(false), "Cont.", "Quant."), kCtrlTagSequencerQuant, "SequencerParams")->SetActionFunction(
       [pGraphics, this](IControl* pControl) {
         mSequencerIsQuantized = pControl->GetValue();
