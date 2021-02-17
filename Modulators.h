@@ -481,7 +481,8 @@ public:
     }
 
     // Increment phase
-    IOscillator<T>::mPhase = FastLFO<T>::WrapPhase(IOscillator<T>::mPhase + phaseIncr, 0., 1.);
+    constexpr double nSteps{ static_cast<double>(NSteps) };
+    IOscillator<T>::mPhase = FastLFO<T>::WrapPhase(IOscillator<T>::mPhase + phaseIncr, 0., mLength / nSteps);
     return s_out * mLevelScalar;
   }
 
