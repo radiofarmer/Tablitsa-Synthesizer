@@ -208,13 +208,13 @@ struct UnisonVoiceManager
     }
 
     // Panning (in progress)
-    double totalPan = std::abs(mMaxPan);
+    double totalPan = mMaxPan;
     if (mNVoices > 1)
     {
       double pan = totalPan * (static_cast<double>(std::rand() % 100) / 50 - 1.);
       mPanBuf[0].Set(
-        (1. + pan) / 2.,
-        (1. - pan) / 2.
+        std::copysign(1. + pan, mMaxPan) / 2.,
+        std::copysign(1. - pan, mMaxPan) / 2.
       );
     }
     else
@@ -227,15 +227,13 @@ struct UnisonVoiceManager
         pan = totalPan * (static_cast<double>(std::rand() % 100) / 50 - 1.);
       else
         pan   = totalPan * std::abs(mPanBuf[i - 1][0]);
-      //mPanBuf[i][0] = (1 + mTotalPan * pan) / 2.;
-      //mPanBuf[i][1] = (1 - mTotalPan * pan) / 2.;
       mPanBuf[i].Set(
-        (1 + std::copysign(pan, 1. - mPanBuf[i - 1][0])) / 2.,
-        (1 - std::copysign(pan, 1. - mPanBuf[i - 1][1])) / 2.
+        std::copysign(1 + std::copysign(pan, 1. - mPanBuf[i - 1][0]), mMaxPan) / 2.,
+        std::copysign(1 - std::copysign(pan, 1. - mPanBuf[i - 1][1]), mMaxPan) / 2.
       );
 
       if (i % 2)
-        totalPan -= pan;
+        totalPan = std::copysign(std::abs(totalPan) - std::abs(pan), mMaxPan);
     }
   }
 
