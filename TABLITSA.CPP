@@ -23,7 +23,7 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
 #else
   GetParam(kParamGain)->InitGain("Gain", -24., -72., 0.);
 #endif
-  GetParam(kParamPan)->InitDouble("Pan", 0., -90., 90., 0.5, "°");
+  GetParam(kParamPan)->InitDouble("Pan", 0., -90., 90., 0.5, "Â°");
   GetParam(kParamNoteGlideTime)->InitMilliseconds("Note Glide Time", 0., 0.0, 3000.);
   GetParam(kParamNoteGlideRate)->InitDouble("Note Glide Rate", 12., 0.5, 128., 0.1, "St/s");
   GetParam(kParamPortamentoMode)->InitBool("Equal Glide Time", true);
@@ -31,7 +31,7 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
   GetParam(kParamUnisonVoices)->InitInt("Unison Voices", 1, 1, 8);
   GetParam(kParamUnisonDetune)->InitDouble("Unison Detune", 0., 0., 12., 0.01, "St.");
   GetParam(kParamUnisonChord)->InitEnum("Chord", 0, { UNISON_CHORD_LIST });
-  GetParam(kParamStereoSpread)->InitDouble("Stereo Spread", 0., -180., 180., 0.5, "°");
+  GetParam(kParamStereoSpread)->InitDouble("Stereo Spread", 0., -180., 180., 0.5, "Â°");
   /*Modulators*/
   // Envelope 1
   GetParam(kParamEnv1Attack)->InitDouble("Env1 Attack", 10., 1., 3000., 0.1, "ms", IParam::kFlagsNone, "ADSR", IParam::ShapePowCurve(3.));
@@ -514,16 +514,18 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
         pGraphics->SetAllControlsDirty();
         });
     // Mono/Poly and Portamento Rate/Time switches
-    pGraphics->AttachControl(new IVKnobControl(masterPanel.GetGridCell(1, 0, 4, 6).GetCentredInside(dialSize), kParamNoteGlideRate, "Glide Rate"), kNoTag, "Master")->Hide(true);
-    pGraphics->AttachControl(new IVKnobControl(masterPanel.GetGridCell(1, 0, 4, 6).GetCentredInside(dialSize), kParamNoteGlideTime, "Glide Time"), kNoTag, "Master")->DisablePrompt(false);
+    pGraphics->AttachControl(new IVKnobControl(masterPanel.GetGridCell(1, 0, 4, 6).GetPadded(-5.f).GetCentredInside(dialSize), kParamNoteGlideRate, "Glide Rate"), kNoTag, "Master")->Hide(true);
+    pGraphics->AttachControl(new IVKnobControl(masterPanel.GetGridCell(1, 0, 4, 6).GetPadded(-5.f).GetCentredInside(dialSize), kParamNoteGlideTime, "Glide Time"), kNoTag, "Master")->DisablePrompt(false);
     pGraphics->AttachControl(new IVToggleControl(masterPanel.GetGridCell(4, 1, 12, 6).GetVPadded(-2.f), kParamMonophonic, "", DEFAULT_STYLE.WithShowLabel(false), "Poly", "Mono"));
     pGraphics->AttachControl(new IVToggleControl(masterPanel.GetGridCell(5, 1, 12, 6).GetVPadded(-2.f), kParamLegato, "", DEFAULT_STYLE.WithShowLabel(false), "Retrigger", "Legato"));
-    pGraphics->AttachControl(new IVLEDMeterControl<2>(masterPanel.GetGridCell(0, 5, 2, 6).GetVPadded(-20.f)), kCtrlTagMeter, "Master");
     // Unison and Stereo Width
-    pGraphics->AttachControl(new IVNumberBoxControl(masterPanel.GetGridCell(0, 2, 4, 6).GetHPadded(-10.f).GetVPadded(-18.f), kParamUnisonVoices, nullptr, "Unison", DEFAULT_STYLE.WithValueText(IText(18.f))), kNoTag, "Stereo");
-    pGraphics->AttachControl(new IVKnobControl(masterPanel.GetGridCell(0, 3, 4, 6).GetCentredInside(dialSize), kParamUnisonDetune, "Detune"), kNoTag, "Stereo");
-    pGraphics->AttachControl(new IVKnobControl(masterPanel.GetGridCell(0, 4, 4, 6).GetCentredInside(dialSize), kParamUnisonChord, "Chord"), kNoTag, "Stereo");
-    pGraphics->AttachControl(new IVKnobControl(masterPanel.GetGridCell(1, 3, 4, 6).GetCentredInside(dialSize), kParamStereoSpread, "Spread"), kNoTag, "Stereo");
+    const IRECT unisonPanel = masterPanel.GetReducedFromLeft(masterPanel.W() / 3.f).GetReducedFromRight(masterPanel.W() / 6.f).GetGridCell(0, 0, 2, 1).GetPadded(-5.f).GetHPadded(-10.f).GetVAlignedTo(osc1Panel, EVAlign::Top);
+    pGraphics->AttachControl(new IVNumberBoxControl(unisonPanel.GetGridCell(0, 0, 2, 2).GetHPadded(-10.f).GetVPadded(-15.f), kParamUnisonVoices, nullptr, "â„– Voices", DEFAULT_STYLE.WithValueText(IText(18.f))), kNoTag, "Unison");
+    pGraphics->AttachControl(new IVKnobControl(unisonPanel.GetGridCell(1, 0, 2, 2).GetCentredInside(dialSize), kParamUnisonDetune, "Detune"), kNoTag, "Unison");
+    pGraphics->AttachControl(new IVKnobControl(unisonPanel.GetGridCell(0, 1, 2, 2).GetCentredInside(dialSize), kParamUnisonChord, "Chord"), kNoTag, "Unison");
+    pGraphics->AttachControl(new IVKnobControl(unisonPanel.GetGridCell(1, 1, 2, 2).GetPadded(-5.f).GetCentredInside(dialSize), kParamStereoSpread, "Spread"), kNoTag, "Unison");
+    pGraphics->AttachControl(new IVGroupControl("Unison", "Unison", 5.f, 15.f, 5.f, 5.f));
+    pGraphics->AttachControl(new IVLEDMeterControl<2>(masterPanel.GetGridCell(0, 5, 2, 6).GetVPadded(-20.f)), kCtrlTagMeter, "Master");
 
     /* Effects Panel */
     // Delay
