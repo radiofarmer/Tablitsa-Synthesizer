@@ -174,16 +174,27 @@ struct UnisonVoiceManager
   void SetNVoices(int nVoices)
   {
     mNVoices = std::min(nVoices, mMaxVoices);
+    RefillBuffers();
   }
 
-  void SetMaxDetune(double maxDetuneSemitones)
+  void SetMaxDetune(double maxDetuneSemitones, bool refillBuffer=true)
   {
     mMaxDetune = maxDetuneSemitones / 12;
+    if (refillBuffer)
+      RefillDetuneBuffer();
   }
 
-  void SetMaxPan(double maxPanDegrees)
+  void SetMaxPan(double maxPanDegrees, bool refillBuffer=true)
   {
     mMaxPan = maxPanDegrees / 180.;
+    if (refillBuffer)
+      RefillPanBuffer();
+  }
+
+  void Reset()
+  {
+    mDetuneVoiceIdx = 0;
+    mPanVoiceIdx = 0;
   }
 
   void SetChord(int chord)
@@ -192,6 +203,12 @@ struct UnisonVoiceManager
   }
 
   void RefillBuffers()
+  {
+    RefillDetuneBuffer();
+    RefillPanBuffer();
+  }
+
+  inline void RefillDetuneBuffer()
   {
     int nVoices = std::max(2, mNVoices);
 
@@ -206,34 +223,34 @@ struct UnisonVoiceManager
       for (auto i{ 0 }; i < mNVoices; ++i)
         mDetuneBuf[i] = mUnisonInvervals[mChord][i % 5] + mMaxDetune * (static_cast<double>(std::rand() % 100) / 50 - 1.);
     }
+  }
 
+  inline void RefillPanBuffer()
+  {
+    constexpr double sqrt2{ 1.45 };
     // Panning (in progress)
-    double totalPan = mMaxPan;
+    double totalPan = std::abs(mMaxPan);
     if (mNVoices > 1)
     {
-      double pan = totalPan * (static_cast<double>(std::rand() % 100) / 50 - 1.);
+      double pan = totalPan;
       mPanBuf[0].Set(
-        std::copysign(1. + pan, mMaxPan) / 2.,
-        std::copysign(1. - pan, mMaxPan) / 2.
+        (1. + std::copysign(pan, mMaxPan)) / sqrt2,
+        (1. - std::copysign(pan, mMaxPan)) / sqrt2
       );
     }
     else
       mPanBuf[0].Set(1., 1.);
     for (auto i{ 1 }; i < mNVoices; ++i)
     {
-      constexpr double sqrt2{ 1.4 };
       double pan;
-      if (!(i % 2))
-        pan = totalPan * (static_cast<double>(std::rand() % 100) / 50 - 1.);
-      else
-        pan   = totalPan * std::abs(mPanBuf[i - 1][0]);
-      mPanBuf[i].Set(
-        std::copysign(1 + std::copysign(pan, 1. - mPanBuf[i - 1][0]), mMaxPan) / 2.,
-        std::copysign(1 - std::copysign(pan, 1. - mPanBuf[i - 1][1]), mMaxPan) / 2.
-      );
-
       if (i % 2)
-        totalPan = std::copysign(std::abs(totalPan) - std::abs(pan), mMaxPan);
+        pan = totalPan / i; // Odd-numbered voices: Pan by the same magnitude as the last voice, but in the opposite direction
+      else
+        pan = totalPan / (i + 1); // Even-numbered voices: Pan within the maximum pan range, to ever-smaller extents
+      mPanBuf[i].Set(
+        (1. - std::copysign(pan, mMaxPan)) / sqrt2,
+        (1. + std::copysign(pan, mMaxPan)) / sqrt2
+      );
     }
   }
 
@@ -274,9 +291,9 @@ public:
       : mMaster(master), mID(id),
       mAmpEnv("gain", [&]() { mOsc1.Reset(); }),
       mEnv1("env1", [&]() { mOsc1.Reset(); }),
-      mLFO1(&mMaster->mGlobalMetronome),
-      mLFO2(&mMaster->mGlobalMetronome),
-      mSequencer(&mMaster->mGlobalMetronome, mMaster->mSeqSteps) // capture ok on RT thread?
+      mLFO1(&GetMaster()->mGlobalMetronome),
+      mLFO2(&GetMaster()->mGlobalMetronome),
+      mSequencer(&GetMaster()->mGlobalMetronome, GetMaster()->mSeqSteps) // capture ok on RT thread?
     {
 //      DBGMSG("new Voice: %i control inputs.\n", static_cast<int>(mInputs.size()));
 
@@ -297,9 +314,9 @@ public:
       mAmpEnv.Kill(true); // Force amplitude envelopes to start in the "Idle" stage
 
       // Fill the envelope queues for legato mode with null pointers
-      mMaster->AmpEnvQueue.push_back(nullptr);
-      mMaster->Env1Queue.push_back(nullptr);
-      mMaster->Env2Queue.push_back(nullptr);
+      GetMaster()->AmpEnvQueue.push_back(nullptr);
+      GetMaster()->Env1Queue.push_back(nullptr);
+      GetMaster()->Env2Queue.push_back(nullptr);
     }
 
     bool GetBusy() const override
@@ -309,7 +326,13 @@ public:
 
     UnisonVoiceManager& GetDetuner()
     {
-      return mMaster->mDetuner;
+      return GetMaster()->mDetuner;
+    }
+
+    void ResetUnisonParams()
+    {
+      mDetune = GetDetuner().DetuneNext();
+      GetDetuner().SetNextPan(mPan);
     }
 
     void Trigger(double level, bool isRetrigger) override
@@ -320,8 +343,7 @@ public:
       mVelocity = level; // TODO: Handling of different velocity settings (i.e. which envelopes are affected by velocity)
       mTriggerRand = static_cast<double>(std::rand()) / static_cast<double>(RAND_MAX);
 
-      mDetune = GetDetuner().DetuneNext();
-      GetDetuner().SetNextPan(mPan);
+      ResetUnisonParams();
 
       for (auto f : mFilters)
       {
@@ -336,7 +358,7 @@ public:
       }
       else
       {
-        mModulators.ReplaceModulator(dynamic_cast<FastLFO<T>*>(&(mMaster->mGlobalLFO1)), 0);
+        mModulators.ReplaceModulator(dynamic_cast<FastLFO<T>*>(&(GetMaster()->mGlobalLFO1)), 0);
       }
 
       if (mLFO2Restart)
@@ -346,7 +368,7 @@ public:
       }
       else
       {
-        mModulators.ReplaceModulator(dynamic_cast<FastLFO<T>*>(&mMaster->mGlobalLFO2), 1);
+        mModulators.ReplaceModulator(dynamic_cast<FastLFO<T>*>(&GetMaster()->mGlobalLFO2), 1);
       }
 
       if (mSequencerRestart)
@@ -354,13 +376,13 @@ public:
         mModulators.ReplaceModulator(dynamic_cast<Sequencer<T>*>(&mSequencer), 0);
         mSequencer.Reset();
         // Update sequencer display with this voice's phase
-        mMaster->mActiveSequencer = &mSequencer;
+        GetMaster()->mActiveSequencer = &mSequencer;
       }
       else
       {
-        mModulators.ReplaceModulator(&mMaster->mGlobalSequencer, 0);
+        mModulators.ReplaceModulator(&GetMaster()->mGlobalSequencer, 0);
         // Update sequencer display with this voice's phase
-        mMaster->mActiveSequencer = &mMaster->mGlobalSequencer;
+        GetMaster()->mActiveSequencer = &GetMaster()->mGlobalSequencer;
       }
 
 
@@ -383,16 +405,16 @@ public:
         Envelope<T>* masterAmpEnv = nullptr;
         Envelope<T>* masterEnv1 = nullptr;
         Envelope<T>* masterEnv2 = nullptr;
-        for (auto i{ 0 }; i < mMaster->AmpEnvQueue.size(); ++i)
+        for (auto i{ 0 }; i < GetMaster()->AmpEnvQueue.size(); ++i)
         {
-          if (mMaster->AmpEnvQueue[i])
+          if (GetMaster()->AmpEnvQueue[i])
           {
-            masterAmpEnv = mMaster->AmpEnvQueue[i];
-            masterEnv1 = mMaster->Env1Queue[i];
-            masterEnv2 = mMaster->Env2Queue[i];
+            masterAmpEnv = GetMaster()->AmpEnvQueue[i];
+            masterEnv1 = GetMaster()->Env1Queue[i];
+            masterEnv2 = GetMaster()->Env2Queue[i];
           }
         }
-
+        // If active envelopes were found, sync this voice's envelopes to them
         if (masterAmpEnv)
         {
           double velSubtr = 1. - level;
@@ -405,6 +427,7 @@ public:
           mEnv2.StartAt(1. - velSubtr * mEnv2VelocityMod,
             masterEnv2->GetValue(), masterEnv2->GetPrevResult(), masterEnv2->GetStage(),
             1. - mEnv2VelocityMod * kMaxEnvTimeScalar * level);
+
         }
         else
         {
@@ -414,9 +437,9 @@ public:
           mEnv2.Start(1. - velSubtr * mEnv2VelocityMod, 1. - mEnv2VelocityMod * kMaxEnvTimeScalar * level);
         }
         // Sync the master envelopes to this voice's envelopes
-        mMaster->Env1Queue[mID] = &mEnv1;
-        mMaster->Env2Queue[mID] = &mEnv2;
-        mMaster->AmpEnvQueue[mID] = &mAmpEnv;
+        GetMaster()->Env1Queue[mID] = &mEnv1;
+        GetMaster()->Env2Queue[mID] = &mEnv2;
+        GetMaster()->AmpEnvQueue[mID] = &mAmpEnv;
       }
     }
     
@@ -426,9 +449,9 @@ public:
       mEnv1.Release();
       mEnv2.Release();
       // Remove this voice's envelopes from the envelope queue
-      mMaster->AmpEnvQueue[mID] = nullptr;
-      mMaster->Env1Queue[mID] = nullptr;
-      mMaster->Env2Queue[mID] = nullptr;
+      GetMaster()->AmpEnvQueue[mID] = nullptr;
+      GetMaster()->Env1Queue[mID] = nullptr;
+      GetMaster()->Env2Queue[mID] = nullptr;
     }
 
     void ProcessSamplesAccumulating(T** inputs, T** outputs, int nInputs, int nOutputs, int startIdx, int nFrames) override
@@ -610,6 +633,11 @@ public:
         mVoiceMetaModParams[paramIdx].SetInitialValue(value);
       else
         mVoiceMetaModParams[paramIdx].SetValue(modIdx - 1, value);
+    }
+
+    TablitsaDSP<T>* GetMaster() const
+    {
+      return mMaster;
     }
 
   public:
@@ -1340,6 +1368,8 @@ public:
       case kParamUnisonVoices:
       {
         int voices = static_cast<int>(value);
+        mDetuner.SetNVoices(voices);
+        mSynth.SetMonoUnison(voices);
         // If the unison voice number has increased, start new voices
         if (voices > mUnisonVoices)
         {
@@ -1354,13 +1384,18 @@ public:
           mSynth.Reset();
         }
         mUnisonVoices = voices;
-        mDetuner.SetNVoices(voices);
-        mSynth.SetMonoUnison(voices);
         break;
       }
       case kParamUnisonDetune:
+      {
         mDetuner.SetMaxDetune(value);
+        mDetuner.Reset();
+        // Send new values to voices
+        mSynth.ForEachVoice([](SynthVoice& voice) {
+          dynamic_cast<TablitsaDSP<T>::Voice&>(voice).ResetUnisonParams();
+          });
         break;
+      }
       case kParamUnisonChord:
         mDetuner.SetChord(static_cast<int>(value) + EUnisonChords::kNoChord);
         break;
@@ -1376,7 +1411,12 @@ public:
           mStereoWidth = (T)value;
           mDetuner.SetMaxPan(mStereoWidth);
         }
-          break;
+        // Send new values to voices
+        mDetuner.Reset();
+        mSynth.ForEachVoice([](SynthVoice& voice) {
+          dynamic_cast<TablitsaDSP<T>::Voice&>(voice).ResetUnisonParams();
+          });
+        break;
       }
       case kParamWavetable1Pitch:
         mParamsToSmooth[kModWavetable1PitchSmoother] = value;

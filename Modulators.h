@@ -120,6 +120,16 @@ public:
     }
   }
 
+  inline void StartAt(T level, T envValue, T prevResult, int stage, T timeScalar = 1.)
+  {
+    mLevel = level;
+    mEnvValue = envValue;
+    mPrevResult = prevResult;
+    mStage = stage;
+    mReleased = stage == kRelease;
+    mScalar = 1. / timeScalar;
+  }
+
   /** Process the envelope, returning the value according to the current envelope stage
   * @param sustainLevel Since the sustain level could be changed during processing, it is supplied as an argument, so that it can be smoothed extenally if nessecary, to avoid discontinuities */
   inline T Process(T sustainLevel = 0.)
