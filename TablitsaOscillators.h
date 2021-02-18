@@ -132,7 +132,8 @@ public:
     std::unique_lock<std::mutex> lock(mWtMutex);
     mCV.wait(lock, [this] { return mWtReady; });
 
-    int tableOffset = static_cast<int>((1 - mWtPosition) * (mWT->mNumTables - 1.0001));
+    mWtPositionNorm = 1. - std::modf((1. - mWtPositionAbs) * (mWT->mNumTables - 1), &mWtOffset);
+    int tableOffset = static_cast<int>(mWtOffset);
     mLUTLo[0] = mWT->GetMipmapLevel_ByIndex(tableOffset, idx, mTableSize);
     mLUTLo[1] = mWT->GetMipmapLevel_ByIndex(tableOffset + 1, idx, mTableSize);
     mLUTHi[0] = mWT->GetMipmapLevel_ByIndex(tableOffset, idx + 1, mNextTableSize);
@@ -150,7 +151,8 @@ public:
     assert(mWT != nullptr);
     size = std::min(size, mWT->GetMaxSize());
 
-    int tableOffset = static_cast<int>((1 - mWtPosition) * (mWT->mNumTables - 1.0001));
+    mWtPositionNorm = std::modf((1. - mWtPositionAbs) * (mWT->mNumTables - 1), &mWtOffset);
+    int tableOffset = static_cast<int>(mWtOffset);
     mLUTLo[0] = mWT->GetMipmapLevel_BySize(tableOffset, size, mTableSize);
     mLUTLo[1] = mWT->GetMipmapLevel_BySize(tableOffset + 1, size, mNextTableSize);
     mTableSizeM1 = mTableSize - 1;
@@ -210,9 +212,7 @@ public:
     double phase; // integer phase
     double frac, frac2; // fractional phases
 
-    // Get the normalized offset of the current wavetable block
-    double tableOffset{ mWtPosition * (mWT->mNumTables - 1) };
-    tableOffset -= std::max(floor(tableOffset - 0.0001), 0.);
+    // tableOffset -= std::max(floor(tableOffset - 1e-7), 0.);
 #if OVERSAMPLING > 1
     // Temporary array to be downsampled
     T* oversampled = new T[nFrames]{ 0. };
@@ -233,7 +233,7 @@ public:
         mLUTHi[1] + (halfOffset & mNextTableSizeM1)
       }; // Obtain the integer portion
       // Read from wavetable
-      const double sampleWtPosition{ tableOffset };
+      const double sampleWtPosition{ mWtPositionNorm };
       const double sampleWtPositionInv{ 1 - sampleWtPosition };
       const T f1 = addr[0][0] * sampleWtPosition + addr[1][0] * sampleWtPositionInv;
       const T f2 = addr[0][1] * sampleWtPosition + addr[1][1] * sampleWtPositionInv;
@@ -265,7 +265,7 @@ public:
 
   inline void ProcessOversamplingVec4(std::array<T, OUTPUT_SIZE>& pOutput)
   {
-    double tableOffset{ mWtPosition * (mWT->mNumTables - 1) };
+    double tableOffset{ mWtPositionAbs * (mWT->mNumTables - 1) };
     tableOffset -= std::max(floor(tableOffset - 0.0001), 0.);
 
     const double phaseIncr = mPhaseIncr * mPhaseIncrFactor * mProcessOS;
@@ -361,7 +361,7 @@ public:
 
   inline double* GetWtPosition()
   {
-    return &mWtPosition;
+    return &mWtPositionAbs;
   }
 
   inline double* GetWtBend()
@@ -371,7 +371,7 @@ public:
 
   inline void SetWtPosition(double wtPos)
   {
-    mWtPosition = wtPos;
+    mWtPositionAbs = wtPos;
   }
 
   inline void SetWtBend(double wtBend)
@@ -381,7 +381,7 @@ public:
 
   inline double SampleWavetablePosition(double phase)
   {
-    return mWtPosition;
+    return mWtPositionAbs;
   }
 
   inline double GetSampleRate()
@@ -456,7 +456,9 @@ private:
   Wavetable<T>* mWT{ nullptr };
 
   // Wavetable Timbre Parameters
-  double mWtPosition{ 0 };
+  double mWtPositionAbs{ 1. }; // Absolute position in full set of wavetables. Range: [0., NTables - 1]
+  double mWtPositionNorm{ 1. }; // Normalized position between two wavetables. Range [0., 1.].
+  double mWtOffset{ 0. };
   double mWtSpacing{ 1. };
   double mWtBend{ 0 };
   int mPrevFreq;
