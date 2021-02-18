@@ -22,6 +22,8 @@ public:
   /* Get a pointer to the start of the delay line */
   const double* GetPointer() {return mBuffer;}
 
+  const double* GetReadPtr() { return &(mBuffer[mRead]); }
+
   /* Add a new sample to the first (most recent) position on the delay line, and adjust the read/write positions accordingly. */
   inline void push(const double s)
   {
