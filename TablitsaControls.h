@@ -6,14 +6,11 @@
 /* A clone of the normal knob control, but with the ability to receive modulation parameters. */
 class IVModKnobControl : public IVKnobControl
 {
-  static int mActiveIdx; // The parameter index of the IVModKnobControl currently linked to the modulator controls
-
 public:
   /* Create a knob control with a modulatable value */
   IVModKnobControl(const IRECT& bounds, int paramIdx, const char* label = "", const IVStyle& style = DEFAULT_STYLE, bool valueIsEditable = false, double gearing = DEFAULT_GEARING)
     : IVModKnobControl(bounds, paramIdx, paramIdx + 1, label, style, valueIsEditable, gearing)
   {
-    GetMouseDblAsSingleClick();
   }
 
   IVModKnobControl(const IRECT& bounds, int paramIdx, int modStartIdx, const char* label = "", const IVStyle& style = DEFAULT_STYLE, bool valueIsEditable = false, double gearing = DEFAULT_GEARING)
@@ -42,7 +39,6 @@ public:
     else
       IVKnobControl::OnMouseDown(x, y, mod);
   }
-
   void OnMouseOut() override
   {
     IVKnobControl::OnMouseOut();
@@ -57,7 +53,7 @@ public:
   void LoadModParams()
   {
     // TODO make a list of Control Tags that can be looped through
-    if (mActive && mActiveIdx == GetParamIdx())
+    if (mActive && GetActiveIdx() == GetParamIdx())
     {
       GetUI()->GetControlWithTag(kCtrlTagEnv1Depth)->SetParamIdx(kNoParameter);
       GetUI()->GetControlWithTag(kCtrlTagEnv2Depth)->SetParamIdx(kNoParameter);
@@ -68,7 +64,7 @@ public:
       GetUI()->GetControlWithTag(kCtrlTagVelDepth)->SetParamIdx(kNoParameter);
       GetUI()->GetControlWithTag(kCtrlTagKTkDepth)->SetParamIdx(kNoParameter);
       GetUI()->GetControlWithTag(kCtrlTagRndDepth)->SetParamIdx(kNoParameter);
-      mActiveIdx = -1;
+      SetActiveIdx(false);
       mActive = false;
     }
     else
@@ -83,7 +79,7 @@ public:
       GetUI()->GetControlWithTag(kCtrlTagVelDepth)->SetParamIdx(mModParamIdx + 6);
       GetUI()->GetControlWithTag(kCtrlTagKTkDepth)->SetParamIdx(mModParamIdx + 7);
       GetUI()->GetControlWithTag(kCtrlTagRndDepth)->SetParamIdx(mModParamIdx + 8);
-      mActiveIdx = GetParamIdx();
+      SetActiveIdx(true);
       mActive = true;
     }
     // Send values and change this control's active state
@@ -93,7 +89,7 @@ public:
 
   void Draw(IGraphics& g) override
   {
-    if (mActive && mActiveIdx == GetParamIdx())
+    if (mActive && GetActiveIdx() == GetParamIdx())
       SetColor(kFG, GetColor(kPR));
     else
       SetColor(kFG, mDefaultColor);
@@ -118,7 +114,7 @@ public:
 
     IRECT knobHandleBounds = mWidgetBounds.GetCentredInside((widgetRadius - mTrackToHandleDistance) * 2.f);
     const float angle = mAngle1 + (static_cast<float>(GetValue()) * (mAngle2 - mAngle1));
-    DrawPressableShape(g, /*mShape*/ EVShape::Ellipse, knobHandleBounds, mActive && mActiveIdx == GetParamIdx(), mMouseIsOver, IsDisabled());
+    DrawPressableShape(g, EVShape::Ellipse, knobHandleBounds, mActive && (GetActiveIdx() == GetParamIdx()), mMouseIsOver, IsDisabled());
     DrawIndicatorTrack(g, angle, cx, cy, widgetRadius);
     DrawPointer(g, angle, cx, cy, knobHandleBounds.W() / 2.f);
   }
@@ -130,61 +126,122 @@ public:
       mAnchorAngle = 0.;
     if (mTrackSize > 0.f)
     {
-      g.DrawArc(IColor(100, 0, 0, 0), cx, cy, radius, angle >= mAnchorAngle ? mAnchorAngle : mAnchorAngle - (mAnchorAngle - angle), angle >= mAnchorAngle ? angle : mAnchorAngle, &mBlend, mTrackSize);
+      g.DrawArc(mBaseTrack, cx, cy, radius, angle >= mAnchorAngle ? mAnchorAngle : mAnchorAngle - (mAnchorAngle - angle), angle >= mAnchorAngle ? angle : mAnchorAngle, &mBlend, mTrackSize);
 
       // Envelope 1
-      float modAngle = std::max(std::min(static_cast<float>(GetDelegate()->GetParam(mModParamIdx)->Value()) * (mAngle2 - mAngle1) + angle, mAngle2), mAngle1);
-      g.DrawArc(mModArcColor[0], cx, cy, radius, modAngle >= angle ? angle : modAngle, modAngle >= angle ? modAngle : angle, &mBlend, mTrackSize * 3);
+      float env1Val = static_cast<float>(GetDelegate()->GetParam(mModParamIdx)->Value());
+      if (env1Val)
+      {
+        float modAngle = std::max(std::min(env1Val * (mAngle2 - mAngle1) + angle, mAngle2), mAngle1);
+        g.DrawArc(mModArcColor[0][0], cx, cy, radius, modAngle >= angle ? angle : modAngle, modAngle >= angle ? modAngle : angle, &mBlend, mTrackSize * 3);
+      }
+
       // Envelope 2
       radius -= mTrackToHandleDistance / 2.f;
-      modAngle = std::max(std::min(static_cast<float>(GetDelegate()->GetParam(mModParamIdx + 1)->Value()) * (mAngle2 - mAngle1) + angle, mAngle2), mAngle1);
-      g.DrawArc(mModArcColor[1], cx, cy, radius, modAngle >= angle ? angle : modAngle, modAngle >= angle ? modAngle : angle, &mBlend, mTrackSize * 2);
+      float env2Val = static_cast<float>(GetDelegate()->GetParam(mModParamIdx + 1)->Value());
+      if (env2Val)
+      {
+        float modAngle = std::max(std::min(env2Val * (mAngle2 - mAngle1) + angle, mAngle2), mAngle1);
+        g.DrawArc(mModArcColor[1][0], cx, cy, radius, modAngle >= angle ? angle : modAngle, modAngle >= angle ? modAngle : angle, &mBlend, mTrackSize * 2);
+      }
+
       // AmpEnv
       radius -= mTrackToHandleDistance / 4.f;
-      modAngle = std::max(std::min(static_cast<float>(GetDelegate()->GetParam(mModParamIdx + 2)->Value()) * (mAngle2 - mAngle1) + angle, mAngle2), mAngle1);
-      g.DrawArc(mModArcColor[2], cx, cy, radius, modAngle >= angle ? angle : modAngle, modAngle >= angle ? modAngle : angle, &mBlend, mTrackSize);
+      float ampEnvVal = static_cast<float>(GetDelegate()->GetParam(mModParamIdx + 2)->Value());
+      if (ampEnvVal)
+      {
+        float modAngle = std::max(std::min(ampEnvVal * (mAngle2 - mAngle1) + angle, mAngle2), mAngle1);
+        g.DrawArc(mModArcColor[2][0], cx, cy, radius, modAngle >= angle ? angle : modAngle, modAngle >= angle ? modAngle : angle, &mBlend, mTrackSize);
+      }
+
       // LFO 1
       radius -= 3.f * mTrackToHandleDistance / 4.f;
-      modAngle = std::max(std::min(static_cast<float>(GetDelegate()->GetParam(mModParamIdx + 3)->Value()) * (mAngle2 - mAngle1) + angle, mAngle2), mAngle1);
-      g.DrawArc(mModArcColor[3], cx, cy, radius, modAngle >= angle ? angle : modAngle, modAngle >= angle ? modAngle : angle, &mBlend, mTrackSize * 3);
-      modAngle = std::max(std::min(static_cast<float>(-1. * GetDelegate()->GetParam(mModParamIdx + 3)->Value()) * (mAngle2 - mAngle1) + angle, mAngle2), mAngle1);
-      g.DrawArc(IColor::LinearInterpolateBetween(mModArcColor[3], IColor(200, 255, 255, 255), 0.4), cx, cy, radius, modAngle >= angle ? angle : modAngle, modAngle >= angle ? modAngle : angle, &mBlend, mTrackSize * 2);
+      float lfo1Val = static_cast<float>(GetDelegate()->GetParam(mModParamIdx + 3)->Value());
+      if (lfo1Val)
+      {
+        float modAngle = std::max(std::min(lfo1Val * (mAngle2 - mAngle1) + angle, mAngle2), mAngle1);
+        g.DrawArc(mModArcColor[3][0], cx, cy, radius, modAngle >= angle ? angle : modAngle, modAngle >= angle ? modAngle : angle, &mBlend, mTrackSize * 3);
+        modAngle = std::max(std::min(-1.f * lfo1Val * (mAngle2 - mAngle1) + angle, mAngle2), mAngle1);
+        g.DrawArc(mModArcColor[3][1], cx, cy, radius, modAngle >= angle ? angle : modAngle, modAngle >= angle ? modAngle : angle, &mBlend, mTrackSize * 2);
+      }
+
       // LFO 2
       radius += mTrackToHandleDistance / 4.f;
-      modAngle = std::max(std::min(static_cast<float>(GetDelegate()->GetParam(mModParamIdx + 4)->Value()) * (mAngle2 - mAngle1) + angle, mAngle2), mAngle1);
-      g.DrawArc(mModArcColor[4], cx, cy, radius, modAngle >= angle ? angle : modAngle, modAngle >= angle ? modAngle : angle, &mBlend, mTrackSize * 2);
-      modAngle = std::max(std::min(static_cast<float>(-1. * GetDelegate()->GetParam(mModParamIdx + 4)->Value()) * (mAngle2 - mAngle1) + angle, mAngle2), mAngle1);
-      g.DrawArc(IColor::LinearInterpolateBetween(mModArcColor[4], IColor(200, 255, 255, 255), 0.4), cx, cy, radius, modAngle >= angle ? angle : modAngle, modAngle >= angle ? modAngle : angle, &mBlend, mTrackSize);
+      float lfo2Val = static_cast<float>(GetDelegate()->GetParam(mModParamIdx + 4)->Value());
+      if (lfo2Val)
+      {
+        float modAngle = std::max(std::min(lfo2Val * (mAngle2 - mAngle1) + angle, mAngle2), mAngle1);
+        g.DrawArc(mModArcColor[4][0], cx, cy, radius, modAngle >= angle ? angle : modAngle, modAngle >= angle ? modAngle : angle, &mBlend, mTrackSize * 2);
+        modAngle = std::max(std::min(-1.f * lfo2Val * (mAngle2 - mAngle1) + angle, mAngle2), mAngle1);
+        g.DrawArc(mModArcColor[4][1], cx, cy, radius, modAngle >= angle ? angle : modAngle, modAngle >= angle ? modAngle : angle, &mBlend, mTrackSize);
+      }
+
       // Sequencer
       radius += mTrackToHandleDistance / 4.f;
-      modAngle = std::max(std::min(static_cast<float>(GetDelegate()->GetParam(mModParamIdx + 5)->Value()) * (mAngle2 - mAngle1) + angle, mAngle2), mAngle1);
-      g.DrawArc(mModArcColor[5], cx, cy, radius, modAngle >= angle ? angle : modAngle, modAngle >= angle ? modAngle : angle, &mBlend, mTrackSize);
+      float seqVal = static_cast<float>(GetDelegate()->GetParam(mModParamIdx + 5)->Value());
+      if (seqVal)
+      {
+        float modAngle = std::max(std::min(seqVal * (mAngle2 - mAngle1) + angle, mAngle2), mAngle1);
+        g.DrawArc(mModArcColor[5][0], cx, cy, radius, modAngle >= angle ? angle : modAngle, modAngle >= angle ? modAngle : angle, &mBlend, mTrackSize);
+      }
+
       // Velocity
       radius -= mTrackToHandleDistance / 4.f;
-      modAngle = std::max(std::min(static_cast<float>(GetDelegate()->GetParam(mModParamIdx + 6)->Value()) * (mAngle2 - mAngle1) + angle, mAngle2), mAngle1);
-      g.DrawArc(mModArcColor[6], cx, cy, radius, modAngle >= angle ? angle : modAngle, modAngle >= angle ? modAngle : angle, &mBlend, mTrackSize);
+      float velVal = static_cast<float>(GetDelegate()->GetParam(mModParamIdx + 6)->Value());
+      if (velVal)
+      {
+        float modAngle = std::max(std::min(velVal * (mAngle2 - mAngle1) + angle, mAngle2), mAngle1);
+        g.DrawArc(mModArcColor[6][0], cx, cy, radius, modAngle >= angle ? angle : modAngle, modAngle >= angle ? modAngle : angle, &mBlend, mTrackSize);
+      }
+
       // Keytrack
-      modAngle = std::max(std::min(static_cast<float>(GetDelegate()->GetParam(mModParamIdx + 7)->Value()) * (mAngle2 - mAngle1) + angle, mAngle2), mAngle1);
-      g.DrawArc(mModArcColor[7], cx, cy, radius, modAngle >= angle ? angle : modAngle, modAngle >= angle ? modAngle : angle, &mBlend, mTrackSize);
+      float ktrVal = static_cast<float>(GetDelegate()->GetParam(mModParamIdx + 7)->Value());
+      if (ktrVal)
+      {
+        float modAngle = std::max(std::min(ktrVal * (mAngle2 - mAngle1) + angle, mAngle2), mAngle1);
+        g.DrawArc(mModArcColor[7][0], cx, cy, radius, modAngle >= angle ? angle : modAngle, modAngle >= angle ? modAngle : angle, &mBlend, mTrackSize);
+      }
+
       // Trigger Random
-      modAngle = std::max(std::min(static_cast<float>(GetDelegate()->GetParam(mModParamIdx + 8)->Value()) * (mAngle2 - mAngle1) + angle, mAngle2), mAngle1);
-      g.DrawArc(mModArcColor[8], cx, cy, radius, modAngle >= angle ? angle : modAngle, modAngle >= angle ? modAngle : angle, &mBlend, mTrackSize);
+      float rndVal = static_cast<float>(GetDelegate()->GetParam(mModParamIdx + 8)->Value());
+      if (rndVal)
+      {
+        float modAngle = std::max(std::min(rndVal * (mAngle2 - mAngle1) + angle, mAngle2), mAngle1);
+        g.DrawArc(mModArcColor[8][0], cx, cy, radius, modAngle >= angle ? angle : modAngle, modAngle >= angle ? modAngle : angle, &mBlend, mTrackSize);
+      }
     }
+  }
+
+  inline int GetActiveIdx()
+  {
+    return dynamic_cast<Tablitsa*>(GetDelegate())->GetActiveModIdx();
+  }
+
+  inline void SetActiveIdx(int idx)
+  {
+    return dynamic_cast<Tablitsa*>(GetDelegate())->SetActiveModIdx(idx);
+  }
+
+  inline void SetActiveIdx(bool isActive)
+  {
+    return dynamic_cast<Tablitsa*>(GetDelegate())->SetActiveModIdx(isActive ? GetParamIdx() : -1);
   }
 
 protected:
   const IColor mDefaultColor;
-  static inline const IColor mModArcColor[]{
-    {200, 200, 100, 100},
-    {200, 225, 150, 100},
-    {200, 250, 200, 100},
-    {200, 160, 0, 225},
-    {200, 225, 0, 190},
-    {200, 0, 250, 100},
-    {150, 0, 100, 255},
-    {150, 200, 0, 200},
-    {150, 0, 255, 255}
+  const IColor mModArcColor[9][2]{
+    {{200, 200, 100, 100}, {}},
+    {{200, 225, 150, 100}, {}},
+    {{200, 250, 200, 100}, {}},
+    {{200, 160, 0, 225}, {200, 200, 0, 235}},
+    {{200, 225, 0, 190}, {200, 235, 0, 220}},
+    {{200, 0, 250, 100}, {}},
+    {{150, 0, 100, 255}, {}},
+    {{150, 200, 0, 200}, {}},
+    {{150, 0, 255, 255}, {}}
   };
+  const IColor mWhite{ 200, 255, 255, 255 };
+  const IColor mBaseTrack{ 100, 0, 0, 0 };
   bool mActive{ false };
   double mGearing;
   int mModParamIdx;
@@ -280,8 +337,6 @@ public:
 private:
 };
 
-int IVModKnobControl::mActiveIdx = -1;
-
 class PeriodicTable : public IControl
 {
   int ElementCoords[118][2]{ ELEMENT_COORDS };
@@ -348,7 +403,7 @@ public:
     assert(atomicNumber >= 1 && atomicNumber <= 118);
     mSelectedElements[elemIdx] = atomicNumber;
   }
-
+  
   void Draw(IGraphics& g)
   {
     g.FillRoundRect(IColor(255, 20, 0, 45), mRECT);
@@ -400,7 +455,7 @@ public:
   void DrawElement(IGraphics& g, const IRECT& bounds, int atomicNumber, int idx)
   {
     assert(atomicNumber > 0);
-    IColor col{ TablitsaDSP<double>::tableLoading[idx] ? ElementIconColor[idx].WithOpacity(0.5f) : ElementIconColor[idx] };
+    IColor col{ mTableLoading[idx] ? ElementIconColor[idx].WithOpacity(0.5f) : ElementIconColor[idx] };
 
     g.DrawRect(col, bounds);
     g.DrawText(LabelText, (atomicNumber) ? "Wavetable 2" : "Wavetable 1", bounds.GetVShifted(-20.f).GetFromTop(20.f));
@@ -419,7 +474,7 @@ public:
     // Draw atomic number
     g.DrawText(ElementIconText.WithSize(24).WithFGColor(col), std::to_string(atomicNumber).c_str(), bounds.GetFromTop(24.f));
   }
-
+  
   void OnMouseOver(float x, float y, const IMouseMod& mod)
   {
     if (x < mTableTLHC[0] || y < mTableTLHC[1])
@@ -478,7 +533,7 @@ public:
     }
     SetDirty(false);
   }
-
+  
   void OnMouseOut()
   {
   }
@@ -515,6 +570,11 @@ public:
     mIsDragging = -1;
     SetDirty(true);
   }
+  
+  void SetTableLoading(const bool isLoading, const int tableIdx)
+  {
+    mTableLoading[tableIdx] = isLoading;
+  }
 
 private:
   ISVG mSVG;
@@ -531,6 +591,7 @@ private:
   IRECT mTableBounds;
   IRECT mLaAcBounds;
   int mIsDragging{ -1 };
+  bool mTableLoading[2]{ false, false };
 };
 
 template <int MAXNC = 1>
@@ -585,6 +646,6 @@ public:
   }
 
 private:
-  static inline const IColor mStepMarkerColor{ 50, 0, 0, 0 };
-  static inline const IColor mLabelColor = mStepMarkerColor.WithOpacity(0.75);
+  const IColor mStepMarkerColor{ 50, 0, 0, 0 };
+  const IColor mLabelColor = mStepMarkerColor.WithOpacity(0.75);
 };

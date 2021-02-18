@@ -31,6 +31,7 @@ enum EParams
   kParamUnisonVoices,
   kParamUnisonDetune,
   kParamUnisonChord,
+  kParamStereoSpread,
   kParamAmpEnvAttack,
   kParamAmpEnvDecay,
   kParamAmpEnvSustain,
@@ -373,7 +374,7 @@ enum EParams
   kParamPhaseModAmountVel,
   kParamPhaseModAmountKTk,
   kParamPhaseModAmountRnd,
-  kParamRingModFreq,
+  kParamRingModFreq, // Ring Mod
   kParamRingModFreqEnv1,
   kParamRingModFreqEnv2,
   kParamRingModFreqAmpEnv,
@@ -392,14 +393,18 @@ enum EParams
   kParamRingModAmountSeq,
   kParamRingModAmountVel,
   kParamRingModAmountKTk,
-  kParamRingModAmountRnd,
-  kParamDelayTimeLMilliseconds,
+  kParamRingModAmountRnd, // !Ring Mod
+  kParamDelayTimeLMilliseconds, // Delay
   kParamDelayTimeRMilliseconds,
   kParamDelayTimeLBeats,
   kParamDelayTimeRBeats,
   kParamDelayTimeMode,
   kParamDelayFeedback,
-  kParamDelayMix,
+  kParamDelayMix, // !Delay
+  kParamSampleAndHold, // Sample-and-Hold
+  kParamSaHRate,
+  kParamSaHDecay,
+  kParamSaHMix, // !Sample-and-Hold
   kNumParams
 };
 
@@ -440,6 +445,7 @@ enum EControlTags
   kCtrlTagFilter1Delay,
   kCtrlTagFilter1Mode,
   kCtrlTagFilter1Type,
+  kCtrlTagFilter1Osc,
   kCtrlTagFilter2Cutoff,
   kCtrlTagFilter2Resonance,
   kCtrlTagFilter2Drive,
@@ -448,6 +454,7 @@ enum EControlTags
   kCtrlTagFilter2Delay,
   kCtrlTagFilter2Mode,
   kCtrlTagFilter2Type,
+  kCtrlTagFilter2Osc,
   kCtrlTagOscModFreq,
   kCtrlTagOscModAmt,
   kCtrlTagOsc1ModSwitch,
@@ -467,6 +474,7 @@ enum EMsgTags
   kMsgWavetable2Changed,
   kMsgSeqSliderChanged,
   kMsgRandomizeSequencer,
+  kMsgFilterOscChanged,
 };
 
 enum EModulators
@@ -515,7 +523,14 @@ public:
   bool SerializeState(IByteChunk& chunk) const override;
   int UnserializeState(const IByteChunk& chunk, int startPos) override;
   void UpdateUIControls();
-  
+  /* implement this and return true to trigger your custom about box, when someone clicks about in the menu of a standalone app or VST3 plugin */
+  bool OnHostRequestingAboutBox() override; // See IPlugAPP_dialog.cpp
+  /* implement this and return true to trigger your custom help info, when someone clicks help in the menu of a standalone app or VST3 plugin */
+  bool OnHostRequestingProductHelp() override;
+
+  int GetActiveModIdx() const;
+  void SetActiveModIdx(int idx);
+
 private:
   TablitsaDSP<sample> mDSP {kNumVoices}; // sample is an alias for double
   IPeakSender<2> mMeterSender;
@@ -525,5 +540,7 @@ private:
 
   double mSequencerIsQuantized{ 0. };
   double mDelayIsSynced{ 0. };
+
+  int mActiveModIdx{ -1 };
 #endif
 };

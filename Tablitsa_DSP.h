@@ -119,14 +119,39 @@ enum EUnisonChords
   kDim7
 };
 
-struct VoiceDetuner
+struct ChannelParam
+{
+  double L{ 0. };
+  double R{ 0. };
+  double LR[2]{ 0. };
+
+  void Set(double l, double r)
+  {
+    LR[0] = L = l;
+    LR[1] = R = r;
+  }
+
+  double& operator [](int ch)
+  {
+    return LR[ch];
+  }
+};
+
+struct UnisonVoiceManager
 {
   int mMaxVoices;
-  double mMaxDetune;
+
+  // Detuning
+  double mMaxDetune; // octaves
   int mNVoices{ 1 };
-  int mVoiceIdx{ 0 };
+  int mDetuneVoiceIdx{ 0 };
   int mChord{ EUnisonChords::kNoChord };
   double* mDetuneBuf;
+
+  // Panning
+  int mPanVoiceIdx{ 0 };
+  double mMaxPan; // [-1., 1.]
+  ChannelParam* mPanBuf;
 
   const double mUnisonInvervals[8][5]{
     {0., 1., 0., 2., 0.}, // Octaves
@@ -139,19 +164,37 @@ struct VoiceDetuner
     {0., 3. / 12., 6. / 12, 9. / 12, 1.} // Full-Diminished 7
   };
 
-  VoiceDetuner(int maxVoices, double maxDetuneSemitones=1.) : mMaxVoices(maxVoices), mMaxDetune(maxDetuneSemitones)
+  UnisonVoiceManager(int maxVoices, double maxDetuneSemitones=1.) : mMaxVoices(maxVoices), mMaxDetune(maxDetuneSemitones)
   {
     mDetuneBuf = new double[mMaxVoices] {0.};
+    mPanBuf = new ChannelParam[mMaxVoices]{};
+    mPanBuf[0].Set(1., 1.);
   }
 
   void SetNVoices(int nVoices)
   {
     mNVoices = std::min(nVoices, mMaxVoices);
+    RefillBuffers();
   }
 
-  void SetMaxDetune(double maxDetuneSemitones)
+  void SetMaxDetune(double maxDetuneSemitones, bool refillBuffer=true)
   {
     mMaxDetune = maxDetuneSemitones / 12;
+    if (refillBuffer)
+      RefillDetuneBuffer();
+  }
+
+  void SetMaxPan(double maxPanDegrees, bool refillBuffer=true)
+  {
+    mMaxPan = maxPanDegrees / 180.;
+    if (refillBuffer)
+      RefillPanBuffer();
+  }
+
+  void Reset()
+  {
+    mDetuneVoiceIdx = 0;
+    mPanVoiceIdx = 0;
   }
 
   void SetChord(int chord)
@@ -159,13 +202,21 @@ struct VoiceDetuner
     mChord = chord;
   }
 
-  void ResetDetuneValues()
+  void RefillBuffers()
+  {
+    RefillDetuneBuffer();
+    RefillPanBuffer();
+  }
+
+  inline void RefillDetuneBuffer()
   {
     int nVoices = std::max(2, mNVoices);
+
+    // Pitch detuning
     if (mChord == EUnisonChords::kNoChord)
     {
       for (auto i{ 0 }; i < mNVoices; ++i)
-        mDetuneBuf[i] = mMaxDetune * static_cast<double>(-i % mNVoices) / (nVoices - 1) * -1;
+        mDetuneBuf[i] = mMaxDetune * static_cast<double>(-i % mNVoices) / (static_cast<double>(nVoices) - 1.) * -1;
     }
     else
     {
@@ -174,14 +225,51 @@ struct VoiceDetuner
     }
   }
 
+  inline void RefillPanBuffer()
+  {
+    constexpr double sqrt2{ 1.45 };
+    // Panning (in progress)
+    double totalPan = std::abs(mMaxPan);
+    if (mNVoices > 1)
+    {
+      double pan = totalPan;
+      mPanBuf[0].Set(
+        (1. + std::copysign(pan, mMaxPan)) / sqrt2,
+        (1. - std::copysign(pan, mMaxPan)) / sqrt2
+      );
+    }
+    else
+      mPanBuf[0].Set(1., 1.);
+    for (auto i{ 1 }; i < mNVoices; ++i)
+    {
+      double pan;
+      if (i % 2)
+        pan = totalPan / i; // Odd-numbered voices: Pan by the same magnitude as the last voice, but in the opposite direction
+      else
+        pan = totalPan / (i + 1); // Even-numbered voices: Pan within the maximum pan range, to ever-smaller extents
+      mPanBuf[i].Set(
+        (1. - std::copysign(pan, mMaxPan)) / sqrt2,
+        (1. + std::copysign(pan, mMaxPan)) / sqrt2
+      );
+    }
+  }
+
   double DetuneNext()
   {
-    int next = mVoiceIdx++ % mNVoices;
-    mVoiceIdx %= mNVoices;
+    int next = mDetuneVoiceIdx++ % mNVoices;
+    mDetuneVoiceIdx %= mNVoices;
     return mDetuneBuf[next];
   }
 
-  ~VoiceDetuner()
+  void SetNextPan(double* channelPan)
+  {
+    int next = mPanVoiceIdx++ % mNVoices;
+    mPanVoiceIdx %= mNVoices;
+    channelPan[0] = mPanBuf[next][0];
+    channelPan[1] = mPanBuf[next][1];
+  }
+
+  ~UnisonVoiceManager()
   {
     delete[] mDetuneBuf;
   }
@@ -199,11 +287,13 @@ public:
     {
     }
 
-    Voice(int id=0)
-      : mID(id),
+    Voice(TablitsaDSP<T>* master, int id = 0)
+      : mMaster(master), mID(id),
       mAmpEnv("gain", [&]() { mOsc1.Reset(); }),
       mEnv1("env1", [&]() { mOsc1.Reset(); }),
-      mSequencer(TablitsaDSP::mSeqSteps) // capture ok on RT thread?
+      mLFO1(&GetMaster()->mGlobalMetronome),
+      mLFO2(&GetMaster()->mGlobalMetronome),
+      mSequencer(&GetMaster()->mGlobalMetronome, GetMaster()->mSeqSteps) // capture ok on RT thread?
     {
 //      DBGMSG("new Voice: %i control inputs.\n", static_cast<int>(mInputs.size()));
 
@@ -224,14 +314,25 @@ public:
       mAmpEnv.Kill(true); // Force amplitude envelopes to start in the "Idle" stage
 
       // Fill the envelope queues for legato mode with null pointers
-      Voice::AmpEnvQueue.push_back(nullptr);
-      Voice::Env1Queue.push_back(nullptr);
-      Voice::Env2Queue.push_back(nullptr);
+      GetMaster()->AmpEnvQueue.push_back(nullptr);
+      GetMaster()->Env1Queue.push_back(nullptr);
+      GetMaster()->Env2Queue.push_back(nullptr);
     }
 
     bool GetBusy() const override
     {
       return mAmpEnv.GetBusy();
+    }
+
+    UnisonVoiceManager& GetDetuner()
+    {
+      return GetMaster()->mDetuner;
+    }
+
+    void ResetUnisonParams()
+    {
+      mDetune = GetDetuner().DetuneNext();
+      GetDetuner().SetNextPan(mPan);
     }
 
     void Trigger(double level, bool isRetrigger) override
@@ -242,7 +343,7 @@ public:
       mVelocity = level; // TODO: Handling of different velocity settings (i.e. which envelopes are affected by velocity)
       mTriggerRand = static_cast<double>(std::rand()) / static_cast<double>(RAND_MAX);
 
-      mDetune = Voice::mDetuner.DetuneNext();
+      ResetUnisonParams();
 
       for (auto f : mFilters)
       {
@@ -257,7 +358,7 @@ public:
       }
       else
       {
-        mModulators.ReplaceModulator(dynamic_cast<FastLFO<T>*>(&TablitsaDSP<T>::mGlobalLFO1), 0);
+        mModulators.ReplaceModulator(dynamic_cast<FastLFO<T>*>(&(GetMaster()->mGlobalLFO1)), 0);
       }
 
       if (mLFO2Restart)
@@ -267,7 +368,7 @@ public:
       }
       else
       {
-        mModulators.ReplaceModulator(dynamic_cast<FastLFO<T>*>(&TablitsaDSP<T>::mGlobalLFO2), 1);
+        mModulators.ReplaceModulator(dynamic_cast<FastLFO<T>*>(&GetMaster()->mGlobalLFO2), 1);
       }
 
       if (mSequencerRestart)
@@ -275,28 +376,28 @@ public:
         mModulators.ReplaceModulator(dynamic_cast<Sequencer<T>*>(&mSequencer), 0);
         mSequencer.Reset();
         // Update sequencer display with this voice's phase
-        TablitsaDSP<T>::mActiveSequencer = &mSequencer;
+        GetMaster()->mActiveSequencer = &mSequencer;
       }
       else
       {
-        mModulators.ReplaceModulator(&TablitsaDSP<T>::mGlobalSequencer, 0);
+        mModulators.ReplaceModulator(&GetMaster()->mGlobalSequencer, 0);
         // Update sequencer display with this voice's phase
-        TablitsaDSP<T>::mActiveSequencer = &TablitsaDSP<T>::mGlobalSequencer;
+        GetMaster()->mActiveSequencer = &GetMaster()->mGlobalSequencer;
       }
 
 
       if (isRetrigger)
       {
         mAmpEnv.Retrigger(level);
-        mEnv1.Retrigger(1., 1. - Voice::mEnv1VelocityMod);
+        mEnv1.Retrigger(1., 1. - mEnv1VelocityMod);
         mEnv2.Retrigger(1.);
       }
-      else if (!Voice::mLegato)
+      else if (!mLegato)
       {
         double velSubtr = 1. - level;
-        mAmpEnv.Start(1. - velSubtr * Voice::mAmpEnvVelocityMod, 1. - Voice::mAmpEnvVelocityMod * kMaxEnvTimeScalar * level);
-        mEnv1.Start(1. - velSubtr * Voice::mEnv1VelocityMod, 1. - Voice::mEnv1VelocityMod * kMaxEnvTimeScalar * level);
-        mEnv2.Start(1. - velSubtr * Voice::mEnv2VelocityMod, 1. - Voice::mEnv2VelocityMod * kMaxEnvTimeScalar * level);
+        mAmpEnv.Start(1. - velSubtr * mAmpEnvVelocityMod, 1. - mAmpEnvVelocityMod * kMaxEnvTimeScalar * level);
+        mEnv1.Start(1. - velSubtr * mEnv1VelocityMod, 1. - mEnv1VelocityMod * kMaxEnvTimeScalar * level);
+        mEnv2.Start(1. - velSubtr * mEnv2VelocityMod, 1. - mEnv2VelocityMod * kMaxEnvTimeScalar * level);
       }
       else
       {
@@ -304,40 +405,41 @@ public:
         Envelope<T>* masterAmpEnv = nullptr;
         Envelope<T>* masterEnv1 = nullptr;
         Envelope<T>* masterEnv2 = nullptr;
-        for (auto i{ 0 }; i < Voice::AmpEnvQueue.size(); ++i)
+        for (auto i{ 0 }; i < GetMaster()->AmpEnvQueue.size(); ++i)
         {
-          if (Voice::AmpEnvQueue[i])
+          if (GetMaster()->AmpEnvQueue[i])
           {
-            masterAmpEnv = AmpEnvQueue[i];
-            masterEnv1 = Env1Queue[i];
-            masterEnv2 = Env2Queue[i];
+            masterAmpEnv = GetMaster()->AmpEnvQueue[i];
+            masterEnv1 = GetMaster()->Env1Queue[i];
+            masterEnv2 = GetMaster()->Env2Queue[i];
           }
         }
-
+        // If active envelopes were found, sync this voice's envelopes to them
         if (masterAmpEnv)
         {
           double velSubtr = 1. - level;
-          mAmpEnv.StartAt(1. - velSubtr * Voice::mAmpEnvVelocityMod,
+          mAmpEnv.StartAt(1. - velSubtr * mAmpEnvVelocityMod,
             masterAmpEnv->GetValue(), masterAmpEnv->GetPrevResult(), masterAmpEnv->GetStage(),
-            1. - Voice::mAmpEnvVelocityMod * kMaxEnvTimeScalar * level);
-          mEnv1.StartAt(1. - velSubtr * Voice::mEnv1VelocityMod,
+            1. - mAmpEnvVelocityMod * kMaxEnvTimeScalar * level);
+          mEnv1.StartAt(1. - velSubtr * mEnv1VelocityMod,
             masterEnv1->GetValue(), masterEnv1->GetPrevResult(), masterEnv1->GetStage(),
-            1. - Voice::mEnv1VelocityMod * kMaxEnvTimeScalar * level);
-          mEnv2.StartAt(1. - velSubtr * Voice::mEnv2VelocityMod,
+            1. - mEnv1VelocityMod * kMaxEnvTimeScalar * level);
+          mEnv2.StartAt(1. - velSubtr * mEnv2VelocityMod,
             masterEnv2->GetValue(), masterEnv2->GetPrevResult(), masterEnv2->GetStage(),
-            1. - Voice::mEnv2VelocityMod * kMaxEnvTimeScalar * level);
+            1. - mEnv2VelocityMod * kMaxEnvTimeScalar * level);
+
         }
         else
         {
           double velSubtr = 1. - level;
-          mAmpEnv.Start(1. - velSubtr * Voice::mAmpEnvVelocityMod, 1. - Voice::mAmpEnvVelocityMod * kMaxEnvTimeScalar * level);
-          mEnv1.Start(1. - velSubtr * Voice::mEnv1VelocityMod, 1. - Voice::mEnv1VelocityMod * kMaxEnvTimeScalar * level);
-          mEnv2.Start(1. - velSubtr * Voice::mEnv2VelocityMod, 1. - Voice::mEnv2VelocityMod * kMaxEnvTimeScalar * level);
+          mAmpEnv.Start(1. - velSubtr * mAmpEnvVelocityMod, 1. - mAmpEnvVelocityMod * kMaxEnvTimeScalar * level);
+          mEnv1.Start(1. - velSubtr * mEnv1VelocityMod, 1. - mEnv1VelocityMod * kMaxEnvTimeScalar * level);
+          mEnv2.Start(1. - velSubtr * mEnv2VelocityMod, 1. - mEnv2VelocityMod * kMaxEnvTimeScalar * level);
         }
         // Sync the master envelopes to this voice's envelopes
-        Voice::Env1Queue[mID] = &mEnv1;
-        Voice::Env2Queue[mID] = &mEnv2;
-        Voice::AmpEnvQueue[mID] = &mAmpEnv;
+        GetMaster()->Env1Queue[mID] = &mEnv1;
+        GetMaster()->Env2Queue[mID] = &mEnv2;
+        GetMaster()->AmpEnvQueue[mID] = &mAmpEnv;
       }
     }
     
@@ -347,9 +449,9 @@ public:
       mEnv1.Release();
       mEnv2.Release();
       // Remove this voice's envelopes from the envelope queue
-      Voice::AmpEnvQueue[mID] = nullptr;
-      Voice::Env1Queue[mID] = nullptr;
-      Voice::Env2Queue[mID] = nullptr;
+      GetMaster()->AmpEnvQueue[mID] = nullptr;
+      GetMaster()->Env1Queue[mID] = nullptr;
+      GetMaster()->Env2Queue[mID] = nullptr;
     }
 
     void ProcessSamplesAccumulating(T** inputs, T** outputs, int nInputs, int nOutputs, int startIdx, int nFrames) override
@@ -381,6 +483,9 @@ public:
 
       const double phaseModFreqFact = pow(2., mVModulations.GetList()[kVPhaseModFreq][0] / 12.);
       const double ringModFreqFact = pow(2., mVModulations.GetList()[kVRingModFreq][0] / 12.);
+
+      const int osc1Filter = mFilterRouting[0];
+      const int osc2Filter = mFilterRouting[1];
 
       // make sound output for each output channel
       for(auto i = startIdx; i < startIdx + nFrames; i += FRAME_INTERVAL)
@@ -418,15 +523,19 @@ public:
         
        for (auto j = 0; j < FRAME_INTERVAL; ++j)
        {
+         // Amp scaling
          osc1Output[j] *= mVModulations.GetList()[kVWavetable1Amp][bufferIdx];
          osc2Output[j] *= mVModulations.GetList()[kVWavetable2Amp][bufferIdx];
+         // Saturation
          osc1Output[j] = mOsc1Sat.Process(osc1Output[j]);
          osc2Output[j] = mOsc2Sat.Process(osc2Output[j]);
-         double filter1Output = mFilters.at(0)->Process(osc1Output[j]);
-         double filter2Output = mFilters.at(1)->Process(osc2Output[j]);
-         double output_summed = filter1Output + filter2Output;
-         outputs[0][i + j] += output_summed * ampEnvVal * mGain;
-         outputs[1][i + j] = outputs[0][i + j];
+         // Filters
+         double osc1FilterOutput = mFilters.at(osc1Filter)->Process(osc1Output[j]);
+         double osc2FilterOutput = mFilters.at(osc2Filter)->Process(osc2Output[j]);
+         double output_summed = osc1FilterOutput + osc2FilterOutput;
+         double output_scaled = output_summed * ampEnvVal * mGain;
+         outputs[0][i + j] += output_scaled * mPan[0];
+         outputs[1][i + j] += output_scaled * mPan[1];
        }
       }
     }
@@ -470,15 +579,6 @@ public:
       //TODO:
     }
 
-    static inline void SetTempoAndBeat(double qnPos = 0., bool transportIsRunning = false, double tempo = 120.)
-    {
-      mQNPos = qnPos;
-      mTransportIsRunning = transportIsRunning;
-      mTempo = tempo;
-      FastLFO<T>::SetTempoAndBeat(mQNPos, mTransportIsRunning, mTempo);
-      Sequencer<T>::SetTempoAndBeat(mQNPos, mTransportIsRunning, mTempo);
-    }
-
     void SetFilterType(int filter, int filterType)
     {
       // Indices of cutoff/res/drive for the given filter
@@ -514,6 +614,12 @@ public:
       }
     }
 
+    /* Route the given oscillator through the given filter */
+    void UpdateFilterSource(int filterIdx, int oscIdx)
+    {
+      mFilterRouting[oscIdx] = filterIdx;
+    }
+
     /* Update polyphonic modulation depths */
     void UpdateVoiceParam(int voiceParam, int modIdx, double value)
     {
@@ -529,7 +635,14 @@ public:
         mVoiceMetaModParams[paramIdx].SetValue(modIdx - 1, value);
     }
 
+    TablitsaDSP<T>* GetMaster() const
+    {
+      return mMaster;
+    }
+
   public:
+    TablitsaDSP<T>* mMaster;
+
     WavetableOscillator<T> mOsc1{ 0, "Hydrogen" };
     WavetableOscillator<T> mOsc2{ 1, "Helium" };
     SaturationEQ<T> mOsc1Sat;
@@ -540,8 +653,6 @@ public:
     T mVelocity{ 1. };
     T mTriggerRand{ 0.5 };
 
-    static inline VoiceDetuner mDetuner{ kMaxUnisonVoices };
-
     // Dynamic Modulators
     Envelope<T> mEnv1;
     Envelope<T> mEnv2;
@@ -551,24 +662,20 @@ public:
     Sequencer<T, kNumSeqSteps> mSequencer;
     ModulatorList<T, Envelope<T>, FastLFO<T>, Sequencer<T>, 6, 3> mModulators;
 
-    // Pointers to master modulators, for free-run and legato modes
-    static inline std::vector<Envelope<T>*> Env1Queue;
-    static inline std::vector<Envelope<T>*> Env2Queue;
-    static inline std::vector<Envelope<T>*> AmpEnvQueue;
-    static inline FastLFO<T>* mMasterLFO1{ nullptr }; // The last-triggered `mLFO1`, which "owns" the master phase
-    static inline FastLFO<T>* mMasterLFO2{ nullptr }; // The last-triggered `mLFO2`, which "owns" the master phase
-    static inline Sequencer<T>* mMasterSeq{ nullptr }; // The last-triggered `mSequencer`, which "owns" the master phase
-
+    // Status parameters
     bool mLFO1Restart{ false };
     bool mLFO2Restart{ false };
     bool mSequencerRestart{ false };
-    static inline bool mLegato{ false }; // This ought to be a static inline member, but the compiler apparently doesn't like that
-    int mFilterUpdateFreq{ 2 };
-    static inline double mEnv1VelocityMod{ 0. };
-    static inline double mEnv2VelocityMod{ 0. };
-    static inline double mAmpEnvVelocityMod{ 1. };
+    bool mLegato{ false };
 
+    // Static Modulators
+    double mEnv1VelocityMod{ 0. };
+    double mEnv2VelocityMod{ 0. };
+    double mAmpEnvVelocityMod{ 1. };
+
+    // Filters
     std::vector<Filter<T>*> mFilters{ new NullFilter<T>(), new NullFilter<T>() };
+    int mFilterRouting[2]{ 0, 1 };
 
     WDL_PtrList<T> mVModulations; // Pointers to modulator buffers
     WDL_TypedBuf<T> mVModulationsData; // Modulator buffer sample data
@@ -611,12 +718,14 @@ public:
 
     };
 
+    // Unison parameters
     double mDetune{ 0. };
+    double mPan[2]{ 1., 1. };
 
     // Sample and Beat data
-    static inline double mTempo{ 120. };
-    static inline bool mTransportIsRunning{ false };
-    static inline double mQNPos{ 0. };
+    double mTempo{ 120. };
+    bool mTransportIsRunning{ false };
+    double mQNPos{ 0. };
 
     LogParamSmooth<T> mFilter1Smoother{ 10. };
     LogParamSmooth<T> mFilter2Smoother{ 10. };
@@ -646,7 +755,7 @@ public:
     for (auto i = 0; i < nVoices; i++)
     {
       // add a voice to Zone 0.
-      mSynthVoices.push_back(new Voice(i));
+      mSynthVoices.push_back(new Voice(this, i));
       mSynth.AddVoice(mSynthVoices.at(i), 0);
     }
 
@@ -669,7 +778,7 @@ public:
 
     // Process voices
     mParamSmoother.ProcessBlock(mParamsToSmooth, mModulations.GetList(), nFrames); // Populate modulations list (to be sent to mSynth as inputs)
-    Voice::SetTempoAndBeat(qnPos, transportIsRunning, tempo);
+    SetTempoAndBeat(qnPos, transportIsRunning, tempo);
     mSynth.ProcessBlock(mModulations.GetList(), outputs, 0, nOutputs, nFrames);
 
     for(int s=0; s < nFrames;s++)
@@ -740,34 +849,43 @@ public:
     mSynth.AddMidiMsgToQueue(msg);
   }
 
+  inline void SetTempoAndBeat(double qnPos, bool transportIsRunning, double tempo)
+  {
+    mGlobalMetronome.Set(qnPos, tempo, transportIsRunning);
+  }
+
   void UpdateOscillatorWavetable(int wtIdx, int oscIdx)
   {
     ResetAllVoices();
-    tableLoading[oscIdx] = true; // NB: this variable lets the PeriodicTable control know whether to display the selected element in the loading (faded) state or not
     WtFile wtFile{ mWavetables.at(wtIdx) };
-    WavetableOscillator<T>::LoadNewTable(wtFile, oscIdx);
+
     if (oscIdx == 0)
     {
-      SendParam([this, oscIdx, &wtFile](Voice* voice) {
-        voice->mOsc1.SetWavetable(WavetableOscillator<T>::LoadedTables[oscIdx]);
-        voice->mOsc1.ReloadLUT();
+      mSynth.ForEachVoice([&wtFile, oscIdx](SynthVoice& voice) {
+        dynamic_cast<Voice&>(voice).mOsc1.LoadNewTable(wtFile, oscIdx);
         });
-      WavetableOscillator<T>::NotifyLoaded(oscIdx);
+      SendParam([this, oscIdx, &wtFile](Voice* voice) {
+        voice->mOsc1.SetWavetable(oscIdx);
+        voice->mOsc1.ReloadLUT();
+        voice->mOsc1.NotifyLoaded();
+        });
     }
     else
     {
-      SendParam([this, oscIdx, &wtFile](Voice* voice) {
-        voice->mOsc2.SetWavetable(WavetableOscillator<T>::LoadedTables[oscIdx]);
-        voice->mOsc2.ReloadLUT();
+      mSynth.ForEachVoice([&wtFile, oscIdx](SynthVoice& voice) {
+        dynamic_cast<Voice&>(voice).mOsc2.LoadNewTable(wtFile, oscIdx);
         });
-      WavetableOscillator<T>::NotifyLoaded(oscIdx);
+      SendParam([this, oscIdx, &wtFile](Voice* voice) {
+        voice->mOsc2.SetWavetable(oscIdx);
+        voice->mOsc2.ReloadLUT();
+        voice->mOsc2.NotifyLoaded();
+        });
     }
-    tableLoading[oscIdx] = false;
   }
 
   void ResetDetune()
   {
-    TablitsaDSP<T>::Voice::mDetuner.ResetDetuneValues();
+    mDetuner.RefillBuffers();
   }
 
   int GetSequencerStep()
@@ -776,6 +894,13 @@ public:
       return mActiveSequencer->GetCurrentStep();
     else
       return 0;
+  }
+
+  void UpdateFilterSource(int filterIdx, int oscIdx)
+  {
+    mSynth.ForEachVoice([filterIdx, oscIdx](SynthVoice& voice) {
+      dynamic_cast<TablitsaDSP<T>::Voice&>(voice).UpdateFilterSource(filterIdx, oscIdx);
+      });
   }
 
   inline void SendParam(std::function<void(Voice* voice)> func)
@@ -875,7 +1000,9 @@ public:
         break;
       }
       case kParamEnv1Velocity:
-        Voice::mEnv1VelocityMod = value;
+        mSynth.ForEachVoice([value](SynthVoice& voice) {
+          dynamic_cast<TablitsaDSP::Voice&>(voice).mEnv1VelocityMod = (T)value;
+          });
         break;
       case kParamEnv1DecayCurve:
         mSynth.ForEachVoice([value](SynthVoice& voice) {
@@ -922,7 +1049,9 @@ public:
         break;
       }
       case kParamEnv2Velocity:
-        Voice::mEnv2VelocityMod = value;
+        mSynth.ForEachVoice([value](SynthVoice& voice) {
+          dynamic_cast<TablitsaDSP::Voice&>(voice).mEnv2VelocityMod = (T)value;
+          });
         break;
       case kParamEnv2DecayCurve:
         mSynth.ForEachVoice([value](SynthVoice& voice) {
@@ -969,7 +1098,9 @@ public:
         break;
       }
       case kParamAmpEnvVelocity:
-        Voice::mAmpEnvVelocityMod = value;
+        mSynth.ForEachVoice([value](SynthVoice& voice) {
+          dynamic_cast<TablitsaDSP::Voice&>(voice).mAmpEnvVelocityMod = (T)value;
+          });
         break;
       case kParamAmpEnvDecayCurve:
         mSynth.ForEachVoice([value](SynthVoice& voice) {
@@ -1223,18 +1354,22 @@ public:
       }
       case kParamLegato:
       {
-        TablitsaDSP::Voice::mLegato = value > 0.5;
+        mSynth.ForEachVoice([value](SynthVoice& voice) {
+          dynamic_cast<TablitsaDSP::Voice&>(voice).mLegato = value > 0.5;
+          });
         if (!(value > 0.5))
         {
-          std::fill(TablitsaDSP::Voice::AmpEnvQueue.begin(), TablitsaDSP::Voice::AmpEnvQueue.end(), nullptr);
-          std::fill(TablitsaDSP::Voice::Env1Queue.begin(), TablitsaDSP::Voice::Env1Queue.end(), nullptr);
-          std::fill(TablitsaDSP::Voice::Env2Queue.begin(), TablitsaDSP::Voice::Env2Queue.end(), nullptr);
+          std::fill(AmpEnvQueue.begin(), AmpEnvQueue.end(), nullptr);
+          std::fill(Env1Queue.begin(), Env1Queue.end(), nullptr);
+          std::fill(Env2Queue.begin(), Env2Queue.end(), nullptr);
         }
         break;
       }
       case kParamUnisonVoices:
       {
         int voices = static_cast<int>(value);
+        mDetuner.SetNVoices(voices);
+        mSynth.SetMonoUnison(voices);
         // If the unison voice number has increased, start new voices
         if (voices > mUnisonVoices)
         {
@@ -1249,16 +1384,40 @@ public:
           mSynth.Reset();
         }
         mUnisonVoices = voices;
-        TablitsaDSP<T>::Voice::mDetuner.SetNVoices(voices);
-        mSynth.SetMonoUnison(voices);
         break;
       }
       case kParamUnisonDetune:
-        TablitsaDSP<T>::Voice::mDetuner.SetMaxDetune(value);
+      {
+        mDetuner.SetMaxDetune(value);
+        mDetuner.Reset();
+        // Send new values to voices
+        mSynth.ForEachVoice([](SynthVoice& voice) {
+          dynamic_cast<TablitsaDSP<T>::Voice&>(voice).ResetUnisonParams();
+          });
         break;
+      }
       case kParamUnisonChord:
-        TablitsaDSP<T>::Voice::mDetuner.SetChord(static_cast<int>(value) + EUnisonChords::kNoChord);
+        mDetuner.SetChord(static_cast<int>(value) + EUnisonChords::kNoChord);
         break;
+      case kParamStereoSpread:
+      {
+        if (mDetuner.mNVoices == 1)
+        {
+          mStereoWidth = (T)value;
+          mDetuner.SetMaxPan(mStereoWidth);
+        }
+        else
+        {
+          mStereoWidth = (T)value;
+          mDetuner.SetMaxPan(mStereoWidth);
+        }
+        // Send new values to voices
+        mDetuner.Reset();
+        mSynth.ForEachVoice([](SynthVoice& voice) {
+          dynamic_cast<TablitsaDSP<T>::Voice&>(voice).ResetUnisonParams();
+          });
+        break;
+      }
       case kParamWavetable1Pitch:
         mParamsToSmooth[kModWavetable1PitchSmoother] = value;
         break;
@@ -1431,6 +1590,25 @@ public:
         const int modIdx = paramIdx - kParamWavetable2Bend;
         mSynth.ForEachVoice([paramIdx, modIdx, value](SynthVoice& voice) {
           dynamic_cast<TablitsaDSP::Voice&>(voice).UpdateVoiceParam(kVWavetable2Bend, modIdx, value);
+          });
+        break;
+      }
+      case kParamWavetable2Sub:
+        mParamsToSmooth[kModWavetable2SubSmoother] = value;
+        break;
+      case kParamWavetable2SubEnv1:
+      case kParamWavetable2SubEnv2:
+      case kParamWavetable2SubAmpEnv:
+      case kParamWavetable2SubLFO1:
+      case kParamWavetable2SubLFO2:
+      case kParamWavetable2SubSeq:
+      case kParamWavetable2SubVel:
+      case kParamWavetable2SubKTk:
+      case kParamWavetable2SubRnd:
+      {
+        const int modIdx = paramIdx - kParamWavetable2Sub;
+        mSynth.ForEachVoice([paramIdx, modIdx, value](SynthVoice& voice) {
+          dynamic_cast<TablitsaDSP::Voice&>(voice).UpdateVoiceParam(kVWavetable2Sub, modIdx, value);
           });
         break;
       }
@@ -1748,9 +1926,11 @@ public:
   std::vector<Voice*> mSynthVoices;
 
   // Polyphonic/Monophonic
-  static inline bool mMono{ false };
+  bool mMono{ false };
   int mUnisonVoices{ 1 };
   float mUnisonDetune{ 0.f };
+  UnisonVoiceManager mDetuner{ kMaxUnisonVoices };
+  double mStereoWidth{ 0. };
 
   // Portamento Parameters
   bool mConstantGlideTime{ true };
@@ -1764,15 +1944,16 @@ public:
   double mTempo{ DEFAULT_TEMPO };
 
   // Status Variables
-  static inline bool tableLoading[2]{ true, true };
   int mSeqPos{ 0 };
-  static inline Sequencer<T, kNumSeqSteps>* mActiveSequencer{ nullptr };
+  Sequencer<T, kNumSeqSteps>* mActiveSequencer{ nullptr };
+  int mFilter1Osc{ 0 }; // Oscillator which provides the filter's input
+  int mFilter2Osc{ 1 };
   bool mFilter1Comb{ false }; // Set to `true` when Filter 1 is a comb filter. Used for scaling delay/drive values by the proper amount.
   bool mFilter2Comb{ false }; // Set to `true` when Filter 2 is a comb filter. Used for scaling delay/drive values by the proper amount.
 
   // Non-modulatable parameters
-  double mLoadedWavetables[2]{ 1., 2. }; // Integer indices of current wavetables
-  static inline double mSeqSteps[kNumSeqSteps]{}; // Value of each step in the sequencer
+  double mLoadedWavetables[2]{ 1., 2. }; // Integer indices (stored as double) of current wavetables
+  double mSeqSteps[kNumSeqSteps]{}; // Value of each step in the sequencer
   int mStepPos{ 0 };
   int mPrevPos{ -1 };
 
@@ -1780,8 +1961,17 @@ public:
   std::vector<Effect<T>*> mEffects;
   DelayEffect<T> mDelayEffect{ DEFAULT_SAMPLE_RATE, DEFAULT_SAMPLE_RATE * 12. };
 
+  // Pointers to master modulators, for free-run and legato modes
+  std::vector<Envelope<T>*> Env1Queue;
+  std::vector<Envelope<T>*> Env2Queue;
+  std::vector<Envelope<T>*> AmpEnvQueue;
+  FastLFO<T>* mMasterLFO1{ nullptr }; // The last-triggered `mLFO1`, which "owns" the master phase
+  FastLFO<T>* mMasterLFO2{ nullptr }; // The last-triggered `mLFO2`, which "owns" the master phase
+  Sequencer<T>* mMasterSeq{ nullptr }; // The last-triggered `mSequencer`, which "owns" the master phase
+
   // Global Modulators
-  static inline GlobalModulator<T, FastLFO<T>> mGlobalLFO1;
-  static inline GlobalModulator<T, FastLFO<T>> mGlobalLFO2;
-  static inline GlobalModulator<T, Sequencer<T>> mGlobalSequencer{ mSeqSteps };
+  ModMetronome mGlobalMetronome;
+  GlobalModulator<T, FastLFO<T>> mGlobalLFO1{ &mGlobalMetronome };
+  GlobalModulator<T, FastLFO<T>> mGlobalLFO2{ &mGlobalMetronome };
+  GlobalModulator<T, Sequencer<T>> mGlobalSequencer{ &mGlobalMetronome, mSeqSteps };
 };

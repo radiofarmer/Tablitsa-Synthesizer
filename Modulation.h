@@ -42,7 +42,7 @@ public:
 
   static inline void SetModValues(double* modPtr)
   {
-    memcpy(ParameterModulator::mModValues, modPtr, DynMods * sizeof(double));
+    //memcpy(ParameterModulator::mModValues, modPtr, DynMods * sizeof(double));
   }
 
   virtual void SetInitialValue(const double value)
@@ -64,22 +64,22 @@ public:
     }
   }
 
-  inline double AddModulation()
+  inline double AddModulation(double* modValues)
   {
-    return AddModulation(mInitial);
+    return AddModulation(mInitial, modValues);
   }
 
-  inline double AddModulation_Vector()
+  inline double AddModulation_Vector(double* modValues)
   {
-    return AddModulation_Vector(mInitial);
+    return AddModulation_Vector(mInitial, modValues);
   }
 
   /* TODO: This may be better implemented with virtual functions (see ParameterModulationExp implementation below) */
-  inline double AddModulation(double initVal) const
+  inline double AddModulation(double initVal, double* modValues) const
   {
     double modulation{ 0. };
     for (auto i{ 0 }; i < DynMods; ++i)
-      modulation += mModDepths[i] * ParameterModulator::mModValues[i];
+      modulation += mModDepths[i] * modValues[i];
     modulation += mStaticModulation;
     if (!mIsExponential)
       return std::max(std::min(initVal + modulation, mMax), mMin);
@@ -87,25 +87,25 @@ public:
       return std::max(std::min(initVal * std::exp(modulation), mMax), mMin);
   }
 
-  inline double AddModulation_Vector(double initVal) const
+  inline double AddModulation_Vector(double initVal, double* modValues) const
   {
     constexpr int vectorsize = 4;
 
     double modulation{ 0. };
     Vec4d modDepths;
-    Vec4d modValues;
+    Vec4d modValuesV;
     auto i{ 0 };
     for (; i < (DynMods & vectorsize); i+=4)
     {
       modDepths.load(mModDepths);
-      modValues.load(ParameterModulator::mModValues);
-      modulation += horizontal_add(modDepths * modValues);
+      modValuesV.load(modValues);
+      modulation += horizontal_add(modDepths * modValuesV);
     }
     modDepths.load_partial(DynMods - i, mModDepths + i);
     modDepths.cutoff(DynMods - i);
-    modValues.load_partial(DynMods - i, ParameterModulator::mModValues + i);
+    modValuesV.load_partial(DynMods - i, modValues + i);
     // modValues.cutoff(DynMods - i);
-    modulation += horizontal_add(modDepths * modValues);
+    modulation += horizontal_add(modDepths * modValuesV);
     modulation += mStaticModulation;
     // Clip and return
     if (!mIsExponential)
@@ -137,7 +137,7 @@ public:
   }
 
 protected:
-  static inline double mModValues[DynMods + StatMods]{ 0. };
+  double mModValues[DynMods + StatMods]{ 0. };
   double mStaticModulation{};
 
   double mInitial{ 0. };
@@ -179,13 +179,12 @@ public:
       T modDepths[NParams]{ 0. };
       for (auto m{ 0 }; m < DynamicMods; ++m)
         modDepths[m] = mod_inputs[m][i];
-      ParameterModulator<DynamicMods, StaticMods>::SetModValues(modDepths);
       for (auto p{ offset }; p < NParams; ++p)
       {
 #if _DEBUG
-        outputs[p][i] = mParams[p]->AddModulation(param_inputs[p][i]);
+        outputs[p][i] = mParams[p]->AddModulation(param_inputs[p][i], modDepths);
 #else
-        outputs[p][i] = mParams[p]->AddModulation_Vector(param_inputs[p][i]);
+        outputs[p][i] = mParams[p]->AddModulation_Vector(param_inputs[p][i], modDepths);
 #endif
       }
     }
@@ -330,21 +329,21 @@ public:
   }
 
   /* Write meta-modulated modulation values to a buffer */
-  void MetaProcessBlock(T** inputs, int nFrames)
+  inline void MetaProcessBlock(T** inputs, int nFrames)
   {
     T metaModParams[2]{ 0. };
     T** modList = mModulators.GetList();
     for (auto i{ 0 }; i < nFrames; ++i)
     {
-      ParameterModulator<DynMods, StatMods>::SetModValues(mPrevValues);
       for (auto m{ 0 }; m < mModPtrs.size(); ++m)
       {
         for (auto mm{ 0 }; mm < mMetaParams[m].size(); ++mm)
         {
 #if _DEBUG
-          metaModParams[mm] = mMetaParams[m][mm]->AddModulation();
+          metaModParams[mm] = mMetaParams[m][mm]->AddModulation(mPrevValues);
 #else
-          metaModParams[mm] = mMetaParams[m][mm]->AddModulation_Vector();
+          // Possible place for optimization: Process multiple modulators simulataneously
+          metaModParams[mm] = mMetaParams[m][mm]->AddModulation_Vector(mPrevValues);
 #endif
         }
         mModPtrs[m]->SetParams(metaModParams);

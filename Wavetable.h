@@ -93,6 +93,7 @@ struct WavHeader
   uint32_t subchunk2Size;
 };
 
+// TODO: To make this class portable, add the wavetable directory as a template variable
 class WtFile
 {
   struct WtHeader
