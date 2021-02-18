@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Oscillator.h"
 #include "Wavetable.h"
 
 #include <vectorclass.h>
@@ -15,44 +16,31 @@
 #define OUTPUT_SIZE VECTOR_SIZE
 #endif
 
+BEGIN_IPLUG_NAMESPACE
 template<typename T>
-class VectorOscillator final : public iplug::IOscillator<T>
+class VectorOscillator final : public FastSinOscillator<T>
 {
-public:
-  VectorOscillator(T startPhase) : IOscillator<T>(startPhase) {}
-
-  void ProcessBlockVector(T* pOutput, int nFrames)
+  union tabfudge
   {
-    double phase = IOscillator<T>::mPhase + (double)UNITBIT32;
-    const Vec4d phaseIncr = IOscillator<T>::mPhaseIncr * mIncrVector * tableSize;
+    double d;
+    int i[2];
+  } ALIGNED(8);
 
-    union tabfudge tf;
-    tf.d = UNITBIT32;
-    const int normhipart = tf.i[HIOFFSET];
+public:
+  VectorOscillator(T startPhase=0.) : FastSinOscillator<T>(startPhase) {}
 
-    for (auto s = 0; s < nFrames; s++)
-    {
-      tf.d = phase;
-      phase += phaseIncr;
-      const T* addr = mLUT + (tf.i[HIOFFSET] & tableSizeM1); // Obtain the integer portion
-      tf.i[HIOFFSET] = normhipart; // Force the double to wrap.
-      const double frac = tf.d - UNITBIT32;
-      const T f1 = addr[0];
-      const T f2 = addr[1];
-      mLastOutput = pOutput[s] = T(f1 + frac * (f2 - f1));
-    }
-
-    // Restore mPhase
-    tf.d = UNITBIT32 * tableSize;
-    const int normhipart2 = tf.i[HIOFFSET];
-    tf.d = phase + (UNITBIT32 * tableSize - UNITBIT32); // Remove the offset we introduced at the start of UNITBIT32.
-    tf.i[HIOFFSET] = normhipart2;
-    IOscillator<T>::mPhase = tf.d - UNITBIT32 * tableSize;
+  inline Vec4d __vectorcall Process_Vector()
+  {
+    double output[4];
+    FastSinOscillator<T>::ProcessBlock(output, 4);
+    return Vec4d().load_a(output);
   }
 
 private:
   const Vec4d mIncrVector = Vec4d(0., 1., 2., 3.);
-};
+} ALIGNED(8);
+
+END_IPLUG_NAMESPACE
 
 template <typename T>
 class WavetableOscillator final : public iplug::IOscillator<T>
@@ -151,7 +139,7 @@ public:
     assert(mWT != nullptr);
     size = std::min(size, mWT->GetMaxSize());
 
-    mWtPositionNorm = std::modf((1. - mWtPositionAbs) * (mWT->mNumTables - 1), &mWtOffset);
+    mWtPositionNorm = 1. - std::modf((1. - mWtPositionAbs) * (mWT->mNumTables - 1), &mWtOffset);
     int tableOffset = static_cast<int>(mWtOffset);
     mLUTLo[0] = mWT->GetMipmapLevel_BySize(tableOffset, size, mTableSize);
     mLUTLo[1] = mWT->GetMipmapLevel_BySize(tableOffset + 1, size, mNextTableSize);
@@ -269,7 +257,7 @@ public:
     tableOffset -= std::max(floor(tableOffset - 0.0001), 0.);
 
     const double phaseIncr = mPhaseIncr * mPhaseIncrFactor * mProcessOS;
-    Vec4d phaseMod = Vec4d(PhaseMod(), PhaseMod(), PhaseMod(), PhaseMod());
+    Vec4d phaseMod = PhaseModVec(); //Vec4d(PhaseMod(), PhaseMod(), PhaseMod(), PhaseMod());
     Vec4d phase = phaseMod + SamplePhaseShift(IOscillator<T>::mPhase);
     Vec4d phaseDouble = mul_add(mIncrVec, phaseIncr, phase) * mTableSize; // Next four phase positions in samples, including fractional position
     Vec4q phaseInt = truncatei(phaseDouble); // Indices of the (left) samples to read
@@ -308,7 +296,7 @@ public:
     Vec4d tb1 = mul_add(tb1hi - tb1lo, mTableInterp, tb1lo);
 
     // Mix wavetables
-    Vec4d ringMod(RingMod());
+    Vec4d ringMod = RingModVec();
     Vec4d mixed = mul_add(tb1 - tb0, 1 - tableOffset, tb0);
     mixed = mul_add(ringMod - 1., mRM * mRingModAmt * mixed, mixed);
 
@@ -343,22 +331,29 @@ public:
   }
 
   /* Returns an adjusted phase increment based on the current (cycle-normalized) phase. */
+#ifndef VECTOR
   inline double PhaseMod()
   {
     return mPM * mPhaseModAmt * mPhaseModulator.Process() * mCyclesPerLevelRecip;
-  }
-
-  // TODO: use enable_if to choose between vector lengths
-  inline Vec4d PhaseModVec()
-  {
-    return Vec4d(0.);
   }
 
   inline double RingMod()
   {
     return mRingModulator.Process();
   }
+#else
 
+  inline Vec4d __vectorcall RingModVec()
+  {
+    return mRingModulator.Process_Vector();
+  }
+
+  // TODO: use enable_if to choose between vector lengths
+  inline Vec4d __vectorcall PhaseModVec()
+  {
+    return mPM * mPhaseModAmt * mPhaseModulator.Process_Vector() * mCyclesPerLevelRecip;
+  }
+#endif
   inline double* GetWtPosition()
   {
     return &mWtPositionAbs;
@@ -490,6 +485,11 @@ private:
 
 public:
   Wavetable<T>* LoadedTables[2]{ nullptr, nullptr };
+#ifndef VECTOR
   iplug::FastSinOscillator<T> mPhaseModulator;
   iplug::FastSinOscillator<T> mRingModulator{ 0.5 }; // Offset start phase by half a cycle
+#else
+  iplug::VectorOscillator<T> mPhaseModulator;
+  iplug::VectorOscillator<T> mRingModulator{ 0.5 }; // Offset start phase by half a cycle
+#endif
 };
