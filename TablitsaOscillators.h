@@ -180,10 +180,9 @@ public:
     AdjustWavetable(freqCPS);
 
     std::array<T, OUTPUT_SIZE> output{ 0. };
-#if VECTOR_SIZE == 8
-    ProcessOversamplingVec<Vec8d, Vec8q>(output);
-#elif VECTOR_SIZE == 4
-    ProcessOversamplingVec4(output);
+#if VECTOR_SIZE == 4
+    Vec4d osc_out = ProcessOversamplingVec4();
+    osc_out.store_partial(2, &output[0]);
 #else
     ProcessOversampling(output, mProcessOS);
 #endif
@@ -252,7 +251,7 @@ public:
 
   }
 
-  inline void ProcessOversamplingVec4(std::array<T, OUTPUT_SIZE>& pOutput)
+  inline Vec4d __vectorcall ProcessOversamplingVec4()
   {
     double tableOffset{ mWtPositionAbs * (mWT->mNumTables - 1) };
     tableOffset -= std::max(floor(tableOffset - 0.0001), 0.);
@@ -313,7 +312,7 @@ public:
     }
 #else
     // Using recursive function
-    mAAFilter.ProcessAndDownsample_Recursive(mixed).store_partial(2, &pOutput[0]);
+    return mAAFilter.ProcessAndDownsample_Recursive(mixed);
 #endif
 
   }
