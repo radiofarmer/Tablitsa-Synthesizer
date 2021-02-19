@@ -397,9 +397,15 @@ public:
         a1*a1*a1*a1 + 3*a1*a1*a2 + a2*a2,
         a1*a1*a1*a2 + 2*a1*a2*a2
       };
-      mAr1.load(a_rec1);
-      mAr2.load(a_rec2);
-      mAr3.load(a_rec3);
+      //mAr1.load(a_rec1);
+      //mAr2.load(a_rec2);
+      //mAr3.load(a_rec3);
+
+      // Column vectors of coefficients
+      mCol1 = Vec4d(a_rec3[0], a_rec2[0], a_rec1[0], mA[0]);
+      mCol2 = Vec4d(a_rec3[1], a_rec2[1], a_rec1[1], mA[1]);
+      mCol3 = Vec4d(a_rec3[2], a_rec2[2], a_rec1[2], mA[2]);
+      mCol4 = Vec4d(a_rec3[3], a_rec2[3], a_rec1[3], mA[3]);
     }
 
     inline T Process(T s)
@@ -434,17 +440,30 @@ public:
     {
       // x = (x[n], x[n+1], x[n+2], x[n+3]), i.e. earliest -> latest
       mDelayVector = blend4<1, 0, 4, 5>(x, mDelayVector); // x[n+1], x[n], w[n-1], w[n-2], i.e. latest -> earliest
-      double w3 = x[3] - mCoefs[4] * x[2] + horizontal_add(mAr3 * mDelayVector); // w[n+3]
-      double w2 = x[2] + horizontal_add(mAr2 * mDelayVector); // w[n+2]
-      double w1 = horizontal_add(mAr1 * mDelayVector); // w[n+1]
-      double w0 = horizontal_add(mA * mDelayVector); // w[n]
-      Vec4d y_in = Vec4d(w3, w2, w1, w0); // latest -> earliest
+
+      // Faster version:
+      T dl[4];
+      mDelayVector.store(dl);
+      const Vec4d a1 = Vec4d(1., -mCoefs[4], 1., 1.);
+      const Vec4d extra1 = Vec4d(x[2], x[2], 0., 0.); // x[n+2] terms
+      const Vec4d extra2 = Vec4d(x[3], 0., 0., 0.); // x[n+3] terms
+      // All delay terms:
+      Vec4d y_in = extra1 + extra2 + mCol1 * dl[0] + mCol2 * dl[1] + mCol3 * dl[2] + mCol4 * dl[3];
+
+      // Original version:
+      //double w3 = x[3] - mCoefs[4] * x[2] + horizontal_add(mAr3 * mDelayVector); // w[n+3]
+      //double w2 = x[2] + horizontal_add(mAr2 * mDelayVector); // w[n+2]
+      //double w1 = horizontal_add(mAr1 * mDelayVector); // w[n+1]
+      //double w0 = horizontal_add(mA * mDelayVector); // w[n]
+      //Vec4d y_in = Vec4d(w3, w2, w1, w0); // latest -> earliest
+
       Vec4d y_out = Vec4d(
         horizontal_add(blend4<3, 6, 7, V_DC>(y_in, mDelayVector) * mB), // y[n] = b0 * w[n] + b1 * w[n-1] + b2 * w[n-2]
         horizontal_add(blend4<2, 3, 6, V_DC>(y_in, mDelayVector) * mB), // y[n+1] = b0 * w[n+1] + b1 * w[n] + b2 * w[n-1]
         horizontal_add(permute4<1, 2, 3, V_DC>(y_in) * mB),
         horizontal_add(y_in * mB) // y[n+3] = b0 * w[n+3] + b1 * w[n+2] + b2 * w[n+1]
       ); // earliest -> latest
+
       mDelayVector = permute4<0, 1, V_DC, V_DC>(y_in); // w[n+3] -> w[n-1]; w[n+2] -> w[n-2]; Order is latest -> earliest
       return y_out;
     }
@@ -464,9 +483,16 @@ public:
     DelayLine mZ{ 2 };
     Vec4d mB;
     Vec4d mA;
+
     Vec4d mAr3; // Recursive coefficients, third iteration
     Vec4d mAr2; // Recursive coefficients, second iteration
-    Vec4d mAr1; // Recursive coefficients, first iteration
+    Vec4d mAr1; // Recursive coefficients, first
+
+    Vec4d mCol1;
+    Vec4d mCol2;
+    Vec4d mCol3;
+    Vec4d mCol4;
+
     Vec4d mDelayVector = Vec4d(0.);
 
     double* mAddends = nullptr;
