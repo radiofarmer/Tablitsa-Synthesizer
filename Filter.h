@@ -374,24 +374,28 @@ public:
     Biquad(std::initializer_list<double> coefs) : mCoefs(coefs)
     {
       mB = Vec4d(mCoefs[0], mCoefs[1], mCoefs[2], 0.);
-      mA = Vec4d(1., -1. * mCoefs[4], -1. * mCoefs[5], 0.);
+      mA = Vec4d(0., 1., -1. * mCoefs[4], -1. * mCoefs[5]);
 
+      // Recursive coefficient expressions
       T a1 = -1. * mCoefs[4];
       T a2 = -1. * mCoefs[5];
-      T a_rec1[4]{ 1.,
+      T a_rec1[4]{
+        1.,
         a1,
-        a1 * a1 + a1 * a2,
-        0.
+        a1*a1 + a2,
+        a1*a2
       };
-      T a_rec2[4]{a1,
-        a1 * a1 + a2,
-        a1 * a1 * a1 + 2 * a1 * a2,
-        a1 * a1 * a2 + a2 * a2
+      T a_rec2[4]{
+        a1,
+        a1*a1 + a2,
+        a1*a1*a1 + 2*a1*a2,
+        a1*a1*a2 + a2*a2
       };
-      T a_rec3[4]{ a1 * a1 + a2,
-        a1 * a1 * a1 + 2 * a1 * a2,
-        a1 * a1 * a1 * a1 + 3 * a1 * a1 * a2 + a2 * a2,
-        a1 * a1 * a1 * a2 + 2 * a1 * a2 * a2
+      T a_rec3[4]{
+        a1*a1 + a2,
+        a1*a1*a1 + 2*a1*a2,
+        a1*a1*a1*a1 + 3*a1*a1*a2 + a2*a2,
+        a1*a1*a1*a2 + 2*a1*a2*a2
       };
       mAr1.load(a_rec1);
       mAr2.load(a_rec2);
@@ -428,20 +432,20 @@ public:
 
     inline Vec4d __vectorcall ProcessRecursive(Vec4d x)
     {
-      // x = (x[n], x[n+1], x[n+2], x[n+3])
-      mDelayVector = blend4<1, 0, 4, 5>(x, mDelayVector); // x[n+1], x[n], w[n-1], w[n-2]
-      T w3 = x[3] - mCoefs[4] * x[2] + horizontal_add(mAr3 * mDelayVector);
-      T w2 = x[2] + horizontal_add(mAr2 * mDelayVector);
-      T w1 = horizontal_add(mAr1 * mDelayVector);
-      T w0 = horizontal_add(mA * mDelayVector);
-      Vec4d y_in = Vec4d(w3, w2, w1, w0);
+      // x = (x[n], x[n+1], x[n+2], x[n+3]), i.e. earliest -> latest
+      mDelayVector = blend4<1, 0, 4, 5>(x, mDelayVector); // x[n+1], x[n], w[n-1], w[n-2], i.e. latest -> earliest
+      double w3 = x[3] - mCoefs[4] * x[2] + horizontal_add(mAr3 * mDelayVector); // w[n+3]
+      double w2 = x[2] + horizontal_add(mAr2 * mDelayVector); // w[n+2]
+      double w1 = horizontal_add(mAr1 * mDelayVector); // w[n+1]
+      double w0 = horizontal_add(mA * mDelayVector); // w[n]
+      Vec4d y_in = Vec4d(w3, w2, w1, w0); // latest -> earliest
       Vec4d y_out = Vec4d(
-        horizontal_add(blend4<3, 6, 7, V_DC>(y_in, mDelayVector) * mB),
-        horizontal_add(blend4<2, 3, 6, V_DC>(y_in, mDelayVector) * mB),
+        horizontal_add(blend4<3, 6, 7, V_DC>(y_in, mDelayVector) * mB), // y[n] = b0 * w[n] + b1 * w[n-1] + b2 * w[n-2]
+        horizontal_add(blend4<2, 3, 6, V_DC>(y_in, mDelayVector) * mB), // y[n+1] = b0 * w[n+1] + b1 * w[n] + b2 * w[n-1]
         horizontal_add(permute4<1, 2, 3, V_DC>(y_in) * mB),
-        horizontal_add(y_in * mB)
-      );
-      mDelayVector = blend4<0, 1, V_DC, V_DC>(y_in, mDelayVector);
+        horizontal_add(y_in * mB) // y[n+3] = b0 * w[n+3] + b1 * w[n+2] + b2 * w[n+1]
+      ); // earliest -> latest
+      mDelayVector = permute4<0, 1, V_DC, V_DC>(y_in); // w[n+3] -> w[n-1]; w[n+2] -> w[n-2]; Order is latest -> earliest
       return y_out;
     }
 
@@ -474,8 +478,8 @@ public:
 public:
   ChebyshevBL()
   {
-    double z1[12];
-    double z2[12];
+    double z1[12]{};
+    double z2[12]{};
 
     for (int i{0}; i < 6; ++i)
     {
@@ -532,17 +536,12 @@ public:
   {
     T sum = s;
     Precompute();
-    for (int i{0}; i < 6; ++i)
-      sum = mSOS[i].ProcessPrecomp(sum);
-    return sum;
-  }
-
-  inline T Process(T* s)
-  {
-    T sum = s;
-    Precompute();
-    for (int i{ 0 }; i < 6; ++i)
-      sum = mSOS[i].ProcessPrecomp(sum);
+    sum = mSOS[0].ProcessPrecomp(sum);
+    sum = mSOS[1].ProcessPrecomp(sum);
+    sum = mSOS[2].ProcessPrecomp(sum);
+    sum = mSOS[3].ProcessPrecomp(sum);
+    sum = mSOS[4].ProcessPrecomp(sum);
+    sum = mSOS[5].ProcessPrecomp(sum);
     return sum;
   }
 
@@ -552,19 +551,13 @@ public:
     return Process(s[1]); // Process and return sample
   }
 
-  inline Vec4d __vectorcall ProcessAndDownsample_Recursive(T* s)
+  inline Vec4d __vectorcall ProcessAndDownsample_Recursive(Vec4d x)
   {
-    Vec4d x = Vec4d().load(s);
     for (int i{ 0 }; i < 6; ++i)
       x = mSOS[i].ProcessRecursive(x);
-    Vec4d out = permute4<0, 2, V_DC, V_DC>(x);
+    Vec4d out = permute4<1, 3, V_DC, V_DC>(x);
     return out;
   }
-
-  /*__vectorcall inline Vec4d ProcessAndDownsample_Vector(Vec4d s)
-  {
-
-  }*/
 
 private:
   Biquad<T> mSOS[6]{ { 1.0194978892532574e-05, 2.0389957785065147e-05, 1.0194978892532574e-05, 1.0, -1.6759049412919762, 0.7386853939104704 },

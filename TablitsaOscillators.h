@@ -268,8 +268,8 @@ public:
 
     // Read from wavetables (lower/larger table)
     Vec4d tb0s0lo = lookup<16384 * 12>(phaseInt, mLUTLo[0]);
-    Vec4d tb0s1lo = lookup<16384 * 12>(phaseInt1, mLUTLo[0]);
     Vec4d tb1s0lo = lookup<16384 * 12>(phaseInt, mLUTLo[1]);
+    Vec4d tb0s1lo = lookup<16384 * 12>(phaseInt1, mLUTLo[0]);
     Vec4d tb1s1lo = lookup<16384 * 12>(phaseInt1, mLUTLo[1]);
     // Interpolate samples
     Vec4d tb0lo = mul_add((tb0s1lo - tb0s0lo), phaseFrac, tb0s0lo);
@@ -304,19 +304,16 @@ public:
     IOscillator<T>::mPhase += phaseIncr * (double)VECTOR_SIZE;
     IOscillator<T>::mPhase -= floor(IOscillator<T>::mPhase);
 
+#if !RECURSION
     T oversampled[VECTOR_SIZE];
     mixed.store(oversampled);
-
-//    mLastOutput = pOutput[s] = mAAFilter.ProcessAndDownsample_Vector(mixed, mProcessOS);
-#if !RECURSION
     for (auto s = 0; s < VECTOR_SIZE / mProcessOS; ++s)
     {
-s      mLastOutput = pOutput[s] = mAAFilter.ProcessAndDownsample(oversampled + (s * mProcessOS));
+      pOutput[s] = mAAFilter.ProcessAndDownsample(oversampled + (s * mProcessOS));
     }
 #else
     // Using recursive function
-    mAAFilter.ProcessAndDownsample_Recursive(oversampled).store_partial(2, &pOutput[0]);
-    //mLastOutput = pOutput[0] = filtered[0];
+    mAAFilter.ProcessAndDownsample_Recursive(mixed).store_partial(2, &pOutput[0]);
 #endif
 
   }
@@ -433,9 +430,9 @@ s      mLastOutput = pOutput[s] = mAAFilter.ProcessAndDownsample(oversampled + (
 
 private:
 #if OVERSAMPLING == 2
-  inline static int mProcessOS{ 2 }; // Sample processing oversampling level (number of samples processed per sample output)
+  static constexpr int mProcessOS{ 2 }; // Sample processing oversampling level (number of samples processed per sample output)
 #else
-  inline static int mProcessOS{ 1 };
+  static constexpr int mProcessOS{ 1 };
 #endif
   ChebyshevBL<T> mAAFilter;
 
