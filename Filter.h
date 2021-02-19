@@ -375,6 +375,27 @@ public:
     {
       mB = Vec4d(mCoefs[0], mCoefs[1], mCoefs[2], 0.);
       mA = Vec4d(1., -1. * mCoefs[4], -1. * mCoefs[5], 0.);
+
+      T a1 = -1. * mCoefs[4];
+      T a2 = -1. * mCoefs[5];
+      T a_rec1[4]{ 1.,
+        a1,
+        a1 * a1 + a1 * a2,
+        0.
+      };
+      T a_rec2[4]{a1,
+        a1 * a1 + a2,
+        a1 * a1 * a1 + 2 * a1 * a2,
+        a1 * a1 * a2 + a2 * a2
+      };
+      T a_rec3[4]{ a1 * a1 + a2,
+        a1 * a1 * a1 + 2 * a1 * a2,
+        a1 * a1 * a1 * a1 + 3 * a1 * a1 * a2 + a2 * a2,
+        a1 * a1 * a1 * a2 + 2 * a1 * a2 * a2
+      };
+      mAr1.load(a_rec1);
+      mAr2.load(a_rec2);
+      mAr3.load(a_rec3);
     }
 
     inline T Process(T s)
@@ -405,18 +426,23 @@ public:
       return out;
     }
 
-    /* Process four samples simultaneously */
-    inline T ProcessPrecomp(T* s)
+    inline Vec4d __vectorcall ProcessRecursive(Vec4d x)
     {
-      Vec4d x = Vec4d().load(s);
-    }
-
-    /* Process one sample and return a vector the sample and the delay line */
-    inline Vec4d __vectorcall ProcessPrecomp_Vector(T s)
-    {
-      T out = ProcessPrecomp(s);
-      mDelayVector = blend4<0, 1, 4, V_DC>(Vec4d(out, sum), mDelayVector);
-      return mDelayVector
+      // x = (x[n], x[n+1], x[n+2], x[n+3])
+      mDelayVector = blend4<1, 0, 4, 5>(x, mDelayVector); // x[n+1], x[n], w[n-1], w[n-2]
+      T w3 = x[3] - mCoefs[4] * x[2] + horizontal_add(mAr3 * mDelayVector);
+      T w2 = x[2] + horizontal_add(mAr2 * mDelayVector);
+      T w1 = horizontal_add(mAr1 * mDelayVector);
+      T w0 = horizontal_add(mA * mDelayVector);
+      Vec4d y_in = Vec4d(w3, w2, w1, w0);
+      Vec4d y_out = Vec4d(
+        horizontal_add(blend4<3, 6, 7, V_DC>(y_in, mDelayVector) * mB),
+        horizontal_add(blend4<2, 3, 6, V_DC>(y_in, mDelayVector) * mB),
+        horizontal_add(permute4<1, 2, 3, V_DC>(y_in) * mB),
+        horizontal_add(y_in * mB)
+      );
+      mDelayVector = blend4<0, 1, V_DC, V_DC>(y_in, mDelayVector);
+      return y_out;
     }
 
     void SetAddendPtr(double* ptr)
@@ -430,10 +456,13 @@ public:
     }
 
   protected:
-    std::vector<double> mCoefs;
+    const std::vector<double> mCoefs;
     DelayLine mZ{ 2 };
     Vec4d mB;
     Vec4d mA;
+    Vec4d mAr3; // Recursive coefficients, third iteration
+    Vec4d mAr2; // Recursive coefficients, second iteration
+    Vec4d mAr1; // Recursive coefficients, first iteration
     Vec4d mDelayVector = Vec4d(0.);
 
     double* mAddends = nullptr;
@@ -508,10 +537,28 @@ public:
     return sum;
   }
 
+  inline T Process(T* s)
+  {
+    T sum = s;
+    Precompute();
+    for (int i{ 0 }; i < 6; ++i)
+      sum = mSOS[i].ProcessPrecomp(sum);
+    return sum;
+  }
+
   inline T ProcessAndDownsample(T* s)
   {
     Process(s[0]); // Process and throw away sample
     return Process(s[1]); // Process and return sample
+  }
+
+  inline Vec4d __vectorcall ProcessAndDownsample_Recursive(T* s)
+  {
+    Vec4d x = Vec4d().load(s);
+    for (int i{ 0 }; i < 6; ++i)
+      x = mSOS[i].ProcessRecursive(x);
+    Vec4d out = permute4<0, 2, V_DC, V_DC>(x);
+    return out;
   }
 
   /*__vectorcall inline Vec4d ProcessAndDownsample_Vector(Vec4d s)

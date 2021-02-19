@@ -10,6 +10,7 @@
 #define VECTOR_SIZE 4
 #define OUTPUT_SIZE VECTOR_SIZE / OVERSAMPLING
 #define VECTOR
+#define RECURSION 1
 #else
 #define OVERSAMPLING 1
 #define VECTOR_SIZE 1
@@ -307,10 +308,16 @@ public:
     mixed.store(oversampled);
 
 //    mLastOutput = pOutput[s] = mAAFilter.ProcessAndDownsample_Vector(mixed, mProcessOS);
+#if !RECURSION
     for (auto s = 0; s < VECTOR_SIZE / mProcessOS; ++s)
     {
-      mLastOutput = pOutput[s] = mAAFilter.ProcessAndDownsample(oversampled + (s * mProcessOS));
+s      mLastOutput = pOutput[s] = mAAFilter.ProcessAndDownsample(oversampled + (s * mProcessOS));
     }
+#else
+    // Using recursive function
+    mAAFilter.ProcessAndDownsample_Recursive(oversampled).store_partial(2, &pOutput[0]);
+    //mLastOutput = pOutput[0] = filtered[0];
+#endif
 
   }
 
