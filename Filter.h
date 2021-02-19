@@ -386,7 +386,7 @@ public:
       return sum;
     }
 
-    inline T Process2(T s)
+    inline T ProcessDFII(T s)
     {
       // Direct Form 2 - summed last two terms in each expression are the values stored in mAddends
       T sum = s - mCoefs[4] * mZ[0] - mCoefs[5] * mZ[1]; // SUM1
