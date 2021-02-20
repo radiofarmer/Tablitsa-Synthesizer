@@ -6,9 +6,10 @@
 const IText TABLITSA_TEXT = IText().WithFGColor(COLOR_WHITE);
 const IVStyle TABLITSA_STYLE = IVStyle(DEFAULT_SHOW_LABEL,
   DEFAULT_SHOW_VALUE,
-  { DEFAULT_BGCOLOR, DEFAULT_FGCOLOR, DEFAULT_PRCOLOR, DEFAULT_FRCOLOR, DEFAULT_HLCOLOR, DEFAULT_SHCOLOR, DEFAULT_X1COLOR, DEFAULT_X2COLOR, DEFAULT_X3COLOR },
-  DEFAULT_LABEL_TEXT, //.WithFGColor(COLOR_WHITE),
-  DEFAULT_VALUE_TEXT, //.WithFGColor(COLOR_WHITE),
+  /* Background       Foreground      Pressed                   Frame            Highlight        Shadow           Extra 1          Extra 2          Extra 3        */
+  { DEFAULT_BGCOLOR, COLOR_DARK_GRAY, IColor(255, 225, 0, 190), DEFAULT_FRCOLOR, DEFAULT_HLCOLOR, DEFAULT_SHCOLOR, DEFAULT_X1COLOR, DEFAULT_X2COLOR, DEFAULT_X3COLOR },
+  DEFAULT_LABEL_TEXT.WithFGColor(COLOR_WHITE),
+  DEFAULT_VALUE_TEXT.WithFGColor(COLOR_WHITE),
   DEFAULT_HIDE_CURSOR,
   DEFAULT_DRAW_FRAME,
   DEFAULT_DRAW_SHADOWS,
@@ -19,7 +20,22 @@ const IVStyle TABLITSA_STYLE = IVStyle(DEFAULT_SHOW_LABEL,
   DEFAULT_WIDGET_FRAC,
   DEFAULT_WIDGET_ANGLE);
 
-const IVStyle modKnobStyle{ TABLITSA_STYLE.WithLabelText(TABLITSA_STYLE.labelText.WithSize(17.f)) };
+
+const IVColorSpec knobColorSpec = IVColorSpec{
+  COLOR_TRANSPARENT,
+  COLOR_BLACK,
+  COLOR_WHITE.WithOpacity(0.75),
+  COLOR_WHITE.WithOpacity(0.5),
+  DEFAULT_HLCOLOR,
+  DEFAULT_SHCOLOR,
+  DEFAULT_X1COLOR,
+  DEFAULT_X2COLOR,
+  DEFAULT_X3COLOR
+};
+
+const IVStyle modKnobStyle{ TABLITSA_STYLE.WithColors(knobColorSpec).WithLabelText(TABLITSA_STYLE.labelText.WithSize(17.f)).WithDrawShadows(false) };
+
+const IText dropdownText{ DEFAULT_TEXT.WithFGColor(COLOR_WHITE) };
 
 class ModSliderControl : public IVSliderControl
 {
@@ -110,8 +126,28 @@ public:
 private:
 };
 
+class TablitsaIVKnobControl : public IVKnobControl
+{
+public:
+  /* Create a knob control with a modulatable value */
+  TablitsaIVKnobControl(const IRECT& bounds, int paramIdx, const char* label = "", const IVStyle& style = modKnobStyle, bool valueIsEditable = false, double gearing = DEFAULT_GEARING)
+    : IVKnobControl(bounds, paramIdx, label, style, valueIsEditable)
+  {
+  }
+
+  void DrawPointer(IGraphics& g, float angle, float cx, float cy, float radius)
+  {
+    g.DrawRadialLine(GetColor(kFR), cx, cy, angle, mInnerPointerFrac * radius, mOuterPointerFrac * radius, &mBlend, mPointerThickness);
+    float data1[2][2];
+    float data2[2][2];
+    iplug::igraphics::RadialPoints(angle, cx, cy, mInnerPointerFrac * radius, mOuterPointerFrac * radius, 2, data1);
+    iplug::igraphics::RadialPoints(angle - 25., cx, cy, mInnerPointerFrac * radius, mOuterPointerFrac * radius * 0.7f, 2, data2);
+    g.DrawLine(GetColor(kFR).WithOpacity(1.), data1[1][0], data1[1][1], data2[1][0], data2[1][1], &mBlend, mPointerThickness);
+  }
+};
+
 /* A clone of the normal knob control, but with the ability to receive modulation parameters. */
-class TablitsaIVModKnobControl : public IVKnobControl
+class TablitsaIVModKnobControl : public TablitsaIVKnobControl
 {
 public:
   /* Create a knob control with a modulatable value */
@@ -121,7 +157,7 @@ public:
   }
 
   TablitsaIVModKnobControl(const IRECT& bounds, int paramIdx, int modStartIdx, const char* label = "", const IVStyle& style = TABLITSA_STYLE, bool valueIsEditable = false, double gearing = DEFAULT_GEARING)
-    : IVKnobControl(bounds, paramIdx, label, style, valueIsEditable), mDefaultColor{ GetColor(kFG) }, mGearing(gearing), mModParamIdx(modStartIdx)
+    : TablitsaIVKnobControl(bounds, paramIdx, label, style, valueIsEditable), mDefaultColor{ GetColor(kFG) }, mGearing(gearing), mModParamIdx(modStartIdx)
   {
     GetMouseDblAsSingleClick();
   }
@@ -190,14 +226,6 @@ public:
     //mActive = !mActive;
   }
 
-  void Draw(IGraphics& g) override
-  {
-    DrawBackground(g, mRECT);
-    DrawLabel(g);
-    DrawWidget(g);
-    DrawValue(g, mValueMouseOver);
-  }
-
   void DrawWidget(IGraphics& g) override
   {
     float widgetRadius; // The radius out to the indicator track arc
@@ -216,6 +244,14 @@ public:
     DrawPressableShape(g, EVShape::Ellipse, knobHandleBounds, mActive && (GetActiveIdx() == GetParamIdx()), mMouseIsOver, IsDisabled());
     DrawIndicatorTrack(g, angle, cx, cy, widgetRadius);
     DrawPointer(g, angle, cx, cy, knobHandleBounds.W() / 2.f);
+  }
+
+  void Draw(IGraphics& g) override
+  {
+    DrawBackground(g, mRECT);
+    DrawLabel(g);
+    DrawWidget(g);
+    DrawValue(g, mValueMouseOver);
   }
 
   void DrawIndicatorTrack(IGraphics& g, float angle, float cx, float cy, float radius) override
