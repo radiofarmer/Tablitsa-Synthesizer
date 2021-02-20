@@ -10,6 +10,7 @@
 #define VECTOR_SIZE 4
 #define OUTPUT_SIZE VECTOR_SIZE / OVERSAMPLING
 #define VECTOR
+#define RECURSION 1
 #else
 #define OVERSAMPLING 1
 #define VECTOR_SIZE 1
@@ -179,10 +180,9 @@ public:
     AdjustWavetable(freqCPS);
 
     std::array<T, OUTPUT_SIZE> output{ 0. };
-#if VECTOR_SIZE == 8
-    ProcessOversamplingVec<Vec8d, Vec8q>(output);
-#elif VECTOR_SIZE == 4
-    ProcessOversamplingVec4(output);
+#if VECTOR_SIZE == 4
+    Vec4d osc_out = ProcessOversamplingVec4();
+    osc_out.store_partial(2, &output[0]);
 #else
     ProcessOversampling(output, mProcessOS);
 #endif
@@ -251,7 +251,7 @@ public:
 
   }
 
-  inline void ProcessOversamplingVec4(std::array<T, OUTPUT_SIZE>& pOutput)
+  inline Vec4d __vectorcall ProcessOversamplingVec4()
   {
     double tableOffset{ mWtPositionAbs * (mWT->mNumTables - 1) };
     tableOffset -= std::max(floor(tableOffset - 0.0001), 0.);
@@ -267,8 +267,8 @@ public:
 
     // Read from wavetables (lower/larger table)
     Vec4d tb0s0lo = lookup<16384 * 12>(phaseInt, mLUTLo[0]);
-    Vec4d tb0s1lo = lookup<16384 * 12>(phaseInt1, mLUTLo[0]);
     Vec4d tb1s0lo = lookup<16384 * 12>(phaseInt, mLUTLo[1]);
+    Vec4d tb0s1lo = lookup<16384 * 12>(phaseInt1, mLUTLo[0]);
     Vec4d tb1s1lo = lookup<16384 * 12>(phaseInt1, mLUTLo[1]);
     // Interpolate samples
     Vec4d tb0lo = mul_add((tb0s1lo - tb0s0lo), phaseFrac, tb0s0lo);
@@ -303,14 +303,17 @@ public:
     IOscillator<T>::mPhase += phaseIncr * (double)VECTOR_SIZE;
     IOscillator<T>::mPhase -= floor(IOscillator<T>::mPhase);
 
+#if !RECURSION
     T oversampled[VECTOR_SIZE];
     mixed.store(oversampled);
-
-//    mLastOutput = pOutput[s] = mAAFilter.ProcessAndDownsample_Vector(mixed, mProcessOS);
     for (auto s = 0; s < VECTOR_SIZE / mProcessOS; ++s)
     {
-      mLastOutput = pOutput[s] = mAAFilter.ProcessAndDownsample(oversampled + (s * mProcessOS));
+      pOutput[s] = mAAFilter.ProcessAndDownsample(oversampled + (s * mProcessOS));
     }
+#else
+    // Using recursive function
+    return mAAFilter.ProcessAndDownsample_Recursive(mixed);
+#endif
 
   }
 
@@ -426,9 +429,9 @@ public:
 
 private:
 #if OVERSAMPLING == 2
-  inline static int mProcessOS{ 2 }; // Sample processing oversampling level (number of samples processed per sample output)
+  static constexpr int mProcessOS{ 2 }; // Sample processing oversampling level (number of samples processed per sample output)
 #else
-  inline static int mProcessOS{ 1 };
+  static constexpr int mProcessOS{ 1 };
 #endif
   ChebyshevBL<T> mAAFilter;
 
