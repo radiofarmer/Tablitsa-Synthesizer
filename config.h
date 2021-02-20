@@ -52,3 +52,4 @@
 #define ROBOTO_FN "Roboto-Regular.ttf"
 #define PERIODIC_TABLE_FN "periodic_table.svg"
 #define LOGO_FN "logo.png"
+#define DIAL_FN "test_dial.png"
