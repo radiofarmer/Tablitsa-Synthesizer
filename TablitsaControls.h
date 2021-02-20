@@ -40,12 +40,18 @@ const IText dropdownText{ DEFAULT_TEXT.WithFGColor(COLOR_WHITE) };
 class ModSliderControl : public IVSliderControl
 {
 public:
-  ModSliderControl(const IRECT& bounds, int paramIdx = kNoParameter, const char* label = "", const IVStyle& style = TABLITSA_STYLE, bool valueIsEditable = false, EDirection dir = EDirection::Vertical, double gearing = DEFAULT_GEARING, float handleSize = 8.f, float trackSize = 2.f, bool handleInsideTrack = true) :
+  ModSliderControl(const IRECT& bounds, int paramIdx = kNoParameter, const char* label = "", const IVStyle& style = TABLITSA_STYLE.WithShowValue(false), bool valueIsEditable = false, EDirection dir = EDirection::Vertical, double gearing = DEFAULT_GEARING, float handleSize = 8.f, float trackSize = 2.f, bool handleInsideTrack = true) :
     IVSliderControl(bounds, paramIdx, label, style, valueIsEditable, dir, gearing, handleSize, trackSize, handleInsideTrack)
   {
+    SetActionFunction([this](IControl* pControl) {
+      // Update control to whose parameter this slider is linked
+      IControl* pTarget = GetUI()->GetControl(mTarget);
+      if (pTarget)
+        pTarget->SetDirty();
+      });
   }
 
-  void Toggle()
+  void Toggle(int targetParam=kNoParameter)
   {
     if (GetParamIdx() == kNoParameter)
     {
@@ -55,6 +61,7 @@ public:
     }
     else
       SetDisabled(false);
+    mTarget = targetParam;
   }
 
   void OnMouseDown(float x, float y, const IMouseMod& mod) override
@@ -124,6 +131,7 @@ public:
   }
 
 private:
+  int mTarget{ -1 }; // The parameter currently linked to the modulation controls
 };
 
 class TablitsaIVKnobControl : public IVKnobControl
@@ -137,12 +145,13 @@ public:
 
   void DrawPointer(IGraphics& g, float angle, float cx, float cy, float radius)
   {
-    g.DrawRadialLine(GetColor(kFR), cx, cy, angle, mInnerPointerFrac * radius, mOuterPointerFrac * radius, &mBlend, mPointerThickness);
+    const IColor pointerColor = GetColor(kFR).WithOpacity(1.f);
+    g.DrawRadialLine(pointerColor, cx, cy, angle, mInnerPointerFrac * radius, mOuterPointerFrac * radius, &mBlend, mPointerThickness);
     float data1[2][2];
     float data2[2][2];
     iplug::igraphics::RadialPoints(angle, cx, cy, mInnerPointerFrac * radius, mOuterPointerFrac * radius, 2, data1);
-    iplug::igraphics::RadialPoints(angle - 25., cx, cy, mInnerPointerFrac * radius, mOuterPointerFrac * radius * 0.7f, 2, data2);
-    g.DrawLine(GetColor(kFR).WithOpacity(1.), data1[1][0], data1[1][1], data2[1][0], data2[1][1], &mBlend, mPointerThickness);
+    iplug::igraphics::RadialPoints(angle - 20., cx, cy, mInnerPointerFrac * radius, mOuterPointerFrac * radius * 0.65f, 2, data2);
+    g.DrawLine(pointerColor, data1[1][0], data1[1][1], data2[1][0], data2[1][1], &mBlend, mPointerThickness);
   }
 };
 
@@ -160,6 +169,13 @@ public:
     : TablitsaIVKnobControl(bounds, paramIdx, label, style, valueIsEditable), mDefaultColor{ GetColor(kFG) }, mGearing(gearing), mModParamIdx(modStartIdx)
   {
     GetMouseDblAsSingleClick();
+
+    SetActionFunction([this](IControl* pControl) {
+        if (mActive && GetActiveIdx() == GetParamIdx())
+          SetColor(kFG, GetColor(kPR));
+        else
+          SetColor(kFG, mDefaultColor);
+      });
   }
 
   /* Get modulator values from a different parameter. (For mutually-exclusive parameters) */
@@ -177,14 +193,10 @@ public:
       /* By default, center-clicking causes the control to be captured such that it still responds to the mouse wheel when
       the mouse is not actually over it. ReleaseMouseCapture() empties the captured-control queue. */
       GetUI()->ReleaseMouseCapture();
+      GetUI()->SetAllControlsDirty();
     }
     else
       IVKnobControl::OnMouseDown(x, y, mod);
-
-    if (mActive && GetActiveIdx() == GetParamIdx())
-      SetColor(kFG, GetColor(kPR));
-    else
-      SetColor(kFG, mDefaultColor);
   }
   void OnMouseOut() override
   {
@@ -205,7 +217,7 @@ public:
       for (int i{ kCtrlTagEnv1Depth }; i <= kCtrlTagRndDepth; ++i)
       {
         GetUI()->GetControlWithTag(i)->SetParamIdx(kNoParameter);
-        dynamic_cast<ModSliderControl*>(GetUI()->GetControlWithTag(i))->Toggle();
+        dynamic_cast<ModSliderControl*>(GetUI()->GetControlWithTag(i))->Toggle(-1);
       }
       SetActiveIdx(false);
       mActive = false;
@@ -216,7 +228,7 @@ public:
       for (int i{ 0 }; i < (kCtrlTagRndDepth - kCtrlTagEnv1Depth); ++i)
       {
         GetUI()->GetControlWithTag(kCtrlTagEnv1Depth + i)->SetParamIdx(mModParamIdx + i);
-        dynamic_cast<ModSliderControl*>(GetUI()->GetControlWithTag(kCtrlTagEnv1Depth + i))->Toggle();
+        dynamic_cast<ModSliderControl*>(GetUI()->GetControlWithTag(kCtrlTagEnv1Depth + i))->Toggle(GetUI()->GetControlIdx(this));
       }
       SetActiveIdx(true);
       mActive = true;

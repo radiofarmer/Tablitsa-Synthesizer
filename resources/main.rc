@@ -152,7 +152,8 @@ BEGIN
     "ROBOTO_FN TTF ROBOTO_FN\r\n"
     "PERIODIC_TABLE_FN SVG PERIODIC_TABLE_FN\r\n"
     "LOGO_FN PNG LOGO_FN\r\n"
-    "DIAL_FN PNG DIAL_FN\0"
+    "DIAL_FN PNG DIAL_FN\r\n"
+    "BG_FN PNG BG_FN\0"
 END
 
 #endif    // APSTUDIO_INVOKED
@@ -236,6 +237,7 @@ ROBOTO_FN TTF ROBOTO_FN
 PERIODIC_TABLE_FN SVG PERIODIC_TABLE_FN
 LOGO_FN PNG LOGO_FN
 DIAL_FN PNG DIAL_FN
+BG_FN PNG BG_FN
 /////////////////////////////////////////////////////////////////////////////
 #endif    // not APSTUDIO_INVOKED
 
