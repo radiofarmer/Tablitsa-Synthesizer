@@ -90,7 +90,8 @@ public:
         pTarget->SetDirty();
       });
   }
-  void Toggle(int targetParam=kNoParameter)
+
+  void Toggle(int targetParam=-1)
   {
     if (GetParamIdx() == kNoParameter)
     {
@@ -199,19 +200,20 @@ public:
     mBaseTrack(style.colorSpec.GetColor(EVColor::kFR))
   {
     GetMouseDblAsSingleClick();
-
-    SetActionFunction([this](IControl* pControl) {
-        if (mActive && GetActiveIdx() == GetParamIdx())
-          SetColor(kFG, GetColor(kPR));
-        else
-          SetColor(kFG, mDefaultColor);
-      });
   }
 
   /* Get modulator values from a different parameter. (For mutually-exclusive parameters) */
   void GetModulationFrom(int paramIdx)
   {
     mModParamIdx = paramIdx + 1;
+  }
+
+  void ColorSwap()
+  {
+    if (mActive && GetActiveIdx() == GetUI()->GetControlIdx(this))
+      SetColor(kFG, GetColor(kPR));
+    else
+      SetColor(kFG, mDefaultColor);
   }
 
   void OnMouseDown(float x, float y, const IMouseMod& mod) override
@@ -242,7 +244,7 @@ public:
   void LoadModParams()
   {
     // TODO make a list of Control Tags that can be looped through
-    if (mActive && GetActiveIdx() == GetParamIdx())
+    if (mActive && GetActiveIdx() == GetUI()->GetControlIdx(this))
     {
       for (int i{ kCtrlTagEnv1Depth }; i <= kCtrlTagRndDepth; ++i)
       {
@@ -283,7 +285,7 @@ public:
 
     IRECT knobHandleBounds = mWidgetBounds.GetCentredInside((widgetRadius - mTrackToHandleDistance) * 2.f);
     const float angle = mAngle1 + (static_cast<float>(GetValue()) * (mAngle2 - mAngle1));
-    DrawPressableShape(g, EVShape::Ellipse, knobHandleBounds, mActive && (GetActiveIdx() == GetParamIdx()), mMouseIsOver, IsDisabled());
+    DrawPressableShape(g, EVShape::Ellipse, knobHandleBounds, mActive && (GetActiveIdx() == GetUI()->GetControlIdx(this)), mMouseIsOver, IsDisabled());
     DrawIndicatorTrack(g, angle, cx, cy, widgetRadius);
     DrawPointer(g, angle, cx, cy, knobHandleBounds.W() / 2.f);
   }
@@ -401,7 +403,7 @@ public:
 
   inline void SetActiveIdx(bool isActive)
   {
-    return dynamic_cast<Tablitsa*>(GetDelegate())->SetActiveModIdx(isActive ? GetParamIdx() : -1);
+    return dynamic_cast<Tablitsa*>(GetDelegate())->SetActiveModIdx(isActive ? GetUI()->GetControlIdx(this) : -1);
   }
 
 protected:
