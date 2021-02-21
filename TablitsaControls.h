@@ -3,20 +3,209 @@
 #include "PeriodicTable.h"
 #include "Modulation.h"
 
-/* A clone of the normal knob control, but with the ability to receive modulation parameters. */
-class IVModKnobControl : public IVKnobControl
+const IText TABLITSA_TEXT = IText().WithFGColor(COLOR_WHITE);
+const IVStyle TABLITSA_STYLE = IVStyle(DEFAULT_SHOW_LABEL,
+  DEFAULT_SHOW_VALUE,
+  /* Background       Foreground      Pressed                   Frame            Highlight        Shadow           Extra 1          Extra 2          Extra 3        */
+  { DEFAULT_BGCOLOR, COLOR_DARK_GRAY, IColor(255, 225, 0, 190), DEFAULT_FRCOLOR, DEFAULT_HLCOLOR, DEFAULT_SHCOLOR, DEFAULT_X1COLOR, DEFAULT_X2COLOR, DEFAULT_X3COLOR },
+  DEFAULT_LABEL_TEXT.WithFGColor(COLOR_WHITE),
+  DEFAULT_VALUE_TEXT.WithFGColor(COLOR_WHITE),
+  DEFAULT_HIDE_CURSOR,
+  DEFAULT_DRAW_FRAME,
+  false, // Draw shadows
+  DEFAULT_EMBOSS,
+  DEFAULT_ROUNDNESS,
+  DEFAULT_FRAME_THICKNESS,
+  DEFAULT_SHADOW_OFFSET,
+  DEFAULT_WIDGET_FRAC,
+  DEFAULT_WIDGET_ANGLE);
+
+
+const IVColorSpec knobColorSpec = IVColorSpec{
+  COLOR_TRANSPARENT,
+  COLOR_BLACK,
+  COLOR_WHITE.WithOpacity(0.75),
+  COLOR_WHITE.WithOpacity(0.5),
+  DEFAULT_HLCOLOR,
+  DEFAULT_SHCOLOR,
+  DEFAULT_X1COLOR,
+  DEFAULT_X2COLOR,
+  DEFAULT_X3COLOR
+};
+
+const IVStyle modKnobStyle{ TABLITSA_STYLE.WithColors(knobColorSpec).WithLabelText(TABLITSA_STYLE.labelText.WithSize(17.f)) };
+
+const IVStyle toggleStyle{ TABLITSA_STYLE.WithDrawFrame(true).WithColor(EVColor::kFG, COLOR_TRANSPARENT).WithShowLabel(false) };
+
+const IText dropdownText{ DEFAULT_TEXT.WithFGColor(COLOR_WHITE) };
+
+class TablitsaSliderControl : public IVSliderControl
+{
+public:
+  TablitsaSliderControl(const IRECT& bounds, int paramIdx = kNoParameter, const char* label = "", const IVStyle& style = TABLITSA_STYLE.WithShowValue(true), bool valueIsEditable = false, EDirection dir = EDirection::Vertical, double gearing = DEFAULT_GEARING, float handleSize = 8.f, float trackSize = 2.f, bool handleInsideTrack = true) :
+    IVSliderControl(bounds, paramIdx, label, style, valueIsEditable, dir, gearing, handleSize, trackSize, handleInsideTrack)
+  {
+    mShape = EVShape::Rectangle;
+  }
+
+  void OnAttached() override
+  {
+    SetColor(EVColor::kX1, COLOR_WHITE);
+  }
+
+  void DrawTrack(IGraphics& g, const IRECT& filledArea) override
+  {
+    const float extra = mHandleInsideTrack ? mHandleSize : 0.f;
+    const IRECT adjustedTrackBounds = mDirection == EDirection::Vertical ? mTrackBounds.GetVPadded(extra) : mTrackBounds.GetHPadded(extra);
+    // Padd the filled area less, to account for the asymmetric rectangular handle
+    const IRECT adjustedFillBounds = mDirection == EDirection::Vertical ? filledArea.GetVPadded(extra / 2.f) : filledArea.GetHPadded(extra / 2.f);
+    const float cr = GetRoundedCornerRadius(mTrackBounds);
+
+    g.FillRoundRect(GetColor(kSH), adjustedTrackBounds, cr, &mBlend);
+    g.FillRoundRect(GetColor(kX1), adjustedFillBounds, cr, &mBlend);
+
+    if (mStyle.drawFrame)
+      g.DrawRoundRect(GetColor(kFR), adjustedTrackBounds, cr, &mBlend, mStyle.frameThickness);
+  }
+
+  void DrawHandle(IGraphics& g, const IRECT& bounds) override
+  {
+    const IRECT boundsAdj = mDirection == EDirection::Vertical ? bounds.GetMidVPadded(bounds.H() / 4.f) : bounds.GetMidHPadded(bounds.W() / 4.f);
+    DrawPressableShape(g, mShape, boundsAdj, mMouseDown, mMouseIsOver, IsDisabled());
+  }
+};
+
+class ModSliderControl : public TablitsaSliderControl
+{
+public:
+  ModSliderControl(const IRECT& bounds, int paramIdx = kNoParameter, const char* label = "", const IVStyle& style = TABLITSA_STYLE.WithShowValue(true), bool valueIsEditable = false, EDirection dir = EDirection::Vertical, double gearing = DEFAULT_GEARING, float handleSize = 8.f, float trackSize = 2.f, bool handleInsideTrack = true) :
+    TablitsaSliderControl(bounds, paramIdx, label, style, valueIsEditable, dir, gearing, handleSize, trackSize, handleInsideTrack)
+  {
+    mShape = EVShape::Rectangle;
+    Toggle();
+    SetActionFunction([this](IControl* pControl) {
+      // Update control to whose parameter this slider is linked
+      IControl* pTarget = GetUI()->GetControl(mTarget);
+      if (pTarget)
+        pTarget->SetDirty();
+      });
+  }
+  void Toggle(int targetParam=kNoParameter)
+  {
+    if (GetParamIdx() == kNoParameter)
+    {
+      SetValueStr("N/A");
+      SetDisabled(true);
+    }
+    else
+      SetDisabled(false);
+    mTarget = targetParam;
+  }
+
+  // Overridden drawing function to draw the filled area starting in the middle of the track
+  void DrawWidget(IGraphics& g) override
+  {
+    float value = (float)GetValue(); // NB: Value is normalized to between 0. and 1.
+    const IRECT handleBounds = (GetParamIdx() == kNoParameter) ? mTrackBounds.FracRect(mDirection, 0.f) : mTrackBounds.FracRect(mDirection, value);
+    const IRECT filledTrack = mDirection == EDirection::Vertical ? (GetParamIdx() == kNoParameter) ?
+        handleBounds : ((value >= 0.5f) ?
+        mTrackBounds.GetGridCell(0, 0, 2, 1).FracRect(mDirection, 2.f * (value - 0.5f)) :
+        mTrackBounds.GetGridCell(1, 0, 2, 1).FracRect(mDirection, 2.f * (0.5 - value), true)) : // <- Vertical
+      (GetParamIdx() == kNoParameter) ?
+        handleBounds : ((value >= 0.5f) ?
+        mTrackBounds.GetGridCell(0, 1, 1, 2).FracRect(mDirection, 2.f * (value - 0.5f)) :
+        mTrackBounds.GetGridCell(0, 0, 1, 2).FracRect(mDirection, 2.f * (0.5 - value), true)); // <- Horizontal
+
+    if (mTrackSize > 0.f)
+      DrawTrack(g, filledTrack);
+
+    float cx, cy;
+
+    const float offset = (mStyle.drawShadows && mShape != EVShape::Ellipse /* TODO? */) ? mStyle.shadowOffset * 0.5f : 0.f;
+
+    if (mDirection == EDirection::Vertical)
+    {
+      cx = handleBounds.MW() + offset;
+      cy = handleBounds.T;
+    }
+    else
+    {
+      cx = handleBounds.R;
+      cy = handleBounds.MH() + offset;
+    }
+
+    if (mHandleSize > 0.f)
+    {
+      DrawHandle(g, { cx - mHandleSize, cy - mHandleSize, cx + mHandleSize, cy + mHandleSize });
+    }
+  }
+
+  void DrawTrack(IGraphics& g, const IRECT& filledArea) override
+  {
+    const float extra = mHandleInsideTrack ? mHandleSize : 0.f;
+    const IRECT adjustedTrackBounds = mDirection == EDirection::Vertical ? mTrackBounds.GetVPadded(extra) : mTrackBounds.GetHPadded(extra);
+    // Padd the filled area less, to account for the asymmetric rectangular handle
+    const IRECT adjustedFillBounds = mDirection == EDirection::Vertical ? filledArea.GetVPadded(extra / 2.f) : filledArea.GetHPadded(extra / 2.f);
+    const float cr = GetRoundedCornerRadius(mTrackBounds);
+
+    g.FillRoundRect(GetColor(kSH), adjustedTrackBounds, cr, &mBlend);
+    g.FillRoundRect(GetColor(kX1), adjustedFillBounds, cr, &mBlend);
+
+    if (mStyle.drawFrame)
+      g.DrawRoundRect(GetColor(kFR), adjustedTrackBounds, cr, &mBlend, mStyle.frameThickness);
+  }
+
+private:
+  int mTarget{ -1 }; // The parameter currently linked to the modulation controls
+};
+
+class TablitsaIVKnobControl : public IVKnobControl
 {
 public:
   /* Create a knob control with a modulatable value */
-  IVModKnobControl(const IRECT& bounds, int paramIdx, const char* label = "", const IVStyle& style = DEFAULT_STYLE, bool valueIsEditable = false, double gearing = DEFAULT_GEARING)
-    : IVModKnobControl(bounds, paramIdx, paramIdx + 1, label, style, valueIsEditable, gearing)
+  TablitsaIVKnobControl(const IRECT& bounds, int paramIdx, const char* label = "", const IVStyle& style = modKnobStyle, bool valueIsEditable = false, double gearing = DEFAULT_GEARING)
+    : IVKnobControl(bounds, paramIdx, label, style, valueIsEditable, false, -135.f, 135.f, -135.f, EDirection::Vertical, gearing, 2.f)
   {
   }
 
-  IVModKnobControl(const IRECT& bounds, int paramIdx, int modStartIdx, const char* label = "", const IVStyle& style = DEFAULT_STYLE, bool valueIsEditable = false, double gearing = DEFAULT_GEARING)
-    : IVKnobControl(bounds, paramIdx, label, style, valueIsEditable), mDefaultColor{ GetColor(kFG) }, mGearing(gearing), mModParamIdx(modStartIdx)
+  // Spin-Up Electron Pointer
+  void DrawPointer(IGraphics& g, float angle, float cx, float cy, float radius)
+  {
+    const IColor pointerColor = GetColor(kFR).WithOpacity(1.f);
+    g.DrawRadialLine(pointerColor, cx, cy, angle, mInnerPointerFrac * radius, mOuterPointerFrac * radius, &mBlend, mPointerThickness);
+    float data1[2][2];
+    float data2[2][2];
+    iplug::igraphics::RadialPoints(angle, cx, cy, mInnerPointerFrac * radius, mOuterPointerFrac * radius, 2, data1);
+    iplug::igraphics::RadialPoints(angle - 20., cx, cy, mInnerPointerFrac * radius, mOuterPointerFrac * radius * 0.65f, 2, data2);
+    g.DrawLine(pointerColor, data1[1][0], data1[1][1], data2[1][0], data2[1][1], &mBlend, mPointerThickness);
+  }
+};
+
+/* A clone of the normal knob control, but with the ability to receive modulation parameters. */
+class TablitsaIVModKnobControl : public TablitsaIVKnobControl
+{
+public:
+  /* Create a knob control with a modulatable value */
+
+  TablitsaIVModKnobControl(const IRECT& bounds, int paramIdx, const char* label = "", const IVStyle& style = modKnobStyle, bool valueIsEditable = false, double gearing = DEFAULT_GEARING)
+    : TablitsaIVModKnobControl(bounds, paramIdx, paramIdx + 1, label, style, valueIsEditable, gearing)
+  {
+  }
+
+  TablitsaIVModKnobControl(const IRECT& bounds, int paramIdx, int modStartIdx, const char* label = "", const IVStyle& style = TABLITSA_STYLE, bool valueIsEditable = false, double gearing = DEFAULT_GEARING)
+    : TablitsaIVKnobControl(bounds, paramIdx, label, style, valueIsEditable, gearing),
+    mDefaultColor{ GetColor(kFG) },
+    mModParamIdx(modStartIdx),
+    mBaseTrack(style.colorSpec.GetColor(EVColor::kFR))
   {
     GetMouseDblAsSingleClick();
+
+    SetActionFunction([this](IControl* pControl) {
+        if (mActive && GetActiveIdx() == GetParamIdx())
+          SetColor(kFG, GetColor(kPR));
+        else
+          SetColor(kFG, mDefaultColor);
+      });
   }
 
   /* Get modulator values from a different parameter. (For mutually-exclusive parameters) */
@@ -27,7 +216,6 @@ public:
 
   void OnMouseDown(float x, float y, const IMouseMod& mod) override
   {
-    
     if (!mod.L)
     {
       LoadModParams();
@@ -35,6 +223,7 @@ public:
       /* By default, center-clicking causes the control to be captured such that it still responds to the mouse wheel when
       the mouse is not actually over it. ReleaseMouseCapture() empties the captured-control queue. */
       GetUI()->ReleaseMouseCapture();
+      GetUI()->SetAllControlsDirty();
     }
     else
       IVKnobControl::OnMouseDown(x, y, mod);
@@ -55,48 +244,28 @@ public:
     // TODO make a list of Control Tags that can be looped through
     if (mActive && GetActiveIdx() == GetParamIdx())
     {
-      GetUI()->GetControlWithTag(kCtrlTagEnv1Depth)->SetParamIdx(kNoParameter);
-      GetUI()->GetControlWithTag(kCtrlTagEnv2Depth)->SetParamIdx(kNoParameter);
-      GetUI()->GetControlWithTag(kCtrlTagAmpEnvDepth)->SetParamIdx(kNoParameter);
-      GetUI()->GetControlWithTag(kCtrlTagLFO1Depth)->SetParamIdx(kNoParameter);
-      GetUI()->GetControlWithTag(kCtrlTagLFO2Depth)->SetParamIdx(kNoParameter);
-      GetUI()->GetControlWithTag(kCtrlTagSequencerDepth)->SetParamIdx(kNoParameter);
-      GetUI()->GetControlWithTag(kCtrlTagVelDepth)->SetParamIdx(kNoParameter);
-      GetUI()->GetControlWithTag(kCtrlTagKTkDepth)->SetParamIdx(kNoParameter);
-      GetUI()->GetControlWithTag(kCtrlTagRndDepth)->SetParamIdx(kNoParameter);
+      for (int i{ kCtrlTagEnv1Depth }; i <= kCtrlTagRndDepth; ++i)
+      {
+        GetUI()->GetControlWithTag(i)->SetParamIdx(kNoParameter);
+        dynamic_cast<ModSliderControl*>(GetUI()->GetControlWithTag(i))->Toggle(-1);
+      }
       SetActiveIdx(false);
       mActive = false;
     }
     else
     {
       // Set all modulator sliders to the values of the currently-selected modulated parameter
-      GetUI()->GetControlWithTag(kCtrlTagEnv1Depth)->SetParamIdx(mModParamIdx);
-      GetUI()->GetControlWithTag(kCtrlTagEnv2Depth)->SetParamIdx(mModParamIdx + 1);
-      GetUI()->GetControlWithTag(kCtrlTagAmpEnvDepth)->SetParamIdx(mModParamIdx + 2);
-      GetUI()->GetControlWithTag(kCtrlTagLFO1Depth)->SetParamIdx(mModParamIdx + 3);
-      GetUI()->GetControlWithTag(kCtrlTagLFO2Depth)->SetParamIdx(mModParamIdx + 4);
-      GetUI()->GetControlWithTag(kCtrlTagSequencerDepth)->SetParamIdx(mModParamIdx + 5);
-      GetUI()->GetControlWithTag(kCtrlTagVelDepth)->SetParamIdx(mModParamIdx + 6);
-      GetUI()->GetControlWithTag(kCtrlTagKTkDepth)->SetParamIdx(mModParamIdx + 7);
-      GetUI()->GetControlWithTag(kCtrlTagRndDepth)->SetParamIdx(mModParamIdx + 8);
+      for (int i{ 0 }; i <= (kCtrlTagRndDepth - kCtrlTagEnv1Depth); ++i)
+      {
+        GetUI()->GetControlWithTag(kCtrlTagEnv1Depth + i)->SetParamIdx(mModParamIdx + i);
+        dynamic_cast<ModSliderControl*>(GetUI()->GetControlWithTag(kCtrlTagEnv1Depth + i))->Toggle(GetUI()->GetControlIdx(this));
+      }
       SetActiveIdx(true);
       mActive = true;
     }
     // Send values and change this control's active state
     GetDelegate()->SendCurrentParamValuesFromDelegate();
     //mActive = !mActive;
-  }
-
-  void Draw(IGraphics& g) override
-  {
-    if (mActive && GetActiveIdx() == GetParamIdx())
-      SetColor(kFG, GetColor(kPR));
-    else
-      SetColor(kFG, mDefaultColor);
-    DrawBackground(g, mRECT);
-    DrawLabel(g);
-    DrawWidget(g);
-    DrawValue(g, mValueMouseOver);
   }
 
   void DrawWidget(IGraphics& g) override
@@ -117,6 +286,14 @@ public:
     DrawPressableShape(g, EVShape::Ellipse, knobHandleBounds, mActive && (GetActiveIdx() == GetParamIdx()), mMouseIsOver, IsDisabled());
     DrawIndicatorTrack(g, angle, cx, cy, widgetRadius);
     DrawPointer(g, angle, cx, cy, knobHandleBounds.W() / 2.f);
+  }
+
+  void Draw(IGraphics& g) override
+  {
+    DrawBackground(g, mRECT);
+    DrawLabel(g);
+    DrawWidget(g);
+    DrawValue(g, mValueMouseOver);
   }
 
   void DrawIndicatorTrack(IGraphics& g, float angle, float cx, float cy, float radius) override
@@ -228,6 +405,7 @@ public:
   }
 
 protected:
+  std::vector<ISVG*> mSVG;
   const IColor mDefaultColor;
   const IColor mModArcColor[9][2]{
     {{200, 200, 100, 100}, {}},
@@ -241,101 +419,11 @@ protected:
     {{150, 0, 255, 255}, {}}
   };
   const IColor mWhite{ 200, 255, 255, 255 };
-  const IColor mBaseTrack{ 100, 0, 0, 0 };
+  const IColor mBaseTrack;
   bool mActive{ false };
-  double mGearing;
   int mModParamIdx;
 };
 
-class ModSliderControl : public IVSliderControl
-{
-public:
-  ModSliderControl(const IRECT& bounds, int paramIdx = kNoParameter, const char* label = "", const IVStyle& style = DEFAULT_STYLE, bool valueIsEditable = false, EDirection dir = EDirection::Vertical, double gearing = DEFAULT_GEARING, float handleSize = 8.f, float trackSize = 2.f, bool handleInsideTrack = true) :
-    IVSliderControl(bounds, paramIdx, label, style, valueIsEditable, dir, gearing, handleSize, trackSize, handleInsideTrack)
-  {
-  }
-
-  void Draw(IGraphics& g) override
-  {
-    if (GetParamIdx() == kNoParameter)
-    {
-      SetValueStr("N/A");
-      SetShowValue(true);
-      SetDisabled(true);
-    }
-    else
-      SetDisabled(false);
-    IVSliderControl::Draw(g);
-  }
-
-  void OnMouseDown(float x, float y, const IMouseMod& mod) override
-  {
-    if (!mod.L)
-    {
-      SetValue(0.5);
-      ISliderControlBase::mMouseDown = true;
-      SetDirty(true);
-      IControl::OnMouseDown(x, y, mod);
-    }
-    else
-      IVSliderControl::OnMouseDown(x, y, mod);
-  }
-
-  // Overridden drawing function to draw the filled area starting in the middle of the track
-  void DrawWidget(IGraphics& g) override
-  {
-    float value = (float)GetValue(); // NB: Value is normalized to between 0. and 1.
-    const IRECT handleBounds = (GetParamIdx() == kNoParameter) ? mTrackBounds.FracRect(mDirection, 0.f) : mTrackBounds.FracRect(mDirection, value);
-    const IRECT filledTrack = mDirection==EDirection::Vertical ? (GetParamIdx() == kNoParameter) ?
-      handleBounds : (value >= 0.5f) ?
-      mTrackBounds.GetGridCell(0, 0, 2, 1).FracRect(mDirection, 2.f * (value - 0.5f)) :
-      mTrackBounds.GetGridCell(1, 0, 2, 1).FracRect(mDirection, 2.f * (0.5 - value), true) : // <- Vertical
-      (GetParamIdx() == kNoParameter) ?
-      handleBounds : (value >= 0.5f) ?
-      mTrackBounds.GetGridCell(0, 1, 1, 2).FracRect(mDirection, 2.f * (value - 0.5f)) :
-      mTrackBounds.GetGridCell(0, 0, 1, 2).FracRect(mDirection, 2.f * (0.5 - value), true); // <- Horizontal
-    
-    if (mTrackSize > 0.f)
-      DrawTrack(g, filledTrack);
-
-    float cx, cy;
-
-    const float offset = (mStyle.drawShadows && mShape != EVShape::Ellipse /* TODO? */) ? mStyle.shadowOffset * 0.5f : 0.f;
-
-    if (mDirection == EDirection::Vertical)
-    {
-      cx = handleBounds.MW() + offset;
-      cy = handleBounds.T;
-    }
-    else
-    {
-      cx = handleBounds.R;
-      cy = handleBounds.MH() + offset;
-    }
-
-    if (mHandleSize > 0.f)
-    {
-      DrawHandle(g, { cx - mHandleSize, cy - mHandleSize, cx + mHandleSize, cy + mHandleSize });
-    }
-  }
-
-  void DrawTrack(IGraphics& g, const IRECT& filledArea) override
-  {
-    const float extra = mHandleInsideTrack ? mHandleSize : 0.f;
-    const IRECT adjustedTrackBounds = mDirection == EDirection::Vertical ? mTrackBounds.GetVPadded(extra) : mTrackBounds.GetHPadded(extra);
-    //const IRECT adjustedFillBounds = filledArea;
-    const IRECT adjustedFillBounds = mDirection == EDirection::Vertical ? filledArea.GetVPadded(extra) : filledArea.GetHPadded(extra);
-    const float cr = GetRoundedCornerRadius(mTrackBounds);
-
-    g.FillRoundRect(GetColor(kSH), adjustedTrackBounds, cr, &mBlend);
-    g.FillRoundRect(GetColor(kX1), adjustedFillBounds, cr, &mBlend);
-
-    if (mStyle.drawFrame)
-      g.DrawRoundRect(GetColor(kFR), adjustedTrackBounds, cr, &mBlend, mStyle.frameThickness);
-  }
-
-private:
-};
 
 class PeriodicTable : public IControl
 {
@@ -568,7 +656,7 @@ public:
 //      GetDelegate()->OnParamChange(GetParamIdx(mIsDragging));
     };
     mIsDragging = -1;
-    SetDirty(true);
+    SetDirty(false);
   }
   
   void SetTableLoading(const bool isLoading, const int tableIdx)
@@ -576,7 +664,7 @@ public:
     mTableLoading[tableIdx] = isLoading;
   }
 
-private:
+protected:
   ISVG mSVG;
   int* mCurrentElementCoords{ nullptr };
   int mCurrentElement{ -1 };
@@ -594,14 +682,101 @@ private:
   bool mTableLoading[2]{ false, false };
 };
 
+/* Custom Toggle Button */
+
+class TablitsaVToggleButton : public IVToggleControl
+{
+public:
+  TablitsaVToggleButton(const IRECT& bounds, int paramIdx, const char* text = "", const IVStyle& style = TABLITSA_STYLE.WithDrawShadows(false)) :
+    TablitsaVToggleButton(bounds, paramIdx, "", style, text, text) {}
+
+  TablitsaVToggleButton(const IRECT& bounds, int paramIdx = kNoParameter, const char* label = "", const IVStyle& style = TABLITSA_STYLE.WithDrawShadows(false), const char* offText = "OFF", const char* onText = "ON") :
+    IVToggleControl(bounds, paramIdx, label, style, offText, onText)
+  {
+
+  }
+
+protected:
+  IBitmap mBitmap;
+};
+
+#define GROUP_BOX_ROUNDING 0.1f
+
+const IVStyle TABLITSA_GROUPBOX_STYLE = TABLITSA_STYLE.WithRoundness(GROUP_BOX_ROUNDING).WithColor(EVColor::kFR, COLOR_WHITE).WithLabelText(DEFAULT_LABEL_TEXT.WithFGColor(IColor(255, 220, 200, 0))).WithDrawShadows(false);
+
+class TablitsaVGroupControl : public IVGroupControl
+{
+public:
+  TablitsaVGroupControl(const char* label="", const char* groupName="", float padL=0.f, float padT=0.f, float padR=0.f, float padB=0.f, const IVStyle& style = TABLITSA_GROUPBOX_STYLE) :
+    IVGroupControl(label, groupName, padL, padT, padR, padB, style)
+  {
+    mLabelOffset = 0.f;
+  }
+
+  TablitsaVGroupControl(const IRECT& bounds, const char* label="", float labelOffset=0.f, const IVStyle& style=TABLITSA_GROUPBOX_STYLE) :
+    IVGroupControl(bounds, label, labelOffset, style) {}
+};
+
+class TablitsaVTabBox : public TablitsaVGroupControl
+{
+public:
+  TablitsaVTabBox(const IRECT& bounds, const char* label = "", const IVStyle& style = TABLITSA_GROUPBOX_STYLE) :
+    TablitsaVGroupControl(bounds, label, 0.f, style)
+  {
+  }
+
+  void OnResize() override
+  {
+    TablitsaVGroupControl::OnResize();
+    IRECT textBounds;
+    GetUI()->MeasureText(mText, mLabelStr.Get(), textBounds);
+    mWidgetBounds.ReduceFromTop(textBounds.H() / 2.f);
+  }
+
+  void DrawWidget(IGraphics& g) override
+  {
+    const float cr = GetRoundedCornerRadius(mWidgetBounds);
+    const float ft = mStyle.frameThickness;
+    const float hft = ft / 2.f;
+
+    int nPaths = /*mStyle.drawShadows ? 2 :*/ 1;
+
+    auto b = mWidgetBounds.GetPadded(/*mStyle.drawShadows ? -mStyle.shadowOffset :*/ 0.f);
+
+    auto labelT = mLabelBounds.Empty() ? mRECT.MH() : mLabelBounds.T;
+    auto labelB = mLabelBounds.Empty() ? mRECT.MH() : mLabelBounds.B;
+    auto labelR = mLabelBounds.Empty() ? mRECT.MW() : mLabelBounds.R;
+    auto labelL = mLabelBounds.Empty() ? mRECT.MW() : mLabelBounds.L;
+
+    for (int i = 0; i < nPaths; i++)
+    {
+      const float offset = i == 0 ? 0.f : mStyle.shadowOffset;
+      g.PathClear();
+      // Path around label
+      g.PathMoveTo(labelL, b.T + hft - offset);
+      g.PathArc(labelL + cr, labelT + cr + hft - offset, cr, 270.f, 0.f);
+      g.PathArc(labelR - cr, labelT + cr + hft - offset, cr, 0.f, 90.f);
+      g.PathLineTo(labelR, b.T + hft - offset);
+      // Path around control
+      g.PathArc(b.R - cr - hft - offset, b.T + cr + hft - offset, cr, 0.f, 90.f);
+      g.PathArc(b.R - cr - hft - offset, b.B - cr - hft - offset, cr, 90.f, 180.f);
+      g.PathArc(b.L + cr + hft - offset, b.B - cr - hft - offset, cr, 180.f, 270.f);
+      g.PathArc(b.L + cr + hft - offset, b.T + cr + hft - offset, cr, 270.f, 360.f);
+      g.PathLineTo(labelL, b.T + hft - offset);
+      g.PathStroke(mStyle.drawShadows ? GetColor(i == 0 ? kSH : kFR) : GetColor(kFR), ft);
+    }
+  }
+};
+
 template <int MAXNC = 1>
 class SequencerControl final : public IVMultiSliderControl<MAXNC>
 {
 public:
-  SequencerControl(const IRECT& bounds, const char* label, const IVStyle& style = DEFAULT_STYLE, int nSteps = 0, EDirection dir = EDirection::Vertical) :
+  SequencerControl(const IRECT& bounds, const char* label, const IVStyle& style = TABLITSA_STYLE.WithDrawFrame(false), int nSteps = 0, EDirection dir = EDirection::Vertical) :
     IVMultiSliderControl<MAXNC>(bounds, label, style, nSteps, dir)
   {
-    SetColor(kX1, GetColor(kPR));
+    SetColor(kX1, GetColor(kPR)); // Set active step color to the pressed step color
+    SetColor(kHL, GetColor(kPR).WithOpacity(0.2)); // Background highlight
   }
 
   void DrawWidget(IGraphics& g) override
@@ -648,4 +823,47 @@ public:
 private:
   const IColor mStepMarkerColor{ 50, 0, 0, 0 };
   const IColor mLabelColor = mStepMarkerColor.WithOpacity(0.75);
+};
+
+template<int MaxTabs = 4>
+class TablitsaEffectBankControl : public IControl
+{
+public:
+  TablitsaEffectBankControl(const IRECT& bounds, int paramIdx, std::initializer_list<char *> labels) : 
+    IControl(bounds, paramIdx)
+  {
+    for (auto l : labels)
+    {
+      int nLabels = mLabels.GetSize();
+      if (nLabels >= MaxTabs)
+        break;
+
+      mLabels.Resize(nLabels + 1);
+      WDL_String* pStr = mLabels.Get() + nLabels;
+      pStr->Set(l, MaxLabelLength);
+    }
+  }
+
+  void TabChanged()
+  {
+
+  }
+
+  void OnAttached() override
+  {
+    const int nLabels = mLabels.GetSize();
+    const float tabWidth = mTabBitmap.W();
+    for (int i{ 0 }; i < nLabels; ++i)
+    {
+      const IRECT tabBounds{mRECT.L + i * tabWidth, mRECT.T, mRECT.L + (i + 1) * tabWidth, mRECT.T + mTabBitmap.H()};
+      mTabs[i] = new TablitsaVTabBox(mRECT, mLabels.Get()[i].Get())
+    }
+  }
+
+private:
+  WDL_TypedBuf<WDL_String> mLabels;
+  static const int MaxLabelLength{ 10 };
+
+  IBitmap mTabBitmap;
+  TablitsaVTabBox* mTabs[MaxTabs];
 };

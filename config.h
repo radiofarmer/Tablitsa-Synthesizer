@@ -50,5 +50,7 @@
 #define APP_SIGNAL_VECTOR_SIZE 64
 // NB: Remember to edit main.rc compile-time directives
 #define ROBOTO_FN "Roboto-Regular.ttf"
+#define BG_FN "tablitsa_background.png"
 #define PERIODIC_TABLE_FN "periodic_table.svg"
 #define LOGO_FN "logo.png"
+#define DIAL_FN "test_dial.png"

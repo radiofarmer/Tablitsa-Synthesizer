@@ -121,8 +121,8 @@ public:
     std::unique_lock<std::mutex> lock(mWtMutex);
     mCV.wait(lock, [this] { return mWtReady; });
 
-    mWtPositionNorm = 1. - std::modf((1. - mWtPositionAbs) * (mWT->mNumTables - 1), &mWtOffset);
-    int tableOffset = static_cast<int>(mWtOffset);
+    mWtPositionNorm = 1 - std::modf((1. - mWtPositionAbs) * (mWT->mNumTables - 1), &mWtOffset);
+    int tableOffset = std::min(static_cast<int>(mWtOffset), mWT->mNumTables - 2);
     mLUTLo[0] = mWT->GetMipmapLevel_ByIndex(tableOffset, idx, mTableSize);
     mLUTLo[1] = mWT->GetMipmapLevel_ByIndex(tableOffset + 1, idx, mTableSize);
     mLUTHi[0] = mWT->GetMipmapLevel_ByIndex(tableOffset, idx + 1, mNextTableSize);
@@ -370,7 +370,7 @@ public:
 
   inline void SetWtPosition(double wtPos)
   {
-    mWtPositionAbs = wtPos;
+    mWtPositionAbs = std::min(wtPos, 0.999);
   }
 
   inline void SetWtBend(double wtBend)
@@ -461,7 +461,7 @@ private:
   double mWtSpacing{ 1. };
   double mWtBend{ 0 };
   int mPrevFreq;
-  int mWtIdx{ 0 };
+  int mWtIdx{ 0 }; // Mipmap level
 
   // Thread-related members for wavetable updates
   static inline std::mutex mWtMutex; // Mutex used when swapping out the current wavetable in each oscillator object
