@@ -1169,6 +1169,12 @@ int Tablitsa::GetActiveModIdx() const
 
 void Tablitsa::SetActiveModIdx(int idx)
 {
+  int prev = mActiveModIdx;
   mActiveModIdx = idx;
+  // Update display of new active 
+  if (idx > -1)
+    dynamic_cast<TablitsaIVModKnobControl*>(GetUI()->GetControl(idx))->ColorSwap();
+  if (prev > -1)
+    dynamic_cast<TablitsaIVModKnobControl*>(GetUI()->GetControl(prev))->ColorSwap();
 }
 #endif
