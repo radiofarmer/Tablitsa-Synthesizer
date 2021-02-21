@@ -12,7 +12,7 @@ const IVStyle TABLITSA_STYLE = IVStyle(DEFAULT_SHOW_LABEL,
   DEFAULT_VALUE_TEXT.WithFGColor(COLOR_WHITE),
   DEFAULT_HIDE_CURSOR,
   DEFAULT_DRAW_FRAME,
-  DEFAULT_DRAW_SHADOWS,
+  false, // Draw shadows
   DEFAULT_EMBOSS,
   DEFAULT_ROUNDNESS,
   DEFAULT_FRAME_THICKNESS,
@@ -33,16 +33,55 @@ const IVColorSpec knobColorSpec = IVColorSpec{
   DEFAULT_X3COLOR
 };
 
-const IVStyle modKnobStyle{ TABLITSA_STYLE.WithColors(knobColorSpec).WithLabelText(TABLITSA_STYLE.labelText.WithSize(17.f)).WithDrawShadows(false) };
+const IVStyle modKnobStyle{ TABLITSA_STYLE.WithColors(knobColorSpec).WithLabelText(TABLITSA_STYLE.labelText.WithSize(17.f)) };
+
+const IVStyle toggleStyle{ TABLITSA_STYLE.WithDrawFrame(true).WithColor(EVColor::kFG, COLOR_TRANSPARENT).WithShowLabel(false) };
 
 const IText dropdownText{ DEFAULT_TEXT.WithFGColor(COLOR_WHITE) };
 
-class ModSliderControl : public IVSliderControl
+class TablitsaSliderControl : public IVSliderControl
+{
+public:
+  TablitsaSliderControl(const IRECT& bounds, int paramIdx = kNoParameter, const char* label = "", const IVStyle& style = TABLITSA_STYLE.WithShowValue(true), bool valueIsEditable = false, EDirection dir = EDirection::Vertical, double gearing = DEFAULT_GEARING, float handleSize = 8.f, float trackSize = 2.f, bool handleInsideTrack = true) :
+    IVSliderControl(bounds, paramIdx, label, style, valueIsEditable, dir, gearing, handleSize, trackSize, handleInsideTrack)
+  {
+    mShape = EVShape::Rectangle;
+  }
+
+  void OnAttached() override
+  {
+    SetColor(EVColor::kX1, COLOR_WHITE);
+  }
+
+  void DrawTrack(IGraphics& g, const IRECT& filledArea) override
+  {
+    const float extra = mHandleInsideTrack ? mHandleSize : 0.f;
+    const IRECT adjustedTrackBounds = mDirection == EDirection::Vertical ? mTrackBounds.GetVPadded(extra) : mTrackBounds.GetHPadded(extra);
+    // Padd the filled area less, to account for the asymmetric rectangular handle
+    const IRECT adjustedFillBounds = mDirection == EDirection::Vertical ? filledArea.GetVPadded(extra / 2.f) : filledArea.GetHPadded(extra / 2.f);
+    const float cr = GetRoundedCornerRadius(mTrackBounds);
+
+    g.FillRoundRect(GetColor(kSH), adjustedTrackBounds, cr, &mBlend);
+    g.FillRoundRect(GetColor(kX1), adjustedFillBounds, cr, &mBlend);
+
+    if (mStyle.drawFrame)
+      g.DrawRoundRect(GetColor(kFR), adjustedTrackBounds, cr, &mBlend, mStyle.frameThickness);
+  }
+
+  void DrawHandle(IGraphics& g, const IRECT& bounds) override
+  {
+    const IRECT boundsAdj = mDirection == EDirection::Vertical ? bounds.GetMidVPadded(bounds.H() / 4.f) : bounds.GetMidHPadded(bounds.W() / 4.f);
+    DrawPressableShape(g, mShape, boundsAdj, mMouseDown, mMouseIsOver, IsDisabled());
+  }
+};
+
+class ModSliderControl : public TablitsaSliderControl
 {
 public:
   ModSliderControl(const IRECT& bounds, int paramIdx = kNoParameter, const char* label = "", const IVStyle& style = TABLITSA_STYLE.WithShowValue(true), bool valueIsEditable = false, EDirection dir = EDirection::Vertical, double gearing = DEFAULT_GEARING, float handleSize = 8.f, float trackSize = 2.f, bool handleInsideTrack = true) :
-    IVSliderControl(bounds, paramIdx, label, style, valueIsEditable, dir, gearing, handleSize, trackSize, handleInsideTrack)
+    TablitsaSliderControl(bounds, paramIdx, label, style, valueIsEditable, dir, gearing, handleSize, trackSize, handleInsideTrack)
   {
+    mShape = EVShape::Rectangle;
     Toggle();
     SetActionFunction([this](IControl* pControl) {
       // Update control to whose parameter this slider is linked
@@ -50,7 +89,6 @@ public:
       if (pTarget)
         pTarget->SetDirty();
       });
-    SetColor(EVColor::kX1, COLOR_WHITE);
   }
   void Toggle(int targetParam=kNoParameter)
   {
@@ -106,8 +144,8 @@ public:
   {
     const float extra = mHandleInsideTrack ? mHandleSize : 0.f;
     const IRECT adjustedTrackBounds = mDirection == EDirection::Vertical ? mTrackBounds.GetVPadded(extra) : mTrackBounds.GetHPadded(extra);
-    //const IRECT adjustedFillBounds = filledArea;
-    const IRECT adjustedFillBounds = mDirection == EDirection::Vertical ? filledArea.GetVPadded(extra) : filledArea.GetHPadded(extra);
+    // Padd the filled area less, to account for the asymmetric rectangular handle
+    const IRECT adjustedFillBounds = mDirection == EDirection::Vertical ? filledArea.GetVPadded(extra / 2.f) : filledArea.GetHPadded(extra / 2.f);
     const float cr = GetRoundedCornerRadius(mTrackBounds);
 
     g.FillRoundRect(GetColor(kSH), adjustedTrackBounds, cr, &mBlend);
@@ -126,10 +164,11 @@ class TablitsaIVKnobControl : public IVKnobControl
 public:
   /* Create a knob control with a modulatable value */
   TablitsaIVKnobControl(const IRECT& bounds, int paramIdx, const char* label = "", const IVStyle& style = modKnobStyle, bool valueIsEditable = false, double gearing = DEFAULT_GEARING)
-    : IVKnobControl(bounds, paramIdx, label, style, valueIsEditable)
+    : IVKnobControl(bounds, paramIdx, label, style, valueIsEditable, false, -135.f, 135.f, -135.f, EDirection::Vertical, gearing, 2.f)
   {
   }
 
+  // Spin-Up Electron Pointer
   void DrawPointer(IGraphics& g, float angle, float cx, float cy, float radius)
   {
     const IColor pointerColor = GetColor(kFR).WithOpacity(1.f);
@@ -147,13 +186,17 @@ class TablitsaIVModKnobControl : public TablitsaIVKnobControl
 {
 public:
   /* Create a knob control with a modulatable value */
+
   TablitsaIVModKnobControl(const IRECT& bounds, int paramIdx, const char* label = "", const IVStyle& style = modKnobStyle, bool valueIsEditable = false, double gearing = DEFAULT_GEARING)
     : TablitsaIVModKnobControl(bounds, paramIdx, paramIdx + 1, label, style, valueIsEditable, gearing)
   {
   }
 
   TablitsaIVModKnobControl(const IRECT& bounds, int paramIdx, int modStartIdx, const char* label = "", const IVStyle& style = TABLITSA_STYLE, bool valueIsEditable = false, double gearing = DEFAULT_GEARING)
-    : TablitsaIVKnobControl(bounds, paramIdx, label, style, valueIsEditable), mDefaultColor{ GetColor(kFG) }, mGearing(gearing), mModParamIdx(modStartIdx)
+    : TablitsaIVKnobControl(bounds, paramIdx, label, style, valueIsEditable, gearing),
+    mDefaultColor{ GetColor(kFG) },
+    mModParamIdx(modStartIdx),
+    mBaseTrack(style.colorSpec.GetColor(EVColor::kFR))
   {
     GetMouseDblAsSingleClick();
 
@@ -212,7 +255,7 @@ public:
     else
     {
       // Set all modulator sliders to the values of the currently-selected modulated parameter
-      for (int i{ 0 }; i < (kCtrlTagRndDepth - kCtrlTagEnv1Depth); ++i)
+      for (int i{ 0 }; i <= (kCtrlTagRndDepth - kCtrlTagEnv1Depth); ++i)
       {
         GetUI()->GetControlWithTag(kCtrlTagEnv1Depth + i)->SetParamIdx(mModParamIdx + i);
         dynamic_cast<ModSliderControl*>(GetUI()->GetControlWithTag(kCtrlTagEnv1Depth + i))->Toggle(GetUI()->GetControlIdx(this));
@@ -362,6 +405,7 @@ public:
   }
 
 protected:
+  std::vector<ISVG*> mSVG;
   const IColor mDefaultColor;
   const IColor mModArcColor[9][2]{
     {{200, 200, 100, 100}, {}},
@@ -375,9 +419,8 @@ protected:
     {{150, 0, 255, 255}, {}}
   };
   const IColor mWhite{ 200, 255, 255, 255 };
-  const IColor mBaseTrack{ 100, 0, 0, 0 };
+  const IColor mBaseTrack;
   bool mActive{ false };
-  double mGearing;
   int mModParamIdx;
 };
 
@@ -729,10 +772,11 @@ template <int MAXNC = 1>
 class SequencerControl final : public IVMultiSliderControl<MAXNC>
 {
 public:
-  SequencerControl(const IRECT& bounds, const char* label, const IVStyle& style = TABLITSA_STYLE, int nSteps = 0, EDirection dir = EDirection::Vertical) :
+  SequencerControl(const IRECT& bounds, const char* label, const IVStyle& style = TABLITSA_STYLE.WithDrawFrame(false), int nSteps = 0, EDirection dir = EDirection::Vertical) :
     IVMultiSliderControl<MAXNC>(bounds, label, style, nSteps, dir)
   {
-    SetColor(kX1, GetColor(kPR));
+    SetColor(kX1, GetColor(kPR)); // Set active step color to the pressed step color
+    SetColor(kHL, GetColor(kPR).WithOpacity(0.2)); // Background highlight
   }
 
   void DrawWidget(IGraphics& g) override
