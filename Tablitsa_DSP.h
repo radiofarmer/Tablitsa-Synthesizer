@@ -472,7 +472,7 @@ public:
       mVoiceMetaModParams[kVEnv1Sustain].SetInitialValue(inputs[kModEnv1SustainSmoother][0]);
       mVoiceMetaModParams[kVEnv2Sustain].SetInitialValue(inputs[kModEnv2SustainSmoother][0]);
       mVoiceMetaModParams[kVAmpEnvSustain].SetInitialValue(inputs[kModAmpEnvSustainSmoother][0]);
-      mModulators.MetaProcessBlock(&(inputs[kModEnv1SustainSmoother]), nFrames);
+      mModulators.MetaProcessBlock_Fast(&(inputs[kModEnv1SustainSmoother]), nFrames); // Modulate the modulators
       // mModulators.ProcessBlock(&(inputs[kModEnv1SustainSmoother]), nFrames);
       // Apply modulation ramps to all modulated parameters
 #if 0
