@@ -451,14 +451,14 @@ public:
       mDelayVector = blend4<1, 0, 4, 5>(x, mDelayVector); // x[n+1], x[n], w[n-1], w[n-2], i.e. latest -> earliest
 
 #ifdef ALG1
-      double w3 = x[3] - mCoefs[4] * x[2] + horizontal_add(mAr3 * mDelayVector); // w[n+3]
-      double w2 = x[2] + horizontal_add(mAr2 * mDelayVector); // w[n+2]
-      double w1 = horizontal_add(mAr1 * mDelayVector); // w[n+1]
-      double w0 = horizontal_add(mA * mDelayVector); // w[n]
+      T w3 = x[3] - mCoefs[4] * x[2] + horizontal_add(mAr3 * mDelayVector); // w[n+3]
+      T w2 = x[2] + horizontal_add(mAr2 * mDelayVector); // w[n+2]
+      T w1 = horizontal_add(mAr1 * mDelayVector); // w[n+1]
+      T w0 = horizontal_add(mA * mDelayVector); // w[n]
       Vec4d y_in = Vec4d(w3, w2, w1, w0); // latest -> earliest
 #elif defined ALG2
-      const Vec4d extra2 = permute4<1, 1, -1, -1>(x); // x[n+2] terms
-      const Vec4d extra1 = permute4<0, -1, -1, -1>(x); // x[n+3] terms
+      const Vec4d extra2 = permute4<3, 3, -1, -1>(x); // x[n+2] terms
+      const Vec4d extra1 = permute4<2, -1, -1, -1>(x); // x[n+3] terms
 
       // All delay terms:
       Vec4d y_in = extra1 + mA1 * extra2 + mCol1 * mDelayVector[0] + mCol2 * mDelayVector[1] + mCol3 * mDelayVector[2] + mCol4 * mDelayVector[3];
@@ -475,12 +475,12 @@ public:
       return y_out;
     }
 
-    void SetAddendPtr(double* ptr)
+    void SetAddendPtr(T* ptr)
     {
       mAddends = ptr;
     }
 
-    void SetDelayPtr(double* ptr)
+    void SetDelayPtr(T* ptr)
     {
       mMatrixDelay = ptr;
     }
@@ -504,8 +504,8 @@ public:
 
     Vec4d mDelayVector = Vec4d(0.);
 
-    double* mAddends = nullptr;
-    double* mMatrixDelay = nullptr;
+    T* mAddends = nullptr;
+    T* mMatrixDelay = nullptr;
 
     friend class ChebyshevBL<T>;
   };
@@ -513,8 +513,8 @@ public:
 public:
   ChebyshevBL()
   {
-    double z1[12]{};
-    double z2[12]{};
+    T z1[12]{};
+    T z2[12]{};
 
     for (int i{0}; i < 6; ++i)
     {
@@ -605,8 +605,8 @@ private:
   Vec4d mZ1_Coefs1, mZ1_Coefs2, mZ1_Coefs3;
   Vec4d mZ2_Coefs1, mZ2_Coefs2, mZ2_Coefs3;
 
-  double mAddendPtrs[12]{ 0. };
-  double mDelayPtrs[6][2]{ 0. };
+  T mAddendPtrs[12]{ 0. };
+  T mDelayPtrs[6][2]{ 0. };
 };
 
 template<typename T>
