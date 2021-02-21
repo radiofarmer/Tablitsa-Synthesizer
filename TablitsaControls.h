@@ -40,41 +40,28 @@ const IText dropdownText{ DEFAULT_TEXT.WithFGColor(COLOR_WHITE) };
 class ModSliderControl : public IVSliderControl
 {
 public:
-  ModSliderControl(const IRECT& bounds, int paramIdx = kNoParameter, const char* label = "", const IVStyle& style = TABLITSA_STYLE.WithShowValue(false), bool valueIsEditable = false, EDirection dir = EDirection::Vertical, double gearing = DEFAULT_GEARING, float handleSize = 8.f, float trackSize = 2.f, bool handleInsideTrack = true) :
+  ModSliderControl(const IRECT& bounds, int paramIdx = kNoParameter, const char* label = "", const IVStyle& style = TABLITSA_STYLE.WithShowValue(true), bool valueIsEditable = false, EDirection dir = EDirection::Vertical, double gearing = DEFAULT_GEARING, float handleSize = 8.f, float trackSize = 2.f, bool handleInsideTrack = true) :
     IVSliderControl(bounds, paramIdx, label, style, valueIsEditable, dir, gearing, handleSize, trackSize, handleInsideTrack)
   {
+    Toggle();
     SetActionFunction([this](IControl* pControl) {
       // Update control to whose parameter this slider is linked
       IControl* pTarget = GetUI()->GetControl(mTarget);
       if (pTarget)
         pTarget->SetDirty();
       });
+    SetColor(EVColor::kX1, COLOR_WHITE);
   }
-
   void Toggle(int targetParam=kNoParameter)
   {
     if (GetParamIdx() == kNoParameter)
     {
       SetValueStr("N/A");
-      SetShowValue(true);
       SetDisabled(true);
     }
     else
       SetDisabled(false);
     mTarget = targetParam;
-  }
-
-  void OnMouseDown(float x, float y, const IMouseMod& mod) override
-  {
-    if (!mod.L)
-    {
-      SetValue(0.5);
-      ISliderControlBase::mMouseDown = true;
-      SetDirty(false);
-      IControl::OnMouseDown(x, y, mod);
-    }
-    else
-      IVSliderControl::OnMouseDown(x, y, mod);
   }
 
   // Overridden drawing function to draw the filled area starting in the middle of the track
@@ -83,13 +70,13 @@ public:
     float value = (float)GetValue(); // NB: Value is normalized to between 0. and 1.
     const IRECT handleBounds = (GetParamIdx() == kNoParameter) ? mTrackBounds.FracRect(mDirection, 0.f) : mTrackBounds.FracRect(mDirection, value);
     const IRECT filledTrack = mDirection == EDirection::Vertical ? (GetParamIdx() == kNoParameter) ?
-      handleBounds : (value >= 0.5f) ?
-      mTrackBounds.GetGridCell(0, 0, 2, 1).FracRect(mDirection, 2.f * (value - 0.5f)) :
-      mTrackBounds.GetGridCell(1, 0, 2, 1).FracRect(mDirection, 2.f * (0.5 - value), true) : // <- Vertical
+        handleBounds : ((value >= 0.5f) ?
+        mTrackBounds.GetGridCell(0, 0, 2, 1).FracRect(mDirection, 2.f * (value - 0.5f)) :
+        mTrackBounds.GetGridCell(1, 0, 2, 1).FracRect(mDirection, 2.f * (0.5 - value), true)) : // <- Vertical
       (GetParamIdx() == kNoParameter) ?
-      handleBounds : (value >= 0.5f) ?
-      mTrackBounds.GetGridCell(0, 1, 1, 2).FracRect(mDirection, 2.f * (value - 0.5f)) :
-      mTrackBounds.GetGridCell(0, 0, 1, 2).FracRect(mDirection, 2.f * (0.5 - value), true); // <- Horizontal
+        handleBounds : ((value >= 0.5f) ?
+        mTrackBounds.GetGridCell(0, 1, 1, 2).FracRect(mDirection, 2.f * (value - 0.5f)) :
+        mTrackBounds.GetGridCell(0, 0, 1, 2).FracRect(mDirection, 2.f * (0.5 - value), true)); // <- Horizontal
 
     if (mTrackSize > 0.f)
       DrawTrack(g, filledTrack);
@@ -672,20 +659,25 @@ protected:
 
 #define GROUP_BOX_ROUNDING 0.1f
 
+const IVStyle TABLITSA_GROUPBOX_STYLE = TABLITSA_STYLE.WithRoundness(GROUP_BOX_ROUNDING).WithColor(EVColor::kFR, COLOR_WHITE).WithLabelText(DEFAULT_LABEL_TEXT.WithFGColor(IColor(255, 220, 200, 0))).WithDrawShadows(false);
+
 class TablitsaVGroupControl : public IVGroupControl
 {
 public:
-  TablitsaVGroupControl(const char* label="", const char* groupName="", float padL=0.f, float padT=0.f, float padR=0.f, float padB=0.f, const IVStyle& style = TABLITSA_STYLE.WithRoundness(GROUP_BOX_ROUNDING)) :
-    IVGroupControl(label, groupName, padL, padT, padR, padB, style) {}
+  TablitsaVGroupControl(const char* label="", const char* groupName="", float padL=0.f, float padT=0.f, float padR=0.f, float padB=0.f, const IVStyle& style = TABLITSA_GROUPBOX_STYLE) :
+    IVGroupControl(label, groupName, padL, padT, padR, padB, style)
+  {
+    mLabelOffset = 0.f;
+  }
 
-  TablitsaVGroupControl(const IRECT& bounds, const char* label="", float labelOffset=10.f, const IVStyle& style=TABLITSA_STYLE.WithRoundness(GROUP_BOX_ROUNDING)) :
+  TablitsaVGroupControl(const IRECT& bounds, const char* label="", float labelOffset=0.f, const IVStyle& style=TABLITSA_GROUPBOX_STYLE) :
     IVGroupControl(bounds, label, labelOffset, style) {}
 };
 
 class TablitsaVTabBox : public TablitsaVGroupControl
 {
 public:
-  TablitsaVTabBox(const IRECT& bounds, const char* label = "", const IVStyle& style = TABLITSA_STYLE.WithRoundness(GROUP_BOX_ROUNDING)) :
+  TablitsaVTabBox(const IRECT& bounds, const char* label = "", const IVStyle& style = TABLITSA_GROUPBOX_STYLE) :
     TablitsaVGroupControl(bounds, label, 0.f, style)
   {
   }
