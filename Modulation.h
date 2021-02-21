@@ -328,11 +328,12 @@ public:
     }
   }
 
-  /* Write meta-modulated modulation values to a buffer */
-  inline void MetaProcessBlock(T** inputs, int nFrames)
+  /* Write SAMPLE-ACCURATE meta-modulated modulation values to a buffer */
+  inline void MetaProcessBlock_Accurate(int nFrames)
   {
     T metaModParams[2]{ 0. };
-    T** modList = mModulators.GetList();
+    T** ModList = mModulators.GetList(); // Pointer to first position of mModulators
+
     for (auto i{ 0 }; i < nFrames; ++i)
     {
       for (auto m{ 0 }; m < mModPtrs.size(); ++m)
@@ -347,7 +348,39 @@ public:
 #endif
         }
         mModPtrs[m]->SetParams(metaModParams);
-        mPrevValues[m] = modList[m][i] = mModPtrs[m]->Process();
+        mPrevValues[m] = ModList[m][i] = mModPtrs[m]->Process();
+      }
+    }
+  }
+
+  /** Write meta-modulated modulation values to a buffer, using only the first calculated value for each
+  modulator as a basis for modulation. */
+  inline void MetaProcessBlock_Fast(T** inputs, int nFrames)
+  {
+    T metaModParams[2]{ 0. };
+    T** modList = mModulators.GetList();
+
+    // Loop through the first value of all the modulators
+    for (auto m{ 0 }; m < mModPtrs.size(); ++m)
+    {
+      // Loop through the parameters that the current modulator requires and set their modulated values
+      for (auto mm{ 0 }; mm < mMetaParams[m].size(); ++mm)
+      {
+#if _DEBUG
+        metaModParams[mm] = mMetaParams[m][mm]->AddModulation(mPrevValues);
+#else
+        // Possible place for optimization: Process multiple modulators simulataneously
+        metaModParams[mm] = mMetaParams[m][mm]->AddModulation_Vector(mPrevValues);
+#endif
+      }
+      mModPtrs[m]->SetParams(metaModParams);
+      mPrevValues[m] = modList[m][0] = mModPtrs[m]->Process();
+    }
+    for (auto m{ 0 }; m < mModPtrs.size(); ++m)
+    {
+      for (auto i{ 1 }; i < nFrames; ++i)
+      {
+        modList[m][i] = mModPtrs[m]->Process();
       }
     }
   }
