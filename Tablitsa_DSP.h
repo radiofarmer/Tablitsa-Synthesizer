@@ -784,14 +784,12 @@ public:
     for(int s=0; s < nFrames;s++)
     {
       const T smoothedGain = mModulations.GetList()[kModGainSmoother][s];
+
       // Master effects processing
-#if _DEBUG
-      const T* delay = mDelayEffect.ProcessStereo(outputs[0][s], outputs[0][s]); // This gets optimized out in the release build apparently???
-#else
-      T delay_in[2]{ outputs[0][s], outputs[1][s] };
-      const T* delay = mDelayEffect.ProcessStereo(delay_in);
+      T delay[2]{ outputs[0][s], outputs[1][s] };
+      mDelayEffect.ProcessStereo(delay);
       //const T delay[2]{ mDelayEffect.Process(outputs[0][s]), mDelayEffect.Process(outputs[0][s]) };
-#endif
+
       outputs[0][s] += delay[0];
       outputs[1][s] += delay[1];
 
