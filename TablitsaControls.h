@@ -6,8 +6,8 @@
 const IText TABLITSA_TEXT = IText().WithFGColor(COLOR_WHITE);
 const IVStyle TABLITSA_STYLE = IVStyle(DEFAULT_SHOW_LABEL,
   DEFAULT_SHOW_VALUE,
-  /* Background       Foreground      Pressed                   Frame            Highlight        Shadow           Extra 1          Extra 2          Extra 3        */
-  { DEFAULT_BGCOLOR, COLOR_DARK_GRAY, IColor(255, 225, 0, 190), DEFAULT_FRCOLOR, DEFAULT_HLCOLOR, DEFAULT_SHCOLOR, DEFAULT_X1COLOR, DEFAULT_X2COLOR, DEFAULT_X3COLOR },
+  /* Background       Foreground      Pressed                   Frame            Highlight    Shadow           Extra 1          Extra 2          Extra 3        */
+  { DEFAULT_BGCOLOR, COLOR_DARK_GRAY, IColor(255, 225, 0, 190), DEFAULT_FRCOLOR, COLOR_WHITE, DEFAULT_SHCOLOR, DEFAULT_X1COLOR, DEFAULT_X2COLOR, DEFAULT_X3COLOR },
   DEFAULT_LABEL_TEXT.WithFGColor(COLOR_WHITE),
   DEFAULT_VALUE_TEXT.WithFGColor(COLOR_WHITE),
   DEFAULT_HIDE_CURSOR,
@@ -722,9 +722,10 @@ public:
 class TablitsaVTabBox : public TablitsaVGroupControl
 {
 public:
-  TablitsaVTabBox(const IRECT& bounds, const char* label = "", const IVStyle& style = TABLITSA_GROUPBOX_STYLE) :
-    TablitsaVGroupControl(bounds, label, 0.f, style)
+  TablitsaVTabBox(const IRECT& bounds, const char* label = "", const char* groupName="", bool active=false, float labelOffset = 0.f, const IVStyle& style = TABLITSA_GROUPBOX_STYLE) :
+    TablitsaVGroupControl(bounds, label, labelOffset, style), mActive(active)
   {
+    mIgnoreMouse = false;
   }
 
   void OnResize() override
@@ -732,7 +733,51 @@ public:
     TablitsaVGroupControl::OnResize();
     IRECT textBounds;
     GetUI()->MeasureText(mText, mLabelStr.Get(), textBounds);
-    mWidgetBounds.ReduceFromTop(textBounds.H() / 2.f);
+    mWidgetBounds.ReduceFromTop(textBounds.H() / 1.5);
+  }
+
+  void SetActive(bool active = true)
+  {
+    mActive = active;
+    // Show/hide controls in this tab view
+    GetUI()->ForControlInGroup(mGroupName.Get(), [active](IControl& control) { control.Hide(active); });
+  }
+
+  const IRECT& GetLabelBounds() const
+  {
+    return mLabelBounds;
+  }
+
+  const bool IsActive() const
+  {
+    return mActive;
+  }
+
+  const bool MouseIsOverLabel() const
+  {
+    return mMouseIsOverLabel;
+  }
+
+  void OnMouseOverLabel(float x, float y, const IMouseMod& mod)
+  {
+    bool prev = mMouseIsOverLabel;
+    mMouseIsOverLabel = true;
+    if (prev == false)
+      SetDirty(false);
+  }
+
+  void OnMouseOutFromLabel()
+  {
+    bool prev = mMouseIsOverLabel;
+    mMouseIsOverLabel = false;
+    if (prev == true)
+      SetDirty(false);
+  }
+
+  void Draw(IGraphics& g) override
+  {
+    DrawWidget(g);
+    DrawLabel(g);
   }
 
   void DrawWidget(IGraphics& g) override
@@ -759,15 +804,38 @@ public:
       g.PathArc(labelL + cr, labelT + cr + hft - offset, cr, 270.f, 0.f);
       g.PathArc(labelR - cr, labelT + cr + hft - offset, cr, 0.f, 90.f);
       g.PathLineTo(labelR, b.T + hft - offset);
-      // Path around control
-      g.PathArc(b.R - cr - hft - offset, b.T + cr + hft - offset, cr, 0.f, 90.f);
-      g.PathArc(b.R - cr - hft - offset, b.B - cr - hft - offset, cr, 90.f, 180.f);
-      g.PathArc(b.L + cr + hft - offset, b.B - cr - hft - offset, cr, 180.f, 270.f);
-      g.PathArc(b.L + cr + hft - offset, b.T + cr + hft - offset, cr, 270.f, 360.f);
-      g.PathLineTo(labelL, b.T + hft - offset);
-      g.PathStroke(mStyle.drawShadows ? GetColor(i == 0 ? kSH : kFR) : GetColor(kFR), ft);
+      if (mActive)
+      {
+        // Path around control
+        g.PathArc(b.R - cr - hft - offset, b.T + cr + hft - offset, cr, 0.f, 90.f);
+        g.PathArc(b.R - cr - hft - offset, b.B - cr - hft - offset, cr, 90.f, 180.f);
+        g.PathArc(b.L + cr + hft - offset, b.B - cr - hft - offset, cr, 180.f, 270.f);
+        g.PathArc(b.L + cr + hft - offset, b.T + cr + hft - offset, cr, 270.f, 360.f);
+        g.PathLineTo(labelL, b.T + hft - offset);
+        g.PathFill(IPattern(GetColor(EVColor::kFG).WithOpacity(0.5)), IFillOptions(true), &mBlend);
+        g.PathStroke(mStyle.drawShadows ? GetColor(i == 0 ? kSH : kFR) : GetColor(kFR), ft);
+      }
+      else
+      {
+        g.PathFill(IPattern(GetColor(mMouseIsOverLabel ? EVColor::kHL : EVColor::kBG).WithOpacity(0.85)), IFillOptions(true), &mBlend);
+        g.PathStroke(mStyle.drawShadows ? GetColor(i == 0 ? kSH : kFR) : GetColor(kFR), ft);
+      }
     }
   }
+
+  void DrawLabel(IGraphics& g)
+  {
+    IText labelText = mStyle.labelText.WithFGColor(mActive ? COLOR_WHITE : mMouseIsOverLabel ? GetColor(EVColor::kFG) : COLOR_WHITE.WithOpacity(0.8));
+    if (mLabelBounds.H() && mStyle.showLabel)
+    {
+      IBlend blend = mControl->GetBlend();
+      g.DrawText(labelText, mLabelStr.Get(), mLabelBounds, &blend);
+    }
+  }
+
+protected:
+  bool mActive;
+  bool mMouseIsOverLabel{ false };
 };
 
 template <int MAXNC = 1>
@@ -787,7 +855,7 @@ public:
     int nSteps = mNSteps + mZeroValueStepHasBounds;
 
     // Step labels
-    IText labelText(DEFAULT_TEXT.WithFGColor(mLabelColor));
+    IText labelText(mStyle.labelText);
     IRECT textBounds;
     g.MeasureText(labelText, "10", textBounds);
     const float stepHeight = IVTrackControlBase::mTrackBounds.Get()[0].H() / nSteps;
@@ -827,45 +895,130 @@ private:
   const IColor mLabelColor = mStepMarkerColor.WithOpacity(0.75);
 };
 
-template<int MaxTabs = 4>
+#define MAX_TAB_LABEL_LENGTH 32
+
 class TablitsaEffectBankControl : public IControl
 {
+  struct TabText
+  {
+    char mText[MAX_TAB_LABEL_LENGTH];
+  };
+
 public:
-  TablitsaEffectBankControl(const IRECT& bounds, int paramIdx, std::initializer_list<char *> labels) : 
-    IControl(bounds, paramIdx)
+  TablitsaEffectBankControl(const IRECT& bounds, std::initializer_list<char*> labels, std::initializer_list<char*> groupNames = { "" }, const IVStyle& style = TABLITSA_GROUPBOX_STYLE, const int maxTabs = 10) :
+    IControl(bounds, kNoParameter), mMaxTabs(maxTabs), mStyle(style)
   {
     for (auto l : labels)
     {
       int nLabels = mLabels.GetSize();
-      if (nLabels >= MaxTabs)
+      if (nLabels >= mMaxTabs)
         break;
 
       mLabels.Resize(nLabels + 1);
-      WDL_String* pStr = mLabels.Get() + nLabels;
-      pStr->Set(l, MaxLabelLength);
+      TabText* pLab = mLabels.Get() + nLabels;
+      strcpy(pLab->mText, l);
+    }
+
+    for (auto g : groupNames)
+    {
+      int nGroups = mGroups.GetSize();
+      mGroups.Resize(nGroups + 1);
+      TabText* pName = mGroups.Get() + nGroups;
+      strcpy(pName->mText, g);
+    }
+
+    // If more labels were supplied than groups, append empty strings to the group  names
+    if (labels.size() > groupNames.size())
+    {
+      for (auto i{ groupNames.size() }; i < labels.size(); ++i)
+      {
+        int nGroups = mGroups.GetSize();
+        mGroups.Resize(nGroups + 1);
+        TabText* pName = mGroups.Get() + nGroups;
+        strcpy(pName->mText, "");
+      }
     }
   }
 
-  void TabChanged()
+  void OnMouseDown(float x, float y, const IMouseMod& mod) override
   {
+    for (int i{ 0 }; i < mMaxTabs; ++i)
+    {
+      if (mTabs[i])
+      {
+        TablitsaVTabBox* tab = dynamic_cast<TablitsaVTabBox*>(mTabs[i]);
+        if (!tab->IsActive() && tab->GetLabelBounds().Contains(x, y))
+        {
+          TabChanged(i);
+        }
+      }
+    }
+  }
 
+  void OnMouseOver(float x, float y, const IMouseMod& mod) override
+  {
+    for (int i{ 0 }; i < mMaxTabs; ++i)
+    {
+      if (mTabs[i])
+      {
+        TablitsaVTabBox* tab = dynamic_cast<TablitsaVTabBox*>(mTabs[i]);
+        if (!tab->IsActive() && tab->GetLabelBounds().Contains(x, y))
+        {
+          tab->OnMouseOverLabel(x, y, mod);
+        }
+        else
+          tab->OnMouseOutFromLabel();
+      }
+    }
+  }
+
+  void OnMouseOut() override
+  {
+    for (int i{ 0 }; i < mMaxTabs; ++i)
+    {
+      if (mTabs[i])
+      {
+        TablitsaVTabBox* tab = dynamic_cast<TablitsaVTabBox*>(mTabs[i]);
+        if (!tab->IsActive())
+        {
+          tab->OnMouseOutFromLabel();
+        }
+      }
+    }
+  }
+
+  void Draw(IGraphics& g) override {}
+
+  void TabChanged(int newIdx)
+  {
+    for (int i{ 0 }; i < mMaxTabs; ++i)
+    {
+      if (mTabs[i])
+      {
+        TablitsaVTabBox* tab = dynamic_cast<TablitsaVTabBox*>(mTabs[i]);
+        tab->SetActive(i == newIdx);
+      }
+    }
   }
 
   void OnAttached() override
   {
     const int nLabels = mLabels.GetSize();
-    const float tabWidth = mTabBitmap.W();
+    float labelOffset = 0.f;
     for (int i{ 0 }; i < nLabels; ++i)
     {
-      const IRECT tabBounds{mRECT.L + i * tabWidth, mRECT.T, mRECT.L + (i + 1) * tabWidth, mRECT.T + mTabBitmap.H()};
-      mTabs[i] = new TablitsaVTabBox(mRECT, mLabels.Get()[i].Get())
+      mTabs[i] = GetUI()->AttachControl(new TablitsaVTabBox(IRECT(mRECT), mLabels.Get()[i].mText, mGroups.Get()[i].mText, i==0, labelOffset, mStyle));
+      labelOffset += dynamic_cast<TablitsaVTabBox*>(mTabs[i])->GetLabelBounds().W();
+      // TODO: allow tabs to overlap if they don't all fit in the available space
     }
   }
 
 private:
-  WDL_TypedBuf<WDL_String> mLabels;
-  static const int MaxLabelLength{ 10 };
+  const int mMaxTabs{ 10 };
+  int MaxLabelLength{ 20 };
+  WDL_TypedBuf<TabText> mLabels;
+  WDL_TypedBuf<TabText> mGroups;
 
-  IBitmap mTabBitmap;
-  TablitsaVTabBox* mTabs[MaxTabs];
+  IVStyle mStyle;
+  IControl* mTabs[10]{ nullptr };
 };

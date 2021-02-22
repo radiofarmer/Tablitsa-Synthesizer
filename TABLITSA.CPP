@@ -578,7 +578,7 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
 
     // Effects tab control
     const IRECT effectsPanel = delayPanel.GetVShifted(masterPanel.H() / 4.f + 10.f);
-    pGraphics->AttachControl(new TablitsaVTabBox(effectsPanel, "Sample & Hold"), kNoTag, "Effects");
+    pGraphics->AttachControl(new TablitsaEffectBankControl(effectsPanel, { "Delay", "Sample & Hold", "Effect 3" }), kNoTag, "Effects");
 
     /* LOWER-HALF CONTROLS */
     constexpr float modulePad[4]{-10.f, -5.f, -10.f, -15.f};
@@ -844,7 +844,7 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
 
     /* Sequencer */
     const IRECT sequencerDisplayPanel = lowerPanel.GetGridCell(2, 2, 3, 3).GetFromLeft(PLUG_WIDTH - lfoPanel.L).GetPadded(0.f, 10.f, 0.f, 0.f);
-    const IRECT sequencerParamsPanel = IRECT(lowerPanel.R, lowerPanel.T, globalControls.R, lowerPanel.B - lowerPanel.H() / 3.f).GetHShifted(-5.f);
+    const IRECT sequencerParamsPanel = IRECT(lowerPanel.R, lowerPanel.T, globalControls.R, lowerPanel.B - lowerPanel.H() / 3.f).GetHShifted(-2.f);
 
     // Sequencer Action Functions
     auto stepRandomizeAction = [pGraphics](IControl* pCaller) {
@@ -857,7 +857,7 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
     pGraphics->AttachControl(new TablitsaIVKnobControl(sequencerParamsPanel.GetGridCell(0, 1, 2, 3).GetCentredInside(dialSize), kParamSequencerRateTempo, "Rate"), kNoTag, "SequencerParams");
     pGraphics->AttachControl(new TablitsaIVModKnobControl(sequencerParamsPanel.GetGridCell(0, 2, 2, 3).GetCentredInside(dialSize), kParamSequencerAmp, "Amp"), kNoTag, "SequencerParams");
     pGraphics->AttachControl(new TablitsaIVKnobControl(sequencerParamsPanel.GetGridCell(1, 0, 2, 3).GetCentredInside(dialSize), kParamSequencerGlide, "Glide"), kNoTag, "SequencerParams");
-    pGraphics->AttachControl(new IVToggleControl(sequencerParamsPanel.GetGridCell(4, 1, 7, 3).GetHPadded(-5.f), kParamSequencerRateMode, "", toggleStyle, "Sync Off", "Sync On"),
+    pGraphics->AttachControl(new IVToggleControl(sequencerParamsPanel.GetGridCell(4, 1, 7, 3).GetPadded(-10.f, -2.f, -10.f, -2.f), kParamSequencerRateMode, "", toggleStyle, "Sync Off", "Sync On"),
       kCtrlTagSequencerRateMode, "Sequencer")->SetAnimationEndActionFunction([pGraphics](IControl* pControl) {
         bool sync = pControl->GetValue() > 0.5;
         pGraphics->HideControl(kParamSequencerRateTempo, !sync);
@@ -878,15 +878,15 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
         pGraphics->GetDelegate()->SendArbitraryMsgFromUI(kMsgSeqSliderChanged, kCtrlTagSequencer, sizeof(ParamTuple), &data);
       }
       });
-    pGraphics->AttachControl(new IVToggleControl(sequencerParamsPanel.GetGridCell(5, 1, 7, 3).GetHPadded(-5.f), kParamSequencerRestart, "", toggleStyle, "Free Run", "Restart"), kNoTag, "SequencerParams");
+    pGraphics->AttachControl(new IVToggleControl(sequencerParamsPanel.GetGridCell(5, 1, 7, 3).GetPadded(-10.f, -2.f, -10.f, -2.f), kParamSequencerRestart, "", toggleStyle, "Free Run", "Restart"), kNoTag, "SequencerParams");
     pGraphics->AttachControl(new ModSliderControl(sequencerDisplayPanel.GetGridCell(0, 5, 1, 6).GetVPadded(-18.f).GetVShifted(-5.f).GetMidHPadded(20.f), kNoParameter, "Depth"), kCtrlTagSequencerDepth, "Sequencer");
-    pGraphics->AttachControl(new IVToggleControl(sequencerParamsPanel.GetGridCell(4, 2, 7, 3).GetHPadded(-5.f), kNoParameter, "", toggleStyle, "Cont.", "Quant."), kCtrlTagSequencerQuant, "SequencerParams")->SetActionFunction(
+    pGraphics->AttachControl(new IVToggleControl(sequencerParamsPanel.GetGridCell(4, 2, 7, 3).GetPadded(-15.f, -2.f, -15.f, -2.f), kNoParameter, "", toggleStyle, "Cont.", "Quant."), kCtrlTagSequencerQuant, "SequencerParams")->SetActionFunction(
       [pGraphics, this](IControl* pControl) {
         mSequencerIsQuantized = pControl->GetValue();
         int nSteps = mSequencerIsQuantized > 0.5 ? 12 : 0;
         dynamic_cast<IVTrackControlBase*>(pGraphics->GetControlWithTag(kCtrlTagSequencer))->SetNSteps(nSteps);
       });
-    pGraphics->AttachControl(new IVButtonControl(sequencerParamsPanel.GetGridCell(5, 2, 7, 3).GetHPadded(-5.f), stepRandomizeAction, "Randomize", TABLITSA_STYLE.WithLabelText(IText(12.f))), kNoTag, "SequencerParams");
+    pGraphics->AttachControl(new IVButtonControl(sequencerParamsPanel.GetGridCell(5, 2, 7, 3).GetPadded(-15.f, -2.f, -15.f, -2.f), stepRandomizeAction, "Randomize", TABLITSA_STYLE.WithLabelText(IText(12.f))), kNoTag, "SequencerParams");
     pGraphics->AttachControl(new TablitsaVGroupControl(sequencerParamsPanel.GetPadded(modulePad[0], modulePad[1] + 5.f, modulePad[2], modulePad[3]), "Sequencer"));
 
     
