@@ -306,7 +306,7 @@ public:
     Vec8i offsets32 = viPhase & mTableSizeM1;
     Vec4q offsets = reinterpret_i(permute8<HIOFFSET_V, -1, HIOFFSET_V + 2, -1, HIOFFSET_V + 4, -1, HIOFFSET_V + 6, -1>(offsets32));
     offsets = (offsets + to_int64_in_range(PhaseMod(), mTableSize)) & mTableSizeM1;
-    Vec4q offsets1 = (offsets + 1) & mTableSizeM1;
+    Vec4q offsets1 = (offsets + 1); // &mTableSizeM1;
     // Force the double to wrap. (AND the upper bits with the upper 32 bits of UNITBIT32)
     viPhase &= normhipart;
     Vec4d phaseFrac = reinterpret_d(viPhase) - (double)UNITBIT32; // get the fractional part
@@ -330,15 +330,15 @@ public:
     offsets32 = viPhase & mNextTableSizeM1;
     offsets = reinterpret_i(permute8<HIOFFSET_V, -1, HIOFFSET_V + 2, -1, HIOFFSET_V + 4, -1, HIOFFSET_V + 6, -1>(offsets32));
     offsets = (offsets + to_int64_in_range(PhaseMod(), mTableSize)) & mNextTableSizeM1;
-    offsets1 = (offsets + 1) & mNextTableSizeM1;
+    offsets1 = (offsets + 1); // & mNextTableSizeM1;
     // Force the double to wrap. (AND the upper bits with the upper 32 bits of UNITBIT32)
     viPhase &= normhipart;
     phaseFrac = reinterpret_d(viPhase) - (double)UNITBIT32; // get the fractional part
 
     // Smaller/higher table
     const Vec4d tb0s0hi = lookup<maxTableSize>(offsets, mLUTHi[0]);
-    const Vec4d tb1s0hi = lookup<maxTableSize>(offsets, mLUTHi[1]);
     const Vec4d tb0s1hi = lookup<maxTableSize>(offsets1, mLUTHi[0]);
+    const Vec4d tb1s0hi = lookup<maxTableSize>(offsets, mLUTHi[1]);
     const Vec4d tb1s1hi = lookup<maxTableSize>(offsets1, mLUTHi[1]);
     // Interpolate samples
     const Vec4d tb0hi = mul_add(tb0s1hi - tb0s0hi, phaseFrac, tb0s0hi);
@@ -357,7 +357,10 @@ public:
     tf.i[HIOFFSET] = normhipart2; // Reset the upper 32 bits
     IOscillator<T>::mPhase = tf.d - UNITBIT32 * mTableSize;
 
+    // Mix wavtables
     Vec4d mixed = mul_add(tb1 - tb0, 1 - tableOffset, tb0);
+    Vec4d ringMod = RingMod();
+    mixed = mul_add(ringMod - 1., mRM * mRingModAmt * mixed, mixed);
 #else
     const double phaseIncr = mPhaseIncr * mPhaseIncrFactor * mProcessOS;
     Vec4d phaseMod = PhaseMod(); //Vec4d(PhaseMod(), PhaseMod(), PhaseMod(), PhaseMod());
