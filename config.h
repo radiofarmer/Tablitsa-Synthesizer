@@ -48,9 +48,14 @@
 #define APP_MULT 1
 #define APP_COPY_AUV3 0
 #define APP_SIGNAL_VECTOR_SIZE 64
+
 // NB: Remember to edit main.rc compile-time directives
 #define ROBOTO_FN "Roboto-Regular.ttf"
 #define BG_FN "tablitsa_background.png"
 #define PERIODIC_TABLE_FN "periodic_table.svg"
 #define LOGO_FN "logo.png"
 #define DIAL_FN "test_dial.png"
+#define DECR_BUTTON_ON_FN "incr_buttons-01.svg"
+#define INCR_BUTTON_ON "incr_buttons-02.svg"
+#define DECR_BUTTON_OFF_FN "incr_buttons-03.svg"
+#define INCR_BUTTON_OFF "incr_buttons-04.svg"
