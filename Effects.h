@@ -114,7 +114,7 @@ public:
     return left_out * mDelayLGain + right_out * mDelayRGain;
   }
 
-  inline T* ProcessStereo(const T sl, const T sr)
+  /*inline void ProcessStereo(const T sl, const T sr)
   {
     const T left_out = mDelayL[mDelayLTime];
     const T right_out = mDelayR[mDelayRTime];
@@ -122,9 +122,9 @@ public:
     mDelayR.push(sr + right_out * mFeedback);
     T output[2]{ left_out * mDelayLGain, right_out * mDelayRGain };
     return output;
-  }
+  }*/
 
-  inline T* ProcessStereo(T inputs[2])
+  inline void ProcessStereo(T inputs[2])
   {
     const T left_out = mDelayL[mDelayLTime];
     const T right_out = mDelayR[mDelayRTime];
@@ -132,7 +132,6 @@ public:
     mDelayR.push(inputs[1] + right_out * mFeedback);
     inputs[0] = left_out * mDelayLGain;
     inputs[1] = right_out * mDelayRGain;
-    return inputs;
   }
 
 private:
