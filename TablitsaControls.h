@@ -726,7 +726,10 @@ public:
     TablitsaVGroupControl(bounds, label, labelOffset, style), mActive(active)
   {
     mIgnoreMouse = false;
+    mGroupName.Set(groupName, MAX_PARAM_GROUP_LEN);
   }
+
+  void OnInit() override {}
 
   void OnResize() override
   {
@@ -740,7 +743,7 @@ public:
   {
     mActive = active;
     // Show/hide controls in this tab view
-    GetUI()->ForControlInGroup(mGroupName.Get(), [active](IControl& control) { control.Hide(active); });
+    GetUI()->ForControlInGroup(mGroupName.Get(), [active](IControl& control) { control.Hide(!active); });
   }
 
   const IRECT& GetLabelBounds() const
