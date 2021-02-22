@@ -435,6 +435,8 @@ private:
 #endif
   ChebyshevBL<T> mAAFilter;
 
+  // TODO: Order elements mindful of cache access:
+
   // Oscillator ID
   int mID;
 
