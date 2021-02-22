@@ -305,7 +305,8 @@ public:
     // Mask the 8-item vector of 32-bit ints with one less than the table size, pad the upper bits (lower indices) with zeros, and reinterpret as a 4-item vector of 64-bit ints
     Vec8i offsets32 = viPhase & mTableSizeM1;
     Vec4q offsets = reinterpret_i(permute8<HIOFFSET_V, -1, HIOFFSET_V + 2, -1, HIOFFSET_V + 4, -1, HIOFFSET_V + 6, -1>(offsets32));
-    offsets = (offsets + to_int64_in_range(PhaseMod(), mTableSize)) & mTableSizeM1;
+    Vec4q phaseMod = to_int64_in_range(PhaseMod(), mTableSize);
+    offsets = (offsets + phaseMod) & mTableSizeM1;
     Vec4q offsets1 = (offsets + 1); // &mTableSizeM1;
     // Force the double to wrap. (AND the upper bits with the upper 32 bits of UNITBIT32)
     viPhase &= normhipart;
@@ -325,16 +326,16 @@ public:
 
     // Read 4 doubles as 8 integers (signed ints are used, but the AND operations later make this irrelevant)
     viPhase = reinterpret_i(vPhase);
-    normhipart = blend8<8, HIOFFSET_V, 8, HIOFFSET_V, 8, HIOFFSET_V, 8, HIOFFSET_V>(reinterpret_i(Vec4d((double)UNITBIT32)), Vec8i(0));
-    // Mask the 8-item vector of 32-bit ints with one less than the table size, pad the upper bits (lower indices) with zeros, and reinterpret as a 4-item vector of 64-bit ints
     offsets32 = viPhase & mNextTableSizeM1;
     offsets = reinterpret_i(permute8<HIOFFSET_V, -1, HIOFFSET_V + 2, -1, HIOFFSET_V + 4, -1, HIOFFSET_V + 6, -1>(offsets32));
-    offsets = (offsets + to_int64_in_range(PhaseMod(), mTableSize)) & mNextTableSizeM1;
+    // Add the phase mod, this time just bit-shifting the previous value, and AND-out bits of or above the MSB of the table size
+    offsets = (offsets + (phaseMod >> (mNextTableSize != mTableSize))) & mNextTableSizeM1;
+//    offsets = ((offsets >> (mNextTableSize != mTableSize)) + to_int64_in_range(PhaseMod(), mNextTableSize)) & mNextTableSizeM1;
     offsets1 = (offsets + 1); // & mNextTableSizeM1;
     // Force the double to wrap. (AND the upper bits with the upper 32 bits of UNITBIT32)
     viPhase &= normhipart;
     phaseFrac = reinterpret_d(viPhase) - (double)UNITBIT32; // get the fractional part
-
+    
     // Smaller/higher table
     const Vec4d tb0s0hi = lookup<maxTableSize>(offsets, mLUTHi[0]);
     const Vec4d tb0s1hi = lookup<maxTableSize>(offsets1, mLUTHi[0]);
@@ -347,7 +348,7 @@ public:
     // Interpolate mipmap levels
     Vec4d tb0 = mul_add(tb0hi - tb0lo, mTableInterp, tb0lo);
     Vec4d tb1 = mul_add(tb1hi - tb1lo, mTableInterp, tb1lo);
-
+    
     // Restore mPhase
     tabfudge tf;
     phase += phaseIncr * (double)VECTOR_SIZE;
