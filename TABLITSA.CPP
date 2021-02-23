@@ -455,6 +455,7 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
     const IRECT b = pGraphics->GetBounds().GetPadded(-plugBorders);
     constexpr float dialSize{ 80.f };
     IRECT globalControls = b.GetOffset(0, 0, 0, -KEYBOARD_HEIGHT).GetHPadded(-5.f).GetReducedFromTop(15.f);
+    const IRECT appControls = b.GetFromTop(30.f);
 #ifndef VST3_API
     IRECT keyboardBounds = b.GetFromBottom((float)KEYBOARD_HEIGHT - plugBorders).GetPadded(-5.f, -25.f, -5.f, -10.f);
     IRECT wheelsBounds = keyboardBounds.ReduceFromLeft(100.f).GetPadded(-10.f);
@@ -474,12 +475,18 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
     const ISVG decrButtonOff = pGraphics->LoadSVG(DECR_BUTTON_OFF_FN);
     const IBitmap logoImg = pGraphics->LoadBitmap(LOGO_FN);
     const IBitmap dialImg = pGraphics->LoadBitmap(DIAL_FN, 64);
+
+    // Periodic table
     pGraphics->AttachControl(new PeriodicTable(globalControls.GetReducedFromBottom(globalControls.H() * 0.5f).GetFromLeft(720.f).GetPadded(-30.f).GetVShifted(20.f), tableImg, { kParamWavetable1, kParamWavetable2 }),
-      kCtrlTagPeriodicTable); // TODO: Set action function to store non-modulatable parameter value
+      kCtrlTagPeriodicTable);
     dynamic_cast<PeriodicTable*>(pGraphics->GetControlWithTag(kCtrlTagPeriodicTable))->LoadValues();
     pGraphics->AttachControl(new IBitmapControl(globalControls.GetReducedFromTop(90.f).GetReducedFromLeft(115.f).GetFromTLHC(280.f, 80.), logoImg));
-
-    const IRECT appControls = b.GetFromTop(30.f);
+    // Preset controls
+    const IRECT presetPanel = globalControls.GetFromTop(20.f).GetFromLeft(720.f).GetPadded(-60.f);
+    IActionFunction savePresetFunction = IActionFunction([this](IControl* pControl) {
+      GetUI()->SendArbitraryMessageFromUI();
+      })
+    pGraphics->AttachControl(new IVButtonControl(presetPanel.GetGridCell(0, 0, 1, 4), ));
 
     // Wavetable controls
     const IRECT osc1Panel = globalControls.GetReducedFromLeft(720.f).GetReducedFromBottom(globalControls.H() / 2.f).GetGridCell(0, 0, 2, 3).GetPadded(-10.f).GetHPadded(-12.f);
