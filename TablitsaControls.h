@@ -39,6 +39,8 @@ const IVStyle toggleStyle{ TABLITSA_STYLE.WithDrawFrame(true).WithColor(EVColor:
 
 const IText dropdownText{ DEFAULT_TEXT.WithFGColor(COLOR_WHITE) };
 
+const IVStyle pushButtonStyle{ TABLITSA_STYLE.WithLabelText(TABLITSA_STYLE.labelText.WithVAlign(EVAlign::Middle)).WithColor(EVColor::kHL, TABLITSA_STYLE.colorSpec.GetColor(EVColor::kPR).WithContrast(0.5)) };
+
 class TablitsaSliderControl : public IVSliderControl
 {
 public:
