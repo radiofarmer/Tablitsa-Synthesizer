@@ -451,15 +451,16 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
 
     //    pGraphics->EnableLiveEdit(true);
     pGraphics->LoadFont("Roboto-Regular", ROBOTO_FN);
-    const IRECT b = pGraphics->GetBounds().GetPadded(-10.f);
+    constexpr float plugBorders = 10.f;
+    const IRECT b = pGraphics->GetBounds().GetPadded(-plugBorders);
     constexpr float dialSize{ 80.f };
     IRECT globalControls = b.GetOffset(0, 0, 0, -KEYBOARD_HEIGHT).GetHPadded(-5.f).GetReducedFromTop(15.f);
 #ifndef VST3_API
-    IRECT keyboardBounds = b.GetFromBottom((float)KEYBOARD_HEIGHT).GetPadded(-10.f);
+    IRECT keyboardBounds = b.GetFromBottom((float)KEYBOARD_HEIGHT - plugBorders).GetPadded(-5.f, -25.f, -5.f, -10.f);
     IRECT wheelsBounds = keyboardBounds.ReduceFromLeft(100.f).GetPadded(-10.f);
 
     // Keyboard
-    pGraphics->AttachControl(new IVKeyboardControl(keyboardBounds, 36), kCtrlTagKeyboard);
+    pGraphics->AttachControl(new IVKeyboardControl(keyboardBounds, 19, 79), kCtrlTagKeyboard);
     // Mod wheels
     pGraphics->AttachControl(new IWheelControl(wheelsBounds.FracRectHorizontal(0.5)), kCtrlTagBender);
     pGraphics->AttachControl(new IWheelControl(wheelsBounds.FracRectHorizontal(0.5, true), IMidiMsg::EControlChangeMsg::kModWheel));
@@ -894,7 +895,7 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
 
     
 #ifndef VST3_API
-    pGraphics->AttachControl(new IVButtonControl(keyboardBounds.GetFromTRHC(200, 30).GetTranslated(0, -30.f), SplashClickActionFunc,
+    pGraphics->AttachControl(new IVButtonControl(b.GetFromBottom(KEYBOARD_HEIGHT + 15.f).GetFromRight(170.f).GetFromTop(30.), SplashClickActionFunc,
       "Show/Hide Keyboard", TABLITSA_STYLE.WithColor(kFG, COLOR_WHITE).WithLabelText({15.f, EVAlign::Middle})))->SetAnimationEndActionFunction(
       [pGraphics, globalControls](IControl* pCaller) {
         static bool hide = false;
