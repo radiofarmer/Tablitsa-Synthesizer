@@ -4,6 +4,8 @@
 #include "LFO.h"
 #include "TablitsaControls.h"
 
+#include <fstream>
+
 #define UI_NROWS 4
 #define UI_NCOLS 3
 #define KEYBOARD
@@ -1113,9 +1115,33 @@ bool Tablitsa::OnMessage(int msgTag, int ctrlTag, int dataSize, const void* pDat
     switch (msgTag)
     {
     case kMsgSavePreset:
+    {
+      std::string filePath = GetDataPath("\\Tablitsa\\presets\\") + "TEST";
+      std::ofstream presetFile(filePath.c_str());
+      IPreset newPreset;
+      SerializeState(newPreset.mChunk);
+      /*for (auto i{ 0 }; i < newPreset.mChunk.Size(); ++i)
+      {
+        char b = 0;
+        newPreset.mChunk.Get(&b, i);
+        presetFile.write(&b, i);
+      }*/
+      unsigned char* allBytes = static_cast<unsigned char*>(newPreset.mChunk.GetData());
+      presetFile.write(reinterpret_cast<char*>(allBytes), newPreset.mChunk.Size());
+      presetFile.close();
       break;
+    }
     case kMsgLoadPreset:
+    {
+
+      std::string filePath = GetDataPath("\\Tablitsa\\presets\\") + "TEST";
+      IPreset newPreset;
+      std::vector<char> presetData = ReadAllBytes(filePath.c_str());
+      for (auto b : presetData)
+        newPreset.mChunk.Put(&b);
+      UnserializeState(newPreset.mChunk, 0);
       break;
+    }
     case kMsgWavetable1Changed:
     {
       PeriodicTable* pTableControl = dynamic_cast<PeriodicTable*>(GetUI()->GetControlWithTag(kCtrlTagPeriodicTable));
@@ -1194,5 +1220,35 @@ void Tablitsa::SetActiveModIdx(int idx)
     dynamic_cast<TablitsaIVModKnobControl*>(GetUI()->GetControl(idx))->ColorSwap();
   if (prev > -1)
     dynamic_cast<TablitsaIVModKnobControl*>(GetUI()->GetControl(prev))->ColorSwap();
+}
+
+std::string GetDataPath(const char* fpath)
+{
+  TCHAR szPath[MAX_PATH];
+  if (SUCCEEDED(SHGetFolderPath(NULL, CSIDL_APPDATA, NULL, 0, szPath)))
+  {
+    PathAppend(szPath, _T(fpath));
+  }
+#if VST3_API
+  // In the standalone app builds, `TCHAR` is type `char`. In VST3 builds, it's `wchar_t`, requiring a different conversion method.
+  std::wstring wpath(szPath);
+  std::string path = std::wstring_convert<std::codecvt_utf8<wchar_t>>().to_bytes(wpath);
+#else
+  std::string path = szPath;
+#endif
+  return path;
+}
+
+std::vector<char> ReadAllBytes(const char* fname)
+{
+  std::ifstream ifs(fname, std::ios::binary | std::ios::ate);
+  std::ifstream::pos_type pos = ifs.tellg();
+
+  std::vector<char> allBytes(pos);
+
+  ifs.seekg(0, std::ios::beg);
+  ifs.read(&allBytes[0], pos);
+
+  return allBytes;
 }
 #endif
