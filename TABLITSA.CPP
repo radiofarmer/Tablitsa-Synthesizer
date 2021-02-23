@@ -1116,16 +1116,31 @@ bool Tablitsa::OnMessage(int msgTag, int ctrlTag, int dataSize, const void* pDat
     {
     case kMsgSavePreset:
     {
-      std::string filePath = GetDataPath("\\Tablitsa\\presets\\") + "TEST";
-      std::ofstream presetFile(filePath.c_str());
+      std::string filePath;
       IPreset newPreset;
       SerializeState(newPreset.mChunk);
-      /*for (auto i{ 0 }; i < newPreset.mChunk.Size(); ++i)
+
+      bool useSystemDialog{ false };
+      if (useSystemDialog)
       {
-        char b = 0;
-        newPreset.mChunk.Get(&b, i);
-        presetFile.write(&b, i);
-      }*/
+        WDL_String fileStr("NewPreset");
+        WDL_String pathStr(GetDataPath("\\Tablitsa\\presets\\").c_str());
+        GetUI()->PromptForFile(fileStr, pathStr, EFileAction::Save);
+        filePath = fileStr.Get(); // Does the path have to be appended to this?
+      }
+      else
+      {
+        filePath = GetDataPath("\\Tablitsa\\presets\\") + "TEST";
+      }
+
+      std::ofstream presetFile(filePath.c_str());
+      
+      if (!presetFile.is_open())
+      {
+        GetUI()->ShowMessageBox("Cannot access selected file path.", "Error", EMsgBoxType::kMB_OK);
+        break;
+      }
+   
       unsigned char* allBytes = static_cast<unsigned char*>(newPreset.mChunk.GetData());
       presetFile.write(reinterpret_cast<char*>(allBytes), newPreset.mChunk.Size());
       presetFile.close();
@@ -1136,7 +1151,23 @@ bool Tablitsa::OnMessage(int msgTag, int ctrlTag, int dataSize, const void* pDat
 
       std::string filePath = GetDataPath("\\Tablitsa\\presets\\") + "TEST";
       IPreset newPreset;
+
+      bool useSystemDialog{ false };
+      if (useSystemDialog)
+      {
+        WDL_String fileStr;
+        WDL_String pathStr;
+        GetUI()->PromptForFile(fileStr, pathStr, EFileAction::Open);
+      }
+
       std::vector<char> presetData = ReadAllBytes(filePath.c_str());
+
+      if (presetData.size() == 0)
+      {
+        GetUI()->ShowMessageBox("Preset file not found", "Error", EMsgBoxType::kMB_OK);
+        break;
+      }
+
       for (auto b : presetData)
         newPreset.mChunk.Put(&b);
       UnserializeState(newPreset.mChunk, 0);
@@ -1244,11 +1275,15 @@ std::vector<char> ReadAllBytes(const char* fname)
   std::ifstream ifs(fname, std::ios::binary | std::ios::ate);
   std::ifstream::pos_type pos = ifs.tellg();
 
-  std::vector<char> allBytes(pos);
+  if (!ifs.is_open())
+  {
+    return std::vector<char>(0);
+  }
 
+  std::vector<char> allBytes(pos);
   ifs.seekg(0, std::ios::beg);
   ifs.read(&allBytes[0], pos);
-
+  ifs.close();
   return allBytes;
 }
 #endif
