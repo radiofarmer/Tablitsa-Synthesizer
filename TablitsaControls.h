@@ -498,7 +498,7 @@ public:
   
   void Draw(IGraphics& g)
   {
-    g.FillRoundRect(IColor(255, 20, 0, 45), mRECT);
+    //g.FillRoundRect(IColor(255, 20, 0, 45), mRECT);
     // Highlight box occupied by mouse
     if (mCurrentElementCoords)
     {

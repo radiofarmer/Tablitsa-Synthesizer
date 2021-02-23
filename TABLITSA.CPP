@@ -455,6 +455,7 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
     const IRECT b = pGraphics->GetBounds().GetPadded(-plugBorders);
     constexpr float dialSize{ 80.f };
     IRECT globalControls = b.GetOffset(0, 0, 0, -KEYBOARD_HEIGHT).GetHPadded(-5.f).GetReducedFromTop(15.f);
+    const IRECT appControls = b.GetFromTop(30.f);
 #ifndef VST3_API
     IRECT keyboardBounds = b.GetFromBottom((float)KEYBOARD_HEIGHT - plugBorders).GetPadded(-5.f, -25.f, -5.f, -10.f);
     IRECT wheelsBounds = keyboardBounds.ReduceFromLeft(100.f).GetPadded(-10.f);
@@ -474,12 +475,22 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
     const ISVG decrButtonOff = pGraphics->LoadSVG(DECR_BUTTON_OFF_FN);
     const IBitmap logoImg = pGraphics->LoadBitmap(LOGO_FN);
     const IBitmap dialImg = pGraphics->LoadBitmap(DIAL_FN, 64);
+
+    // Periodic table
     pGraphics->AttachControl(new PeriodicTable(globalControls.GetReducedFromBottom(globalControls.H() * 0.5f).GetFromLeft(720.f).GetPadded(-30.f).GetVShifted(20.f), tableImg, { kParamWavetable1, kParamWavetable2 }),
-      kCtrlTagPeriodicTable); // TODO: Set action function to store non-modulatable parameter value
+      kCtrlTagPeriodicTable);
     dynamic_cast<PeriodicTable*>(pGraphics->GetControlWithTag(kCtrlTagPeriodicTable))->LoadValues();
     pGraphics->AttachControl(new IBitmapControl(globalControls.GetReducedFromTop(90.f).GetReducedFromLeft(115.f).GetFromTLHC(280.f, 80.), logoImg));
-
-    const IRECT appControls = b.GetFromTop(30.f);
+    // Preset controls
+    const IRECT presetPanel = globalControls.GetFromTop(20.f).GetFromLeft(720.f).GetHPadded(-60.f);
+    IActionFunction savePresetFunction = IActionFunction([this](IControl* pControl) {
+      SendArbitraryMsgFromUI(kMsgSavePreset);
+      });
+    IActionFunction loadPresetFunction = IActionFunction([this](IControl* pControl) {
+      SendArbitraryMsgFromUI(kMsgLoadPreset);
+      });
+    pGraphics->AttachControl(new IVButtonControl(presetPanel.GetGridCell(0, 0, 1, 4), SplashClickActionFunc, "Save", pushButtonStyle), kNoTag, "Presets")->SetAnimationEndActionFunction(savePresetFunction);
+    pGraphics->AttachControl(new IVButtonControl(presetPanel.GetGridCell(0, 1, 1, 4), SplashClickActionFunc, "Load", pushButtonStyle), kNoTag, "Presets")->SetAnimationEndActionFunction(loadPresetFunction);
 
     // Wavetable controls
     const IRECT osc1Panel = globalControls.GetReducedFromLeft(720.f).GetReducedFromBottom(globalControls.H() / 2.f).GetGridCell(0, 0, 2, 3).GetPadded(-10.f).GetHPadded(-12.f);
@@ -524,12 +535,12 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
     pGraphics->AttachControl(new IVToggleControl(masterPanel.GetGridCell(4, 1, 12, 6).GetVShifted(-15.f).GetVPadded(-2.f), kParamMonophonic, "", toggleStyle, "Poly", "Mono"));
     pGraphics->AttachControl(new IVToggleControl(masterPanel.GetGridCell(5, 1, 12, 6).GetVShifted(-15.f).GetVPadded(-2.f), kParamLegato, "", toggleStyle, "Retrigger", "Legato"));
     // Unison and Stereo Width
-    const IRECT unisonPanel = masterPanel.GetReducedFromLeft(masterPanel.W() / 3.f).GetReducedFromRight(masterPanel.W() / 6.f).GetGridCell(0, 0, 2, 1).GetVShifted(-12.f).GetVPadded(-10.f).GetHPadded(-12.f).GetHShifted(2.f);
+    const IRECT unisonPanel = masterPanel.GetReducedFromLeft(masterPanel.W() / 3.f).GetReducedFromRight(masterPanel.W() / 6.f).GetGridCell(0, 0, 2, 1).GetVShifted(-12.f).GetHPadded(-10.f).GetHShifted(2.f);
     pGraphics->AttachControl(new TablitsaIVKnobControl(unisonPanel.GetGridCell(0, 0, 2, 2).GetCentredInside(dialSize), kParamUnisonVoices, "№ Voices", modKnobStyle), kNoTag, "Unison");
     pGraphics->AttachControl(new TablitsaIVKnobControl(unisonPanel.GetGridCell(1, 0, 2, 2).GetCentredInside(dialSize), kParamUnisonDetune, "Detune", modKnobStyle), kNoTag, "Unison");
     pGraphics->AttachControl(new TablitsaIVKnobControl(unisonPanel.GetGridCell(0, 1, 2, 2).GetCentredInside(dialSize), kParamUnisonChord, "Chord", modKnobStyle), kNoTag, "Unison");
     pGraphics->AttachControl(new TablitsaIVKnobControl(unisonPanel.GetGridCell(1, 1, 2, 2).GetPadded(-5.f).GetCentredInside(dialSize), kParamStereoSpread, "Spread"), kNoTag, "Unison");
-    pGraphics->AttachControl(new TablitsaVGroupControl("Unison", "Unison", 0.f, 15.f, 0.f, 2.f));
+    pGraphics->AttachControl(new TablitsaVGroupControl("Unison", "Unison", 0.f, 13.f, 0.f, 0.f));
     pGraphics->AttachControl(new IVLEDMeterControl<2>(masterPanel.GetGridCell(0, 5, 2, 6).GetVPadded(-20.f)), kCtrlTagMeter, "Master");
 
     /* Effects Panel */
@@ -588,7 +599,7 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
     constexpr float modulePad[4]{-10.f, -5.f, -10.f, -15.f};
 
     /* Waveform Modulation Panel */
-    const IRECT lowerPanel = globalControls.GetReducedFromTop(globalControls.H() * 0.5f).GetPadded(-10.f).GetReducedFromRight(250.f).GetVShifted(-5.f);
+    const IRECT lowerPanel = globalControls.GetReducedFromTop(globalControls.H() * 0.5f).GetPadded(-10.f).GetReducedFromRight(250.f);
     const IRECT oscModPanel = lowerPanel.GetGridCell(0, 0, 3, 3);
     pGraphics->AttachControl(new ICaptionControl(oscModPanel.GetVPadded(-10.f).GetGridCell(0, 0, 3, 3).GetVShifted(10.f), kParamOscModulator, dropdownText), kNoTag, "OscMod")->SetActionFunction(
       [pGraphics](IControl* pControl) {
@@ -847,9 +858,8 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
     pGraphics->AttachControl(new TablitsaVGroupControl(lfoPanel.GetGridCell(1, 0, 3, 1).GetPadded(modulePad[0], modulePad[1], modulePad[2], modulePad[3]), "LFO 2"));
 
     /* Sequencer */
-    const float seqPanelWidth = PLUG_WIDTH - plugBorders - lowerPanel.R;
-    const IRECT sequencerDisplayPanel = lowerPanel.GetGridCell(2, 2, 3, 3).GetFromLeft(PLUG_WIDTH - lfoPanel.L).GetPadded(0.f, 10.f, 0.f, 0.f);
-    const IRECT sequencerParamsPanel = lowerPanel.FracRectVertical(2.f / 3, true).GetHShifted(seqPanelWidth - 3.f).GetFromRight(seqPanelWidth).GetVShifted(-8.f).GetPadded(-10.f);
+    const IRECT sequencerDisplayPanel = lowerPanel.GetGridCell(2, 2, 3, 3).GetFromLeft(PLUG_WIDTH - lfoPanel.L).GetVShifted(9.f).GetPadded(10.f, 12.f, 0.f, 0.f);
+    const IRECT sequencerParamsPanel = IRECT(lowerPanel.R, lowerPanel.T, globalControls.R, lowerPanel.B - lowerPanel.H() / 3.f).GetHShifted(-2.f);
 
     // Sequencer Action Functions
     auto stepRandomizeAction = [pGraphics](IControl* pCaller) {
@@ -862,8 +872,7 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
     pGraphics->AttachControl(new TablitsaIVKnobControl(sequencerParamsPanel.GetGridCell(0, 1, 2, 3).GetCentredInside(dialSize), kParamSequencerRateTempo, "Rate"), kNoTag, "SequencerParams");
     pGraphics->AttachControl(new TablitsaIVModKnobControl(sequencerParamsPanel.GetGridCell(0, 2, 2, 3).GetCentredInside(dialSize), kParamSequencerAmp, "Amp"), kNoTag, "SequencerParams");
     pGraphics->AttachControl(new TablitsaIVKnobControl(sequencerParamsPanel.GetGridCell(1, 0, 2, 3).GetCentredInside(dialSize), kParamSequencerGlide, "Glide"), kNoTag, "SequencerParams");
-    pGraphics->AttachControl(new TablitsaIVKnobControl(sequencerParamsPanel.GetGridCell(1, 1, 2, 3).GetCentredInside(dialSize), kParamSequencerCurve, "Curve"), kNoTag, "SequencerParams");
-    pGraphics->AttachControl(new IVToggleControl(sequencerParamsPanel.GetGridCell(4, 2, 8, 3).GetPadded(-15.f, -2.f, -15.f, -2.f), kParamSequencerRateMode, "", toggleStyle, "Sync Off", "Sync On"),
+    pGraphics->AttachControl(new IVToggleControl(sequencerParamsPanel.GetGridCell(4, 1, 7, 3).GetPadded(-10.f, -2.f, -10.f, -2.f), kParamSequencerRateMode, "", toggleStyle, "Sync Off", "Sync On"),
       kCtrlTagSequencerRateMode, "Sequencer")->SetAnimationEndActionFunction([pGraphics](IControl* pControl) {
         bool sync = pControl->GetValue() > 0.5;
         pGraphics->HideControl(kParamSequencerRateTempo, !sync);
@@ -884,16 +893,16 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
         pGraphics->GetDelegate()->SendArbitraryMsgFromUI(kMsgSeqSliderChanged, kCtrlTagSequencer, sizeof(ParamTuple), &data);
       }
       });
-    pGraphics->AttachControl(new IVToggleControl(sequencerParamsPanel.GetGridCell(5, 2, 8, 3).GetPadded(-15.f, -2.f, -15.f, -2.f), kParamSequencerRestart, "", toggleStyle, "Free Run", "Restart"), kNoTag, "SequencerParams");
+    pGraphics->AttachControl(new IVToggleControl(sequencerParamsPanel.GetGridCell(5, 1, 7, 3).GetPadded(-10.f, -2.f, -10.f, -2.f), kParamSequencerRestart, "", toggleStyle, "Free Run", "Restart"), kNoTag, "SequencerParams");
     pGraphics->AttachControl(new ModSliderControl(sequencerDisplayPanel.GetGridCell(0, 5, 1, 6).GetVPadded(-18.f).GetVShifted(-5.f).GetMidHPadded(20.f), kNoParameter, "Depth"), kCtrlTagSequencerDepth, "Sequencer");
-    pGraphics->AttachControl(new IVToggleControl(sequencerParamsPanel.GetGridCell(6, 2, 8, 3).GetPadded(-15.f, -2.f, -15.f, -2.f), kNoParameter, "", toggleStyle, "Cont.", "Quant."), kCtrlTagSequencerQuant, "SequencerParams")->SetActionFunction(
+    pGraphics->AttachControl(new IVToggleControl(sequencerParamsPanel.GetGridCell(4, 2, 7, 3).GetPadded(-15.f, -2.f, -15.f, -2.f), kNoParameter, "", toggleStyle, "Cont.", "Quant."), kCtrlTagSequencerQuant, "SequencerParams")->SetActionFunction(
       [pGraphics, this](IControl* pControl) {
         mSequencerIsQuantized = pControl->GetValue();
         int nSteps = mSequencerIsQuantized > 0.5 ? 12 : 0;
         dynamic_cast<IVTrackControlBase*>(pGraphics->GetControlWithTag(kCtrlTagSequencer))->SetNSteps(nSteps);
       });
-    pGraphics->AttachControl(new IVButtonControl(sequencerParamsPanel.GetGridCell(7, 2, 8, 3).GetPadded(-15.f, -2.f, -15.f, -2.f), stepRandomizeAction, "Rand.", pushButtonStyle.WithLabelText(pushButtonStyle.labelText.WithSize(12.f))), kNoTag, "SequencerParams");
-    pGraphics->AttachControl(new TablitsaVGroupControl("Sequencer", "SequencerParams", 0.f, 15.f, 0.f, 5.f));
+    pGraphics->AttachControl(new IVButtonControl(sequencerParamsPanel.GetGridCell(5, 2, 7, 3).GetPadded(-15.f, -2.f, -15.f, -2.f), stepRandomizeAction, "Randomize", pushButtonStyle.WithLabelText(pushButtonStyle.labelText.WithSize(12.f))), kNoTag, "SequencerParams");
+    pGraphics->AttachControl(new TablitsaVGroupControl(sequencerParamsPanel.GetPadded(modulePad[0], modulePad[1] + 5.f, modulePad[2], modulePad[3]), "Sequencer"));
 
     
 #ifndef VST3_API
@@ -1103,60 +1112,64 @@ bool Tablitsa::OnMessage(int msgTag, int ctrlTag, int dataSize, const void* pDat
   {
     switch (msgTag)
     {
-      case kMsgWavetable1Changed:
+    case kMsgSavePreset:
+      break;
+    case kMsgLoadPreset:
+      break;
+    case kMsgWavetable1Changed:
+    {
+      PeriodicTable* pTableControl = dynamic_cast<PeriodicTable*>(GetUI()->GetControlWithTag(kCtrlTagPeriodicTable));
+      pTableControl->SetTableLoading(true, 0);
+      const double wtIdx = *static_cast<const double*>(pData); //Semi-Normalized value (between 1/118 and 1)
+      mDSP.mLoadedWavetables[0] = wtIdx * 118.; // Corresponds to the atomic number (not the 0-indexed vector item)
+      mDSP.UpdateOscillatorWavetable(static_cast<int>(mDSP.mLoadedWavetables[0]) - 1, 0);
+      pTableControl->SetTableLoading(false, 0);
+      break;
+    }
+    case kMsgWavetable2Changed:
+    {
+      PeriodicTable* pTableControl = dynamic_cast<PeriodicTable*>(GetUI()->GetControlWithTag(kCtrlTagPeriodicTable));
+      pTableControl->SetTableLoading(true, 1);
+      const double wtIdx = *static_cast<const double*>(pData);
+      mDSP.mLoadedWavetables[1] = wtIdx * 118.;
+      mDSP.UpdateOscillatorWavetable(static_cast<int>(mDSP.mLoadedWavetables[1]) - 1, 1);
+      pTableControl->SetTableLoading(false, 1);
+      break;
+    }
+    case kMsgSeqSliderChanged:
+    {
+      // Read incoming data as a tuple
+      auto* pConverted = reinterpret_cast<const ParamTuple*>(pData);
+      mDSP.mSeqSteps[pConverted->idx] = pConverted->value;
+      break;
+    }
+    case kMsgRandomizeSequencer:
+    {
+      auto* pSequencer = dynamic_cast<SequencerControl<kNumSeqSteps>*>(GetUI()->GetControlWithTag(kCtrlTagSequencer));
+      for (auto i{ 0 }; i < kNumSeqSteps; ++i)
       {
-        PeriodicTable* pTableControl = dynamic_cast<PeriodicTable*>(GetUI()->GetControlWithTag(kCtrlTagPeriodicTable));
-        pTableControl->SetTableLoading(true, 0);
-        const double wtIdx = *static_cast<const double*>(pData); //Semi-Normalized value (between 1/118 and 1)
-        mDSP.mLoadedWavetables[0] = wtIdx * 118.; // Corresponds to the atomic number (not the 0-indexed vector item)
-        mDSP.UpdateOscillatorWavetable(static_cast<int>(mDSP.mLoadedWavetables[0]) - 1, 0);
-        pTableControl->SetTableLoading(false, 0);
-        break;
+        mDSP.mSeqSteps[i] = static_cast<double>(std::rand() % 1000) / 1000.;
+        pSequencer->SetValue(mDSP.mSeqSteps[i], i);
       }
-      case kMsgWavetable2Changed:
+      pSequencer->SetDirty(true);
+      break;
+    }
+    case kMsgFilterOscChanged:
+    {
+      IControl* pControl = GetUI()->GetControlWithTag(ctrlTag);
+      if (ctrlTag == kCtrlTagFilter1Osc)
       {
-        PeriodicTable* pTableControl = dynamic_cast<PeriodicTable*>(GetUI()->GetControlWithTag(kCtrlTagPeriodicTable));
-        pTableControl->SetTableLoading(true, 1);
-        const double wtIdx = *static_cast<const double*>(pData);
-        mDSP.mLoadedWavetables[1] = wtIdx * 118.;
-        mDSP.UpdateOscillatorWavetable(static_cast<int>(mDSP.mLoadedWavetables[1]) - 1, 1);
-        pTableControl->SetTableLoading(false, 1);
-        break;
+        mDSP.UpdateFilterSource(0, static_cast<int>(pControl->GetValue()));
+        mDSP.UpdateFilterSource(1, 1 - static_cast<int>(pControl->GetValue()));
       }
-      case kMsgSeqSliderChanged:
+      else
       {
-        // Read incoming data as a tuple
-        auto* pConverted = reinterpret_cast<const ParamTuple*>(pData);
-        mDSP.mSeqSteps[pConverted->idx] = pConverted->value;
-        break;
+        mDSP.UpdateFilterSource(1, static_cast<int>(pControl->GetValue()));
+        mDSP.UpdateFilterSource(0, 1 - static_cast<int>(pControl->GetValue()));
       }
-      case kMsgRandomizeSequencer:
-      {
-        auto* pSequencer = dynamic_cast<SequencerControl<kNumSeqSteps>*>(GetUI()->GetControlWithTag(kCtrlTagSequencer));
-        for (auto i{ 0 }; i < kNumSeqSteps; ++i)
-        {
-          mDSP.mSeqSteps[i] = static_cast<double>(std::rand() % 1000) / 1000.;
-          pSequencer->SetValue(mDSP.mSeqSteps[i], i);
-        }
-        pSequencer->SetDirty(true);
-        break;
-      }
-      case kMsgFilterOscChanged:
-      {
-        IControl* pControl = GetUI()->GetControlWithTag(ctrlTag);
-        if (ctrlTag == kCtrlTagFilter1Osc)
-        {
-          mDSP.UpdateFilterSource(0, static_cast<int>(pControl->GetValue()));
-          mDSP.UpdateFilterSource(1, 1 - static_cast<int>(pControl->GetValue()));
-        }
-        else
-        {
-          mDSP.UpdateFilterSource(1, static_cast<int>(pControl->GetValue()));
-          mDSP.UpdateFilterSource(0, 1 - static_cast<int>(pControl->GetValue()));
-        }
-      }
-      default:
-        break;
+    }
+    default:
+      break;
     }
   }
   return false;

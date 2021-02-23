@@ -475,6 +475,8 @@ enum EMsgTags
   kMsgSeqSliderChanged,
   kMsgRandomizeSequencer,
   kMsgFilterOscChanged,
+  kMsgSavePreset,
+  kMsgLoadPreset
 };
 
 enum EModulators
