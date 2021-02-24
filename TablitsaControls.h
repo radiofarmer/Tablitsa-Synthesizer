@@ -1,7 +1,12 @@
 #pragma once
-#include "Tablitsa.h"
 #include "PeriodicTable.h"
 #include "Modulation.h"
+
+#include "IGraphics.h"
+#include "IControls.h"
+
+BEGIN_IPLUG_NAMESPACE
+BEGIN_IGRAPHICS_NAMESPACE
 
 const IText TABLITSA_TEXT = IText().WithFGColor(COLOR_WHITE);
 const IVStyle TABLITSA_STYLE = IVStyle(DEFAULT_SHOW_LABEL,
@@ -55,20 +60,7 @@ public:
     SetColor(EVColor::kX1, COLOR_WHITE);
   }
 
-  void DrawTrack(IGraphics& g, const IRECT& filledArea) override
-  {
-    const float extra = mHandleInsideTrack ? mHandleSize : 0.f;
-    const IRECT adjustedTrackBounds = mDirection == EDirection::Vertical ? mTrackBounds.GetVPadded(extra) : mTrackBounds.GetHPadded(extra);
-    // Padd the filled area less, to account for the asymmetric rectangular handle
-    const IRECT adjustedFillBounds = mDirection == EDirection::Vertical ? filledArea.GetVPadded(extra / 2.f) : filledArea.GetHPadded(extra / 2.f);
-    const float cr = GetRoundedCornerRadius(mTrackBounds);
-
-    g.FillRoundRect(GetColor(kSH), adjustedTrackBounds, cr, &mBlend);
-    g.FillRoundRect(GetColor(kX1), adjustedFillBounds, cr, &mBlend);
-
-    if (mStyle.drawFrame)
-      g.DrawRoundRect(GetColor(kFR), adjustedTrackBounds, cr, &mBlend, mStyle.frameThickness);
-  }
+  void DrawTrack(IGraphics& g, const IRECT& filledArea) override;
 
   void DrawHandle(IGraphics& g, const IRECT& bounds) override
   {
@@ -1023,10 +1015,12 @@ public:
   PresetSelector(const IRECT& bounds, IPopupMenuControl* menu, std::initializer_list<char*> defaultPresets = { "" });
 
   void LoadUserPresets(std::initializer_list<char*> userPresets);
+  void Draw(IGraphics& g) override;
 
 protected:
   std::vector<std::string> mDefaultPresets;
   std::vector<std::string> mUserPresets;
+  std::vector<std::string> mAllPresets;
   IPopupMenuControl* mMenu;
 };
 

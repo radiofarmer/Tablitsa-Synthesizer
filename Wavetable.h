@@ -1,6 +1,5 @@
 #pragma once
 
-#include "IPlugPlatform.h"
 #include <ShlObj.h>
 #include <Shlwapi.h>
 #include <tchar.h>
@@ -38,11 +37,8 @@
 #include "vectormath_exp.h"
 #include "fft.h"
 
-#include "Filter.h"
-#include "Oscillator.h"
 
-
-void fft_lp_filter(WDL_FFT_REAL* samples, const int length, int max_bin, int decimation=1)
+static void fft_lp_filter(WDL_FFT_REAL* samples, const int length, int max_bin, int decimation=1)
 {
   WDL_fft_init();
   WDL_real_fft(samples, length, 0);
