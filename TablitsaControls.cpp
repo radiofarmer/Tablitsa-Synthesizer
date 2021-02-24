@@ -42,7 +42,7 @@ PresetSelector::PresetSelector(const IRECT& bounds, IPopupMenuControl* menu, std
   {
     mDefaultPresets.push_back(std::string(p));
   }
-  LoadUserPresets();
+  // LoadUserPresets(...);
   mAllPresets.insert(mAllPresets.begin(), mDefaultPresets.begin(), mDefaultPresets.end());
   mAllPresets.insert(mAllPresets.end(), mUserPresets.begin(), mUserPresets.end());
 }
