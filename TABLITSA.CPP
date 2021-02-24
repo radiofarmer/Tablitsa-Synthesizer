@@ -1,8 +1,6 @@
 
 #include "Tablitsa.h"
 #include "IPlug_include_in_plug_src.h"
-#include "LFO.h"
-#include "TablitsaControls.h"
 
 #include <fstream>
 
@@ -12,6 +10,9 @@
 #define FILTER_PARTITION 0.8
 #define ENVELOPE_PARTITION 0.8
 #define LFO_PARTITION 1.4
+
+// Load/save presets with file dialog or internal controls
+#define LOAD_WITH_DIALOG 1
 
 Tablitsa::Tablitsa(const InstanceInfo& info)
 : Plugin(info, MakeConfig(kNumParams, kNumPresets))
@@ -483,17 +484,22 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
       kCtrlTagPeriodicTable);
     dynamic_cast<PeriodicTable*>(pGraphics->GetControlWithTag(kCtrlTagPeriodicTable))->LoadValues();
     pGraphics->AttachControl(new IBitmapControl(globalControls.GetReducedFromTop(90.f).GetReducedFromLeft(115.f).GetFromTLHC(280.f, 80.), logoImg));
+
     // Preset controls
-    const IRECT presetPanel = globalControls.GetFromTop(20.f).GetFromLeft(720.f).GetHPadded(-60.f);
+    const IRECT presetPanel = globalControls.GetFromTop(50.f).GetFromLeft(720.f).GetHPadded(-60.f);
     IActionFunction savePresetFunction = IActionFunction([this](IControl* pControl) {
       SendArbitraryMsgFromUI(kMsgSavePreset);
       });
     IActionFunction loadPresetFunction = IActionFunction([this](IControl* pControl) {
       SendArbitraryMsgFromUI(kMsgLoadPreset);
       });
-    pGraphics->AttachControl(new IVButtonControl(presetPanel.GetGridCell(0, 0, 1, 4), SplashClickActionFunc, "Save", pushButtonStyle), kNoTag, "Presets")->SetAnimationEndActionFunction(savePresetFunction);
-    pGraphics->AttachControl(new IVButtonControl(presetPanel.GetGridCell(0, 1, 1, 4), SplashClickActionFunc, "Load", pushButtonStyle), kNoTag, "Presets")->SetAnimationEndActionFunction(loadPresetFunction);
-
+    pGraphics->AttachControl(new IVButtonControl(presetPanel.GetGridCell(0, 0, 2, 4).GetHPadded(-20.f), SplashClickActionFunc, "Save", pushButtonStyle), kNoTag, "Presets")->SetAnimationEndActionFunction(savePresetFunction);
+    pGraphics->AttachControl(new IVButtonControl(presetPanel.GetGridCell(1, 0, 2, 4).GetHPadded(-20.f), SplashClickActionFunc, "Load", pushButtonStyle), kNoTag, "Presets")->SetAnimationEndActionFunction(loadPresetFunction);
+#if !LOAD_WITH_DIALOG
+    const IRECT presetMenuBounds = presetPanel.GetGridCell(1, 1, 2, 4).GetVShifted(presetPanel.GetGridCell(1, 1, 2, 5).H()).GetPadded(0.f, 0.f, 100.f, 100.f);
+    IPopupMenuControl* presetSelectionMenu = new IPopupMenuControl(kNoParameter, TABLITSA_TEXT);
+    pGraphics->AttachControl(new PresetSelector(presetPanel.GetGridCell(1, 1, 2, 4).GetHPadded(-10.f), presetSelectionMenu, {"Preset 1", "Preset 2"}));
+#endif
     // Wavetable controls
     const IRECT osc1Panel = globalControls.GetReducedFromLeft(720.f).GetReducedFromBottom(globalControls.H() / 2.f).GetGridCell(0, 0, 2, 3).GetPadded(-10.f).GetHPadded(-12.f);
     pGraphics->AttachControl(new TablitsaIVModKnobControl(osc1Panel.GetGridCell(0, 0, 2, 2).GetCentredInside(dialSize), kParamWavetable1Pitch, "Pitch", modKnobStyle, true, 0.05), kNoTag, "Osc1");
@@ -543,7 +549,7 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
     pGraphics->AttachControl(new TablitsaIVKnobControl(unisonPanel.GetGridCell(0, 1, 2, 2).GetCentredInside(dialSize), kParamUnisonChord, "Chord", modKnobStyle), kNoTag, "Unison");
     pGraphics->AttachControl(new TablitsaIVKnobControl(unisonPanel.GetGridCell(1, 1, 2, 2).GetPadded(-5.f).GetCentredInside(dialSize), kParamStereoSpread, "Spread"), kNoTag, "Unison");
     pGraphics->AttachControl(new TablitsaVGroupControl("Unison", "Unison", 0.f, 13.f, 0.f, 0.f));
-    pGraphics->AttachControl(new IVLEDMeterControl<2>(masterPanel.GetGridCell(0, 5, 2, 6).GetVPadded(-20.f)), kCtrlTagMeter, "Master");
+    pGraphics->AttachControl(new IVLEDMeterControl<2>(masterPanel.GetGridCell(0, 5, 2, 6).GetVShifted(-15.f).GetHShifted(-4.f).GetVPadded(-8.f)), kCtrlTagMeter, "Master");
 
     /* Effects Panel */
     const IRECT effectsPanel = IRECT(masterPanel.GetGridCell(1, 1, 2, 7).R, masterPanel.GetGridCell(1, 0, 2, 7).T, masterPanel.GetGridCell(1, 6, 2, 7).R, masterPanel.GetGridCell(1, 6, 2, 7).B).GetHPadded(-5.f).GetHShifted(2.f);
@@ -1148,29 +1154,10 @@ bool Tablitsa::OnMessage(int msgTag, int ctrlTag, int dataSize, const void* pDat
     }
     case kMsgLoadPreset:
     {
-
-      std::string filePath = GetDataPath("\\Tablitsa\\presets\\") + "TEST";
-      IPreset newPreset;
-
-      bool useSystemDialog{ false };
-      if (useSystemDialog)
-      {
-        WDL_String fileStr;
-        WDL_String pathStr;
-        GetUI()->PromptForFile(fileStr, pathStr, EFileAction::Open);
-      }
-
-      std::vector<char> presetData = ReadAllBytes(filePath.c_str());
-
-      if (presetData.size() == 0)
-      {
-        GetUI()->ShowMessageBox("Preset file not found", "Error", EMsgBoxType::kMB_OK);
+      IByteChunk presetData = LoadPreset("TEST");
+      if (presetData.Size() == 0)
         break;
-      }
-
-      for (auto b : presetData)
-        newPreset.mChunk.Put(&b);
-      UnserializeState(newPreset.mChunk, 0);
+      UnserializeState(presetData, 0);
       break;
     }
     case kMsgWavetable1Changed:
@@ -1251,6 +1238,33 @@ void Tablitsa::SetActiveModIdx(int idx)
     dynamic_cast<TablitsaIVModKnobControl*>(GetUI()->GetControl(idx))->ColorSwap();
   if (prev > -1)
     dynamic_cast<TablitsaIVModKnobControl*>(GetUI()->GetControl(prev))->ColorSwap();
+}
+
+IByteChunk Tablitsa::LoadPreset(const char* filename)
+{
+  std::string filePath = GetDataPath("\\Tablitsa\\presets\\") + filename;
+  IByteChunk presetData;
+
+  bool useSystemDialog{ false };
+  if (useSystemDialog)
+  {
+    WDL_String fileStr;
+    WDL_String pathStr;
+    GetUI()->PromptForFile(fileStr, pathStr, EFileAction::Open);
+  }
+
+  std::vector<char> fileData = ReadAllBytes(filePath.c_str());
+
+  if (fileData.size() == 0)
+  {
+    GetUI()->ShowMessageBox("Preset file not found", "Error", EMsgBoxType::kMB_OK);
+    return presetData;
+  }
+
+  for (auto b : fileData)
+    presetData.Put(&b);
+
+  return presetData;
 }
 
 std::string GetDataPath(const char* fpath)

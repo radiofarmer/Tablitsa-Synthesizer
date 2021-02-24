@@ -103,6 +103,7 @@
     </ClCompile>
     <ClCompile Include="..\VectorFunctions.cpp" />
     <ClCompile Include="..\SignalProcessing.cpp" />
+    <ClCompile Include="..\TablitsaControls.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\Tablitsa.h" />

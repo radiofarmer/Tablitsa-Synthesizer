@@ -2,8 +2,6 @@
 
 #include "IPlug_include_in_plug_hdr.h"
 #include "IControls.h"
-// #include <vectorclass.h>
-
 
 const int kNumPresets = 1;
 constexpr int kNumVoices = 16;
@@ -530,8 +528,12 @@ public:
   /* implement this and return true to trigger your custom help info, when someone clicks help in the menu of a standalone app or VST3 plugin */
   bool OnHostRequestingProductHelp() override;
 
+  IByteChunk LoadPreset(const char* filename="Default");
+
   int GetActiveModIdx() const;
   void SetActiveModIdx(int idx);
+  int GetFirstModCtrlTag() const { return kCtrlTagEnv1Depth; }
+  int GetLastModCtrlTag() const { return kCtrlTagRndDepth; }
 
 private:
   TablitsaDSP<sample> mDSP {kNumVoices}; // sample is an alias for double
@@ -545,8 +547,10 @@ private:
 
   int mActiveModIdx{ -1 };
 #endif
-};
+};  
 
 std::string GetDataPath(const char* fpath);
 
 std::vector<char> ReadAllBytes(const char* fname); // For reading preset files of arbitrary length
+
+#include "TablitsaControls.h"
