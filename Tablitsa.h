@@ -547,4 +547,8 @@ private:
 #endif
 };
 
+std::string GetDataPath(const char* fpath);
+
+std::vector<char> ReadAllBytes(const char* fname); // For reading preset files of arbitrary length
+
 #include "TablitsaControls.h"

@@ -2,6 +2,8 @@
 #include "Tablitsa.h"
 #include "IPlug_include_in_plug_src.h"
 
+#include <fstream>
+
 #define UI_NROWS 4
 #define UI_NCOLS 3
 #define KEYBOARD
@@ -1113,9 +1115,64 @@ bool Tablitsa::OnMessage(int msgTag, int ctrlTag, int dataSize, const void* pDat
     switch (msgTag)
     {
     case kMsgSavePreset:
+    {
+      std::string filePath;
+      IPreset newPreset;
+      SerializeState(newPreset.mChunk);
+
+      bool useSystemDialog{ false };
+      if (useSystemDialog)
+      {
+        WDL_String fileStr("NewPreset");
+        WDL_String pathStr(GetDataPath("\\Tablitsa\\presets\\").c_str());
+        GetUI()->PromptForFile(fileStr, pathStr, EFileAction::Save);
+        filePath = fileStr.Get(); // Does the path have to be appended to this?
+      }
+      else
+      {
+        filePath = GetDataPath("\\Tablitsa\\presets\\") + "TEST";
+      }
+
+      std::ofstream presetFile(filePath.c_str());
+      
+      if (!presetFile.is_open())
+      {
+        GetUI()->ShowMessageBox("Cannot access selected file path.", "Error", EMsgBoxType::kMB_OK);
+        break;
+      }
+   
+      unsigned char* allBytes = static_cast<unsigned char*>(newPreset.mChunk.GetData());
+      presetFile.write(reinterpret_cast<char*>(allBytes), newPreset.mChunk.Size());
+      presetFile.close();
       break;
+    }
     case kMsgLoadPreset:
+    {
+
+      std::string filePath = GetDataPath("\\Tablitsa\\presets\\") + "TEST";
+      IPreset newPreset;
+
+      bool useSystemDialog{ false };
+      if (useSystemDialog)
+      {
+        WDL_String fileStr;
+        WDL_String pathStr;
+        GetUI()->PromptForFile(fileStr, pathStr, EFileAction::Open);
+      }
+
+      std::vector<char> presetData = ReadAllBytes(filePath.c_str());
+
+      if (presetData.size() == 0)
+      {
+        GetUI()->ShowMessageBox("Preset file not found", "Error", EMsgBoxType::kMB_OK);
+        break;
+      }
+
+      for (auto b : presetData)
+        newPreset.mChunk.Put(&b);
+      UnserializeState(newPreset.mChunk, 0);
       break;
+    }
     case kMsgWavetable1Changed:
     {
       PeriodicTable* pTableControl = dynamic_cast<PeriodicTable*>(GetUI()->GetControlWithTag(kCtrlTagPeriodicTable));
@@ -1194,5 +1251,39 @@ void Tablitsa::SetActiveModIdx(int idx)
     dynamic_cast<TablitsaIVModKnobControl*>(GetUI()->GetControl(idx))->ColorSwap();
   if (prev > -1)
     dynamic_cast<TablitsaIVModKnobControl*>(GetUI()->GetControl(prev))->ColorSwap();
+}
+
+std::string GetDataPath(const char* fpath)
+{
+  TCHAR szPath[MAX_PATH];
+  if (SUCCEEDED(SHGetFolderPath(NULL, CSIDL_APPDATA, NULL, 0, szPath)))
+  {
+    PathAppend(szPath, _T(fpath));
+  }
+#if VST3_API
+  // In the standalone app builds, `TCHAR` is type `char`. In VST3 builds, it's `wchar_t`, requiring a different conversion method.
+  std::wstring wpath(szPath);
+  std::string path = std::wstring_convert<std::codecvt_utf8<wchar_t>>().to_bytes(wpath);
+#else
+  std::string path = szPath;
+#endif
+  return path;
+}
+
+std::vector<char> ReadAllBytes(const char* fname)
+{
+  std::ifstream ifs(fname, std::ios::binary | std::ios::ate);
+  std::ifstream::pos_type pos = ifs.tellg();
+
+  if (!ifs.is_open())
+  {
+    return std::vector<char>(0);
+  }
+
+  std::vector<char> allBytes(pos);
+  ifs.seekg(0, std::ios::beg);
+  ifs.read(&allBytes[0], pos);
+  ifs.close();
+  return allBytes;
 }
 #endif
