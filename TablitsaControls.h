@@ -80,18 +80,7 @@ public:
 class ModSliderControl : public TablitsaSliderControl
 {
 public:
-  ModSliderControl(const IRECT& bounds, int paramIdx = kNoParameter, const char* label = "", const IVStyle& style = TABLITSA_STYLE.WithShowValue(true), bool valueIsEditable = false, EDirection dir = EDirection::Vertical, double gearing = DEFAULT_GEARING, float handleSize = 8.f, float trackSize = 2.f, bool handleInsideTrack = true) :
-    TablitsaSliderControl(bounds, paramIdx, label, style, valueIsEditable, dir, gearing, handleSize, trackSize, handleInsideTrack)
-  {
-    mShape = EVShape::Rectangle;
-    Toggle();
-    SetActionFunction([this](IControl* pControl) {
-      // Update control to whose parameter this slider is linked
-      IControl* pTarget = GetUI()->GetControl(mTarget);
-      if (pTarget)
-        pTarget->SetDirty();
-      });
-  }
+  ModSliderControl(const IRECT& bounds, int paramIdx = kNoParameter, const char* label = "", const IVStyle& style = TABLITSA_STYLE.WithShowValue(true), bool valueIsEditable = false, EDirection dir = EDirection::Vertical, double gearing = DEFAULT_GEARING, float handleSize = 8.f, float trackSize = 2.f, bool handleInsideTrack = true);
 
   void Toggle(int targetParam=-1)
   {
@@ -1027,3 +1016,19 @@ private:
   IVStyle mStyle;
   IControl* mTabs[10]{ nullptr };
 };
+
+class PresetSelector : public ICaptionControl
+{
+public:
+  PresetSelector(const IRECT& bounds, IPopupMenuControl* menu, std::initializer_list<char*> defaultPresets = { "" });
+
+  void LoadUserPresets(std::initializer_list<char*> userPresets);
+
+protected:
+  std::vector<std::string> mDefaultPresets;
+  std::vector<std::string> mUserPresets;
+  IPopupMenuControl* mMenu;
+};
+
+END_IPLUG_NAMESPACE
+END_IGRAPHICS_NAMESPACE
