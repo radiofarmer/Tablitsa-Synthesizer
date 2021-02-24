@@ -1,8 +1,6 @@
 
 #include "Tablitsa.h"
 #include "IPlug_include_in_plug_src.h"
-#include "LFO.h"
-#include "TablitsaControls.h"
 
 #define UI_NROWS 4
 #define UI_NCOLS 3
@@ -481,16 +479,18 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
       kCtrlTagPeriodicTable);
     dynamic_cast<PeriodicTable*>(pGraphics->GetControlWithTag(kCtrlTagPeriodicTable))->LoadValues();
     pGraphics->AttachControl(new IBitmapControl(globalControls.GetReducedFromTop(90.f).GetReducedFromLeft(115.f).GetFromTLHC(280.f, 80.), logoImg));
+
     // Preset controls
-    const IRECT presetPanel = globalControls.GetFromTop(20.f).GetFromLeft(720.f).GetHPadded(-60.f);
+    const IRECT presetPanel = globalControls.GetFromTop(50.f).GetFromLeft(720.f).GetHPadded(-60.f);
     IActionFunction savePresetFunction = IActionFunction([this](IControl* pControl) {
       SendArbitraryMsgFromUI(kMsgSavePreset);
       });
     IActionFunction loadPresetFunction = IActionFunction([this](IControl* pControl) {
       SendArbitraryMsgFromUI(kMsgLoadPreset);
       });
-    pGraphics->AttachControl(new IVButtonControl(presetPanel.GetGridCell(0, 0, 1, 4), SplashClickActionFunc, "Save", pushButtonStyle), kNoTag, "Presets")->SetAnimationEndActionFunction(savePresetFunction);
-    pGraphics->AttachControl(new IVButtonControl(presetPanel.GetGridCell(0, 1, 1, 4), SplashClickActionFunc, "Load", pushButtonStyle), kNoTag, "Presets")->SetAnimationEndActionFunction(loadPresetFunction);
+    pGraphics->AttachControl(new IVButtonControl(presetPanel.GetGridCell(0, 0, 2, 4).GetHPadded(-20.f), SplashClickActionFunc, "Save", pushButtonStyle), kNoTag, "Presets")->SetAnimationEndActionFunction(savePresetFunction);
+    pGraphics->AttachControl(new IVButtonControl(presetPanel.GetGridCell(1, 0, 2, 4).GetHPadded(-20.f), SplashClickActionFunc, "Load", pushButtonStyle), kNoTag, "Presets")->SetAnimationEndActionFunction(loadPresetFunction);
+    //pGraphics->AttachControl(new ICaptionControl(presetPanel.GetGridCell(1, 1, 2, 4).GetHPadded(-10.f), ));
 
     // Wavetable controls
     const IRECT osc1Panel = globalControls.GetReducedFromLeft(720.f).GetReducedFromBottom(globalControls.H() / 2.f).GetGridCell(0, 0, 2, 3).GetPadded(-10.f).GetHPadded(-12.f);
@@ -541,7 +541,7 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
     pGraphics->AttachControl(new TablitsaIVKnobControl(unisonPanel.GetGridCell(0, 1, 2, 2).GetCentredInside(dialSize), kParamUnisonChord, "Chord", modKnobStyle), kNoTag, "Unison");
     pGraphics->AttachControl(new TablitsaIVKnobControl(unisonPanel.GetGridCell(1, 1, 2, 2).GetPadded(-5.f).GetCentredInside(dialSize), kParamStereoSpread, "Spread"), kNoTag, "Unison");
     pGraphics->AttachControl(new TablitsaVGroupControl("Unison", "Unison", 0.f, 13.f, 0.f, 0.f));
-    pGraphics->AttachControl(new IVLEDMeterControl<2>(masterPanel.GetGridCell(0, 5, 2, 6).GetVPadded(-20.f)), kCtrlTagMeter, "Master");
+    pGraphics->AttachControl(new IVLEDMeterControl<2>(masterPanel.GetGridCell(0, 5, 2, 6).GetVShifted(-15.f).GetHShifted(-4.f).GetVPadded(-8.f)), kCtrlTagMeter, "Master");
 
     /* Effects Panel */
     const IRECT effectsPanel = IRECT(masterPanel.GetGridCell(1, 1, 2, 7).R, masterPanel.GetGridCell(1, 0, 2, 7).T, masterPanel.GetGridCell(1, 6, 2, 7).R, masterPanel.GetGridCell(1, 6, 2, 7).B).GetHPadded(-5.f).GetHShifted(2.f);

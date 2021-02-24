@@ -3,9 +3,9 @@
 #include "PeriodicTable.h"
 #include "Effects.h"
 #include "TablitsaOscillators.h"
-
-
 #include "Modulation.h"
+
+
 #include "IPlugConstants.h"
 #include "Oscillator.h"
 #include "MidiSynth.h"

@@ -1,7 +1,8 @@
 #pragma once
 
-#include "Oscillator.h"
 #include "Wavetable.h"
+
+#include "Oscillator.h"
 
 #include <vectorclass.h>
 

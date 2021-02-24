@@ -2,8 +2,6 @@
 
 #include "IPlug_include_in_plug_hdr.h"
 #include "IControls.h"
-// #include <vectorclass.h>
-
 
 const int kNumPresets = 1;
 constexpr int kNumVoices = 16;
@@ -532,6 +530,8 @@ public:
 
   int GetActiveModIdx() const;
   void SetActiveModIdx(int idx);
+  int GetFirstModCtrlTag() const { return kCtrlTagEnv1Depth; }
+  int GetLastModCtrlTag() const { return kCtrlTagRndDepth; }
 
 private:
   TablitsaDSP<sample> mDSP {kNumVoices}; // sample is an alias for double
@@ -546,3 +546,5 @@ private:
   int mActiveModIdx{ -1 };
 #endif
 };
+
+#include "TablitsaControls.h"
