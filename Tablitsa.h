@@ -528,7 +528,8 @@ public:
   /* implement this and return true to trigger your custom help info, when someone clicks help in the menu of a standalone app or VST3 plugin */
   bool OnHostRequestingProductHelp() override;
 
-  IByteChunk LoadPreset(const char* filename="Default");
+  IByteChunk LoadPreset(const char* filename="Default", bool isBackup=false);
+  void SavePreset(IByteChunk& byteData, const char* filename = "Default", bool isBackup=false);
 
   int GetActiveModIdx() const;
   void SetActiveModIdx(int idx);

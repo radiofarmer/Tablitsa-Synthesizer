@@ -9,16 +9,10 @@
 //#define FFT
 #define FFT_MAX_SIZE 32768
 
-#if _DEBUG && !VST3_API
-#define WT_DIR "..\\resources\\data\\wavetables\\"
-#else
 #define USE_APPDATA_PATH
 #define WT_DIR "\\Tablitsa\\wavetables\\"
-#if VST3_API
 #include <locale>
 #include <codecvt>
-#endif
-#endif
 
 #define WT_SIZE 1024
 #define WAV16_MAX 32767
