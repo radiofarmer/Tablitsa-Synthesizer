@@ -201,7 +201,7 @@ public:
 
   void OnMouseDown(float x, float y, const IMouseMod& mod) override
   {
-    if (!mod.L)
+    if (!mod.L || (mod.L && mod.A))
     {
       LoadModParams();
       mMouseDown = !mMouseDown;
