@@ -5,18 +5,6 @@
 using namespace igraphics;
 using namespace iplug;
 
-ModSliderControl::ModSliderControl(const IRECT& bounds, int paramIdx, const char* label, const IVStyle& style, bool valueIsEditable, EDirection dir, double gearing, float handleSize, float trackSize, bool handleInsideTrack) :
-  TablitsaSliderControl(bounds, paramIdx, label, style, valueIsEditable, dir, gearing, handleSize, trackSize, handleInsideTrack)
-{
-  mShape = EVShape::Rectangle;
-  Toggle();
-  SetActionFunction([this](IControl* pControl) {
-    // Update control to whose parameter this slider is linked
-    IControl* pTarget = GetUI()->GetControl(mTarget);
-    if (pTarget)
-      pTarget->SetDirty();
-    });
-}
 
 void TablitsaSliderControl::DrawTrack(IGraphics& g, const IRECT& filledArea)
 {
@@ -33,6 +21,20 @@ void TablitsaSliderControl::DrawTrack(IGraphics& g, const IRECT& filledArea)
     g.DrawRoundRect(GetColor(kFR), adjustedTrackBounds, cr, &mBlend, mStyle.frameThickness);
 }
 
+ModSliderControl::ModSliderControl(const IRECT& bounds, int paramIdx, const char* label, const IVStyle& style, bool valueIsEditable, EDirection dir, double gearing, float handleSize, float trackSize, bool handleInsideTrack) :
+  TablitsaSliderControl(bounds, paramIdx, label, style, valueIsEditable, dir, gearing, handleSize, trackSize, handleInsideTrack)
+{
+  mShape = EVShape::Rectangle;
+  Toggle();
+  SetActionFunction([this](IControl* pControl) {
+    // Update control to whose parameter this slider is linked
+    IControl* pTarget = GetUI()->GetControl(mTarget);
+    if (pTarget)
+      pTarget->SetDirty();
+    });
+}
+
+
 /* Preset Selection Control */
 
 PresetSelector::PresetSelector(const IRECT& bounds, IPopupMenuControl* menu, std::initializer_list<char*> defaultPresets) :
@@ -42,9 +44,62 @@ PresetSelector::PresetSelector(const IRECT& bounds, IPopupMenuControl* menu, std
   {
     mDefaultPresets.push_back(std::string(p));
   }
-  LoadUserPresets();
+  // LoadUserPresets(...);
   mAllPresets.insert(mAllPresets.begin(), mDefaultPresets.begin(), mDefaultPresets.end());
   mAllPresets.insert(mAllPresets.end(), mUserPresets.begin(), mUserPresets.end());
+}
+
+
+DropdownListControl::DropdownListControl(const IRECT& bounds, std::initializer_list<char*> options, const IText& text, const IColor& bgColor, bool showLabel) :
+  ICaptionControl(bounds, kNoParameter, text, bgColor, showLabel)
+{
+  for (auto s : options)
+  {
+    mOptions.push_back(std::string(s));
+  }
+
+  mPopupMenu.SetFunction([this](IPopupMenu* pControl) {
+    mCurrentIdx = pControl->GetChosenItemIdx();
+    });
+}
+
+void DropdownListControl::Draw(IGraphics& g)
+{
+  mStr.Set(mOptions[0].c_str());
+
+  ITextControl::Draw(g);
+
+  if (mTri.W() > 0.f)
+  {
+    g.FillTriangle(mMouseIsOver ? mTriangleMouseOverColor : mTriangleColor, mTri.L, mTri.T, mTri.R, mTri.T, mTri.MW(), mTri.B, GetMouseIsOver() ? 0 : &BLEND_50);
+  }
+}
+
+void DropdownListControl::OnMouseDown(float x, float y, const IMouseMod& mod)
+{
+  mPopupMenu.Clear();
+  int nDisplayTexts = mOptions.size();
+  // Fill the menu
+  for (int i = 0; i < nDisplayTexts; ++i)
+  {
+    const char* str = &mOptions[i].c_str()[0];
+    // TODO: what if two parameters have the same text?
+    if (!strcmp(str, mOptions[mCurrentIdx].c_str())) // strings are equal
+      mPopupMenu.AddItem(new IPopupMenu::Item(str, IPopupMenu::Item::kChecked), -1);
+    else // not equal
+      mPopupMenu.AddItem(new IPopupMenu::Item(str), -1);
+
+    mPopupMenu.SetRootTitle(mOptions[mCurrentIdx].c_str());
+  }
+  mMenu->CreatePopupMenu(mPopupMenu, mRECT);
+}
+
+void DropdownListControl::OnResize()
+{
+  if (mOptions.size() != 0)
+  {
+    mTri = mRECT.FracRectHorizontal(0.2f, true).GetCentredInside(IRECT(0, 0, 8, 5)); //TODO: This seems rubbish
+  }
 }
 
 void PresetSelector::LoadUserPresets(std::initializer_list<char*> userPresets)
