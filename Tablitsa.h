@@ -531,7 +531,8 @@ public:
   /* implement this and return true to trigger your custom help info, when someone clicks help in the menu of a standalone app or VST3 plugin */
   bool OnHostRequestingProductHelp() override;
 
-  IByteChunk LoadPreset(const char* filename="Default");
+  IByteChunk LoadPreset(const char* filename="UserPreset", bool isBackup=false);
+  void SavePreset(IByteChunk& byteData, const char* filename = "UserPreset", bool isBackup=false);
 
   int GetActiveModIdx() const;
   void SetActiveModIdx(int idx);
@@ -550,9 +551,9 @@ private:
 
   int mActiveModIdx{ -1 };
 #endif
-};  
+};
 
-std::string GetDataPath(const char* fpath);
+std::string GetDataPath(char* appendPath="\\");
 
 std::vector<char> ReadAllBytes(const char* fname); // For reading preset files of arbitrary length
 

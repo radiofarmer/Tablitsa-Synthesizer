@@ -2,7 +2,7 @@
 #include "Tablitsa.h"
 #include "IPlug_include_in_plug_src.h"
 
-#include <fstream>
+#include <atlstr.h>
 
 #define UI_NROWS 4
 #define UI_NCOLS 3
@@ -432,10 +432,10 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
   GetParam(kParamDelayFeedback)->InitPercentage("Delay Feedback");
   GetParam(kParamDelayMix)->InitPercentage("Delay Mix", 0.);
 
-#ifndef VST3_API
-#define KEYBOARD_HEIGHT 150.f
-#else
+#if VST3_API
 #define KEYBOARD_HEIGHT 0.f
+#else
+#define KEYBOARD_HEIGHT 150.f
 #endif
 #if IPLUG_EDITOR // http://bit.ly/2S64BDd
   mMakeGraphicsFunc = [&]() {
@@ -488,13 +488,40 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
     // Preset controls
     const IRECT presetPanel = globalControls.GetFromTop(50.f).GetFromLeft(720.f).GetHPadded(-60.f);
     IActionFunction savePresetFunction = IActionFunction([this](IControl* pControl) {
-      SendArbitraryMsgFromUI(kMsgSavePreset);
+      bool saveBackup = false;
+      SendArbitraryMsgFromUI(kMsgSavePreset, kNoTag, sizeof(bool), reinterpret_cast<const void*>(&saveBackup));
       });
     IActionFunction loadPresetFunction = IActionFunction([this](IControl* pControl) {
-      SendArbitraryMsgFromUI(kMsgLoadPreset);
+      bool loadBackup = false;
+      SendArbitraryMsgFromUI(kMsgLoadPreset, kNoTag, sizeof(bool), reinterpret_cast<const void*>(&loadBackup));
+      });
+    IActionFunction resetToDefaultFunction = IActionFunction([this](IControl* pControl) {
+      // Save current state
+      std::string backupPath = GetDataPath("\\Tablitsa\\presets\\") + "_backup.TPST";
+      IByteChunk currentState;
+      SerializeState(currentState);
+      SavePreset(currentState, backupPath.c_str(), true);
+      // Load default state
+      std::string defaultPath = GetDataPath("\\Tablitsa\\presets\\") + "_Tablitsa_Default.TPST";
+      IByteChunk presetData = LoadPreset(defaultPath.c_str(), false);
+      if (presetData.Size() == 0)
+        return;
+      UnserializeState(presetData, 0);
+      UpdateUIControls();
+      });
+    IActionFunction loadBackupFunction = IActionFunction([this](IControl* pControl) {
+      std::string defaultPath = GetDataPath("\\Tablitsa\\presets\\") + "_backup.TPST";
+      IByteChunk presetData = LoadPreset(defaultPath.c_str(), false);
+      if (presetData.Size() == 0)
+        return;
+      UnserializeState(presetData, 0);
+      UpdateUIControls();
       });
     pGraphics->AttachControl(new IVButtonControl(presetPanel.GetGridCell(0, 0, 2, 4).GetHPadded(-20.f), SplashClickActionFunc, "Save", pushButtonStyle), kNoTag, "Presets")->SetAnimationEndActionFunction(savePresetFunction);
-    pGraphics->AttachControl(new IVButtonControl(presetPanel.GetGridCell(1, 0, 2, 4).GetHPadded(-20.f), SplashClickActionFunc, "Load", pushButtonStyle), kNoTag, "Presets")->SetAnimationEndActionFunction(loadPresetFunction);
+    pGraphics->AttachControl(new IVButtonControl(presetPanel.GetGridCell(0, 1, 2, 4).GetHPadded(-20.f), SplashClickActionFunc, "Load", pushButtonStyle), kNoTag, "Presets")->SetAnimationEndActionFunction(loadPresetFunction);
+    pGraphics->AttachControl(new IVButtonControl(presetPanel.GetGridCell(1, 0, 2, 4).GetHPadded(-20.f), SplashClickActionFunc, "Reset", pushButtonStyle), kNoTag, "Presets")->SetAnimationEndActionFunction(resetToDefaultFunction);
+    pGraphics->AttachControl(new IVButtonControl(presetPanel.GetGridCell(1, 1, 2, 4).GetHPadded(-20.f), SplashClickActionFunc, "Load Backup", pushButtonStyle), kNoTag, "Presets")->SetAnimationEndActionFunction(loadBackupFunction);
+    // Built-in file selection
 #if !LOAD_WITH_DIALOG
     const IRECT presetMenuBounds = presetPanel.GetGridCell(1, 1, 2, 4).GetVShifted(presetPanel.GetGridCell(1, 1, 2, 5).H()).GetPadded(0.f, 0.f, 100.f, 100.f);
     IPopupMenuControl* presetSelectionMenu = new IPopupMenuControl(kNoParameter, TABLITSA_TEXT);
@@ -981,6 +1008,9 @@ int Tablitsa::UnserializeState(const IByteChunk& chunk, int startPos)
   // Delay tempo sync
   startPos = chunk.Get(&v, startPos);
   mDelayIsSynced = v;
+
+  assert(mDSP.mLoadedWavetables[0] == static_cast<int>(mDSP.mLoadedWavetables[0]));
+  assert(mDSP.mLoadedWavetables[1] == static_cast<int>(mDSP.mLoadedWavetables[1]));
   
   // If UI exists
   if (GetUI())
@@ -1126,42 +1156,55 @@ bool Tablitsa::OnMessage(int msgTag, int ctrlTag, int dataSize, const void* pDat
     {
     case kMsgSavePreset:
     {
+      auto* backup = reinterpret_cast<const bool*>(pData);
       std::string filePath;
-      IPreset newPreset;
-      SerializeState(newPreset.mChunk);
+      IByteChunk newPreset;
+      SerializeState(newPreset);
 
-      bool useSystemDialog{ false };
+      bool useSystemDialog{ (bool)LOAD_WITH_DIALOG };
       if (useSystemDialog)
       {
         WDL_String fileStr("NewPreset");
         WDL_String pathStr(GetDataPath("\\Tablitsa\\presets\\").c_str());
-        GetUI()->PromptForFile(fileStr, pathStr, EFileAction::Save);
-        filePath = fileStr.Get(); // Does the path have to be appended to this?
+        GetUI()->PromptForFile(fileStr, pathStr, EFileAction::Save, "TPST");
+        filePath = fileStr.Get();
+        if (filePath == "\0")
+          break;
       }
       else
       {
-        filePath = GetDataPath("\\Tablitsa\\presets\\") + "TEST";
+        filePath = GetDataPath("\\Tablitsa\\presets\\") + "TEST.TPST";
       }
 
-      std::ofstream presetFile(filePath.c_str());
-      
-      if (!presetFile.is_open())
-      {
-        GetUI()->ShowMessageBox("Cannot access selected file path.", "Error", EMsgBoxType::kMB_OK);
-        break;
-      }
-   
-      unsigned char* allBytes = static_cast<unsigned char*>(newPreset.mChunk.GetData());
-      presetFile.write(reinterpret_cast<char*>(allBytes), newPreset.mChunk.Size());
-      presetFile.close();
+      SavePreset(newPreset, filePath.c_str(), *backup);
+
       break;
     }
     case kMsgLoadPreset:
     {
-      IByteChunk presetData = LoadPreset("TEST");
+      auto* backup = reinterpret_cast<const bool*>(pData);
+      std::string filePath;
+      if (*backup)
+      {
+        filePath = GetDataPath("\\Tablitsa\\presets\\") + "_tablitsa.bkp";
+      }
+      else if ((bool)LOAD_WITH_DIALOG)
+      {
+        WDL_String fileStr("UserPreset");
+        WDL_String pathStr(GetDataPath("\\Tablitsa\\presets\\").c_str());
+        GetUI()->PromptForFile(fileStr, pathStr, EFileAction::Open, "TPST");
+        filePath = fileStr.Get();
+        if (filePath == "\0")
+          break;
+      }
+      else
+        filePath = GetDataPath("\\Tablitsa\\presets\\") + "TEST.TPST";
+
+      IByteChunk presetData = LoadPreset(filePath.c_str(), *backup);
       if (presetData.Size() == 0)
         break;
       UnserializeState(presetData, 0);
+      UpdateUIControls();
       break;
     }
     case kMsgWavetable1Changed:
@@ -1244,24 +1287,44 @@ void Tablitsa::SetActiveModIdx(int idx)
     dynamic_cast<TablitsaIVModKnobControl*>(GetUI()->GetControl(prev))->ColorSwap();
 }
 
-IByteChunk Tablitsa::LoadPreset(const char* filename)
+void Tablitsa::SavePreset(IByteChunk& byteData, const char* filename, bool isBackup)
 {
-  std::string filePath = GetDataPath("\\Tablitsa\\presets\\") + filename;
-  IByteChunk presetData;
+  assert(byteData.Size() != 0);
 
-  bool useSystemDialog{ false };
-  if (useSystemDialog)
+  if (!strcmp(filename, "_Tablitsa_Default.TPST"))
   {
-    WDL_String fileStr;
-    WDL_String pathStr;
-    GetUI()->PromptForFile(fileStr, pathStr, EFileAction::Open);
+    GetUI()->ShowMessageBox("Cannot overwrite default preset", "Error", EMsgBoxType::kMB_OK);
   }
 
-  std::vector<char> fileData = ReadAllBytes(filePath.c_str());
+  std::ofstream presetFile(filename);
+
+  if (!presetFile.is_open())
+  {
+    if (isBackup)
+      GetUI()->ShowMessageBox("Could not open backup file. Check directory and try again.", "Error", EMsgBoxType::kMB_OK);
+    else
+      GetUI()->ShowMessageBox("Cannot access selected file path.", "Error", EMsgBoxType::kMB_OK);
+    presetFile.close();
+    return;
+  }
+
+  unsigned char* allBytes = static_cast<unsigned char*>(byteData.GetData());
+  presetFile.write(reinterpret_cast<char*>(allBytes), byteData.Size());
+  presetFile.close();
+}
+
+IByteChunk Tablitsa::LoadPreset(const char* filename, bool isBackup)
+{
+  IByteChunk presetData;
+
+  std::vector<char> fileData = ReadAllBytes(filename);
 
   if (fileData.size() == 0)
   {
-    GetUI()->ShowMessageBox("Preset file not found", "Error", EMsgBoxType::kMB_OK);
+    if (isBackup)
+      GetUI()->ShowMessageBox("Backup file not found", "Error", EMsgBoxType::kMB_OK);
+    else
+      GetUI()->ShowMessageBox("Preset file not found", "Error", EMsgBoxType::kMB_OK);
     return presetData;
   }
 
@@ -1270,13 +1333,15 @@ IByteChunk Tablitsa::LoadPreset(const char* filename)
 
   return presetData;
 }
+#endif
 
-std::string GetDataPath(const char* fpath)
+std::string GetDataPath(char* appendPath)
 {
+  USES_CONVERSION;
   TCHAR szPath[MAX_PATH];
   if (SUCCEEDED(SHGetFolderPath(NULL, CSIDL_APPDATA, NULL, 0, szPath)))
   {
-    PathAppend(szPath, _T(fpath));
+    PathAppend(szPath, A2T(appendPath));
   }
 #if VST3_API
   // In the standalone app builds, `TCHAR` is type `char`. In VST3 builds, it's `wchar_t`, requiring a different conversion method.
@@ -1300,8 +1365,8 @@ std::vector<char> ReadAllBytes(const char* fname)
 
   std::vector<char> allBytes(pos);
   ifs.seekg(0, std::ios::beg);
+  // TODO: Exception handling here in case the vector is empty
   ifs.read(&allBytes[0], pos);
   ifs.close();
   return allBytes;
 }
-#endif
