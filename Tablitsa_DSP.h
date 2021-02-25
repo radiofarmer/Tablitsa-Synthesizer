@@ -523,16 +523,13 @@ public:
         
        for (auto j = 0; j < FRAME_INTERVAL; ++j)
        {
-         // Amp scaling
-         osc1Output[j] *= mVModulations.GetList()[kVWavetable1Amp][bufferIdx];
-         osc2Output[j] *= mVModulations.GetList()[kVWavetable2Amp][bufferIdx];
          // Saturation
-         osc1Output[j] = mOsc1Sat.Process(osc1Output[j]);
+         osc1Output[j] = mOsc1Sat.Process(osc1Output[j]); 
          osc2Output[j] = mOsc2Sat.Process(osc2Output[j]);
          // Filters
          double osc1FilterOutput = mFilters.at(osc1Filter)->Process(osc1Output[j]);
          double osc2FilterOutput = mFilters.at(osc2Filter)->Process(osc2Output[j]);
-         double output_summed = osc1FilterOutput + osc2FilterOutput;
+         double output_summed = osc1FilterOutput * mVModulations.GetList()[kVWavetable1Amp][bufferIdx] + osc2FilterOutput * mVModulations.GetList()[kVWavetable2Amp][bufferIdx];
          double output_scaled = output_summed * ampEnvVal * mGain;
          outputs[0][i + j] += output_scaled * mPan[0];
          outputs[1][i + j] += output_scaled * mPan[1];
