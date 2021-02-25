@@ -439,6 +439,7 @@
     <ClCompile Include="..\..\..\WDL\fft.c" />
     <ClCompile Include="..\SignalProcessing.cpp" />
     <ClCompile Include="..\Tablitsa.cpp" />
+    <ClCompile Include="..\TablitsaControls.cpp" />
     <ClCompile Include="..\VectorFunctions.cpp" />
   </ItemGroup>
   <ItemGroup>

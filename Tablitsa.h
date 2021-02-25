@@ -548,9 +548,9 @@ private:
 
   int mActiveModIdx{ -1 };
 #endif
-};  
+};
 
-std::string GetDataPath(const char* fpath);
+std::string GetDataPath(char* fpath);
 
 std::vector<char> ReadAllBytes(const char* fname); // For reading preset files of arbitrary length
 

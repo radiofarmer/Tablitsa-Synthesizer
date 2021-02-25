@@ -5,18 +5,6 @@
 using namespace igraphics;
 using namespace iplug;
 
-ModSliderControl::ModSliderControl(const IRECT& bounds, int paramIdx, const char* label, const IVStyle& style, bool valueIsEditable, EDirection dir, double gearing, float handleSize, float trackSize, bool handleInsideTrack) :
-  TablitsaSliderControl(bounds, paramIdx, label, style, valueIsEditable, dir, gearing, handleSize, trackSize, handleInsideTrack)
-{
-  mShape = EVShape::Rectangle;
-  Toggle();
-  SetActionFunction([this](IControl* pControl) {
-    // Update control to whose parameter this slider is linked
-    IControl* pTarget = GetUI()->GetControl(mTarget);
-    if (pTarget)
-      pTarget->SetDirty();
-    });
-}
 
 void TablitsaSliderControl::DrawTrack(IGraphics& g, const IRECT& filledArea)
 {
@@ -32,6 +20,20 @@ void TablitsaSliderControl::DrawTrack(IGraphics& g, const IRECT& filledArea)
   if (mStyle.drawFrame)
     g.DrawRoundRect(GetColor(kFR), adjustedTrackBounds, cr, &mBlend, mStyle.frameThickness);
 }
+
+ModSliderControl::ModSliderControl(const IRECT& bounds, int paramIdx, const char* label, const IVStyle& style, bool valueIsEditable, EDirection dir, double gearing, float handleSize, float trackSize, bool handleInsideTrack) :
+  TablitsaSliderControl(bounds, paramIdx, label, style, valueIsEditable, dir, gearing, handleSize, trackSize, handleInsideTrack)
+{
+  mShape = EVShape::Rectangle;
+  Toggle();
+  SetActionFunction([this](IControl* pControl) {
+    // Update control to whose parameter this slider is linked
+    IControl* pTarget = GetUI()->GetControl(mTarget);
+    if (pTarget)
+      pTarget->SetDirty();
+    });
+}
+
 
 /* Preset Selection Control */
 

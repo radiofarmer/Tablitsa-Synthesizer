@@ -2,7 +2,7 @@
 #include "Tablitsa.h"
 #include "IPlug_include_in_plug_src.h"
 
-#include <fstream>
+#include <atlstr.h>
 
 #define UI_NROWS 4
 #define UI_NCOLS 3
@@ -1132,6 +1132,12 @@ bool Tablitsa::OnMessage(int msgTag, int ctrlTag, int dataSize, const void* pDat
       bool useSystemDialog{ (bool)LOAD_WITH_DIALOG };
       if (useSystemDialog)
       {
+#if VST3_API
+        typedef const wchar_t* pathchar_t;
+#else
+        typedef const char* pathchar_t;
+#endif
+
         WDL_String fileStr("NewPreset");
         WDL_String pathStr(GetDataPath("\\Tablitsa\\presets\\").c_str());
         GetUI()->PromptForFile(fileStr, pathStr, EFileAction::Save, "TPST");
@@ -1294,13 +1300,15 @@ IByteChunk Tablitsa::LoadPreset(const char* filename, bool isBackup)
 
   return presetData;
 }
+#endif
 
-std::string GetDataPath(const char* fpath)
+std::string GetDataPath(char* fpath)
 {
+  USES_CONVERSION;
   TCHAR szPath[MAX_PATH];
   if (SUCCEEDED(SHGetFolderPath(NULL, CSIDL_APPDATA, NULL, 0, szPath)))
   {
-    PathAppend(szPath, _T(fpath));
+    PathAppend(szPath, A2T(fpath));
   }
 #if VST3_API
   // In the standalone app builds, `TCHAR` is type `char`. In VST3 builds, it's `wchar_t`, requiring a different conversion method.
@@ -1328,4 +1336,3 @@ std::vector<char> ReadAllBytes(const char* fname)
   ifs.close();
   return allBytes;
 }
-#endif
