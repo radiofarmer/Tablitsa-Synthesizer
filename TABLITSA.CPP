@@ -582,7 +582,7 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
     const IRECT effectsPanel = IRECT(masterPanel.GetGridCell(1, 1, 2, 7).R, masterPanel.GetGridCell(1, 0, 2, 7).T, masterPanel.GetGridCell(1, 6, 2, 7).R, masterPanel.GetGridCell(1, 6, 2, 7).B).GetHPadded(-5.f).GetHShifted(2.f);
 
     // Effects tab control
-    pGraphics->AttachControl(new TablitsaEffectBankControl(effectsPanel, { "Effect 1", "Effect1", "Effect3" }, { "E1", "E2", "E3" }), kNoTag, "Effects");
+    pGraphics->AttachControl(new TablitsaEffectBankControl(effectsPanel, { "Effect 1", "Effect1", "Effect3" }, { "Delay", "S&H", "E3" }), kCtrlTagEffectBank, "Effects");
     // Delay
     auto channelLockFunction = IActionFunction([pGraphics, this](IControl* pControl) {
       int ctrlTag = pControl->GetTag() == kCtrlTagDelayLMilliseconds || pControl->GetTag() == kCtrlTagDelayLBeats ? pControl->GetTag() + 1 : pControl->GetTag() - 1;
@@ -590,7 +590,11 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
       GetUI()->GetDelegate()->SendParameterValueFromUI(pGraphics->GetControlWithTag(ctrlTag)->GetParamIdx(), pControl->GetValue());
       pGraphics->GetControlWithTag(ctrlTag)->SetDirty(false);
       });
-    pGraphics->AttachControl(new DropdownListControl(effectsPanel.FracRectHorizontal(0.25, false).GetFromTop(40.f).GetReducedFromTop(20.f).GetPadded(-2.f), TABLITSA_EFFECTS_LIST), kCtrlTagEffect1List, "Delay");
+    pGraphics->AttachControl(new DropdownListControl(effectsPanel.FracRectHorizontal(0.4, false).GetFromTop(40.f).GetReducedFromTop(20.f).GetPadded(-2.f), TABLITSA_EFFECTS_LIST), kCtrlTagEffect1Tab)->SetActionFunction(
+      [pGraphics](IControl* pControl) {
+        dynamic_cast<TablitsaEffectBankControl*>(pGraphics->GetControlWithTag(kCtrlTagEffectBank))->SetTabGroup(0, dynamic_cast<DropdownListControl*>(pControl)->GetSelectedGroupName());
+      }
+    );
     const IRECT effectsControlsPanel = effectsPanel.GetReducedFromTop(40.f);
     pGraphics->AttachControl(new TablitsaIVKnobControl(effectsControlsPanel.FracRectVertical(2.f / 3, true).GetGridCell(0, 0, 1, 4).GetCentredInside(dialSize), kParamDelayTimeLMilliseconds, "Left", modKnobStyle), kCtrlTagDelayLMilliseconds, "Delay");
     pGraphics->AttachControl(new TablitsaIVKnobControl(effectsControlsPanel.FracRectVertical(2.f / 3, true).GetGridCell(0, 1, 1, 4).GetCentredInside(dialSize), kParamDelayTimeRMilliseconds, "Right", modKnobStyle), kCtrlTagDelayRMilliseconds, "Delay");
@@ -630,7 +634,6 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
         pGraphics->SetAllControlsDirty();
       }
     );
-
     /* LOWER-HALF CONTROLS */
     constexpr float modulePad[4]{-10.f, -5.f, -10.f, -15.f};
 
@@ -964,7 +967,7 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
 #endif
 
     // Popup Menus
-    dynamic_cast<DropdownListControl*>(pGraphics->GetControlWithTag(kCtrlTagEffect1List))->AttachPopupMenu();
+    dynamic_cast<DropdownListControl*>(pGraphics->GetControlWithTag(kCtrlTagEffect1Tab))->AttachPopupMenu();
 
   };
 #endif

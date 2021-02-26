@@ -34,21 +34,84 @@ ModSliderControl::ModSliderControl(const IRECT& bounds, int paramIdx, const char
     });
 }
 
+/* Tab Controls */
 
-/* Preset Selection Control */
-
-PresetSelector::PresetSelector(const IRECT& bounds, IPopupMenuControl* menu, std::initializer_list<char*> defaultPresets) :
-  ICaptionControl(bounds, kNoParameter, TABLITSA_TEXT, TABLITSA_STYLE.colorSpec.GetColor(EVColor::kBG)), mMenu(menu)
+void TablitsaVTabBox::SetActive(bool active)
 {
-  for (auto p : defaultPresets)
-  {
-    mDefaultPresets.push_back(std::string(p));
-  }
-  // LoadUserPresets(...);
-  mAllPresets.insert(mAllPresets.begin(), mDefaultPresets.begin(), mDefaultPresets.end());
-  mAllPresets.insert(mAllPresets.end(), mUserPresets.begin(), mUserPresets.end());
+  mActive = active;
+  // Show/hide controls in this tab view
+  GetUI()->ForControlInGroup(mGroupName.Get(), [active](IControl& control) {
+    if(control.IsHidden() == !active)
+      control.Hide(!active);
+    });
 }
 
+void TablitsaVTabBox::SetGroupName(const char* newGroupName)
+{
+  // Hide old group
+  GetUI()->ForControlInGroup(mGroupName.Get(), [](IControl& control) {
+    if (!control.IsHidden())
+      control.Hide(true);
+    });
+  mGroupName.Set(newGroupName);
+  // show new group
+  GetUI()->ForControlInGroup(mGroupName.Get(), [](IControl& control) {
+    if (control.IsHidden())
+      control.Hide(false);
+    control.SetDirty(true); // Trigger control show/hide functions
+    });
+}
+
+/* Effect Bank */
+
+TablitsaEffectBankControl::TablitsaEffectBankControl(const IRECT& bounds, std::initializer_list<char*> labels, std::initializer_list<char*> groupNames, const IVStyle& style, const int maxTabs) :
+  IControl(bounds, kNoParameter), mMaxTabs(maxTabs), mStyle(style)
+{
+  for (auto l : labels)
+  {
+    int nLabels = mLabels.GetSize();
+    if (nLabels >= mMaxTabs)
+      break;
+
+    mLabels.Resize(nLabels + 1);
+    TabText* pLab = mLabels.Get() + nLabels;
+    strcpy(pLab->mText, l);
+  }
+
+  for (auto g : groupNames)
+  {
+    int nGroups = mGroups.GetSize();
+    mGroups.Resize(nGroups + 1);
+    TabText* pName = mGroups.Get() + nGroups;
+    strcpy(pName->mText, g);
+  }
+
+  // If more labels were supplied than groups, append empty strings to the group  names
+  if (labels.size() > groupNames.size())
+  {
+    for (auto i{ groupNames.size() }; i < labels.size(); ++i)
+    {
+      int nGroups = mGroups.GetSize();
+      mGroups.Resize(nGroups + 1);
+      TabText* pName = mGroups.Get() + nGroups;
+      strcpy(pName->mText, mGroups.Get()[i].mText);
+    }
+  }
+}
+
+void TablitsaEffectBankControl::TabChanged(int newIdx)
+{
+  for (int i{ 0 }; i < mMaxTabs; ++i)
+  {
+    if (mTabs[i])
+    {
+      TablitsaVTabBox* tab = dynamic_cast<TablitsaVTabBox*>(mTabs[i]);
+      tab->SetActive(i == newIdx);
+    }
+  }
+}
+
+/* Generic Dropdown List */
 
 DropdownListControl::DropdownListControl(const IRECT& bounds, std::initializer_list<char*> options, const IText& text, const IColor& bgColor, bool showLabel) :
   ICaptionControl(bounds, kNoParameter, text, bgColor, showLabel)
@@ -59,13 +122,15 @@ DropdownListControl::DropdownListControl(const IRECT& bounds, std::initializer_l
   }
 
   mPopupMenu.SetFunction([this](IPopupMenu* pControl) {
-    mCurrentIdx = pControl->GetChosenItemIdx();
+    if (pControl->GetChosenItemIdx() >= 0)
+      mCurrentIdx = pControl->GetChosenItemIdx();
+    this->SetDirty(true); // Tablitsa: Trigger action function to update the tab control
     });
 }
 
 void DropdownListControl::Draw(IGraphics& g)
 {
-  mStr.Set(mOptions[0].c_str());
+  mStr.Set(mOptions[mCurrentIdx].c_str());
 
   ITextControl::Draw(g);
 
@@ -100,6 +165,20 @@ void DropdownListControl::OnResize()
   {
     mTri = mRECT.FracRectHorizontal(0.2f, true).GetCentredInside(IRECT(0, 0, 8, 5)); //TODO: This seems rubbish
   }
+}
+
+/* Preset Selection Control */
+
+PresetSelector::PresetSelector(const IRECT& bounds, IPopupMenuControl* menu, std::initializer_list<char*> defaultPresets) :
+  ICaptionControl(bounds, kNoParameter, TABLITSA_TEXT, TABLITSA_STYLE.colorSpec.GetColor(EVColor::kBG)), mMenu(menu)
+{
+  for (auto p : defaultPresets)
+  {
+    mDefaultPresets.push_back(std::string(p));
+  }
+  // LoadUserPresets(...);
+  mAllPresets.insert(mAllPresets.begin(), mDefaultPresets.begin(), mDefaultPresets.end());
+  mAllPresets.insert(mAllPresets.end(), mUserPresets.begin(), mUserPresets.end());
 }
 
 void PresetSelector::LoadUserPresets(std::initializer_list<char*> userPresets)
