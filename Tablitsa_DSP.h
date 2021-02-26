@@ -766,7 +766,7 @@ public:
 
     // Process voices
     mParamSmoother.ProcessBlock(mParamsToSmooth, mModulations.GetList(), nFrames); // Populate modulations list (to be sent to mSynth as inputs)
-    SetTempoAndBeat(qnPos, transportIsRunning, tempo);
+    SetTempoAndBeat(qnPos, transportIsRunning, tempo, mTSNum, mTSDenom);
     mSynth.ProcessBlock(mModulations.GetList(), outputs, 0, nOutputs, nFrames);
 
     for(int s=0; s < nFrames;s++)
@@ -774,12 +774,12 @@ public:
       const T smoothedGain = mModulations.GetList()[kModGainSmoother][s];
 
       // Master effects processing
-      T delay[2]{ outputs[0][s], outputs[1][s] };
-      mDelayEffect.ProcessStereo(delay);
-      //const T delay[2]{ mDelayEffect.Process(outputs[0][s]), mDelayEffect.Process(outputs[0][s]) };
+      T stereo_in[2]{ outputs[0][s], outputs[1][s] };
+      mEffects[0]->ProcessStereo(stereo_in);
+//      mEffects[1]->ProcessStereo(stereo_in);
 
-      outputs[0][s] += delay[0];
-      outputs[1][s] += delay[1];
+      outputs[0][s] = stereo_in[0];
+      outputs[1][s] = stereo_in[1];
 
       outputs[0][s] *= smoothedGain * (2 - mModulations.GetList()[kModPanSmoother][s]);
       outputs[1][s] *= smoothedGain * mModulations.GetList()[kModPanSmoother][s];
@@ -809,7 +809,8 @@ public:
     mModulations.Empty();
 
     // Effects
-    mDelayEffect.SetSampleRate(sampleRate);
+    mEffects[0]->SetSampleRate(sampleRate);
+    mEffects[1]->SetSampleRate(sampleRate);
     
     for(auto i = 0; i < kNumModulations; i++)
     {
@@ -835,9 +836,9 @@ public:
     mSynth.AddMidiMsgToQueue(msg);
   }
 
-  inline void SetTempoAndBeat(double qnPos, bool transportIsRunning, double tempo)
+  inline void SetTempoAndBeat(double qnPos, bool transportIsRunning, double tempo, const int tsNum, const int tsDenom)
   {
-    mGlobalMetronome.Set(qnPos, tempo, transportIsRunning);
+    mGlobalMetronome.Set(qnPos, tempo, transportIsRunning, tsNum, tsDenom);
   }
 
   void UpdateOscillatorWavetable(int wtIdx, int oscIdx)
@@ -1877,28 +1878,19 @@ public:
         break;
       }
       case kParamEffect1Param5:
-        mDelayEffect.SetTempoSync(value > 0.5);
+        mEffects[0]->SetParam5((T)value);
         break;
       case kParamEffect1Param1:
-      case kParamEffect1Param2:
-      {
-        if (true)
-        {
-          mDelayEffect.SetDelayMS(value, paramIdx - kParamEffect1Param1);
-        }
-        else
-        {
-          double qnScalar = LFO<T>::GetQNScalar(static_cast<LFO<T>::ETempoDivision>(Clip((int)value, 0, (int)LFO<T>::ETempoDivision::kNumDivisions)));
-          double qnPerMeasure = 4. / mTSDenom * mTSNum;
-          mDelayEffect.SetDelayTempo(1. / qnScalar / qnPerMeasure, paramIdx - kParamEffect1Param1, mTempo);
-        }
+        mEffects[0]->SetParam1((T)value);
         break;
-      }
+      case kParamEffect1Param2:
+        mEffects[0]->SetParam2((T)value);
+        break;
       case kParamEffect1Param3:
-        mDelayEffect.SetFeedback((T)value / 100.);
+        mEffects[0]->SetParam3((T)value); // Delay feedback
         break;
       case kParamEffect1Param4:
-        mDelayEffect.SetGain((T)value / 100.);
+        mEffects[0]->SetParam4((T)value); // Delay mix
         break;
       default:
         break;
@@ -1946,10 +1938,6 @@ public:
   int mStepPos{ 0 };
   int mPrevPos{ -1 };
 
-  // Effects
-  std::vector<Effect<T>*> mEffects;
-  DelayEffect<T> mDelayEffect{ DEFAULT_SAMPLE_RATE, DEFAULT_SAMPLE_RATE * 12. };
-
   // Pointers to master modulators, for free-run and legato modes
   std::vector<Envelope<T>*> Env1Queue;
   std::vector<Envelope<T>*> Env2Queue;
@@ -1963,4 +1951,11 @@ public:
   GlobalModulator<T, FastLFO<T>> mGlobalLFO1{ &mGlobalMetronome };
   GlobalModulator<T, FastLFO<T>> mGlobalLFO2{ &mGlobalMetronome };
   GlobalModulator<T, Sequencer<T>> mGlobalSequencer{ &mGlobalMetronome, mSeqSteps };
+
+
+  // Effects
+  std::vector<Effect<T>*> mEffects{
+    new DelayEffect<T>(DEFAULT_SAMPLE_RATE, 10000., &mGlobalMetronome),
+    new SampleAndHold<T>(DEFAULT_SAMPLE_RATE)
+  };
 };

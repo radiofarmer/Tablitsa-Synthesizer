@@ -309,7 +309,7 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
   GetParam(kParamPhaseModFreqKTk)->InitDouble("Phase Mod Frequency KTk Mod", 0., -1., 1., 0.01);
   GetParam(kParamPhaseModFreqRnd)->InitDouble("Phase Mod Frequency Rnd Mod", 0., -1., 1., 0.01);
   // Phase Mod Amount
-  GetParam(kParamPhaseModAmount)->InitPercentage("Phase Modulator Amount", 25., 0., 100., 1.);
+  GetParam(kParamPhaseModAmount)->InitPercentage("Phase Modulator Amount", 25., 0., 100.);
   GetParam(kParamPhaseModAmountEnv1)->InitDouble("Phase Mod Depth Env1 Mod", 0., -1., 1., 0.01);
   GetParam(kParamPhaseModAmountEnv2)->InitDouble("Phase Mod Depth Env2 Mod", 0., -1., 1., 0.01);
   GetParam(kParamPhaseModAmountAmpEnv)->InitDouble("Phase Mod Depth AmpEnv Mod", 0., -1., 1., 0.01);
@@ -331,8 +331,8 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
   GetParam(kParamRingModFreqKTk)->InitDouble("Ring Mod Frequency KTk Mod", 0., -1., 1., 0.01);
   GetParam(kParamRingModFreqRnd)->InitDouble("Ring Mod Frequency Rnd Mod", 0., -1., 1., 0.01);
   // Ring Mod Amount
-  GetParam(kParamRingModAmount)->InitPercentage("Ring Modulator Amount", 25., 0., 100., 1.);
-  GetParam(kParamRingModAmount)->InitPercentage("Ring Modulator Amount", 25., 0., 100., 1.);
+  GetParam(kParamRingModAmount)->InitPercentage("Ring Modulator Amount", 25., 0., 100.);
+  GetParam(kParamRingModAmount)->InitPercentage("Ring Modulator Amount", 25., 0., 100.);
   GetParam(kParamRingModAmountEnv1)->InitDouble("Ring Mod Depth Env1 Mod", 0., -1., 1., 0.01);
   GetParam(kParamRingModAmountEnv2)->InitDouble("Ring Mod Depth Env2 Mod", 0., -1., 1., 0.01);
   GetParam(kParamRingModAmountAmpEnv)->InitDouble("Ring Mod Depth AmpEnv Mod", 0., -1., 1., 0.01);
@@ -424,15 +424,15 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
   GetParam(kParamFilter2Delay)->InitInt("Filter 2 Delay", 8, 1, 512);
 
   // Effect Parameters
-  GetParam(kParamEffect1Param1)->InitDouble("Stereo Delay Time L (ms)", 100., 1., 5000., 1., "ms", IParam::kFlagsNone, "Delay", IParam::ShapePowCurve(3.));
-  GetParam(kParamEffect1Param2)->InitDouble("Stereo Delay Time R (ms)", 100., 1., 5000., 1., "ms", IParam::kFlagsNone, "Delay", IParam::ShapePowCurve(3.));
-  GetParam(kParamEffect1Param3)->InitPercentage("Delay Feedback");
-  GetParam(kParamEffect1Param4)->InitPercentage("Delay Mix", 0.);
-  GetParam(kParamEffect1Param5)->InitBool("Delay Tempo Sync", false);
+  GetParam(kParamEffect1Param1)->InitDouble("Effect 1 Parameter 1", 1., 1., 5000., 1., "ms", IParam::kFlagsNone, "Delay", IParam::ShapePowCurve(3.));
+  GetParam(kParamEffect1Param2)->InitDouble("Effect 1 Parameter 2", 100., 1., 5000., 1., "ms", IParam::kFlagsNone, "Delay", IParam::ShapePowCurve(3.));
+  GetParam(kParamEffect1Param3)->InitPercentage("Effect 1 Parameter 3");
+  GetParam(kParamEffect1Param4)->InitPercentage("Effect 1 Parameter 4", 0.);
+  GetParam(kParamEffect1Param5)->InitBool("Effect 1 Parameter 5", false);
   //GetParam(kParamDelayTimeLBeats)->InitEnum("Stereo Delay Time L (tempo)", LFO<>::k8th, { DELAY_TEMPODIV_VALIST });
   //GetParam(kParamDelayTimeRBeats)->InitEnum("Stereo Delay Time R (tempo)", LFO<>::k8th, { DELAY_TEMPODIV_VALIST });
 
-  GetParam(kParamEffect2Param1)->InitDouble("Sample-and-Hold Sample Rate", 100., 1., 5000., 1., "ms", IParam::kFlagsNone, "SaH", IParam::ShapePowCurve(3.));
+  GetParam(kParamEffect2Param1)->InitDouble("Sample-and-Hold Sample Rate", 10., 1., 100., 1., "ms", IParam::kFlagsNone, "SaH", IParam::ShapePowCurve(3.));
   GetParam(kParamEffect2Param2)->InitPercentage("Sample-and-Hold Decay", 0.);
   GetParam(kParamEffect2Param3)->InitPercentage("Sample-and-Hold Noise");
   GetParam(kParamEffect2Param4)->InitPercentage("Sample-and-Hold Mix", 0.);
@@ -444,7 +444,7 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
 #endif
 #if IPLUG_EDITOR // http://bit.ly/2S64BDd
   mMakeGraphicsFunc = [&]() {
-    return MakeGraphics(*this, PLUG_WIDTH, (int)(PLUG_HEIGHT + KEYBOARD_HEIGHT), PLUG_FPS, GetScaleForScreen(PLUG_WIDTH, PLUG_HEIGHT + KEYBOARD_HEIGHT));
+    return MakeGraphics(*this, PLUG_WIDTH, (int)(PLUG_HEIGHT + KEYBOARD_HEIGHT), PLUG_FPS, GetScaleForScreen((int)(PLUG_WIDTH), (int)(PLUG_HEIGHT + KEYBOARD_HEIGHT)));
   };
   mLayoutFunc = [&](IGraphics* pGraphics) {
 
@@ -588,7 +588,7 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
 
     // Effects tab control
     pGraphics->AttachControl(new TablitsaEffectBankControl(effectsPanel, { "Effect 1", "Effect1", "Effect3" }, { "E1", "E2", "E3" }), kCtrlTagEffectBank, "Effects");
-    // Delay
+    // Effect 1
     auto channelLockFunction = IActionFunction([pGraphics, this](IControl* pControl) {
       // Tag of the other channel's control
       int ctrlTag = pControl->GetTag() == kCtrlTagEffect1Knob1 || pControl->GetTag() == kCtrlTagEffect1Knob1 ? pControl->GetTag() + 1 : pControl->GetTag() - 1;
@@ -596,6 +596,7 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
       GetUI()->GetDelegate()->SendParameterValueFromUI(pGraphics->GetControlWithTag(ctrlTag)->GetParamIdx(), pControl->GetValue());
       pGraphics->GetControlWithTag(ctrlTag)->SetDirty(false);
       });
+    // Selector list
     pGraphics->AttachControl(new DropdownListControl(effectsPanel.FracRectHorizontal(0.4, false).GetFromTop(40.f).GetReducedFromTop(20.f).GetPadded(-2.f), TABLITSA_EFFECTS_LIST), kCtrlTagEffect1Tab, "E1")->SetActionFunction(
       [pGraphics, this](IControl* pControl) {
         // Swap out effect parameters (and rearrange controls if necessary)
@@ -608,7 +609,7 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
         IControl* toggle2 = pGraphics->GetControlWithTag(kCtrlTagEffect1Toggle2);
         switch (effectIdx)
         {
-        case 0:
+        case kDelayEffect:
         {
           GetParam(kParamEffect1Param1)->InitDouble("Stereo Delay Time L (ms)", 100., 1., 5000., 1., "ms", IParam::kFlagsNone, "Delay", IParam::ShapePowCurve(3.));
           GetParam(kParamEffect1Param2)->InitDouble("Stereo Delay Time R (ms)", 100., 1., 5000., 1., "ms", IParam::kFlagsNone, "Delay", IParam::ShapePowCurve(3.));
@@ -628,10 +629,10 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
           knob4->SetDisabled(false);
           break;
         }
-        case 1:
+        case kSampleAndHoldEffect:
         {
           // Sample-and-Hold Parameter definitions (only here)
-          GetParam(kParamEffect1Param1)->InitDouble("Sample-and-Hold Sample Rate", 100., 1., 5000., 1., "ms", IParam::kFlagsNone, "SaH", IParam::ShapePowCurve(3.));
+          GetParam(kParamEffect1Param1)->InitDouble("Sample-and-Hold Sample Rate", 10., 1., 100., 1., "ms", IParam::kFlagsNone, "SaH", IParam::ShapePowCurve(3.));
           GetParam(kParamEffect1Param2)->InitPercentage("Sample-and-Hold Decay", 0.);
           GetParam(kParamEffect1Param3)->InitPercentage("Sample-and-Hold Noise");
           GetParam(kParamEffect1Param4)->InitPercentage("Sample-and-Hold Mix", 0.);
@@ -665,6 +666,8 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
         knob4->SetDirty(true);
         toggle1->SetDirty(true);
         toggle2->SetDirty(true);
+        SendArbitraryMsgFromUI(kMsgEffect1Changed, kNoTag, sizeof(effectIdx), reinterpret_cast<void*>(&effectIdx));
+        SendCurrentParamValuesFromDelegate();
       }
     );
     const IRECT effectsControlsPanel = effectsPanel.GetReducedFromTop(40.f);
@@ -1022,7 +1025,7 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
       [pGraphics, globalControls](IControl* pCaller) {
         static bool hide = false;
         pGraphics->GetControlWithTag(kCtrlTagKeyboard)->Hide(hide = !hide);
-        pGraphics->Resize((float)PLUG_WIDTH, hide ? (float)PLUG_HEIGHT : (float)PLUG_HEIGHT + (float)KEYBOARD_HEIGHT, pGraphics->GetDrawScale());
+        pGraphics->Resize((int)PLUG_WIDTH, hide ? (int)PLUG_HEIGHT : (float)PLUG_HEIGHT + (float)KEYBOARD_HEIGHT, pGraphics->GetDrawScale());
     });
     pGraphics->SetQwertyMidiKeyHandlerFunc([pGraphics](const IMidiMsg& msg) {
                                               dynamic_cast<IVKeyboardControl*>(pGraphics->GetControlWithTag(kCtrlTagKeyboard))->SetNoteFromMidi(msg.NoteNumber(), msg.StatusMsg() == IMidiMsg::kNoteOn);
@@ -1336,6 +1339,23 @@ bool Tablitsa::OnMessage(int msgTag, int ctrlTag, int dataSize, const void* pDat
       {
         mDSP.UpdateFilterSource(1, static_cast<int>(pControl->GetValue()));
         mDSP.UpdateFilterSource(0, 1 - static_cast<int>(pControl->GetValue()));
+      }
+    }
+    case kMsgEffect1Changed:
+    case kMsgEffect2Changed:
+    case kMsgEffect3Changed:
+    {
+      int effectIdx = *reinterpret_cast<const int*>(pData);
+      switch (effectIdx)
+      {
+      case kDelayEffect:
+        mDSP.mEffects[msgTag - kMsgEffect1Changed] = new DelayEffect<iplug::sample>(GetSampleRate(), 10000., &mDSP.mGlobalMetronome);
+        break;
+      case kSampleAndHoldEffect:
+        mDSP.mEffects[msgTag - kMsgEffect1Changed] = new SampleAndHold<iplug::sample>(GetSampleRate());
+        break;
+      default:
+        mDSP.mEffects[msgTag - kMsgEffect1Changed] = new Effect<iplug::sample>(GetSampleRate());
       }
     }
     default:

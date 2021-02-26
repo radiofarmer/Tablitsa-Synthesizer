@@ -693,7 +693,7 @@ public:
     IVMultiSliderControl<MAXNC>(bounds, label, style, nSteps, dir)
   {
     SetColor(kX1, GetColor(kPR)); // Set active step color to the pressed step color
-    SetColor(kHL, GetColor(kPR).WithOpacity(0.2)); // Background highlight
+    SetColor(kHL, GetColor(kPR).WithOpacity(0.2f)); // Background highlight
   }
 
   void DrawWidget(IGraphics& g) override
