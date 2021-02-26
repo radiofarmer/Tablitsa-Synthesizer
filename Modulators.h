@@ -352,7 +352,7 @@ public:
     {
       phaseIncr *= LFO<T>::mQNScalar;
       if (transportIsRunning)
-        phase = std::fmod(sampleAccurateQnPos, oneOverQNScalar) * LFO<T>::mQNScalar;
+        phase = std::fmod(sampleAccurateQnPos, oneOverQNScalar) * LFO<T>::mQNScalar * mTableSize;
     }
 
     T s_out = Lookup(phase);

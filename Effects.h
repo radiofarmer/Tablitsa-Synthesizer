@@ -24,7 +24,7 @@ public:
   virtual void SetParam1(T value) {}
   virtual void SetParam2(T value) {}
   virtual void SetParam3(T value) {}
-  virtual void SetParam4(T value) { SetMix((T)value / 100.); }
+  virtual void SetParam4(T value) { SetMix(value / (T)100.); }
   virtual void SetParam5(T value) {}
   virtual void SetParam6(T value) {}
 
@@ -90,8 +90,8 @@ public:
     else
       SetDelayMS(value, 1);
   }
-  virtual void SetParam3(T value) override { SetFeedback((T)value / 100.); }
-  virtual void SetParam4(T value) override { SetGain((T)value / 100.); }
+  virtual void SetParam3(T value) override { SetFeedback(value / (T)100.); }
+  virtual void SetParam4(T value) override { SetGain(value / (T)100.); }
   virtual void SetParam5(T value) override { SetTempoSync(value > 0.5); }
 
   void SetDelayMS(T timeMS, int channel)
@@ -204,24 +204,26 @@ public:
   SampleAndHold(T sampleRate) : Effect(sampleRate) {}
 
   void SetParam1(T value) override { SetRateMS(value); }
-  void SetParam2(T value) override { SetDecay((T)value / 100.); }
-  void SetParam3(T value) override { SetNoise((T)value / 100.); }
+  void SetParam2(T value) override { SetDecay(value / (T)100.); }
+  void SetParam3(T value) override { SetNoise(value / (T)100.); }
 
   T Process(T s) override
   {
     T out = mHold;
+    mHold *= mDecay;
     if (mSampleCounter++ >= mRate)
     {
       out = mHold = s;
       mSampleCounter = 0;
     }
-    return s + mWetMix * (out - s);
+    out = mWetMix * (out - s);
+    return s + out;
   }
 
   void ProcessStereo(T* s) override
   {
     s[0] = Process(s[0]);
-    s[1] = s[0];
+    s[1] = Process(s[1]);
   }
 
   void SetRateMS(T rate)
@@ -231,12 +233,12 @@ public:
 
   void SetDecay(T decay)
   {
-    mDecay = decay;
+    mDecay = 1. - decay;
   }
 
   void SetNoise(T noise)
   {
-    mNoise = noise;
+    mNoise = std::pow(2., std::pow(2., 11.) * noise);
   }
 
 protected:
