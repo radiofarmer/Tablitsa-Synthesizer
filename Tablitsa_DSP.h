@@ -275,6 +275,33 @@ struct UnisonVoiceManager
   }
 };
 
+// Effect helper enums and structs
+
+enum EEffectTypes
+{
+  kDelayEffect,
+  kSampleAndHoldEffect
+};
+enum EDelayParams
+{
+  kDelayTempoSync,
+  kDelayChannelLock
+};
+
+template<typename T, int NumEffects>
+struct EffectHolder
+{
+  std::vector<bool> mSettings;
+  Effect<T>* mEffect;
+  int mEffectType;
+
+  EffectHolder(Effect<T>* effect, const int effectType, std::initializer_list<bool> boolSettings = {}) :
+    mEffect(effect), mSettings(boolSettings)
+  {
+
+  }
+};
+
 template<typename T>
 class TablitsaDSP
 {
@@ -766,7 +793,7 @@ public:
 
     // Process voices
     mParamSmoother.ProcessBlock(mParamsToSmooth, mModulations.GetList(), nFrames); // Populate modulations list (to be sent to mSynth as inputs)
-    SetTempoAndBeat(qnPos, transportIsRunning, tempo);
+    SetTempoAndBeat(qnPos, transportIsRunning, tempo, mTSNum, mTSDenom);
     mSynth.ProcessBlock(mModulations.GetList(), outputs, 0, nOutputs, nFrames);
 
     for(int s=0; s < nFrames;s++)
@@ -775,8 +802,8 @@ public:
 
       // Master effects processing
       T delay[2]{ outputs[0][s], outputs[1][s] };
-      mDelayEffect.ProcessStereo(delay);
-      //const T delay[2]{ mDelayEffect.Process(outputs[0][s]), mDelayEffect.Process(outputs[0][s]) };
+      mEffect1->ProcessStereo(delay);
+      //const T delay[2]{ mEffect1.Process(outputs[0][s]), mEffect1.Process(outputs[0][s]) };
 
       outputs[0][s] += delay[0];
       outputs[1][s] += delay[1];
@@ -809,7 +836,7 @@ public:
     mModulations.Empty();
 
     // Effects
-    mDelayEffect.SetSampleRate(sampleRate);
+    mEffect1->SetSampleRate(sampleRate);
     
     for(auto i = 0; i < kNumModulations; i++)
     {
@@ -835,9 +862,9 @@ public:
     mSynth.AddMidiMsgToQueue(msg);
   }
 
-  inline void SetTempoAndBeat(double qnPos, bool transportIsRunning, double tempo)
+  inline void SetTempoAndBeat(double qnPos, bool transportIsRunning, double tempo, const int tsNum, const int tsDenom)
   {
-    mGlobalMetronome.Set(qnPos, tempo, transportIsRunning);
+    mGlobalMetronome.Set(qnPos, tempo, transportIsRunning, tsNum, tsDenom);
   }
 
   void UpdateOscillatorWavetable(int wtIdx, int oscIdx)
@@ -1877,28 +1904,19 @@ public:
         break;
       }
       case kParamEffect1Param5:
-        mDelayEffect.SetTempoSync(value > 0.5);
+        mEffect1->SetParam5((T)value);
         break;
       case kParamEffect1Param1:
-      case kParamEffect1Param2:
-      {
-        if (true)
-        {
-          mDelayEffect.SetDelayMS(value, paramIdx - kParamEffect1Param1);
-        }
-        else
-        {
-          double qnScalar = LFO<T>::GetQNScalar(static_cast<LFO<T>::ETempoDivision>(Clip((int)value, 0, (int)LFO<T>::ETempoDivision::kNumDivisions)));
-          double qnPerMeasure = 4. / mTSDenom * mTSNum;
-          mDelayEffect.SetDelayTempo(1. / qnScalar / qnPerMeasure, paramIdx - kParamEffect1Param1, mTempo);
-        }
+        mEffect1->SetParam1((T)value);
         break;
-      }
+      case kParamEffect1Param2:
+        mEffect1->SetParam2((T)value);
+        break;
       case kParamEffect1Param3:
-        mDelayEffect.SetFeedback((T)value / 100.);
+        mEffect1->SetParam3((T)value); // Delay feedback
         break;
       case kParamEffect1Param4:
-        mDelayEffect.SetGain((T)value / 100.);
+        mEffect1->SetParam4((T)value); // Delay mix
         break;
       default:
         break;
@@ -1946,10 +1964,6 @@ public:
   int mStepPos{ 0 };
   int mPrevPos{ -1 };
 
-  // Effects
-  std::vector<Effect<T>*> mEffects;
-  DelayEffect<T> mDelayEffect{ DEFAULT_SAMPLE_RATE, DEFAULT_SAMPLE_RATE * 12. };
-
   // Pointers to master modulators, for free-run and legato modes
   std::vector<Envelope<T>*> Env1Queue;
   std::vector<Envelope<T>*> Env2Queue;
@@ -1963,4 +1977,9 @@ public:
   GlobalModulator<T, FastLFO<T>> mGlobalLFO1{ &mGlobalMetronome };
   GlobalModulator<T, FastLFO<T>> mGlobalLFO2{ &mGlobalMetronome };
   GlobalModulator<T, Sequencer<T>> mGlobalSequencer{ &mGlobalMetronome, mSeqSteps };
+
+
+  // Effects
+  Effect<T>* mEffect1 = new DelayEffect<T>(DEFAULT_SAMPLE_RATE, DEFAULT_SAMPLE_RATE * 12., &mGlobalMetronome);
+  std::vector<Effect<T>*> mEffects;
 };

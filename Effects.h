@@ -2,6 +2,7 @@
 
 #include "SignalProcessing.h"
 #include "Filter.h"
+#include "Modulators.h"
 
 template<typename T>
 class Effect
@@ -11,10 +12,19 @@ public:
 
   virtual T Process(T s) = 0;
 
+  virtual void ProcessStereo(T* s) {}
+
   virtual void SetSampleRate(T sampleRate)
   {
     mSampleRate = sampleRate;
   }
+
+  virtual void SetParam1(T value, ...) {}
+  virtual void SetParam2(T value, ...) {}
+  virtual void SetParam3(T value, ...) {}
+  virtual void SetParam4(T value, ...) {}
+  virtual void SetParam5(T value, ...) {}
+  virtual void SetParam6(T value, ...) {}
 
 protected:
   double mSampleRate;
@@ -34,6 +44,11 @@ class DelayEffect final : public Effect<T>
 
 public:
   DelayEffect(double sampleRate, double maxDelayMS = 5000.) :
+    DelayEffect(sampleRate, maxDelayMS, nullptr)
+  {
+  }
+
+  DelayEffect(double sampleRate, double maxDelayMS = 5000., ModMetronome* metronome=nullptr) :
     Effect<T>(sampleRate),
     mMaxDelayMS(maxDelayMS),
     mMaxDelay(static_cast<int>((mMaxDelayMS / 1000. + 1.)* mSampleRate)),
@@ -44,10 +59,37 @@ public:
     mDelayLTimeMS(mMaxDelayMS / 2),
     mDelayRTimeMS(mMaxDelayMS / 2),
     mDelayLBeats(1.),
-    mDelayRBeats(1.)
+    mDelayRBeats(1.),
+    mMetronome(metronome)
   {
 
   }
+  // Helper functions
+  virtual void SetParam1(T value, ...)
+  {
+    if (mTempoSync)
+    {
+      double qnScalar = LFO<T>::GetQNScalar(static_cast<LFO<T>::ETempoDivision>(Clip((int)value, 0, (int)LFO<T>::ETempoDivision::kNumDivisions)));
+      double qnPerMeasure = 4. / mMetronome->mTSDenom * mMetronome->mTSNum;
+      SetDelayTempo(1. / qnScalar / qnPerMeasure, 0);
+    }
+    else
+      SetDelayMS(value, 0);
+  }
+  virtual void SetParam2(T value, ...)
+  {
+    if (mTempoSync)
+    {
+      double qnScalar = LFO<T>::GetQNScalar(static_cast<LFO<T>::ETempoDivision>(Clip((int)value, 0, (int)LFO<T>::ETempoDivision::kNumDivisions)));
+      double qnPerMeasure = 4. / mMetronome->mTSDenom * mMetronome->mTSNum;
+      SetDelayTempo(1. / qnScalar / qnPerMeasure, 1);
+    }
+    else
+      SetDelayMS(value, 1);
+  }
+  virtual void SetParam3(T value, ...) { SetFeedback((T)value / 100.); }
+  virtual void SetParam4(T value, ...) { SetGain((T)value / 100.); }
+  virtual void SetParam5(T value, ...) { SetTempoSync(value > 0.5); }
 
   void SetDelayMS(T timeMS, int channel)
   {
@@ -139,6 +181,7 @@ private:
   int mMaxDelay;
   DelayLine mDelayL;
   DelayLine mDelayR;
+  ModMetronome* mMetronome; // For tempo sync
 
   T mDelayLGain{ 0.5 };
   T mDelayRGain{ 0.5 };
