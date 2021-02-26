@@ -212,17 +212,17 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
   GetParam(kParamWavetable1BendVel)->InitDouble("WT1 Bend Vel Mod", 0., -1., 1., 0.01);
   GetParam(kParamWavetable1BendKTk)->InitDouble("WT1 Bend KTk Mod", 0., -1., 1., 0.01);
   GetParam(kParamWavetable1BendRnd)->InitDouble("WT1 Bend Rnd Mod", 0., -1., 1., 0.01);
-  // Wavetable 1 Sub
-  GetParam(kParamWavetable1Sub)->InitDouble("WT1 Sub", 0., 0., 1., 0.01);
-  GetParam(kParamWavetable1SubEnv1)->InitDouble("WT1 Sub Env1 Mod", 0., -1., 1., 0.01);
-  GetParam(kParamWavetable1SubEnv2)->InitDouble("WT1 Sub Env2 Mod", 0., -1., 1., 0.01);
-  GetParam(kParamWavetable1SubAmpEnv)->InitDouble("WT1 Sub SubEnv Mod", 0., -1., 1., 0.01);
-  GetParam(kParamWavetable1SubLFO1)->InitDouble("WT1 Sub LFO1 Mod", 0., -1., 1., 0.01);
-  GetParam(kParamWavetable1SubLFO2)->InitDouble("WT1 Sub LFO2 Mod", 0., -1., 1., 0.01);
-  GetParam(kParamWavetable1SubSeq)->InitDouble("WT1 Sub Seq Mod", 0., -1., 1., 0.01);
-  GetParam(kParamWavetable1SubVel)->InitDouble("WT1 Sub Vel Mod", 0., -1., 1., 0.01);
-  GetParam(kParamWavetable1SubKTk)->InitDouble("WT1 Sub KTk Mod", 0., -1., 1., 0.01);
-  GetParam(kParamWavetable1SubRnd)->InitDouble("WT1 Sub Rnd Mod", 0., -1., 1., 0.01);
+  // Wavetable 1 Formant
+  GetParam(kParamWavetable1Formant)->InitDouble("WT1 Formant", 1., 0., 1., 0.01);
+  GetParam(kParamWavetable1FormantEnv1)->InitDouble("WT1 Formant Env1 Mod", 0., -1., 1., 0.01);
+  GetParam(kParamWavetable1FormantEnv2)->InitDouble("WT1 Formant Env2 Mod", 0., -1., 1., 0.01);
+  GetParam(kParamWavetable1FormantAmpEnv)->InitDouble("WT1 Formant FormantEnv Mod", 0., -1., 1., 0.01);
+  GetParam(kParamWavetable1FormantLFO1)->InitDouble("WT1 Formant LFO1 Mod", 0., -1., 1., 0.01);
+  GetParam(kParamWavetable1FormantLFO2)->InitDouble("WT1 Formant LFO2 Mod", 0., -1., 1., 0.01);
+  GetParam(kParamWavetable1FormantSeq)->InitDouble("WT1 Formant Seq Mod", 0., -1., 1., 0.01);
+  GetParam(kParamWavetable1FormantVel)->InitDouble("WT1 Formant Vel Mod", 0., -1., 1., 0.01);
+  GetParam(kParamWavetable1FormantKTk)->InitDouble("WT1 Formant KTk Mod", 0., -1., 1., 0.01);
+  GetParam(kParamWavetable1FormantRnd)->InitDouble("WT1 Formant Rnd Mod", 0., -1., 1., 0.01);
   // Wavetable 1 Amp
   GetParam(kParamWavetable1Amp)->InitDouble("WT1 Amp", 0.5, 0., 1., 0.01);
   GetParam(kParamWavetable1AmpEnv1)->InitDouble("WT1 Amp Env1 Mod", 0., -1., 1., 0.01);
@@ -268,17 +268,17 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
   GetParam(kParamWavetable2BendVel)->InitDouble("WT2 Bend Vel Mod", 0., -1., 1., 0.01);
   GetParam(kParamWavetable2BendKTk)->InitDouble("WT2 Bend KTk Mod", 0., -1., 1., 0.01);
   GetParam(kParamWavetable2BendRnd)->InitDouble("WT2 Bend Rnd Mod", 0., -1., 1., 0.01);
-  // Wavetable 2 Sub
-  GetParam(kParamWavetable2Sub)->InitDouble("WT2 Sub", 0., 0., 1., 0.01);
-  GetParam(kParamWavetable2SubEnv1)->InitDouble("WT2 Sub Env1 Mod", 0., -1., 1., 0.01);
-  GetParam(kParamWavetable2SubEnv2)->InitDouble("WT2 Sub Env2 Mod", 0., -1., 1., 0.01);
-  GetParam(kParamWavetable2SubAmpEnv)->InitDouble("WT2 Sub SubEnv Mod", 0., -1., 1., 0.01);
-  GetParam(kParamWavetable2SubLFO1)->InitDouble("WT2 Sub LFO1 Mod", 0., -1., 1., 0.01);
-  GetParam(kParamWavetable2SubLFO2)->InitDouble("WT2 Sub LFO2 Mod", 0., -1., 1., 0.01);
-  GetParam(kParamWavetable2SubSeq)->InitDouble("WT2 Sub Seq Mod", 0., -1., 1., 0.01);
-  GetParam(kParamWavetable2SubVel)->InitDouble("WT2 Sub Vel Mod", 0., -1., 1., 0.01);
-  GetParam(kParamWavetable2SubKTk)->InitDouble("WT2 Sub KTk Mod", 0., -1., 1., 0.01);
-  GetParam(kParamWavetable2SubRnd)->InitDouble("WT2 Sub Rnd Mod", 0., -1., 1., 0.01);
+  // Wavetable 2 Formant
+  GetParam(kParamWavetable2Formant)->InitDouble("WT2 Formant", 1., 0., 1., 0.01);
+  GetParam(kParamWavetable2FormantEnv1)->InitDouble("WT2 Formant Env1 Mod", 0., -1., 1., 0.01);
+  GetParam(kParamWavetable2FormantEnv2)->InitDouble("WT2 Formant Env2 Mod", 0., -1., 1., 0.01);
+  GetParam(kParamWavetable2FormantAmpEnv)->InitDouble("WT2 Formant FormantEnv Mod", 0., -1., 1., 0.01);
+  GetParam(kParamWavetable2FormantLFO1)->InitDouble("WT2 Formant LFO1 Mod", 0., -1., 1., 0.01);
+  GetParam(kParamWavetable2FormantLFO2)->InitDouble("WT2 Formant LFO2 Mod", 0., -1., 1., 0.01);
+  GetParam(kParamWavetable2FormantSeq)->InitDouble("WT2 Formant Seq Mod", 0., -1., 1., 0.01);
+  GetParam(kParamWavetable2FormantVel)->InitDouble("WT2 Formant Vel Mod", 0., -1., 1., 0.01);
+  GetParam(kParamWavetable2FormantKTk)->InitDouble("WT2 Formant KTk Mod", 0., -1., 1., 0.01);
+  GetParam(kParamWavetable2FormantRnd)->InitDouble("WT2 Formant Rnd Mod", 0., -1., 1., 0.01);
   // Wavetable 2 Amp
   GetParam(kParamWavetable2Amp)->InitDouble("WT2 Amp", 0.5, 0., 1., 0.01);
   GetParam(kParamWavetable2AmpEnv1)->InitDouble("WT2 Amp Env1 Mod", 0., -1., 1., 0.01);
@@ -533,7 +533,7 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
     pGraphics->AttachControl(new TablitsaIVModKnobControl(osc1Panel.GetGridCell(0, 1, 2, 2).GetCentredInside(dialSize), kParamWavetable1Amp, "Amp"), kNoTag, "Osc1");
     pGraphics->AttachControl(new TablitsaIVModKnobControl(osc1Panel.GetGridCell(1, 0, 2, 3).GetCentredInside(dialSize), kParamWavetable1Pos, "Valency"), kNoTag, "Osc1");
     pGraphics->AttachControl(new TablitsaIVModKnobControl(osc1Panel.GetGridCell(1, 1, 2, 3).GetCentredInside(dialSize), kParamWavetable1Bend, "Energy"), kNoTag, "Osc1");
-    pGraphics->AttachControl(new TablitsaIVModKnobControl(osc1Panel.GetGridCell(1, 2, 2, 3).GetCentredInside(dialSize), kParamWavetable1Sub, "Mass"), kNoTag, "Osc1");
+    pGraphics->AttachControl(new TablitsaIVModKnobControl(osc1Panel.GetGridCell(1, 2, 2, 3).GetCentredInside(dialSize), kParamWavetable1Formant, "Mass"), kNoTag, "Osc1");
     pGraphics->AttachControl(new TablitsaVGroupControl("Wavetable 1", "Osc1", -5.f, 15.f, -5.f, 2.f));
 
     const IRECT osc2Panel = globalControls.GetReducedFromLeft(720.f).GetReducedFromBottom(globalControls.H() / 2.f).GetGridCell(1, 0, 2, 3).GetPadded(-10.f).GetHPadded(-12.f);
@@ -541,7 +541,7 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
     pGraphics->AttachControl(new TablitsaIVModKnobControl(osc2Panel.GetGridCell(0, 1, 2, 2).GetCentredInside(dialSize), kParamWavetable2Amp, "Amp"), kNoTag, "Osc2");
     pGraphics->AttachControl(new TablitsaIVModKnobControl(osc2Panel.GetGridCell(1, 0, 2, 3).GetCentredInside(dialSize), kParamWavetable2Pos, "Valency"), kNoTag, "Osc2");
     pGraphics->AttachControl(new TablitsaIVModKnobControl(osc2Panel.GetGridCell(1, 1, 2, 3).GetCentredInside(dialSize), kParamWavetable2Bend, "Energy"), kNoTag, "Osc2");
-    pGraphics->AttachControl(new TablitsaIVModKnobControl(osc2Panel.GetGridCell(1, 2, 2, 3).GetCentredInside(dialSize), kParamWavetable2Sub, "Mass"), kNoTag, "Osc2");
+    pGraphics->AttachControl(new TablitsaIVModKnobControl(osc2Panel.GetGridCell(1, 2, 2, 3).GetCentredInside(dialSize), kParamWavetable2Formant, "Mass"), kNoTag, "Osc2");
     pGraphics->AttachControl(new TablitsaVGroupControl("Wavetable 2", "Osc2", -5.f, 15.f, -5.f, 2.f));
 
     /* Master Controls */

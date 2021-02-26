@@ -36,12 +36,12 @@ enum EModulations
   kModWavetable1PitchSmoother,
   kModWavetable1PosSmoother,
   kModWavetable1BendSmoother,
-  kModWavetable1SubSmoother,
+  kModWavetable1FormantSmoother,
   kModWavetable1AmpSmoother,
   kModWavetable2PitchSmoother,
   kModWavetable2PosSmoother,
   kModWavetable2BendSmoother,
-  kModWavetable2SubSmoother,
+  kModWavetable2FormantSmoother,
   kModWavetable2AmpSmoother,
   kModFilter1CutoffSmoother,
   kModFilter1ResonanceSmoother,
@@ -68,12 +68,12 @@ enum EVoiceModParams
   kVWavetable1PitchOffset = 0,
   kVWavetable1Position,
   kVWavetable1Bend,
-  kVWavetable1Sub,
+  kVWavetable1Formant,
   kVWavetable1Amp,
   kVWavetable2PitchOffset,
   kVWavetable2Position,
   kVWavetable2Bend,
-  kVWavetable2Sub,
+  kVWavetable2Formant,
   kVWavetable2Amp,
   kVFilter1Cutoff,
   kVFilter1Resonance,
@@ -456,7 +456,6 @@ public:
 
     void ProcessSamplesAccumulating(T** inputs, T** outputs, int nInputs, int nOutputs, int startIdx, int nFrames) override
     {
-      constexpr double ktShelfIncr{ 0.001 };
       // inputs to the synthesizer can just fetch a value every block, like this:
 //      double gate = mInputs[kVoiceControlGate].endValue;
       double pitch = mInputs[kVoiceControlPitch].endValue + mDetune; // pitch = (MidiKey - 69) / 12
@@ -498,14 +497,14 @@ public:
         double osc1Freq = 440. * pow(2., pitch + mVModulations.GetList()[kVWavetable1PitchOffset][bufferIdx] / 12.);
         mOsc1.SetWtPosition(1 - mVModulations.GetList()[kVWavetable1Position][bufferIdx]); // Wavetable 1 Position
         mOsc1.SetWtBend(mVModulations.GetList()[kVWavetable1Bend][bufferIdx]); // Wavetable 1 Bend
-        mOsc1Sat.SetLevel(mVModulations.GetList()[kVWavetable1Sub][bufferIdx], keytrack * ktShelfIncr);
+        mOsc1.SetFormant(1. - mVModulations.GetList()[kVWavetable1Formant][bufferIdx]);
         mOsc1.SetPhaseModulation(mVModulations.GetList()[kVPhaseModAmt][bufferIdx], osc1Freq * phaseModFreqFact);
         mOsc1.SetRingModulation(mVModulations.GetList()[kVRingModAmt][bufferIdx], osc1Freq * ringModFreqFact);
 
         double osc2Freq = 440. * pow(2., pitch + mVModulations.GetList()[kVWavetable2PitchOffset][bufferIdx] / 12.);
         mOsc2.SetWtPosition(1 - mVModulations.GetList()[kVWavetable2Position][bufferIdx]); // Wavetable 2 Position
         mOsc2.SetWtBend(mVModulations.GetList()[kVWavetable2Bend][bufferIdx]); // Wavetable 2 Bend
-        mOsc2Sat.SetLevel(mVModulations.GetList()[kVWavetable2Sub][bufferIdx], keytrack * ktShelfIncr);
+        mOsc2.SetFormant(1. - mVModulations.GetList()[kVWavetable2Formant][bufferIdx]);
         mOsc2.SetPhaseModulation(mVModulations.GetList()[kVPhaseModAmt][bufferIdx], osc2Freq * phaseModFreqFact);
         mOsc2.SetRingModulation(mVModulations.GetList()[kVRingModAmt][bufferIdx], osc2Freq * ringModFreqFact);
         
@@ -523,9 +522,6 @@ public:
         
        for (auto j = 0; j < FRAME_INTERVAL; ++j)
        {
-         // Saturation
-         osc1Output[j] = mOsc1Sat.Process(osc1Output[j]); 
-         osc2Output[j] = mOsc2Sat.Process(osc2Output[j]);
          // Filters
          double osc1FilterOutput = mFilters.at(osc1Filter)->Process(osc1Output[j]);
          double osc2FilterOutput = mFilters.at(osc2Filter)->Process(osc2Output[j]);
@@ -549,9 +545,6 @@ public:
 
       mFilters[0]->SetSampleRate(sampleRate);
       mFilters[1]->SetSampleRate(sampleRate);
-
-      mOsc1Sat.SetSampleRate(sampleRate);
-      mOsc2Sat.SetSampleRate(sampleRate);
       
       mVModulationsData.Resize(blockSize * kNumModulations);
       mVModulations.Empty();
@@ -642,8 +635,6 @@ public:
 
     WavetableOscillator<T> mOsc1{ 0, "Hydrogen" };
     WavetableOscillator<T> mOsc2{ 1, "Helium" };
-    SaturationEQ<T> mOsc1Sat;
-    SaturationEQ<T> mOsc2Sat;
 
     // Static Modulators
     T mKey{ 69. };
@@ -683,12 +674,12 @@ public:
       new ParameterModulator<>(-24., 24., "Wt1 Pitch Offset"),
       new ParameterModulator<>(0., 1., "Wt1 Position"),
       new ParameterModulator<>(-1., 1., "Wt1 Bend"),
-      new ParameterModulator<>(0., 1., "Wt1 Sub"),
+      new ParameterModulator<>(0., 1., "Wt1 Formant"),
       new ParameterModulator<>(0., 1., "Wt1 Amp"),
       new ParameterModulator<>(-24., 24., "Wt1 Pitch Offset"),
       new ParameterModulator<>(0., 1., "Wt2 Position"),
       new ParameterModulator<>(-1., 1., "Wt2 Bend"),
-      new ParameterModulator<>(0., 1., "Wt2 Sub"),
+      new ParameterModulator<>(0., 1., "Wt2 Formant"),
       new ParameterModulator<>(0., 1., "Wt2 Amp"),
       new ParameterModulator<>(0.001, 0.5, "Flt1 Cutoff", true),
       new ParameterModulator<>(0., 1., "Flt1 Resonance"),
@@ -1489,22 +1480,22 @@ public:
           });
         break;
       }
-      case kParamWavetable1Sub:
-        mParamsToSmooth[kModWavetable1SubSmoother] = value;
+      case kParamWavetable1Formant:
+        mParamsToSmooth[kModWavetable1FormantSmoother] = value;
         break;
-      case kParamWavetable1SubEnv1:
-      case kParamWavetable1SubEnv2:
-      case kParamWavetable1SubAmpEnv:
-      case kParamWavetable1SubLFO1:
-      case kParamWavetable1SubLFO2:
-      case kParamWavetable1SubSeq:
-      case kParamWavetable1SubVel:
-      case kParamWavetable1SubKTk:
-      case kParamWavetable1SubRnd:
+      case kParamWavetable1FormantEnv1:
+      case kParamWavetable1FormantEnv2:
+      case kParamWavetable1FormantAmpEnv:
+      case kParamWavetable1FormantLFO1:
+      case kParamWavetable1FormantLFO2:
+      case kParamWavetable1FormantSeq:
+      case kParamWavetable1FormantVel:
+      case kParamWavetable1FormantKTk:
+      case kParamWavetable1FormantRnd:
       {
-        const int modIdx = paramIdx - kParamWavetable1Sub;
+        const int modIdx = paramIdx - kParamWavetable1Formant;
         mSynth.ForEachVoice([paramIdx, modIdx, value](SynthVoice& voice) {
-          dynamic_cast<TablitsaDSP::Voice&>(voice).UpdateVoiceParam(kVWavetable1Sub, modIdx, value);
+          dynamic_cast<TablitsaDSP::Voice&>(voice).UpdateVoiceParam(kVWavetable1Formant, modIdx, value);
           });
         break;
       }
@@ -1588,22 +1579,22 @@ public:
           });
         break;
       }
-      case kParamWavetable2Sub:
-        mParamsToSmooth[kModWavetable2SubSmoother] = value;
+      case kParamWavetable2Formant:
+        mParamsToSmooth[kModWavetable2FormantSmoother] = value;
         break;
-      case kParamWavetable2SubEnv1:
-      case kParamWavetable2SubEnv2:
-      case kParamWavetable2SubAmpEnv:
-      case kParamWavetable2SubLFO1:
-      case kParamWavetable2SubLFO2:
-      case kParamWavetable2SubSeq:
-      case kParamWavetable2SubVel:
-      case kParamWavetable2SubKTk:
-      case kParamWavetable2SubRnd:
+      case kParamWavetable2FormantEnv1:
+      case kParamWavetable2FormantEnv2:
+      case kParamWavetable2FormantAmpEnv:
+      case kParamWavetable2FormantLFO1:
+      case kParamWavetable2FormantLFO2:
+      case kParamWavetable2FormantSeq:
+      case kParamWavetable2FormantVel:
+      case kParamWavetable2FormantKTk:
+      case kParamWavetable2FormantRnd:
       {
-        const int modIdx = paramIdx - kParamWavetable2Sub;
+        const int modIdx = paramIdx - kParamWavetable2Formant;
         mSynth.ForEachVoice([paramIdx, modIdx, value](SynthVoice& voice) {
-          dynamic_cast<TablitsaDSP::Voice&>(voice).UpdateVoiceParam(kVWavetable2Sub, modIdx, value);
+          dynamic_cast<TablitsaDSP::Voice&>(voice).UpdateVoiceParam(kVWavetable2Formant, modIdx, value);
           });
         break;
       }
