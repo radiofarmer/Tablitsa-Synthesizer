@@ -3,6 +3,8 @@
 #include "IPlug_include_in_plug_hdr.h"
 #include "IControls.h"
 
+#define TABLITSA_EFFECTS_LIST {"Delay", "Sample & Hold"}
+
 const int kNumPresets = 1;
 constexpr int kNumVoices = 16;
 constexpr int kMaxUnisonVoices = 8;
@@ -458,6 +460,7 @@ enum EControlTags
   kCtrlTagOsc1ModSwitch,
   kCtrlTagOsc2ModSwitch,
   kCtrlTagSequencer,
+  kCtrlTagEffect1List,
   kCtrlTagDelayLMilliseconds,
   kCtrlTagDelayRMilliseconds,
   kCtrlTagDelayLBeats,
