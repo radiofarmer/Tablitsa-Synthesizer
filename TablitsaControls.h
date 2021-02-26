@@ -995,6 +995,28 @@ protected:
   int mCurrentIdx{ 0 };
 };
 
+class DropdownListControl : public ICaptionControl
+{
+public:
+  DropdownListControl(const IRECT& bounds, std::initializer_list<char*> options, const IText& text = TABLITSA_TEXT, const IColor& bgColor = DEFAULT_BGCOLOR, bool showLabel = false);
+
+  void Draw(IGraphics& g) override;
+  void OnResize() override;
+  void OnMouseDown(float x, float y, const IMouseMod& mod) override;
+
+  void AttachPopupMenu()
+  {
+    mMenu = new IPopupMenuControl();
+    GetUI()->AttachControl(mMenu);
+  }
+
+protected:
+  std::vector<std::string> mOptions;
+  IPopupMenu mPopupMenu;
+  IPopupMenuControl* mMenu;
+  int mCurrentIdx{ 0 };
+};
+
 class PresetSelector : public ICaptionControl
 {
 public:
