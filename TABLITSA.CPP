@@ -18,11 +18,7 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
 : Plugin(info, MakeConfig(kNumParams, kNumPresets))
 {
   /*Master Controls*/
-#ifdef VST3_API
-  GetParam(kParamGain)->InitDouble("Gain", 25., 0., 100.0, 0.01, "%", IParam::kFlagsNone, "Master");
-#else
   GetParam(kParamGain)->InitGain("Gain", -24., -72., 0.);
-#endif
   GetParam(kParamPan)->InitDouble("Pan", 0., -90., 90., 0.5, "°");
   GetParam(kParamNoteGlideTime)->InitMilliseconds("Note Glide Time", 0., 0.0, 3000.);
   GetParam(kParamNoteGlideRate)->InitDouble("Note Glide Rate", 12., 0.5, 128., 0.1, "St/s");

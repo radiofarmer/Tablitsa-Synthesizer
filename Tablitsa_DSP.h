@@ -929,11 +929,7 @@ public:
       }
       case kParamGain:
       {
-#ifdef VST3_API
-        mParamsToSmooth[kModGainSmoother] = (T)value / 100.;
-#else
         mParamsToSmooth[kModGainSmoother] = std::pow(10., value / 20.);
-#endif
         break;
       }
       case kParamPan:
