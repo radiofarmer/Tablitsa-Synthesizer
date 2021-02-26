@@ -627,7 +627,7 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
         case kSampleAndHoldEffect:
         {
           GetParam(kParamEffect1Param1)->InitDouble("Effect 1 Parameter 1", 10., 1., 20., 0.1, "ms", IParam::kFlagsNone, "Effect1", IParam::ShapePowCurve(3.));
-          GetParam(kParamEffect1Param2)->InitDouble("Effect 1 Parameter 2", 10., 1., 20., 0.1, "ms", IParam::kFlagsNone, "Effect1", IParam::ShapePowCurve(3.));
+          GetParam(kParamEffect1Param2)->InitDouble("Effect 1 Parameter 2", 0., 1., 100., 1., "%", IParam::kFlagsNone, "Effect1", IParam::ShapePowCurve(3.));
           knob1->SetParamIdx(kParamEffect1Param1);
           pGraphics->HideControl(kParamEffect1Param5, true);
           pGraphics->HideControl(kParamEffect1Param6, true);
@@ -653,7 +653,7 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
           knob4->SetDisabled(true);
         }
         }
-        SendArbitraryMsgFromUI(kMsgEffect1Changed, kNoTag, sizeof(effectIdx), reinterpret_cast<void*>(&effectIdx));
+        SendArbitraryMsgFromUI(kMsgEffect1Changed, kNoTag, sizeof(effectIdx), reinterpret_cast<void*>(&effectIdx)); // Effects must be swapped before OnParamChange is called
         knob1->SetDirty(true);
         knob2->SetDirty(true);
         knob3->SetDirty(true);
@@ -1330,6 +1330,7 @@ bool Tablitsa::OnMessage(int msgTag, int ctrlTag, int dataSize, const void* pDat
         mDSP.UpdateFilterSource(1, static_cast<int>(pControl->GetValue()));
         mDSP.UpdateFilterSource(0, 1 - static_cast<int>(pControl->GetValue()));
       }
+      break;
     }
     case kMsgEffect1Changed:
     case kMsgEffect2Changed:
@@ -1346,8 +1347,10 @@ bool Tablitsa::OnMessage(int msgTag, int ctrlTag, int dataSize, const void* pDat
         break;
       default:
         mDSP.mEffects[msgTag - kMsgEffect1Changed] = new Effect<iplug::sample>(GetSampleRate());
+        break;
       }
       SendCurrentParamValuesFromDelegate();
+      break;
     }
     default:
       break;
