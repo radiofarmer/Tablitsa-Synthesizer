@@ -1139,7 +1139,7 @@ void Tablitsa::UpdateUIControls()
 #if IPLUG_DSP
 void Tablitsa::ProcessBlock(sample** inputs, sample** outputs, int nFrames)
 {
-  mDSP.ProcessBlock(nullptr, outputs, 2, nFrames, mTimeInfo.mPPQPos, mTimeInfo.mTransportIsRunning);
+  mDSP.ProcessBlock(nullptr, outputs, 2, nFrames, mTimeInfo.mPPQPos, mTimeInfo.mTransportIsRunning, mTimeInfo.mTempo);
   mMeterSender.ProcessBlock(outputs, nFrames, kCtrlTagMeter);
 //  mLFO1VisSender.PushData({ kCtrlTagLFO1Vis, {float(mDSP.mGlobalLFO1.GetLastOutput())}});
 //  mLFO2VisSender.PushData({ kCtrlTagLFO2Vis, {float(TablitsaDSP<sample>::mGlobalLFO2.GetLastOutput())} });
