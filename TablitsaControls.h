@@ -685,6 +685,63 @@ protected:
   IBitmap mBitmap;
 };
 
+template <int MAXNC = 1>
+class SequencerControl final : public IVMultiSliderControl<MAXNC>
+{
+public:
+  SequencerControl(const IRECT& bounds, const char* label, const IVStyle& style = TABLITSA_STYLE.WithDrawFrame(false), int nSteps = 0, EDirection dir = EDirection::Vertical) :
+    IVMultiSliderControl<MAXNC>(bounds, label, style, nSteps, dir)
+  {
+    SetColor(kX1, GetColor(kPR)); // Set active step color to the pressed step color
+    SetColor(kHL, GetColor(kPR).WithOpacity(0.2)); // Background highlight
+  }
+
+  void DrawWidget(IGraphics& g) override
+  {
+    const int nVals = NVals();
+    int nSteps = mNSteps + mZeroValueStepHasBounds;
+
+    // Step labels
+    IText labelText(mStyle.labelText);
+    IRECT textBounds;
+    g.MeasureText(labelText, "10", textBounds);
+    const float stepHeight = IVTrackControlBase::mTrackBounds.Get()[0].H() / nSteps;
+    // Make sure label fits inside the step borders
+    while (textBounds.H() >= stepHeight)
+    {
+      labelText = labelText.WithSize(labelText.mSize - 0.5f);
+      g.MeasureText(labelText, "10", textBounds);
+    }
+
+    for (int ch = 0; ch < nVals; ch++)
+    {
+      if (GetStepped())
+      {
+        for (int step{ 0 }; step < nSteps; ++step)
+        {
+          const IRECT trackBounds = IVTrackControlBase::mTrackBounds.Get()[ch];
+          if (mDirection == EDirection::Vertical)
+          {
+            float stepSpan = trackBounds.H() / nSteps;
+            const IRECT stepBounds = trackBounds.SubRect(EDirection::Vertical, nSteps, step);
+            g.PathClear();
+            g.PathMoveTo(trackBounds.L + 1, trackBounds.B - step * stepSpan);
+            g.PathLineTo(trackBounds.R - 1, trackBounds.B - step * stepSpan);
+            g.PathStroke(mStepMarkerColor, 1.f);
+            if (step % 2 == 0)
+              g.DrawText(labelText, std::to_string(nSteps - step - 1).c_str(), stepBounds);
+          }
+        }
+      }
+      DrawTrack(g, IVTrackControlBase::mTrackBounds.Get()[ch], ch);
+    }
+  }
+
+private:
+  const IColor mStepMarkerColor{ 50, 0, 0, 0 };
+  const IColor mLabelColor = mStepMarkerColor.WithOpacity(0.75);
+};
+
 #define GROUP_BOX_ROUNDING 0.1f
 
 const IVStyle TABLITSA_GROUPBOX_STYLE = TABLITSA_STYLE.WithRoundness(GROUP_BOX_ROUNDING).WithColor(EVColor::kFR, COLOR_WHITE).WithLabelText(DEFAULT_LABEL_TEXT.WithFGColor(IColor(255, 220, 200, 0))).WithDrawShadows(false);
@@ -692,20 +749,22 @@ const IVStyle TABLITSA_GROUPBOX_STYLE = TABLITSA_STYLE.WithRoundness(GROUP_BOX_R
 class TablitsaVGroupControl : public IVGroupControl
 {
 public:
-  TablitsaVGroupControl(const char* label="", const char* groupName="", float padL=0.f, float padT=0.f, float padR=0.f, float padB=0.f, const IVStyle& style = TABLITSA_GROUPBOX_STYLE) :
+  TablitsaVGroupControl(const char* label = "", const char* groupName = "", float padL = 0.f, float padT = 0.f, float padR = 0.f, float padB = 0.f, const IVStyle& style = TABLITSA_GROUPBOX_STYLE) :
     IVGroupControl(label, groupName, padL, padT, padR, padB, style)
   {
     mLabelOffset = 0.f;
   }
 
-  TablitsaVGroupControl(const IRECT& bounds, const char* label="", float labelOffset=0.f, const IVStyle& style=TABLITSA_GROUPBOX_STYLE) :
+  TablitsaVGroupControl(const IRECT& bounds, const char* label = "", float labelOffset = 0.f, const IVStyle& style = TABLITSA_GROUPBOX_STYLE) :
     IVGroupControl(bounds, label, labelOffset, style) {}
 };
+
+#define MAX_TAB_LABEL_LENGTH 32
 
 class TablitsaVTabBox : public TablitsaVGroupControl
 {
 public:
-  TablitsaVTabBox(const IRECT& bounds, const char* label = "", const char* groupName="", bool active=false, float labelOffset = 0.f, const IVStyle& style = TABLITSA_GROUPBOX_STYLE) :
+  TablitsaVTabBox(const IRECT& bounds, const char* label = "", const char* groupName = "", bool active = false, float labelOffset = 0.f, const IVStyle& style = TABLITSA_GROUPBOX_STYLE) :
     TablitsaVGroupControl(bounds, label, labelOffset, style), mActive(active)
   {
     mIgnoreMouse = false;
@@ -722,12 +781,7 @@ public:
     mWidgetBounds.ReduceFromTop(textBounds.H() / 1.5);
   }
 
-  void SetActive(bool active = true)
-  {
-    mActive = active;
-    // Show/hide controls in this tab view
-    GetUI()->ForControlInGroup(mGroupName.Get(), [active](IControl& control) { control.Hide(!active); });
-  }
+  void SetActive(bool active = true);
 
   const IRECT& GetLabelBounds() const
   {
@@ -819,69 +873,12 @@ public:
     }
   }
 
+  void SetGroupName(const char* newGroupName);
+
 protected:
   bool mActive;
   bool mMouseIsOverLabel{ false };
 };
-
-template <int MAXNC = 1>
-class SequencerControl final : public IVMultiSliderControl<MAXNC>
-{
-public:
-  SequencerControl(const IRECT& bounds, const char* label, const IVStyle& style = TABLITSA_STYLE.WithDrawFrame(false), int nSteps = 0, EDirection dir = EDirection::Vertical) :
-    IVMultiSliderControl<MAXNC>(bounds, label, style, nSteps, dir)
-  {
-    SetColor(kX1, GetColor(kPR)); // Set active step color to the pressed step color
-    SetColor(kHL, GetColor(kPR).WithOpacity(0.2)); // Background highlight
-  }
-
-  void DrawWidget(IGraphics& g) override
-  {
-    const int nVals = NVals();
-    int nSteps = mNSteps + mZeroValueStepHasBounds;
-
-    // Step labels
-    IText labelText(mStyle.labelText);
-    IRECT textBounds;
-    g.MeasureText(labelText, "10", textBounds);
-    const float stepHeight = IVTrackControlBase::mTrackBounds.Get()[0].H() / nSteps;
-    // Make sure label fits inside the step borders
-    while (textBounds.H() >= stepHeight)
-    {
-      labelText = labelText.WithSize(labelText.mSize - 0.5f);
-      g.MeasureText(labelText, "10", textBounds);
-    }
-
-    for (int ch = 0; ch < nVals; ch++)
-    {
-      if (GetStepped())
-      {
-        for (int step{ 0 }; step < nSteps; ++step)
-        {
-          const IRECT trackBounds = IVTrackControlBase::mTrackBounds.Get()[ch];
-          if (mDirection == EDirection::Vertical)
-          {
-            float stepSpan = trackBounds.H() / nSteps;
-            const IRECT stepBounds = trackBounds.SubRect(EDirection::Vertical, nSteps, step);
-            g.PathClear();
-            g.PathMoveTo(trackBounds.L + 1, trackBounds.B - step * stepSpan);
-            g.PathLineTo(trackBounds.R - 1, trackBounds.B - step * stepSpan);
-            g.PathStroke(mStepMarkerColor, 1.f);
-            if (step % 2 == 0)
-              g.DrawText(labelText, std::to_string(nSteps - step - 1).c_str(), stepBounds);
-          }
-        }
-      }
-      DrawTrack(g, IVTrackControlBase::mTrackBounds.Get()[ch], ch);
-    }
-  }
-
-private:
-  const IColor mStepMarkerColor{ 50, 0, 0, 0 };
-  const IColor mLabelColor = mStepMarkerColor.WithOpacity(0.75);
-};
-
-#define MAX_TAB_LABEL_LENGTH 32
 
 class TablitsaEffectBankControl : public IControl
 {
@@ -891,40 +888,7 @@ class TablitsaEffectBankControl : public IControl
   };
 
 public:
-  TablitsaEffectBankControl(const IRECT& bounds, std::initializer_list<char*> labels, std::initializer_list<char*> groupNames = { "" }, const IVStyle& style = TABLITSA_GROUPBOX_STYLE, const int maxTabs = 10) :
-    IControl(bounds, kNoParameter), mMaxTabs(maxTabs), mStyle(style)
-  {
-    for (auto l : labels)
-    {
-      int nLabels = mLabels.GetSize();
-      if (nLabels >= mMaxTabs)
-        break;
-
-      mLabels.Resize(nLabels + 1);
-      TabText* pLab = mLabels.Get() + nLabels;
-      strcpy(pLab->mText, l);
-    }
-
-    for (auto g : groupNames)
-    {
-      int nGroups = mGroups.GetSize();
-      mGroups.Resize(nGroups + 1);
-      TabText* pName = mGroups.Get() + nGroups;
-      strcpy(pName->mText, g);
-    }
-
-    // If more labels were supplied than groups, append empty strings to the group  names
-    if (labels.size() > groupNames.size())
-    {
-      for (auto i{ groupNames.size() }; i < labels.size(); ++i)
-      {
-        int nGroups = mGroups.GetSize();
-        mGroups.Resize(nGroups + 1);
-        TabText* pName = mGroups.Get() + nGroups;
-        strcpy(pName->mText, "");
-      }
-    }
-  }
+  TablitsaEffectBankControl(const IRECT& bounds, std::initializer_list<char*> labels, std::initializer_list<char*> groupNames = { "" }, const IVStyle& style = TABLITSA_GROUPBOX_STYLE, const int maxTabs = 10);
 
   void OnMouseDown(float x, float y, const IMouseMod& mod) override
   {
@@ -975,17 +939,7 @@ public:
 
   void Draw(IGraphics& g) override {}
 
-  void TabChanged(int newIdx)
-  {
-    for (int i{ 0 }; i < mMaxTabs; ++i)
-    {
-      if (mTabs[i])
-      {
-        TablitsaVTabBox* tab = dynamic_cast<TablitsaVTabBox*>(mTabs[i]);
-        tab->SetActive(i == newIdx);
-      }
-    }
-  }
+  void TabChanged(int newIdx);
 
   void OnAttached() override
   {
@@ -999,6 +953,12 @@ public:
     }
   }
 
+  /* TablitsaEffectsBankControl */
+  void SetTabGroup(int tabIdx, const char* newGroupName)
+  {
+    dynamic_cast<TablitsaVTabBox*>(mTabs[tabIdx])->SetGroupName(newGroupName);
+  }
+
 private:
   const int mMaxTabs{ 10 };
   int MaxLabelLength{ 20 };
@@ -1006,7 +966,33 @@ private:
   WDL_TypedBuf<TabText> mGroups;
 
   IVStyle mStyle;
-  IControl* mTabs[10]{ nullptr };
+  IControl* mTabs[10]{ nullptr }; // Needs to be an IControl pointer in order to attach (or maybe you can down-cast to IControl*?)
+};
+
+class DropdownListControl : public ICaptionControl
+{
+public:
+  DropdownListControl(const IRECT& bounds, std::initializer_list<char*> options, const IText& text = TABLITSA_TEXT, const IColor& bgColor = DEFAULT_BGCOLOR, bool showLabel = false);
+
+  void Draw(IGraphics& g) override;
+  void OnResize() override;
+  void OnMouseDown(float x, float y, const IMouseMod& mod) override;
+
+  /* DropdownList Control */
+  int GetCurrentIndex() { return mCurrentIdx; }
+  const char* GetSelectedString() { return mOptions[mCurrentIdx].c_str(); }
+
+  void AttachPopupMenu()
+  {
+    mMenu = new IPopupMenuControl();
+    GetUI()->AttachControl(mMenu);
+  }
+
+protected:
+  std::vector<std::string> mOptions;
+  IPopupMenu mPopupMenu;
+  IPopupMenuControl* mMenu;
+  int mCurrentIdx{ 0 };
 };
 
 class DropdownListControl : public ICaptionControl

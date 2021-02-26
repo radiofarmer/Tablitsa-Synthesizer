@@ -1876,25 +1876,28 @@ public:
           });
         break;
       }
-      case kParamDelayTimeMode:
+      case kParamEffect1Param5:
         mDelayEffect.SetTempoSync(value > 0.5);
         break;
-      case kParamDelayTimeLMilliseconds:
-      case kParamDelayTimeRMilliseconds:
-        mDelayEffect.SetDelayMS(value, paramIdx - kParamDelayTimeLMilliseconds);
-        break;
-      case kParamDelayTimeLBeats:
-      case kParamDelayTimeRBeats:
+      case kParamEffect1Param1:
+      case kParamEffect1Param2:
       {
-        double qnScalar = LFO<T>::GetQNScalar(static_cast<LFO<T>::ETempoDivision>(Clip((int)value, 0, (int)LFO<T>::ETempoDivision::kNumDivisions)));
-        double qnPerMeasure = 4. / mTSDenom * mTSNum;
-        mDelayEffect.SetDelayTempo(1. / qnScalar / qnPerMeasure, paramIdx - kParamDelayTimeLBeats, mTempo);
+        if (true)
+        {
+          mDelayEffect.SetDelayMS(value, paramIdx - kParamEffect1Param1);
+        }
+        else
+        {
+          double qnScalar = LFO<T>::GetQNScalar(static_cast<LFO<T>::ETempoDivision>(Clip((int)value, 0, (int)LFO<T>::ETempoDivision::kNumDivisions)));
+          double qnPerMeasure = 4. / mTSDenom * mTSNum;
+          mDelayEffect.SetDelayTempo(1. / qnScalar / qnPerMeasure, paramIdx - kParamEffect1Param1, mTempo);
+        }
         break;
       }
-      case kParamDelayFeedback:
+      case kParamEffect1Param3:
         mDelayEffect.SetFeedback((T)value / 100.);
         break;
-      case kParamDelayMix:
+      case kParamEffect1Param4:
         mDelayEffect.SetGain((T)value / 100.);
         break;
       default:
