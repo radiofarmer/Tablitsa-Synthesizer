@@ -53,6 +53,8 @@ class WavetableOscillator final : public iplug::IOscillator<T>
     int i[2];
   } ALIGNED(8);
 
+  static constexpr T MaxNote = 12543.8539514; // Highest Midi note frequency (440 * 2^((127-69)/2)), for setting the maximum formant shift
+
 public:
   WavetableOscillator(const int id, const char* tableName, const double startPhase = 0., const double startFreq = 1.) :
     mID(id), IOscillator<T>(startPhase), mPrevFreq(static_cast<int>(startFreq))
@@ -74,6 +76,7 @@ public:
   void SetSampleRate(double sampleRate)
   {
     mSampleRate = sampleRate * mProcessOS;
+    mNyquist = sampleRate / 2.;
     mPhaseModulator.SetSampleRate(mSampleRate);
     mRingModulator.SetSampleRate(mSampleRate);
   }
@@ -164,6 +167,7 @@ public:
   inline void AdjustWavetable(double freqCPS)
   {
     IOscillator<T>::SetFreqCPS(freqCPS);
+    mMaxFormant = MaxNote / freqCPS;
 
     if (mPrevFreq != static_cast<int>(freqCPS))
     {
@@ -323,6 +327,7 @@ public:
   {
     double cycle;
     mPhaseInCycle = modf(phase * mWT->mCyclesPerLevel, &cycle);
+    mPhaseInCycle = mFormant * mPhaseInCycle * (mPhaseInCycle <= 1 / mFormant);
     return (cycle + std::pow(mPhaseInCycle, 1. + (mWtBend >= 0. ? mWtBend : mWtBend / 2.))) * mCyclesPerLevelRecip;
   }
 
@@ -374,9 +379,16 @@ public:
     mWtPositionAbs = std::min(wtPos, 0.999);
   }
 
+  // Phase Skew
   inline void SetWtBend(double wtBend)
   {
     mWtBend = wtBend;
+  }
+
+  // Formant: Accepts a value between zero and one
+  inline void SetFormant(double fmtNorm)
+  {
+    mFormant = 1. + fmtNorm * mMaxFormant;
   }
 
   inline double SampleWavetablePosition(double phase)
@@ -435,6 +447,7 @@ private:
   static constexpr int mProcessOS{ 1 };
 #endif
   ChebyshevBL<T> mAAFilter;
+  double mNyquist{ 20000. };
 
   // TODO: Order elements mindful of cache access:
 
@@ -463,6 +476,8 @@ private:
   double mWtOffset{ 0. };
   double mWtSpacing{ 1. };
   double mWtBend{ 0 };
+  double mFormant{ 1. };
+  double mMaxFormant{ 10. }; // Set according to current pitch
   int mPrevFreq;
   int mWtIdx{ 0 }; // Mipmap level
 
