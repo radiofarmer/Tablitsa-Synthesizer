@@ -394,17 +394,18 @@ enum EParams
   kParamRingModAmountVel,
   kParamRingModAmountKTk,
   kParamRingModAmountRnd, // !Ring Mod
-  kParamDelayTimeLMilliseconds, // Delay
-  kParamDelayTimeRMilliseconds,
-  kParamDelayTimeLBeats,
-  kParamDelayTimeRBeats,
-  kParamDelayTimeMode,
-  kParamDelayFeedback,
-  kParamDelayMix, // !Delay
-  kParamSampleAndHold, // Sample-and-Hold
-  kParamSaHRate,
-  kParamSaHDecay,
-  kParamSaHMix, // !Sample-and-Hold
+  kParamEffect1Param1, // Effects
+  kParamEffect1Param2,
+  kParamEffect1Param3,
+  kParamEffect1Param4,
+  kParamEffect1Param5,
+  kParamEffect1Param6,
+  kParamEffect2Param1,
+  kParamEffect2Param2,
+  kParamEffect2Param3,
+  kParamEffect2Param4,
+  kParamEffect2Param5,
+  kParamEffect2Param6,
   kNumParams
 };
 
@@ -462,11 +463,12 @@ enum EControlTags
   kCtrlTagSequencer,
   kCtrlTagEffectBank,
   kCtrlTagEffect1Tab,
-  kCtrlTagDelayLMilliseconds,
-  kCtrlTagDelayRMilliseconds,
-  kCtrlTagDelayLBeats,
-  kCtrlTagDelayRBeats,
-  kCtrlTagDelayTempoSync,
+  kCtrlTagEffect1Knob1,
+  kCtrlTagEffect1Knob2,
+  kCtrlTagEffect1Knob3,
+  kCtrlTagEffect1Knob4,
+  kCtrlTagEffect1Toggle1,
+  kCtrlTagEffect1Toggle2,
   kNumCtrlTags
 };
 
@@ -503,7 +505,7 @@ constexpr EControlTags kStartupTriggerControls[]{
   kCtrlTagFilter1Type,
   kCtrlTagFilter2Type,
   kCtrlTagGlideMode,
-  kCtrlTagDelayTempoSync
+  kCtrlTagEffect1Toggle1
 };
 
 using namespace iplug;

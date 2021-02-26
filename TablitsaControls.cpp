@@ -41,7 +41,6 @@ void TablitsaVTabBox::SetActive(bool active)
   mActive = active;
   // Show/hide controls in this tab view
   GetUI()->ForControlInGroup(mGroupName.Get(), [active](IControl& control) {
-    if(control.IsHidden() == !active)
       control.Hide(!active);
     });
 }

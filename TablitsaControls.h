@@ -980,7 +980,7 @@ public:
 
   /* DropdownList Control */
   int GetCurrentIndex() { return mCurrentIdx; }
-  const char* GetSelectedGroupName() { return mOptions[mCurrentIdx].c_str(); }
+  const char* GetSelectedString() { return mOptions[mCurrentIdx].c_str(); }
 
   void AttachPopupMenu()
   {

@@ -424,13 +424,18 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
   GetParam(kParamFilter2Delay)->InitInt("Filter 2 Delay", 8, 1, 512);
 
   // Effect Parameters
-  GetParam(kParamDelayTimeLMilliseconds)->InitDouble("Stereo Delay Time L (ms)", 100., 1., 5000., 1., "ms", IParam::kFlagsNone, "Delay", IParam::ShapePowCurve(3.));
-  GetParam(kParamDelayTimeRMilliseconds)->InitDouble("Stereo Delay Time R (ms)", 100., 1., 5000., 1., "ms", IParam::kFlagsNone, "Delay", IParam::ShapePowCurve(3.));
-  GetParam(kParamDelayTimeLBeats)->InitEnum("Stereo Delay Time L (tempo)", LFO<>::k8th, { DELAY_TEMPODIV_VALIST });
-  GetParam(kParamDelayTimeRBeats)->InitEnum("Stereo Delay Time R (tempo)", LFO<>::k8th, { DELAY_TEMPODIV_VALIST });
-  GetParam(kParamDelayTimeMode)->InitBool("Delay Tempo Sync", false);
-  GetParam(kParamDelayFeedback)->InitPercentage("Delay Feedback");
-  GetParam(kParamDelayMix)->InitPercentage("Delay Mix", 0.);
+  GetParam(kParamEffect1Param1)->InitDouble("Stereo Delay Time L (ms)", 100., 1., 5000., 1., "ms", IParam::kFlagsNone, "Delay", IParam::ShapePowCurve(3.));
+  GetParam(kParamEffect1Param2)->InitDouble("Stereo Delay Time R (ms)", 100., 1., 5000., 1., "ms", IParam::kFlagsNone, "Delay", IParam::ShapePowCurve(3.));
+  GetParam(kParamEffect1Param3)->InitPercentage("Delay Feedback");
+  GetParam(kParamEffect1Param4)->InitPercentage("Delay Mix", 0.);
+  GetParam(kParamEffect1Param5)->InitBool("Delay Tempo Sync", false);
+  //GetParam(kParamDelayTimeLBeats)->InitEnum("Stereo Delay Time L (tempo)", LFO<>::k8th, { DELAY_TEMPODIV_VALIST });
+  //GetParam(kParamDelayTimeRBeats)->InitEnum("Stereo Delay Time R (tempo)", LFO<>::k8th, { DELAY_TEMPODIV_VALIST });
+
+  GetParam(kParamEffect2Param1)->InitDouble("Sample-and-Hold Sample Rate", 100., 1., 5000., 1., "ms", IParam::kFlagsNone, "SaH", IParam::ShapePowCurve(3.));
+  GetParam(kParamEffect2Param2)->InitPercentage("Sample-and-Hold Decay", 0.);
+  GetParam(kParamEffect2Param3)->InitPercentage("Sample-and-Hold Noise");
+  GetParam(kParamEffect2Param4)->InitPercentage("Sample-and-Hold Mix", 0.);
 
 #if VST3_API
 #define KEYBOARD_HEIGHT 0.f
@@ -582,54 +587,121 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
     const IRECT effectsPanel = IRECT(masterPanel.GetGridCell(1, 1, 2, 7).R, masterPanel.GetGridCell(1, 0, 2, 7).T, masterPanel.GetGridCell(1, 6, 2, 7).R, masterPanel.GetGridCell(1, 6, 2, 7).B).GetHPadded(-5.f).GetHShifted(2.f);
 
     // Effects tab control
-    pGraphics->AttachControl(new TablitsaEffectBankControl(effectsPanel, { "Effect 1", "Effect1", "Effect3" }, { "Delay", "S&H", "E3" }), kCtrlTagEffectBank, "Effects");
+    pGraphics->AttachControl(new TablitsaEffectBankControl(effectsPanel, { "Effect 1", "Effect1", "Effect3" }, { "E1", "E2", "E3" }), kCtrlTagEffectBank, "Effects");
     // Delay
     auto channelLockFunction = IActionFunction([pGraphics, this](IControl* pControl) {
-      int ctrlTag = pControl->GetTag() == kCtrlTagDelayLMilliseconds || pControl->GetTag() == kCtrlTagDelayLBeats ? pControl->GetTag() + 1 : pControl->GetTag() - 1;
+      // Tag of the other channel's control
+      int ctrlTag = pControl->GetTag() == kCtrlTagEffect1Knob1 || pControl->GetTag() == kCtrlTagEffect1Knob1 ? pControl->GetTag() + 1 : pControl->GetTag() - 1;
       pGraphics->GetControlWithTag(ctrlTag)->SetValue(pControl->GetValue());
       GetUI()->GetDelegate()->SendParameterValueFromUI(pGraphics->GetControlWithTag(ctrlTag)->GetParamIdx(), pControl->GetValue());
       pGraphics->GetControlWithTag(ctrlTag)->SetDirty(false);
       });
-    pGraphics->AttachControl(new DropdownListControl(effectsPanel.FracRectHorizontal(0.4, false).GetFromTop(40.f).GetReducedFromTop(20.f).GetPadded(-2.f), TABLITSA_EFFECTS_LIST), kCtrlTagEffect1Tab)->SetActionFunction(
-      [pGraphics](IControl* pControl) {
-        dynamic_cast<TablitsaEffectBankControl*>(pGraphics->GetControlWithTag(kCtrlTagEffectBank))->SetTabGroup(0, dynamic_cast<DropdownListControl*>(pControl)->GetSelectedGroupName());
+    pGraphics->AttachControl(new DropdownListControl(effectsPanel.FracRectHorizontal(0.4, false).GetFromTop(40.f).GetReducedFromTop(20.f).GetPadded(-2.f), TABLITSA_EFFECTS_LIST), kCtrlTagEffect1Tab, "E1")->SetActionFunction(
+      [pGraphics, this](IControl* pControl) {
+        // Swap out effect parameters (and rearrange controls if necessary)
+        int effectIdx = dynamic_cast<DropdownListControl*>(pControl)->GetCurrentIndex();
+        IControl* knob1 = pGraphics->GetControlWithTag(kCtrlTagEffect1Knob1);
+        IControl* knob2 = pGraphics->GetControlWithTag(kCtrlTagEffect1Knob2);
+        IControl* knob3 = pGraphics->GetControlWithTag(kCtrlTagEffect1Knob3);
+        IControl* knob4 = pGraphics->GetControlWithTag(kCtrlTagEffect1Knob4);
+        IControl* toggle1 = pGraphics->GetControlWithTag(kCtrlTagEffect1Toggle1);
+        IControl* toggle2 = pGraphics->GetControlWithTag(kCtrlTagEffect1Toggle2);
+        switch (effectIdx)
+        {
+        case 0:
+        {
+          GetParam(kParamEffect1Param1)->InitDouble("Stereo Delay Time L (ms)", 100., 1., 5000., 1., "ms", IParam::kFlagsNone, "Delay", IParam::ShapePowCurve(3.));
+          GetParam(kParamEffect1Param2)->InitDouble("Stereo Delay Time R (ms)", 100., 1., 5000., 1., "ms", IParam::kFlagsNone, "Delay", IParam::ShapePowCurve(3.));
+          GetParam(kParamEffect1Param3)->InitPercentage("Delay Feedback");
+          GetParam(kParamEffect1Param4)->InitPercentage("Delay Mix", 0.);
+          GetParam(kParamEffect1Param5)->InitBool("Delay Tempo Sync", false);
+          pGraphics->HideControl(kParamEffect1Param5, false);
+          pGraphics->HideControl(kParamEffect1Param6, true);
+          dynamic_cast<IVKnobControl*>(knob3)->SetLabelStr("L");
+          dynamic_cast<IVKnobControl*>(knob3)->SetLabelStr("R");
+          dynamic_cast<IVKnobControl*>(knob3)->SetLabelStr("Feedback");
+          toggle1->Hide(false);
+          toggle2->Hide(false);
+          knob1->SetDisabled(false);
+          knob2->SetDisabled(false);
+          knob3->SetDisabled(false);
+          knob4->SetDisabled(false);
+          break;
+        }
+        case 1:
+        {
+          // Sample-and-Hold Parameter definitions (only here)
+          GetParam(kParamEffect1Param1)->InitDouble("Sample-and-Hold Sample Rate", 100., 1., 5000., 1., "ms", IParam::kFlagsNone, "SaH", IParam::ShapePowCurve(3.));
+          GetParam(kParamEffect1Param2)->InitPercentage("Sample-and-Hold Decay", 0.);
+          GetParam(kParamEffect1Param3)->InitPercentage("Sample-and-Hold Noise");
+          GetParam(kParamEffect1Param4)->InitPercentage("Sample-and-Hold Mix", 0.);
+          pGraphics->HideControl(kParamEffect1Param5, true);
+          pGraphics->HideControl(kParamEffect1Param6, true);
+          dynamic_cast<IVKnobControl*>(knob1)->SetLabelStr("Rate");
+          dynamic_cast<IVKnobControl*>(knob2)->SetLabelStr("Decay");
+          dynamic_cast<IVKnobControl*>(knob3)->SetLabelStr("Noise");
+          toggle1->Hide(true);
+          toggle2->Hide(true);
+          knob1->SetDisabled(false);
+          knob2->SetDisabled(false);
+          knob3->SetDisabled(false);
+          knob4->SetDisabled(false);
+          break;
+        }
+        default:
+        {
+          dynamic_cast<IVKnobControl*>(knob1)->SetLabelStr("");
+          dynamic_cast<IVKnobControl*>(knob2)->SetLabelStr("");
+          dynamic_cast<IVKnobControl*>(knob3)->SetLabelStr("");
+          knob1->SetDisabled(true);
+          knob2->SetDisabled(true);
+          knob3->SetDisabled(true);
+          knob4->SetDisabled(true);
+        }
+        }
+        knob1->SetDirty(true);
+        knob2->SetDirty(true);
+        knob3->SetDirty(true);
+        knob4->SetDirty(true);
+        toggle1->SetDirty(true);
+        toggle2->SetDirty(true);
       }
     );
     const IRECT effectsControlsPanel = effectsPanel.GetReducedFromTop(40.f);
-    pGraphics->AttachControl(new TablitsaIVKnobControl(effectsControlsPanel.FracRectVertical(2.f / 3, true).GetGridCell(0, 0, 1, 4).GetCentredInside(dialSize), kParamDelayTimeLMilliseconds, "Left", modKnobStyle), kCtrlTagDelayLMilliseconds, "Delay");
-    pGraphics->AttachControl(new TablitsaIVKnobControl(effectsControlsPanel.FracRectVertical(2.f / 3, true).GetGridCell(0, 1, 1, 4).GetCentredInside(dialSize), kParamDelayTimeRMilliseconds, "Right", modKnobStyle), kCtrlTagDelayRMilliseconds, "Delay");
-    pGraphics->AttachControl(new TablitsaIVKnobControl(effectsControlsPanel.FracRectVertical(2.f / 3, true).GetGridCell(0, 0, 1, 4).GetCentredInside(dialSize), kParamDelayTimeLBeats, "Left", modKnobStyle), kCtrlTagDelayLBeats, "Delay")->Hide(true);
-    pGraphics->AttachControl(new TablitsaIVKnobControl(effectsControlsPanel.FracRectVertical(2.f / 3, true).GetGridCell(0, 1, 1, 4).GetCentredInside(dialSize), kParamDelayTimeRBeats, "Right", modKnobStyle), kCtrlTagDelayRBeats, "Delay")->Hide(true);
-    pGraphics->AttachControl(new TablitsaIVKnobControl(effectsControlsPanel.FracRectVertical(2.f / 3, true).GetGridCell(0, 2, 1, 4).GetCentredInside(dialSize), kParamDelayFeedback, "Feedback", modKnobStyle), kNoTag, "Delay");
-    pGraphics->AttachControl(new TablitsaIVKnobControl(effectsControlsPanel.FracRectVertical(2.f / 3, true).GetGridCell(0, 3, 1, 4).GetCentredInside(dialSize), kParamDelayMix, "Mix", modKnobStyle), kNoTag, "Delay");
-    pGraphics->AttachControl(new IVToggleControl(effectsControlsPanel.FracRectVertical(1.f / 3).GetGridCell(0,  1, 1, 4).GetPadded(-10.f), kParamDelayTimeMode, "", toggleStyle, "Time", "Tempo"),
-      kCtrlTagDelayTempoSync, "Delay")->SetActionFunction(
+    pGraphics->AttachControl(new TablitsaIVKnobControl(effectsControlsPanel.FracRectVertical(2.f / 3, true).GetGridCell(0, 0, 1, 4).GetCentredInside(dialSize), kParamEffect1Param1, "Left", modKnobStyle), kCtrlTagEffect1Knob1, "E1");
+    pGraphics->AttachControl(new TablitsaIVKnobControl(effectsControlsPanel.FracRectVertical(2.f / 3, true).GetGridCell(0, 1, 1, 4).GetCentredInside(dialSize), kParamEffect1Param2, "Right", modKnobStyle), kCtrlTagEffect1Knob2, "E1");
+    pGraphics->AttachControl(new TablitsaIVKnobControl(effectsControlsPanel.FracRectVertical(2.f / 3, true).GetGridCell(0, 2, 1, 4).GetCentredInside(dialSize), kParamEffect1Param3, "Feedback", modKnobStyle), kCtrlTagEffect1Knob3, "E1");
+    pGraphics->AttachControl(new TablitsaIVKnobControl(effectsControlsPanel.FracRectVertical(2.f / 3, true).GetGridCell(0, 3, 1, 4).GetCentredInside(dialSize), kParamEffect1Param4, "Mix", modKnobStyle), kCtrlTagEffect1Knob4, "E1");
+    pGraphics->AttachControl(new IVToggleControl(effectsControlsPanel.FracRectVertical(1.f / 3).GetGridCell(0,  1, 1, 4).GetPadded(-10.f), kParamEffect1Param5, "", toggleStyle, "Time", "Tempo"),
+      kCtrlTagEffect1Toggle1, "E1")->SetActionFunction(
       [pGraphics, this](IControl* pControl) {
         mDelayIsSynced = pControl->GetValue();
         bool isTempoSync = mDelayIsSynced > 0.5;
-        pGraphics->HideControl(kParamDelayTimeLMilliseconds, isTempoSync);
-        pGraphics->HideControl(kParamDelayTimeRMilliseconds, isTempoSync);
-        pGraphics->HideControl(kParamDelayTimeLBeats, !isTempoSync);
-        pGraphics->HideControl(kParamDelayTimeRBeats, !isTempoSync);
+        if (isTempoSync)
+        {
+          GetParam(kParamEffect1Param1)->InitEnum("Stereo Delay Time L (tempo)", LFO<>::k8th, { DELAY_TEMPODIV_VALIST });
+          GetParam(kParamEffect1Param2)->InitEnum("Stereo Delay Time R (tempo)", LFO<>::k8th, { DELAY_TEMPODIV_VALIST });
+        }
+        else
+        {
+          GetParam(kParamEffect1Param1)->InitDouble("Stereo Delay Time L (ms)", 100., 1., 5000., 1., "ms", IParam::kFlagsNone, "Delay", IParam::ShapePowCurve(3.));
+          GetParam(kParamEffect1Param2)->InitDouble("Stereo Delay Time R (ms)", 100., 1., 5000., 1., "ms", IParam::kFlagsNone, "Delay", IParam::ShapePowCurve(3.));
+        }
         pGraphics->SetAllControlsDirty();
       }
     );
-    pGraphics->AttachControl(new IVToggleControl(effectsControlsPanel.FracRectVertical(1.f / 3).GetGridCell(0, 2, 1, 4).GetPadded(-10.f), kNoParameter, "", toggleStyle, "Stereo", "Mono"), kNoTag, "Delay")->SetActionFunction(
+    pGraphics->AttachControl(new IVToggleControl(effectsControlsPanel.FracRectVertical(1.f / 3).GetGridCell(0, 2, 1, 4).GetPadded(-10.f), kNoParameter, "", toggleStyle, "Stereo", "Mono"), kCtrlTagEffect1Toggle2, "E1")->SetActionFunction(
       [pGraphics, channelLockFunction](IControl* pControl) {
         bool mono = pControl->GetValue() > 0.5;
         if (mono)
         {
-          pGraphics->GetControlWithTag(kCtrlTagDelayLMilliseconds)->SetActionFunction(channelLockFunction);
-          pGraphics->GetControlWithTag(kCtrlTagDelayRMilliseconds)->SetActionFunction(channelLockFunction);
-          pGraphics->GetControlWithTag(kCtrlTagDelayLBeats)->SetActionFunction(channelLockFunction);
-          pGraphics->GetControlWithTag(kCtrlTagDelayRBeats)->SetActionFunction(channelLockFunction);
+          pGraphics->GetControlWithTag(kCtrlTagEffect1Knob1)->SetActionFunction(channelLockFunction);
+          pGraphics->GetControlWithTag(kCtrlTagEffect1Knob2)->SetActionFunction(channelLockFunction);
         }
         else
         {
-          pGraphics->GetControlWithTag(kCtrlTagDelayLMilliseconds)->SetActionFunction([pGraphics](IControl* pControl) {});
-          pGraphics->GetControlWithTag(kCtrlTagDelayRMilliseconds)->SetActionFunction([pGraphics](IControl* pControl) {});
-          pGraphics->GetControlWithTag(kCtrlTagDelayLBeats)->SetActionFunction([pGraphics](IControl* pControl) {});
-          pGraphics->GetControlWithTag(kCtrlTagDelayRBeats)->SetActionFunction([pGraphics](IControl* pControl) {});
+          pGraphics->GetControlWithTag(kCtrlTagEffect1Knob1)->SetActionFunction([pGraphics](IControl* pControl) {});
+          pGraphics->GetControlWithTag(kCtrlTagEffect1Knob2)->SetActionFunction([pGraphics](IControl* pControl) {});
         }
         pGraphics->SetAllControlsDirty();
       }
@@ -1057,8 +1129,12 @@ void Tablitsa::UpdateUIControls()
   GetUI()->GetControlWithTag(kCtrlTagFilter1Type)->SetDirty(true);
   GetUI()->GetControlWithTag(kCtrlTagFilter2Type)->SetDirty(true);
   GetUI()->GetControlWithTag(kCtrlTagGlideMode)->SetDirty(true);*/
-  for (auto i{0}; i < std::size(kStartupTriggerControls); ++i)
-    GetUI()->GetControlWithTag(kStartupTriggerControls[i])->SetDirty(true);
+  for (auto i{ 0 }; i < std::size(kStartupTriggerControls); ++i)
+  {
+    IControl* pControl = GetUI()->GetControlWithTag(kStartupTriggerControls[i]);
+    if (!pControl->IsHidden())
+      pControl->SetDirty(true);
+  }
 }
 
 #if IPLUG_DSP
