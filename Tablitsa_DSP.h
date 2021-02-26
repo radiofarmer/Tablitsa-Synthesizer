@@ -275,33 +275,6 @@ struct UnisonVoiceManager
   }
 };
 
-// Effect helper enums and structs
-
-enum EEffectTypes
-{
-  kDelayEffect,
-  kSampleAndHoldEffect
-};
-enum EDelayParams
-{
-  kDelayTempoSync,
-  kDelayChannelLock
-};
-
-template<typename T, int NumEffects>
-struct EffectHolder
-{
-  std::vector<bool> mSettings;
-  Effect<T>* mEffect;
-  int mEffectType;
-
-  EffectHolder(Effect<T>* effect, const int effectType, std::initializer_list<bool> boolSettings = {}) :
-    mEffect(effect), mSettings(boolSettings)
-  {
-
-  }
-};
-
 template<typename T>
 class TablitsaDSP
 {
@@ -801,12 +774,12 @@ public:
       const T smoothedGain = mModulations.GetList()[kModGainSmoother][s];
 
       // Master effects processing
-      T delay[2]{ outputs[0][s], outputs[1][s] };
-      mEffect1->ProcessStereo(delay);
-      //const T delay[2]{ mEffect1.Process(outputs[0][s]), mEffect1.Process(outputs[0][s]) };
+      T stereo_in[2]{ outputs[0][s], outputs[1][s] };
+      mEffects[0]->ProcessStereo(stereo_in);
+//      mEffects[1]->ProcessStereo(stereo_in);
 
-      outputs[0][s] += delay[0];
-      outputs[1][s] += delay[1];
+      outputs[0][s] = stereo_in[0];
+      outputs[1][s] = stereo_in[1];
 
       outputs[0][s] *= smoothedGain * (2 - mModulations.GetList()[kModPanSmoother][s]);
       outputs[1][s] *= smoothedGain * mModulations.GetList()[kModPanSmoother][s];
@@ -836,7 +809,8 @@ public:
     mModulations.Empty();
 
     // Effects
-    mEffect1->SetSampleRate(sampleRate);
+    mEffects[0]->SetSampleRate(sampleRate);
+    mEffects[1]->SetSampleRate(sampleRate);
     
     for(auto i = 0; i < kNumModulations; i++)
     {
@@ -1904,19 +1878,19 @@ public:
         break;
       }
       case kParamEffect1Param5:
-        mEffect1->SetParam5((T)value);
+        mEffects[0]->SetParam5((T)value);
         break;
       case kParamEffect1Param1:
-        mEffect1->SetParam1((T)value);
+        mEffects[0]->SetParam1((T)value);
         break;
       case kParamEffect1Param2:
-        mEffect1->SetParam2((T)value);
+        mEffects[0]->SetParam2((T)value);
         break;
       case kParamEffect1Param3:
-        mEffect1->SetParam3((T)value); // Delay feedback
+        mEffects[0]->SetParam3((T)value); // Delay feedback
         break;
       case kParamEffect1Param4:
-        mEffect1->SetParam4((T)value); // Delay mix
+        mEffects[0]->SetParam4((T)value); // Delay mix
         break;
       default:
         break;
@@ -1980,6 +1954,8 @@ public:
 
 
   // Effects
-  Effect<T>* mEffect1 = new DelayEffect<T>(DEFAULT_SAMPLE_RATE, DEFAULT_SAMPLE_RATE * 12., &mGlobalMetronome);
-  std::vector<Effect<T>*> mEffects;
+  std::vector<Effect<T>*> mEffects{
+    new DelayEffect<T>(DEFAULT_SAMPLE_RATE, 10000., &mGlobalMetronome),
+    new SampleAndHold<T>(DEFAULT_SAMPLE_RATE)
+  };
 };

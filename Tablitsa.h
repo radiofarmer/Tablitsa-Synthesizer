@@ -480,7 +480,10 @@ enum EMsgTags
   kMsgRandomizeSequencer,
   kMsgFilterOscChanged,
   kMsgSavePreset,
-  kMsgLoadPreset
+  kMsgLoadPreset,
+  kMsgEffect1Changed,
+  kMsgEffect2Changed,
+  kMsgEffect3Changed
 };
 
 enum EModulators
@@ -495,6 +498,12 @@ enum EModulators
   kKeytrack,
   kTriggerRandom,
   kNumMods
+};
+
+enum EEffectTypes
+{
+  kDelayEffect,
+  kSampleAndHoldEffect
 };
 
 constexpr EControlTags kStartupTriggerControls[]{

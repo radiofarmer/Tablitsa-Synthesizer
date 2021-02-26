@@ -8,9 +8,9 @@ template<typename T>
 class Effect
 {
 public:
-  Effect(double sampleRate) : mSampleRate(sampleRate) {}
+  Effect(T sampleRate) : mSampleRate(sampleRate) {}
 
-  virtual T Process(T s) = 0;
+  virtual T Process(T s) { return s; }
 
   virtual void ProcessStereo(T* s) {}
 
@@ -19,15 +19,18 @@ public:
     mSampleRate = sampleRate;
   }
 
-  virtual void SetParam1(T value, ...) {}
-  virtual void SetParam2(T value, ...) {}
-  virtual void SetParam3(T value, ...) {}
-  virtual void SetParam4(T value, ...) {}
-  virtual void SetParam5(T value, ...) {}
-  virtual void SetParam6(T value, ...) {}
+  virtual void SetMix(T wet) { mWetMix = wet; }
+
+  virtual void SetParam1(T value) {}
+  virtual void SetParam2(T value) {}
+  virtual void SetParam3(T value) {}
+  virtual void SetParam4(T value) { SetMix((T)value / 100.); }
+  virtual void SetParam5(T value) {}
+  virtual void SetParam6(T value) {}
 
 protected:
-  double mSampleRate;
+  T mSampleRate;
+  T mWetMix{ 0. };
 };
 
 #define DELAY_TEMPODIV_VALIST "1/64", "1/32", "1/16T", "1/16", "1/16D", "1/8T", "1/8", "1/8D", "1/4", "1/4D", "1/2", "1/1"
@@ -43,7 +46,7 @@ class DelayEffect final : public Effect<T>
   };
 
 public:
-  DelayEffect(double sampleRate, double maxDelayMS = 5000.) :
+  DelayEffect(T sampleRate, T maxDelayMS = 5000.) :
     DelayEffect(sampleRate, maxDelayMS, nullptr)
   {
   }
@@ -65,7 +68,7 @@ public:
 
   }
   // Helper functions
-  virtual void SetParam1(T value, ...)
+  virtual void SetParam1(T value) override
   {
     if (mTempoSync)
     {
@@ -76,7 +79,7 @@ public:
     else
       SetDelayMS(value, 0);
   }
-  virtual void SetParam2(T value, ...)
+  virtual void SetParam2(T value) override
   {
     if (mTempoSync)
     {
@@ -87,9 +90,9 @@ public:
     else
       SetDelayMS(value, 1);
   }
-  virtual void SetParam3(T value, ...) { SetFeedback((T)value / 100.); }
-  virtual void SetParam4(T value, ...) { SetGain((T)value / 100.); }
-  virtual void SetParam5(T value, ...) { SetTempoSync(value > 0.5); }
+  virtual void SetParam3(T value) override { SetFeedback((T)value / 100.); }
+  virtual void SetParam4(T value) override { SetGain((T)value / 100.); }
+  virtual void SetParam5(T value) override { SetTempoSync(value > 0.5); }
 
   void SetDelayMS(T timeMS, int channel)
   {
@@ -124,6 +127,8 @@ public:
 
   void CalculateDelaySamples()
   {
+    if (mMetronome)
+      mBPM = mMetronome->mTempo;
     if (mTempoSync)
     {
       mDelayLTime = static_cast<int>(mDelayLBeats * mBPM / 60. * mSampleRate);
@@ -147,6 +152,7 @@ public:
     mDelayRGain = gain;
   }
 
+  // Returns only the wet signal
   inline T Process(T s) override
   {
     T left_out = mDelayL[mDelayLTime];
@@ -156,24 +162,15 @@ public:
     return left_out * mDelayLGain + right_out * mDelayRGain;
   }
 
-  /*inline void ProcessStereo(const T sl, const T sr)
-  {
-    const T left_out = mDelayL[mDelayLTime];
-    const T right_out = mDelayR[mDelayRTime];
-    mDelayL.push(sl + left_out * mFeedback);
-    mDelayR.push(sr + right_out * mFeedback);
-    T output[2]{ left_out * mDelayLGain, right_out * mDelayRGain };
-    return output;
-  }*/
-
+  // Returns the mixed signal
   inline void ProcessStereo(T inputs[2])
   {
     const T left_out = mDelayL[mDelayLTime];
     const T right_out = mDelayR[mDelayRTime];
     mDelayL.push(inputs[0] + left_out * mFeedback);
     mDelayR.push(inputs[1] + right_out * mFeedback);
-    inputs[0] = left_out * mDelayLGain;
-    inputs[1] = right_out * mDelayRGain;
+    inputs[0] += left_out * mDelayLGain;
+    inputs[1] += right_out * mDelayRGain;
   }
 
 private:
@@ -200,37 +197,52 @@ private:
   T mFeedback{ 0. };
 };
 
-template <typename T>
-class SaturationEQ
+template<typename T>
+class SampleAndHold : public Effect<T>
 {
 public:
-  SaturationEQ(double sampleRate=41000., double boostFc=0.05, double lowEndGain_dB=5.) : mLowShelf(sampleRate, boostFc, lowEndGain_dB)
+  SampleAndHold(T sampleRate) : Effect(sampleRate) {}
+
+  void SetParam1(T value) override { SetRateMS(value); }
+  void SetParam2(T value) override { SetDecay((T)value / 100.); }
+  void SetParam3(T value) override { SetNoise((T)value / 100.); }
+
+  T Process(T s) override
   {
+    T out = mHold;
+    if (mSampleCounter++ >= mRate)
+    {
+      out = mHold = s;
+      mSampleCounter = 0;
+    }
+    return s + mWetMix * (out - s);
   }
 
-  void SetSampleRate(double sampleRate)
+  void ProcessStereo(T* s) override
   {
-    mLowShelf.SetSampleRate(sampleRate);
+    s[0] = Process(s[0]);
+    s[1] = s[0];
   }
 
-  inline void SetLevel(T lvl)
+  void SetRateMS(T rate)
   {
-    mGain = 1. + lvl / 2.;
-    mLowShelf.SetGain(lvl * 10.);
+    mRate = static_cast<int>(rate / 1000. * mSampleRate);
   }
 
-  inline void SetLevel(T lvl, T cutoffShift)
+  void SetDecay(T decay)
   {
-    SetLevel(lvl);
-    mLowShelf.ShiftCutoff(cutoffShift);
+    mDecay = decay;
   }
 
-  inline T Process(T s)
+  void SetNoise(T noise)
   {
-    return std::tanh(mLowShelf.Process(s) * mGain) / mGain;
+    mNoise = noise;
   }
 
-private:
-  T mGain;
-  ShelvingFilter<T, true> mLowShelf;
+protected:
+  int mRate{ 1 }; // samples
+  int mSampleCounter{ 0 };
+  T mHold{ 0. };
+  T mDecay{ 0. };
+  T mNoise{ 0. };
 };
