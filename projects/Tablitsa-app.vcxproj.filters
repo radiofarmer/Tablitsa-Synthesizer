@@ -104,6 +104,7 @@
     <ClCompile Include="..\VectorFunctions.cpp" />
     <ClCompile Include="..\SignalProcessing.cpp" />
     <ClCompile Include="..\TablitsaControls.cpp" />
+    <ClCompile Include="..\TablitsaEffects.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\Tablitsa.h" />
@@ -323,10 +324,10 @@
     <ClInclude Include="..\PeriodicTable.h" />
     <ClInclude Include="..\VoiceThread.h" />
     <ClInclude Include="..\VectorFunctions.h" />
-    <ClInclude Include="..\Effects.h" />
     <ClInclude Include="..\Modulation.h" />
     <ClInclude Include="..\TablitsaControls.h" />
     <ClInclude Include="..\TablitsaOscillators.h" />
+    <ClInclude Include="..\TablitsaEffects.h" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="resources">

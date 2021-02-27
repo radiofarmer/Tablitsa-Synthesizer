@@ -1,7 +1,7 @@
 #pragma once
 
 #include "PeriodicTable.h"
-#include "Effects.h"
+#include "TablitsaEffects.h"
 #include "TablitsaOscillators.h"
 #include "Modulation.h"
 

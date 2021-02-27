@@ -343,7 +343,7 @@
     <ClInclude Include="..\..\..\IPlug\IPlug_include_in_plug_hdr.h" />
     <ClInclude Include="..\..\..\IPlug\IPlug_include_in_plug_src.h" />
     <ClInclude Include="..\TablitsaControls.h" />
-    <ClInclude Include="..\Effects.h" />
+    <ClInclude Include="..\TablitsaEffects.h" />
     <ClInclude Include="..\Filter.h" />
     <ClInclude Include="..\Modulation.h" />
     <ClInclude Include="..\Modulators.h" />
@@ -443,6 +443,7 @@
     <ClCompile Include="..\SignalProcessing.cpp" />
     <ClCompile Include="..\Tablitsa.cpp" />
     <ClCompile Include="..\TablitsaControls.cpp" />
+    <ClCompile Include="..\TablitsaEffects.cpp" />
     <ClCompile Include="..\VectorFunctions.cpp" />
   </ItemGroup>
   <ItemGroup>
