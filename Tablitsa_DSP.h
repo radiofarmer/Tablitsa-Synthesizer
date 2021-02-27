@@ -337,8 +337,6 @@ public:
 
     void Trigger(double level, bool isRetrigger) override
     {
-      mOsc1.Reset();
-      mOsc2.Reset();
 
       mVelocity = level; // TODO: Handling of different velocity settings (i.e. which envelopes are affected by velocity)
       mTriggerRand = static_cast<double>(std::rand()) / static_cast<double>(RAND_MAX);
@@ -398,6 +396,9 @@ public:
         mAmpEnv.Start(1. - velSubtr * mAmpEnvVelocityMod, 1. - mAmpEnvVelocityMod * kMaxEnvTimeScalar * level);
         mEnv1.Start(1. - velSubtr * mEnv1VelocityMod, 1. - mEnv1VelocityMod * kMaxEnvTimeScalar * level);
         mEnv2.Start(1. - velSubtr * mEnv2VelocityMod, 1. - mEnv2VelocityMod * kMaxEnvTimeScalar * level);
+        // Don't reset oscillators in legato mode - the phase sync will case clicks
+        mOsc1.Reset();
+        mOsc2.Reset();
       }
       else
       {
@@ -1335,6 +1336,7 @@ public:
         mSynth.ForEachVoice([glideNorm](SynthVoice& voice) {
           dynamic_cast<TablitsaDSP::Voice&>(voice).mSequencer.SetGlide(glideNorm);
           });
+        break;
       }
       case kParamLegato:
       {
@@ -1928,6 +1930,7 @@ public:
         break;
       case kParamEffect3Param6:
         mEffects[2]->SetParam6((T)value);
+        break;
       default:
         break;
     }
