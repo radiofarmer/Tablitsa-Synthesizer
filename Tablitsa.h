@@ -3,7 +3,7 @@
 #include "IPlug_include_in_plug_hdr.h"
 #include "IControls.h"
 
-#define TABLITSA_EFFECTS_LIST {"Delay", "Sample & Hold"}
+#define TABLITSA_EFFECTS_LIST {"None", "Delay", "Waveshaper", "Sample & Hold"}
 
 const int kNumPresets = 1;
 constexpr int kNumVoices = 16;
@@ -406,6 +406,12 @@ enum EParams
   kParamEffect2Param4,
   kParamEffect2Param5,
   kParamEffect2Param6,
+  kParamEffect3Param1,
+  kParamEffect3Param2,
+  kParamEffect3Param3,
+  kParamEffect3Param4,
+  kParamEffect3Param5,
+  kParamEffect3Param6,
   kNumParams
 };
 
@@ -462,13 +468,30 @@ enum EControlTags
   kCtrlTagOsc2ModSwitch,
   kCtrlTagSequencer,
   kCtrlTagEffectBank,
-  kCtrlTagEffect1Tab,
+  kCtrlTagEffect1List,
+  kCtrlTagEffect1Switch,
   kCtrlTagEffect1Knob1,
   kCtrlTagEffect1Knob2,
   kCtrlTagEffect1Knob3,
   kCtrlTagEffect1Knob4,
   kCtrlTagEffect1Toggle1,
   kCtrlTagEffect1Toggle2,
+  kCtrlTagEffect2List,
+  kCtrlTagEffect2Switch,
+  kCtrlTagEffect2Knob1,
+  kCtrlTagEffect2Knob2,
+  kCtrlTagEffect2Knob3,
+  kCtrlTagEffect2Knob4,
+  kCtrlTagEffect2Toggle1,
+  kCtrlTagEffect2Toggle2,
+  kCtrlTagEffect3List,
+  kCtrlTagEffect3Switch,
+  kCtrlTagEffect3Knob1,
+  kCtrlTagEffect3Knob2,
+  kCtrlTagEffect3Knob3,
+  kCtrlTagEffect3Knob4,
+  kCtrlTagEffect3Toggle1,
+  kCtrlTagEffect3Toggle2,
   kNumCtrlTags
 };
 
@@ -502,7 +525,9 @@ enum EModulators
 
 enum EEffectTypes
 {
+  kNoEffect,
   kDelayEffect,
+  kWaveshaperEffect,
   kSampleAndHoldEffect
 };
 
@@ -514,7 +539,18 @@ constexpr EControlTags kStartupTriggerControls[]{
   kCtrlTagFilter1Type,
   kCtrlTagFilter2Type,
   kCtrlTagGlideMode,
-  kCtrlTagEffect1Toggle1
+  kCtrlTagEffect1List,
+  kCtrlTagEffect1Toggle1,
+  kCtrlTagEffect1Toggle2,
+  kCtrlTagEffect2List,
+  kCtrlTagEffect2Toggle1,
+  kCtrlTagEffect2Toggle2,
+  kCtrlTagEffect3List,
+  kCtrlTagEffect3Toggle1,
+  kCtrlTagEffect3Toggle2,
+  kCtrlTagEffect1Switch,
+  kCtrlTagEffect2Switch,
+  kCtrlTagEffect3Switch,
 };
 
 using namespace iplug;

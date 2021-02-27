@@ -1,7 +1,5 @@
 #include "SignalProcessing.h"
 
-#include <assert.h>
-
 double SoftClip(double s, double gain)
 {
   /*double s_abs = std::abs(s);
@@ -10,21 +8,4 @@ double SoftClip(double s, double gain)
   double s_abs = std::tanh(std::abs(s * gain));
   double nonlin = 2. - 3 * s_abs * s_abs;
   return std::copysign((3. - nonlin * nonlin) / 4., s);
-}
-
-DelayLine::DelayLine(const int length) : mLength(length)
-{
-  assert(mLength > 1);
-  mBuffer = new double[mLength] {};
-}
-
-void DelayLine::reset()
-{
-  delete[] mBuffer;
-  mBuffer = new double[mLength] {};
-}
-
-void DelayLine::SetDelay(const int d)
-{
-  mLength = d;
 }

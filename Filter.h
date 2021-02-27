@@ -28,7 +28,7 @@ enum EFilters
 
 /* General function for processing a biquad filter in direct form II*/
 template<typename T>
-inline T ProcessBiquadII(T s, T* a, T* b, DelayLine& z)
+inline T ProcessBiquadII(T s, T* a, T* b, DelayLine<T, 2>& z)
 {
   T sum = s - a[0] * z[0] - a[1] * z[1];
   T out = sum * b[0] + z[0] * b[1] + z[1] * b[2];
@@ -487,7 +487,7 @@ public:
 
   protected:
     const std::vector<double> mCoefs;
-    DelayLine mZ{ 2 };
+    DelayLine<T, 2> mZ;
     Vec4d mB;
     Vec4d mA;
 #if defined ALG1
@@ -647,8 +647,8 @@ private:
   int mDelayLength;
   T& mFF{ mFc }; // Feedforward used as alias for cutoff
   T& mFB{ mQ }; // Feedback used as alias for resonance
-  DelayLine mDelayIn{ COMB_MAX_DELAY + 1 };
-  DelayLine mDelayOut{ COMB_MAX_DELAY + 1 };
+  DelayLine<T, COMB_MAX_DELAY> mDelayIn;
+  DelayLine<T, COMB_MAX_DELAY> mDelayOut;
 };
 
 template<typename T, bool LowShelf=true>

@@ -34,8 +34,10 @@ protected:
 };
 
 #define DELAY_TEMPODIV_VALIST "1/64", "1/32", "1/16T", "1/16", "1/16D", "1/8T", "1/8", "1/8D", "1/4", "1/4D", "1/2", "1/1"
+#define TABLITSA_MAX_DELAY_MS 10000.
+#define TABLITSA_MAX_DELAY_SAMP (int)480000
 
-template<typename T>
+template<typename T, int MaxDelay=TABLITSA_MAX_DELAY_SAMP>
 class DelayEffect final : public Effect<T>
 {
   enum EChannels
@@ -46,17 +48,15 @@ class DelayEffect final : public Effect<T>
   };
 
 public:
-  DelayEffect(T sampleRate, T maxDelayMS = 5000.) :
-    DelayEffect(sampleRate, maxDelayMS, nullptr)
+  DelayEffect(T sampleRate) :
+    DelayEffect(sampleRate, nullptr)
   {
   }
 
-  DelayEffect(double sampleRate, double maxDelayMS = 5000., ModMetronome* metronome=nullptr) :
+  DelayEffect(double sampleRate, ModMetronome* metronome=nullptr) :
     Effect<T>(sampleRate),
-    mMaxDelayMS(maxDelayMS),
-    mMaxDelay(static_cast<int>((mMaxDelayMS / 1000. + 1.)* mSampleRate)),
-    mDelayL(mMaxDelay),
-    mDelayR(mMaxDelay),
+    mMaxDelayMS(TABLITSA_MAX_DELAY_MS),
+    mMaxDelay(MaxDelay),
     mDelayLTime(mMaxDelay / 2),
     mDelayRTime(mMaxDelay / 2),
     mDelayLTimeMS(mMaxDelayMS / 2),
@@ -65,7 +65,7 @@ public:
     mDelayRBeats(1.),
     mMetronome(metronome)
   {
-
+    Reset();
   }
   // Helper functions
   virtual void SetParam1(T value) override
@@ -139,6 +139,8 @@ public:
       mDelayLTime = static_cast<int>(mDelayLTimeMS / 1000. * mSampleRate);
       mDelayRTime = static_cast<int>(mDelayRTimeMS / 1000. * mSampleRate);
     }
+    mDelayLTime = std::min(mDelayLTime, TABLITSA_MAX_DELAY_SAMP);
+    mDelayRTime = std::min(mDelayRTime, TABLITSA_MAX_DELAY_SAMP);
   }
 
   void SetFeedback(const T fb)
@@ -173,12 +175,15 @@ public:
     inputs[1] += right_out * mDelayRGain;
   }
 
+  void Reset()
+  {
+    mDelayL.reset();
+    mDelayR.reset();
+  }
+
 private:
-  const double mMaxDelayMS;
+  const T mMaxDelayMS;
   int mMaxDelay;
-  DelayLine mDelayL;
-  DelayLine mDelayR;
-  ModMetronome* mMetronome; // For tempo sync
 
   T mDelayLGain{ 0.5 };
   T mDelayRGain{ 0.5 };
@@ -195,6 +200,10 @@ private:
   bool mTempoSync{ false };
   T mBPM{ 120. };
   T mFeedback{ 0. };
+
+  DelayLine<T, TABLITSA_MAX_DELAY_SAMP>  mDelayL;
+  DelayLine<T, TABLITSA_MAX_DELAY_SAMP> mDelayR;
+  ModMetronome* mMetronome; // For tempo sync
 };
 
 template<typename T>
@@ -206,7 +215,7 @@ class SampleAndHold : public Effect<T>
   };
 
 public:
-  SampleAndHold(T sampleRate) : Effect(sampleRate) {}
+  SampleAndHold(T sampleRate) : Effect<T>(sampleRate) {}
 
   void SetParam1(T value) override { SetRateMS(value); }
   void SetParam2(T value) override { SetDecay(value / (T)100.); }
@@ -276,4 +285,25 @@ protected:
   unsigned int mJitter{ 0 };
   unsigned int mRateAdj{ 1 };
   xor128 mRandGen{ 0xAF31, 0x1234, 0xFF2E, 0xDCBA };
+};
+
+#define WAVESHAPE_TYPES "Sine", "Parabolic", "Hyp. Tan.", "Soft Clip", "Hard Clip"
+enum EWaveshaperMode
+{
+  kWaveshapeSine,
+  kWaveshapeParabola,
+  kWaveshapeTanh,
+  kWaveshapeSoft,
+  kWaveshapeHard,
+  kNumWaveshaperModes
+};
+
+template<typename T>
+class Waveshaper : public Effect<T>
+{
+public:
+  Waveshaper(T sampleRate, EWaveshaperMode mode=kWaveshapeSine) : Effect<T>(sampleRate), mShaperMode(mode) {}
+
+private:
+  EWaveshaperMode mShaperMode;
 };

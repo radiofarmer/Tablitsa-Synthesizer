@@ -40,7 +40,7 @@ const IVColorSpec knobColorSpec = IVColorSpec{
 
 const IVStyle modKnobStyle{ TABLITSA_STYLE.WithColors(knobColorSpec).WithLabelText(TABLITSA_STYLE.labelText.WithSize(17.f)) };
 
-const IVStyle toggleStyle{ TABLITSA_STYLE.WithDrawFrame(true).WithColor(EVColor::kFG, COLOR_TRANSPARENT).WithShowLabel(false) };
+const IVStyle toggleStyle{ TABLITSA_STYLE.WithDrawFrame(true).WithColor(EVColor::kFG, COLOR_TRANSPARENT).WithColor(EVColor::kHL, IColor(100, 220, 0, 180)).WithShowLabel(false) };
 
 const IText dropdownText{ DEFAULT_TEXT.WithFGColor(COLOR_WHITE) };
 

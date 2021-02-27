@@ -776,7 +776,8 @@ public:
       // Master effects processing
       T stereo_in[2]{ outputs[0][s], outputs[1][s] };
       mEffects[0]->ProcessStereo(stereo_in);
-//      mEffects[1]->ProcessStereo(stereo_in);
+      mEffects[1]->ProcessStereo(stereo_in);
+      mEffects[2]->ProcessStereo(stereo_in);
 
       outputs[0][s] = stereo_in[0];
       outputs[1][s] = stereo_in[1];
@@ -1873,8 +1874,6 @@ public:
           });
         break;
       }
-      case kParamEffect1Param5:
-        mEffects[0]->SetParam5((T)value);
         break;
       case kParamEffect1Param1:
         mEffects[0]->SetParam1((T)value);
@@ -1888,6 +1887,47 @@ public:
       case kParamEffect1Param4:
         mEffects[0]->SetParam4((T)value); // Delay mix
         break;
+      case kParamEffect1Param5:
+        mEffects[0]->SetParam5((T)value);
+        break;
+      case kParamEffect1Param6:
+        mEffects[0]->SetParam6((T)value);
+        break;
+      case kParamEffect2Param1:
+        mEffects[1]->SetParam1((T)value);
+        break;
+      case kParamEffect2Param2:
+        mEffects[1]->SetParam2((T)value);
+        break;
+      case kParamEffect2Param3:
+        mEffects[1]->SetParam3((T)value); // Delay feedback
+        break;
+      case kParamEffect2Param4:
+        mEffects[1]->SetParam4((T)value); // Delay mix
+        break;
+      case kParamEffect2Param5:
+        mEffects[1]->SetParam5((T)value);
+        break;
+      case kParamEffect2Param6:
+        mEffects[1]->SetParam6((T)value);
+        break;
+      case kParamEffect3Param1:
+        mEffects[2]->SetParam1((T)value);
+        break;
+      case kParamEffect3Param2:
+        mEffects[2]->SetParam2((T)value);
+        break;
+      case kParamEffect3Param3:
+        mEffects[2]->SetParam3((T)value); // Delay feedback
+        break;
+      case kParamEffect3Param4:
+        mEffects[2]->SetParam4((T)value); // Delay mix
+        break;
+      case kParamEffect3Param5:
+        mEffects[2]->SetParam5((T)value);
+        break;
+      case kParamEffect3Param6:
+        mEffects[2]->SetParam6((T)value);
       default:
         break;
     }
@@ -1948,10 +1988,10 @@ public:
   GlobalModulator<T, FastLFO<T>> mGlobalLFO2{ &mGlobalMetronome };
   GlobalModulator<T, Sequencer<T>> mGlobalSequencer{ &mGlobalMetronome, mSeqSteps };
 
-
   // Effects
   std::vector<Effect<T>*> mEffects{
-    new DelayEffect<T>(DEFAULT_SAMPLE_RATE, 10000., &mGlobalMetronome),
-    new SampleAndHold<T>(DEFAULT_SAMPLE_RATE)
+    new DelayEffect<T, TABLITSA_MAX_DELAY_SAMP>(DEFAULT_SAMPLE_RATE, &mGlobalMetronome),
+    new Effect<T>(DEFAULT_SAMPLE_RATE),
+    new Effect<T>(DEFAULT_SAMPLE_RATE)
   };
 };

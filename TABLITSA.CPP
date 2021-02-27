@@ -1,6 +1,7 @@
 
 #include "Tablitsa.h"
 #include "IPlug_include_in_plug_src.h"
+#include "TablitsaUIFunctions.h"
 
 #include <atlstr.h>
 
@@ -420,18 +421,28 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
   GetParam(kParamFilter2Delay)->InitInt("Filter 2 Delay", 8, 1, 512);
 
   // Effect Parameters
-  GetParam(kParamEffect1Param1)->InitDouble("Effect 1 Parameter 1", 100., 1., 5000., 1., "ms", IParam::kFlagsNone, "Effect1", IParam::ShapePowCurve(3.));
-  GetParam(kParamEffect1Param2)->InitDouble("Effect 1 Parameter 2", 100., 1., 5000., 1., "ms", IParam::kFlagsNone, "Effect1", IParam::ShapePowCurve(3.));
+  //GetParam(kParamEffect1Param1)->InitDouble("Effect 1 Parameter 1", 100., 1., 5000., 1., "ms", IParam::kFlagsNone, "Effect1", IParam::ShapePowCurve(3.));
+  //GetParam(kParamEffect1Param2)->InitDouble("Effect 1 Parameter 2", 100., 1., 5000., 1., "ms", IParam::kFlagsNone, "Effect1", IParam::ShapePowCurve(3.));
+  GetParam(kParamEffect1Param1)->InitPercentage("Effect 1 Parameter 1", 0.);
+  GetParam(kParamEffect1Param2)->InitPercentage("Effect 1 Parameter 2", 0.);
   GetParam(kParamEffect1Param3)->InitPercentage("Effect 1 Parameter 3", 0.);
   GetParam(kParamEffect1Param4)->InitPercentage("Effect 1 Parameter 4", 0.);
   GetParam(kParamEffect1Param5)->InitBool("Effect 1 Parameter 5", false);
-  //GetParam(kParamDelayTimeLBeats)->InitEnum("Stereo Delay Time L (tempo)", LFO<>::k8th, { DELAY_TEMPODIV_VALIST });
-  //GetParam(kParamDelayTimeRBeats)->InitEnum("Stereo Delay Time R (tempo)", LFO<>::k8th, { DELAY_TEMPODIV_VALIST });
+  GetParam(kParamEffect1Param6)->InitBool("Effect 1 Parameter 6", false);
 
-  GetParam(kParamEffect2Param1)->InitDouble("Effect 1 Parameter 1", 10., 1., 20., 0.1, "ms", IParam::kFlagsNone, "Effect1", IParam::ShapePowCurve(3.));
-  GetParam(kParamEffect2Param2)->InitPercentage("Effect 1 Parameter 2", 0.);
-  GetParam(kParamEffect2Param3)->InitPercentage("Sample-and-Hold Noise");
-  GetParam(kParamEffect2Param4)->InitPercentage("Sample-and-Hold Mix", 0.);
+  GetParam(kParamEffect2Param1)->InitPercentage("Effect 2 Parameter 1", 0.);
+  GetParam(kParamEffect2Param2)->InitPercentage("Effect 2 Parameter 2", 0.);
+  GetParam(kParamEffect2Param3)->InitPercentage("Effect 2 Parameter 3", 0.);
+  GetParam(kParamEffect2Param4)->InitPercentage("Effect 2 Parameter 4", 0.);
+  GetParam(kParamEffect2Param5)->InitBool("Effect 2 Parameter 5", false);
+  GetParam(kParamEffect2Param6)->InitBool("Effect 2 Parameter 6", false);
+
+  GetParam(kParamEffect3Param1)->InitPercentage("Effect 3 Parameter 1", 0.);
+  GetParam(kParamEffect3Param2)->InitPercentage("Effect 3 Parameter 2", 0.);
+  GetParam(kParamEffect3Param3)->InitPercentage("Effect 3 Parameter 3", 0.);
+  GetParam(kParamEffect3Param4)->InitPercentage("Effect 3 Parameter 4", 0.);
+  GetParam(kParamEffect3Param5)->InitBool("Effect 3 Parameter 5", false);
+  GetParam(kParamEffect3Param6)->InitBool("Effect 3 Parameter 6", false);
 
 #if VST3_API
 #define KEYBOARD_HEIGHT 0.f
@@ -581,19 +592,66 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
 
     /* Effects Panel */
     const IRECT effectsPanel = IRECT(masterPanel.GetGridCell(1, 1, 2, 7).R, masterPanel.GetGridCell(1, 0, 2, 7).T, masterPanel.GetGridCell(1, 6, 2, 7).R, masterPanel.GetGridCell(1, 6, 2, 7).B).GetHPadded(-5.f).GetHShifted(2.f);
+    const IRECT effectsControlsPanel = effectsPanel.GetReducedFromTop(40.f);
 
-    // Effects tab control
-    pGraphics->AttachControl(new TablitsaEffectBankControl(effectsPanel, { "Effect 1", "Effect1", "Effect3" }, { "E1", "E2", "E3" }), kCtrlTagEffectBank, "Effects");
-    // Effect 1
-    auto channelLockFunction = IActionFunction([pGraphics, this](IControl* pControl) {
+    auto channelLockFunction1 = IActionFunction([pGraphics, this](IControl* pControl) {
       // Tag of the other channel's control
       int ctrlTag = pControl->GetTag() == kCtrlTagEffect1Knob1 || pControl->GetTag() == kCtrlTagEffect1Knob1 ? pControl->GetTag() + 1 : pControl->GetTag() - 1;
       pGraphics->GetControlWithTag(ctrlTag)->SetValue(pControl->GetValue());
       GetUI()->GetDelegate()->SendParameterValueFromUI(pGraphics->GetControlWithTag(ctrlTag)->GetParamIdx(), pControl->GetValue());
       pGraphics->GetControlWithTag(ctrlTag)->SetDirty(false);
       });
+    auto channelLockFunction2 = IActionFunction([pGraphics, this](IControl* pControl) {
+      // Tag of the other channel's control
+      int ctrlTag = pControl->GetTag() == kCtrlTagEffect2Knob1 || pControl->GetTag() == kCtrlTagEffect2Knob1 ? pControl->GetTag() + 1 : pControl->GetTag() - 1;
+      pGraphics->GetControlWithTag(ctrlTag)->SetValue(pControl->GetValue());
+      GetUI()->GetDelegate()->SendParameterValueFromUI(pGraphics->GetControlWithTag(ctrlTag)->GetParamIdx(), pControl->GetValue());
+      pGraphics->GetControlWithTag(ctrlTag)->SetDirty(false);
+      });
+    auto channelLockFunction3 = IActionFunction([pGraphics, this](IControl* pControl) {
+      // Tag of the other channel's control
+      int ctrlTag = pControl->GetTag() == kCtrlTagEffect3Knob1 || pControl->GetTag() == kCtrlTagEffect3Knob1 ? pControl->GetTag() + 1 : pControl->GetTag() - 1;
+      pGraphics->GetControlWithTag(ctrlTag)->SetValue(pControl->GetValue());
+      GetUI()->GetDelegate()->SendParameterValueFromUI(pGraphics->GetControlWithTag(ctrlTag)->GetParamIdx(), pControl->GetValue());
+      pGraphics->GetControlWithTag(ctrlTag)->SetDirty(false);
+      });
+    IActionFunction effect1ToggleFunc = [this, pGraphics](IControl* pControl) {
+      const int effectIdx = pControl->GetValue() > 0.5 ? dynamic_cast<DropdownListControl*>(pGraphics->GetControlWithTag(kCtrlTagEffect1List))->GetCurrentIndex() : 0;
+      if (pControl->GetValue())
+        dynamic_cast<IVSlideSwitchControl*>(pControl)->SetValueStr("On");
+      else
+        dynamic_cast<IVSlideSwitchControl*>(pControl)->SetValueStr("Off");
+      SendArbitraryMsgFromUI(kMsgEffect1Changed, effectIdx, sizeof(effectIdx), reinterpret_cast<const void*>(&effectIdx));
+      // Need to set controls dirty so that parameter values are loaded:
+      SetAllEffectControlsDirty(pGraphics, kCtrlTagEffect1Knob1);
+    };
+    IActionFunction effect2ToggleFunc = [this, pGraphics](IControl* pControl) {
+      const int effectIdx = pControl->GetValue() > 0.5 ? dynamic_cast<DropdownListControl*>(pGraphics->GetControlWithTag(kCtrlTagEffect2List))->GetCurrentIndex() : 0;
+      if (pControl->GetValue())
+        dynamic_cast<IVSlideSwitchControl*>(pControl)->SetValueStr("On");
+      else
+        dynamic_cast<IVSlideSwitchControl*>(pControl)->SetValueStr("Off");
+      SendArbitraryMsgFromUI(kMsgEffect2Changed, effectIdx, sizeof(effectIdx), reinterpret_cast<const void*>(&effectIdx));
+      // Need to set controls dirty so that parameter values are loaded:
+      SetAllEffectControlsDirty(pGraphics, kCtrlTagEffect2Knob1);
+    };
+    IActionFunction effect3ToggleFunc = [this, pGraphics](IControl* pControl) {
+      const int effectIdx = pControl->GetValue() > 0.5 ? dynamic_cast<DropdownListControl*>(pGraphics->GetControlWithTag(kCtrlTagEffect3List))->GetCurrentIndex() : 0;
+      if (pControl->GetValue())
+        dynamic_cast<IVSlideSwitchControl*>(pControl)->SetValueStr("On");
+      else
+        dynamic_cast<IVSlideSwitchControl*>(pControl)->SetValueStr("Off");
+      SendArbitraryMsgFromUI(kMsgEffect3Changed, effectIdx, sizeof(effectIdx), reinterpret_cast<const void*>(&effectIdx));
+      // Need to set controls dirty so that parameter values are loaded:
+      SetAllEffectControlsDirty(pGraphics, kCtrlTagEffect3Knob1);
+    };
+
+    // Effects tab control
+    pGraphics->AttachControl(new TablitsaEffectBankControl(effectsPanel, { "Effect 1", "Effect2", "Effect3" }, { "E1", "E2", "E3" }), kCtrlTagEffectBank, "Effects");
+    
+    /* EFFECT 1 */
     // Selector list
-    pGraphics->AttachControl(new DropdownListControl(effectsPanel.FracRectHorizontal(0.4f, false).GetFromTop(40.f).GetReducedFromTop(20.f).GetPadded(-2.f), TABLITSA_EFFECTS_LIST), kCtrlTagEffect1Tab, "E1")->SetActionFunction(
+    pGraphics->AttachControl(new DropdownListControl(effectsPanel.GetGridCell(0, 0, 1, 3).GetFromTop(50.f).GetReducedFromTop(20.f).GetPadded(-2.f), TABLITSA_EFFECTS_LIST), kCtrlTagEffect1List, "E1")->SetActionFunction(
       [pGraphics, this](IControl* pControl) {
         // Swap out effect parameters (and rearrange controls if necessary)
         int effectIdx = dynamic_cast<DropdownListControl*>(pControl)->GetCurrentIndex();
@@ -603,64 +661,45 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
         IControl* knob4 = pGraphics->GetControlWithTag(kCtrlTagEffect1Knob4);
         IControl* toggle1 = pGraphics->GetControlWithTag(kCtrlTagEffect1Toggle1);
         IControl* toggle2 = pGraphics->GetControlWithTag(kCtrlTagEffect1Toggle2);
+        std::vector<IControl*> allKnobs{ knob1, knob2, knob3, knob4 };
+        std::vector<IControl*> controls{ knob1, knob2, knob3, knob4, toggle1, toggle2 };
+        std::vector<int> params{ kParamEffect1Param1, kParamEffect1Param2, kParamEffect1Param3, kParamEffect1Param4, kParamEffect1Param5, kParamEffect1Param6 };
         switch (effectIdx)
         {
         case kDelayEffect:
         {
-          GetParam(kParamEffect1Param1)->InitDouble("Effect 1 Parameter 1", 100., 1., 5000., 1., "ms", IParam::kFlagsNone, "Effect1", IParam::ShapePowCurve(3.));
-          GetParam(kParamEffect1Param2)->InitDouble("Effect 1 Parameter 2", 100., 1., 5000., 1., "ms", IParam::kFlagsNone, "Effect1", IParam::ShapePowCurve(3.));
-          pGraphics->HideControl(kParamEffect1Param5, false);
-          pGraphics->HideControl(kParamEffect1Param6, true);
-          dynamic_cast<IVKnobControl*>(knob3)->SetLabelStr("L");
-          dynamic_cast<IVKnobControl*>(knob3)->SetLabelStr("R");
-          dynamic_cast<IVKnobControl*>(knob3)->SetLabelStr("Feedback");
-          toggle1->Hide(false);
-          toggle2->Hide(false);
-          knob1->SetDisabled(false);
-          knob2->SetDisabled(false);
-          knob3->SetDisabled(false);
-          knob4->SetDisabled(false);
-          toggle1->SetDirty(true);
-          toggle2->SetDirty(true);
+          std::vector<char*> paramNames{ "Effect 1 Parameter 1", "Effect 1 Parameter 2" , "Effect 1 Parameter 3", "Effect 1 Parameter 4" };
+          InitDelayUI(this, pGraphics, controls, params, paramNames);
+          break;
+        }
+        case kWaveshaperEffect:
+        {
+          std::vector<char*> paramNames{ "Effect 1 Parameter 1", "Effect 1 Parameter 2" , "Effect 1 Parameter 3", "Effect 1 Parameter 4" };
+          InitWaveshaperUI(this, pGraphics, controls, params, paramNames);
           break;
         }
         case kSampleAndHoldEffect:
         {
-          GetParam(kParamEffect1Param1)->InitDouble("Effect 1 Parameter 1", 10., 1., 20., 0.1, "ms", IParam::kFlagsNone, "Effect1", IParam::ShapePowCurve(3.));
-          GetParam(kParamEffect1Param2)->InitDouble("Effect 1 Parameter 2", 0., 1., 100., 1., "%", IParam::kFlagsNone, "Effect1", IParam::ShapePowCurve(3.));
-          knob1->SetParamIdx(kParamEffect1Param1);
-          pGraphics->HideControl(kParamEffect1Param5, true);
-          pGraphics->HideControl(kParamEffect1Param6, true);
-          dynamic_cast<IVKnobControl*>(knob1)->SetLabelStr("Rate");
-          dynamic_cast<IVKnobControl*>(knob2)->SetLabelStr("Decay");
-          dynamic_cast<IVKnobControl*>(knob3)->SetLabelStr("Noise");
-          toggle1->Hide(true);
-          toggle2->Hide(true);
-          knob1->SetDisabled(false);
-          knob2->SetDisabled(false);
-          knob3->SetDisabled(false);
-          knob4->SetDisabled(false);
+          std::vector<char*> paramNames{ "Effect 1 Parameter 1", "Effect 1 Parameter 2" , "Effect 1 Parameter 3", "Effect 1 Parameter 4" };
+          InitSampleAndHoldUI(this, pGraphics, controls, params, paramNames);
           break;
         }
         default:
         {
-          dynamic_cast<IVKnobControl*>(knob1)->SetLabelStr("");
-          dynamic_cast<IVKnobControl*>(knob2)->SetLabelStr("");
-          dynamic_cast<IVKnobControl*>(knob3)->SetLabelStr("");
-          knob1->SetDisabled(true);
-          knob2->SetDisabled(true);
-          knob3->SetDisabled(true);
-          knob4->SetDisabled(true);
+          std::vector<char*> paramNames{ "Effect 1 Parameter 1", "Effect 1 Parameter 2" , "Effect 1 Parameter 3", "Effect 1 Parameter 4" };
+          InitDefaultUI(this, pGraphics, controls, params, paramNames);
+          break;
         }
         }
+        // If the effect is turned off, load an empty effect object. Otherwise change to the new effect.
+        int effectEnabled = pGraphics->GetControlWithTag(kCtrlTagEffect1Switch)->GetValue() > 0.5 ? 0xFFFF : 0;
+        effectIdx &= effectEnabled;
         SendArbitraryMsgFromUI(kMsgEffect1Changed, kNoTag, sizeof(effectIdx), reinterpret_cast<void*>(&effectIdx)); // Effects must be swapped before OnParamChange is called
-        knob1->SetDirty(true);
-        knob2->SetDirty(true);
-        knob3->SetDirty(true);
-        knob4->SetDirty(true);
+        for (auto* knob : allKnobs)
+          knob->SetDirty(true);
       }
     );
-    const IRECT effectsControlsPanel = effectsPanel.GetReducedFromTop(40.f);
+    pGraphics->AttachControl(new IVSlideSwitchControl(effectsPanel.GetGridCell(0, 1, 1, 3).GetFromTop(45.f).GetReducedFromTop(30.f).GetHPadded(-20.f), effect1ToggleFunc, "", toggleStyle, true, EDirection::Horizontal, 2, 0), kCtrlTagEffect1Switch, "E1");
     pGraphics->AttachControl(new TablitsaIVKnobControl(effectsControlsPanel.FracRectVertical(2.f / 3, true).GetGridCell(0, 0, 1, 4).GetCentredInside(dialSize), kParamEffect1Param1, "Left", modKnobStyle), kCtrlTagEffect1Knob1, "E1");
     pGraphics->AttachControl(new TablitsaIVKnobControl(effectsControlsPanel.FracRectVertical(2.f / 3, true).GetGridCell(0, 1, 1, 4).GetCentredInside(dialSize), kParamEffect1Param2, "Right", modKnobStyle), kCtrlTagEffect1Knob2, "E1");
     pGraphics->AttachControl(new TablitsaIVKnobControl(effectsControlsPanel.FracRectVertical(2.f / 3, true).GetGridCell(0, 2, 1, 4).GetCentredInside(dialSize), kParamEffect1Param3, "Feedback", modKnobStyle), kCtrlTagEffect1Knob3, "E1");
@@ -669,36 +708,161 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
       kCtrlTagEffect1Toggle1, "E1")->SetActionFunction(
       [pGraphics, this](IControl* pControl) {
         mDelayIsSynced = pControl->GetValue();
-        bool isTempoSync = mDelayIsSynced > 0.5;
-        if (isTempoSync)
-        {
-          GetParam(kParamEffect1Param1)->InitEnum("Stereo Delay Time L (tempo)", LFO<>::k8th, { DELAY_TEMPODIV_VALIST });
-          GetParam(kParamEffect1Param2)->InitEnum("Stereo Delay Time R (tempo)", LFO<>::k8th, { DELAY_TEMPODIV_VALIST });
-        }
-        else
-        {
-          GetParam(kParamEffect1Param1)->InitDouble("Stereo Delay Time L (ms)", 100., 1., 5000., 1., "ms", IParam::kFlagsNone, "Delay", IParam::ShapePowCurve(3.));
-          GetParam(kParamEffect1Param2)->InitDouble("Stereo Delay Time R (ms)", 100., 1., 5000., 1., "ms", IParam::kFlagsNone, "Delay", IParam::ShapePowCurve(3.));
-        }
-        pGraphics->SetAllControlsDirty();
+        std::vector<int> params{ kParamEffect1Param1, kParamEffect1Param2 };
+        DelayTempoSyncToggle(this, pGraphics, params, mDelayIsSynced, kCtrlTagEffect1List);
       }
     );
     pGraphics->AttachControl(new IVToggleControl(effectsControlsPanel.FracRectVertical(1.f / 3).GetGridCell(0, 2, 1, 4).GetPadded(-10.f), kNoParameter, "", toggleStyle, "Stereo", "Mono"), kCtrlTagEffect1Toggle2, "E1")->SetActionFunction(
-      [pGraphics, channelLockFunction](IControl* pControl) {
+      [pGraphics, channelLockFunction1](IControl* pControl) {
         bool mono = pControl->GetValue() > 0.5;
-        if (mono)
-        {
-          pGraphics->GetControlWithTag(kCtrlTagEffect1Knob1)->SetActionFunction(channelLockFunction);
-          pGraphics->GetControlWithTag(kCtrlTagEffect1Knob2)->SetActionFunction(channelLockFunction);
-        }
-        else
-        {
-          pGraphics->GetControlWithTag(kCtrlTagEffect1Knob1)->SetActionFunction([pGraphics](IControl* pControl) {});
-          pGraphics->GetControlWithTag(kCtrlTagEffect1Knob2)->SetActionFunction([pGraphics](IControl* pControl) {});
-        }
-        pGraphics->SetAllControlsDirty();
+        std::vector<int> ctrlTags{ kCtrlTagEffect1Knob1, kCtrlTagEffect1Knob2 };
+        DelayStereoToggle(pGraphics, ctrlTags, mono, channelLockFunction1, kCtrlTagEffect1List);
       }
     );
+
+    /* EFFECT 2 */
+    pGraphics->AttachControl(new DropdownListControl(effectsPanel.FracRectHorizontal(0.4f, false).GetFromTop(40.f).GetReducedFromTop(20.f).GetPadded(-2.f), TABLITSA_EFFECTS_LIST), kCtrlTagEffect2List, "E2")->SetActionFunction(
+      [pGraphics, this](IControl* pControl) {
+        // Swap out effect parameters (and rearrange controls if necessary)
+        int effectIdx = dynamic_cast<DropdownListControl*>(pControl)->GetCurrentIndex();
+        IControl* knob1 = pGraphics->GetControlWithTag(kCtrlTagEffect2Knob1);
+        IControl* knob2 = pGraphics->GetControlWithTag(kCtrlTagEffect2Knob2);
+        IControl* knob3 = pGraphics->GetControlWithTag(kCtrlTagEffect2Knob3);
+        IControl* knob4 = pGraphics->GetControlWithTag(kCtrlTagEffect2Knob4);
+        IControl* toggle1 = pGraphics->GetControlWithTag(kCtrlTagEffect2Toggle1);
+        IControl* toggle2 = pGraphics->GetControlWithTag(kCtrlTagEffect2Toggle2);
+        std::vector<IControl*> allKnobs{ knob1, knob2, knob3, knob4 };
+        std::vector<IControl*> controls{ knob1, knob2, knob3, knob4, toggle1, toggle2 };
+        std::vector<int> params{ kParamEffect2Param1, kParamEffect2Param2, kParamEffect2Param3, kParamEffect2Param4, kParamEffect2Param5, kParamEffect2Param6 };
+        switch (effectIdx)
+        {
+        case kDelayEffect:
+        {
+          std::vector<char*> paramNames{ "Effect 2 Parameter 1", "Effect 2 Parameter 2" , "Effect 2 Parameter 3", "Effect 2 Parameter 4" };
+          InitDelayUI(this, pGraphics, controls, params, paramNames);
+          break;
+        }
+        case kWaveshaperEffect:
+        {
+          std::vector<char*> paramNames{ "Effect 2 Parameter 1", "Effect 2 Parameter 2" , "Effect 2 Parameter 3", "Effect 2 Parameter 4" };
+          InitWaveshaperUI(this, pGraphics, controls, params, paramNames);
+          break;
+        }
+        case kSampleAndHoldEffect:
+        {
+          std::vector<char*> paramNames{ "Effect 2 Parameter 1", "Effect 2 Parameter 2" , "Effect 2 Parameter 3", "Effect 2 Parameter 4" };
+          InitSampleAndHoldUI(this, pGraphics, controls, params, paramNames);
+          break;
+        }
+        default:
+        {
+          std::vector<char*> paramNames{ "Effect 2 Parameter 1", "Effect 2 Parameter 2" , "Effect 2 Parameter 3", "Effect 2 Parameter 4" };
+          InitDefaultUI(this, pGraphics, controls, params, paramNames);
+          break;
+        }
+        }
+        SendArbitraryMsgFromUI(kMsgEffect2Changed, kNoTag, sizeof(effectIdx), reinterpret_cast<void*>(&effectIdx)); // Effects must be swapped before OnParamChange is called
+        for (auto* knob : allKnobs)
+          knob->SetDirty(true);
+      }
+    );
+    pGraphics->AttachControl(new IVSlideSwitchControl(effectsPanel.GetGridCell(0, 1, 1, 3).GetFromTop(45.f).GetReducedFromTop(25.f).GetHPadded(-20.f), effect2ToggleFunc, "", toggleStyle, true, EDirection::Horizontal, 2, 0), kCtrlTagEffect2Switch, "E2");
+    pGraphics->AttachControl(new TablitsaIVKnobControl(effectsControlsPanel.FracRectVertical(2.f / 3, true).GetGridCell(0, 0, 1, 4).GetCentredInside(dialSize), kParamEffect2Param1, "Left", modKnobStyle), kCtrlTagEffect2Knob1, "E2");
+    pGraphics->AttachControl(new TablitsaIVKnobControl(effectsControlsPanel.FracRectVertical(2.f / 3, true).GetGridCell(0, 1, 1, 4).GetCentredInside(dialSize), kParamEffect2Param2, "Right", modKnobStyle), kCtrlTagEffect2Knob2, "E2");
+    pGraphics->AttachControl(new TablitsaIVKnobControl(effectsControlsPanel.FracRectVertical(2.f / 3, true).GetGridCell(0, 2, 1, 4).GetCentredInside(dialSize), kParamEffect2Param3, "Feedback", modKnobStyle), kCtrlTagEffect2Knob3, "E2");
+    pGraphics->AttachControl(new TablitsaIVKnobControl(effectsControlsPanel.FracRectVertical(2.f / 3, true).GetGridCell(0, 3, 1, 4).GetCentredInside(dialSize), kParamEffect2Param4, "Mix", modKnobStyle), kCtrlTagEffect2Knob4, "E2");
+    pGraphics->AttachControl(new IVToggleControl(effectsControlsPanel.FracRectVertical(1.f / 3).GetGridCell(0, 1, 1, 4).GetPadded(-10.f), kParamEffect2Param5, "", toggleStyle, "Time", "Tempo"),
+      kCtrlTagEffect2Toggle1, "E2")->SetActionFunction(
+        [pGraphics, this](IControl* pControl) {
+          mDelayIsSynced = pControl->GetValue();
+          std::vector<int> params{ kParamEffect2Param1, kParamEffect2Param2 };
+          DelayTempoSyncToggle(this, pGraphics, params, mDelayIsSynced, kCtrlTagEffect2List);
+        }
+    );
+    pGraphics->AttachControl(new IVToggleControl(effectsControlsPanel.FracRectVertical(1.f / 3).GetGridCell(0, 2, 1, 4).GetPadded(-10.f), kNoParameter, "", toggleStyle, "Stereo", "Mono"), kCtrlTagEffect2Toggle2, "E2")->SetActionFunction(
+      [pGraphics, channelLockFunction2](IControl* pControl) {
+        bool mono = pControl->GetValue() > 0.5;
+        std::vector<int> ctrlTags{ kCtrlTagEffect2Knob1, kCtrlTagEffect2Knob2 };
+        DelayStereoToggle(pGraphics, ctrlTags, mono, channelLockFunction2, kCtrlTagEffect2List);
+      }
+    );
+
+    /* EFFECT 3 */
+    pGraphics->AttachControl(new DropdownListControl(effectsPanel.FracRectHorizontal(0.4f, false).GetFromTop(40.f).GetReducedFromTop(20.f).GetPadded(-2.f), TABLITSA_EFFECTS_LIST), kCtrlTagEffect3List, "E3")->SetActionFunction(
+      [pGraphics, this](IControl* pControl) {
+        // Swap out effect parameters (and rearrange controls if necessary)
+        int effectIdx = dynamic_cast<DropdownListControl*>(pControl)->GetCurrentIndex();
+        IControl* knob1 = pGraphics->GetControlWithTag(kCtrlTagEffect3Knob1);
+        IControl* knob2 = pGraphics->GetControlWithTag(kCtrlTagEffect3Knob2);
+        IControl* knob3 = pGraphics->GetControlWithTag(kCtrlTagEffect3Knob3);
+        IControl* knob4 = pGraphics->GetControlWithTag(kCtrlTagEffect3Knob4);
+        IControl* toggle1 = pGraphics->GetControlWithTag(kCtrlTagEffect3Toggle1);
+        IControl* toggle2 = pGraphics->GetControlWithTag(kCtrlTagEffect3Toggle2);
+        std::vector<IControl*> allKnobs{ knob1, knob2, knob3, knob4 };
+        std::vector<IControl*> controls{ knob1, knob2, knob3, knob4, toggle1, toggle2 };
+        std::vector<int> params{ kParamEffect2Param1, kParamEffect2Param2, kParamEffect2Param3, kParamEffect2Param4, kParamEffect2Param5, kParamEffect2Param6 };
+        switch (effectIdx)
+        {
+        case kDelayEffect:
+        {
+          std::vector<char*> paramNames{ "Effect 3 Parameter 1", "Effect 3 Parameter 2" , "Effect 3 Parameter 3", "Effect 3 Parameter 4" };
+          InitDelayUI(this, pGraphics, controls, params, paramNames);
+          break;
+        }
+        case kWaveshaperEffect:
+        {
+          std::vector<char*> paramNames{ "Effect 3 Parameter 1", "Effect 3 Parameter 2" , "Effect 3 Parameter 3", "Effect 3 Parameter 4" };
+          InitWaveshaperUI(this, pGraphics, controls, params, paramNames);
+          break;
+        }
+        case kSampleAndHoldEffect:
+        {
+          std::vector<char*> paramNames{ "Effect 3 Parameter 1", "Effect 3 Parameter 2" , "Effect 3 Parameter 3", "Effect 3 Parameter 4" };
+          InitSampleAndHoldUI(this, pGraphics, controls, params, paramNames);
+          break;
+        }
+        default:
+        {
+          std::vector<char*> paramNames{ "Effect 3 Parameter 1", "Effect 3 Parameter 2" , "Effect 3 Parameter 3", "Effect 3 Parameter 4" };
+          InitDefaultUI(this, pGraphics, controls, params, paramNames);
+          break;
+        }
+        }
+        SendArbitraryMsgFromUI(kMsgEffect3Changed, kNoTag, sizeof(effectIdx), reinterpret_cast<void*>(&effectIdx)); // Effects must be swapped before OnParamChange is called
+        for (auto* knob : allKnobs)
+          knob->SetDirty(true);
+      }
+    );
+    pGraphics->AttachControl(new IVSlideSwitchControl(effectsPanel.GetGridCell(0, 1, 1, 3).GetFromTop(45.f).GetReducedFromTop(25.f).GetHPadded(-20.f), effect3ToggleFunc, "", toggleStyle, true, EDirection::Horizontal, 2, 0), kCtrlTagEffect3Switch, "E3");
+    pGraphics->AttachControl(new TablitsaIVKnobControl(effectsControlsPanel.FracRectVertical(2.f / 3, true).GetGridCell(0, 0, 1, 4).GetCentredInside(dialSize), kParamEffect3Param1, "Left", modKnobStyle), kCtrlTagEffect3Knob1, "E3")->Hide(true);
+    pGraphics->AttachControl(new TablitsaIVKnobControl(effectsControlsPanel.FracRectVertical(2.f / 3, true).GetGridCell(0, 1, 1, 4).GetCentredInside(dialSize), kParamEffect3Param2, "Right", modKnobStyle), kCtrlTagEffect3Knob2, "E3")->Hide(true);
+    pGraphics->AttachControl(new TablitsaIVKnobControl(effectsControlsPanel.FracRectVertical(2.f / 3, true).GetGridCell(0, 2, 1, 4).GetCentredInside(dialSize), kParamEffect3Param3, "Feedback", modKnobStyle), kCtrlTagEffect3Knob3, "E3")->Hide(true);
+    pGraphics->AttachControl(new TablitsaIVKnobControl(effectsControlsPanel.FracRectVertical(2.f / 3, true).GetGridCell(0, 3, 1, 4).GetCentredInside(dialSize), kParamEffect3Param4, "Mix", modKnobStyle), kCtrlTagEffect3Knob4, "E3")->Hide(true);
+    pGraphics->AttachControl(new IVToggleControl(effectsControlsPanel.FracRectVertical(1.f / 3).GetGridCell(0, 1, 1, 4).GetPadded(-10.f), kParamEffect3Param5, "", toggleStyle, "Time", "Tempo"),
+      kCtrlTagEffect3Toggle1, "E3")->SetActionFunction(
+        [pGraphics, this](IControl* pControl) {
+          mDelayIsSynced = pControl->GetValue();
+          std::vector<int> params{ kParamEffect3Param1, kParamEffect3Param2 };
+          DelayTempoSyncToggle(this, pGraphics, params, mDelayIsSynced, kCtrlTagEffect3List);
+        }
+    );
+    pGraphics->AttachControl(new IVToggleControl(effectsControlsPanel.FracRectVertical(1.f / 3).GetGridCell(0, 2, 1, 4).GetPadded(-10.f), kNoParameter, "", toggleStyle, "Stereo", "Mono"), kCtrlTagEffect3Toggle2, "E3")->SetActionFunction(
+      [pGraphics, channelLockFunction3](IControl* pControl) {
+        bool mono = pControl->GetValue() > 0.5;
+        std::vector<int> ctrlTags{ kCtrlTagEffect3Knob1, kCtrlTagEffect3Knob2 };
+        DelayStereoToggle(pGraphics, ctrlTags, mono, channelLockFunction3, kCtrlTagEffect3List);
+      }
+    );
+
+    // Initialize all tab displays
+    dynamic_cast<TablitsaEffectBankControl*>(pGraphics->GetControlWithTag(kCtrlTagEffectBank))->TabChanged(0);
+    // Initialize all effect panels
+    pGraphics->GetControlWithTag(kCtrlTagEffect1List)->SetDirty(true);
+    pGraphics->GetControlWithTag(kCtrlTagEffect2List)->SetDirty(true);
+    pGraphics->GetControlWithTag(kCtrlTagEffect3List)->SetDirty(true);
+    dynamic_cast<IVSwitchControl*>(pGraphics->GetControlWithTag(kCtrlTagEffect2Switch))->SetValueStr("Off");
+    dynamic_cast<IVSwitchControl*>(pGraphics->GetControlWithTag(kCtrlTagEffect3Switch))->SetValueStr("Off");
+
     /* LOWER-HALF CONTROLS */
     constexpr float modulePad[4]{-10.f, -5.f, -10.f, -15.f};
 
@@ -1032,7 +1196,9 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
 #endif
 
     // Popup Menus
-    dynamic_cast<DropdownListControl*>(pGraphics->GetControlWithTag(kCtrlTagEffect1Tab))->AttachPopupMenu();
+    dynamic_cast<DropdownListControl*>(pGraphics->GetControlWithTag(kCtrlTagEffect1List))->AttachPopupMenu();
+    dynamic_cast<DropdownListControl*>(pGraphics->GetControlWithTag(kCtrlTagEffect2List))->AttachPopupMenu();
+    dynamic_cast<DropdownListControl*>(pGraphics->GetControlWithTag(kCtrlTagEffect3List))->AttachPopupMenu();
 
   };
 #endif
@@ -1114,14 +1280,6 @@ void Tablitsa::UpdateUIControls()
   SendCurrentParamValuesFromDelegate();
   GetUI()->SetAllControlsDirty();
 
-  // Trigger the ActionFunctions of controls that change the user interface
-  /*GetUI()->GetControlWithTag(kCtrlTagLFO1RateMode)->SetDirty(true);
-  GetUI()->GetControlWithTag(kCtrlTagLFO2RateMode)->SetDirty(true);
-  GetUI()->GetControlWithTag(kCtrlTagSequencerRateMode)->SetDirty(true);
-  GetUI()->GetControlWithTag(kCtrlTagSequencerQuant)->SetDirty(true);
-  GetUI()->GetControlWithTag(kCtrlTagFilter1Type)->SetDirty(true);
-  GetUI()->GetControlWithTag(kCtrlTagFilter2Type)->SetDirty(true);
-  GetUI()->GetControlWithTag(kCtrlTagGlideMode)->SetDirty(true);*/
   for (auto i{ 0 }; i < std::size(kStartupTriggerControls); ++i)
   {
     IControl* pControl = GetUI()->GetControlWithTag(kStartupTriggerControls[i]);
@@ -1149,17 +1307,20 @@ void Tablitsa::OnIdle()
   GetTimeSig(mDSP.mTSNum, mDSP.mTSDenom);
   mDSP.mTempo = GetTempo();
 
-  if (mDSP.mStepPos != mDSP.mPrevPos)
+  /*if (mDSP.mStepPos != mDSP.mPrevPos)
   {
     mDSP.mPrevPos = mDSP.mStepPos;
     SendControlMsgFromDelegate(kCtrlTagSequencer, IVMultiSliderControl<>::kMsgTagSetHighlight, sizeof(int), &mDSP.mPrevPos);
-  }
+  }*/
 
-  // Update Sequencer Position
-  if (mDSP.GetSequencerStep() != mDSP.mSeqPos)
+  if (GetUI())
   {
-    mDSP.mSeqPos = mDSP.GetSequencerStep();
-    SendControlMsgFromDelegate(kCtrlTagSequencer, IVMultiSliderControl<>::kMsgTagSetHighlight, sizeof(int), &mDSP.mSeqPos);
+    // Update Sequencer Position
+    if (mDSP.GetSequencerStep() != mDSP.mSeqPos)
+    {
+      mDSP.mSeqPos = mDSP.GetSequencerStep();
+      SendControlMsgFromDelegate(kCtrlTagSequencer, IVMultiSliderControl<>::kMsgTagSetHighlight, sizeof(int), &mDSP.mSeqPos);
+    }
   }
 }
 
@@ -1340,7 +1501,10 @@ bool Tablitsa::OnMessage(int msgTag, int ctrlTag, int dataSize, const void* pDat
       switch (effectIdx)
       {
       case kDelayEffect:
-        mDSP.mEffects[msgTag - kMsgEffect1Changed] = new DelayEffect<iplug::sample>(GetSampleRate(), 10000., &mDSP.mGlobalMetronome);
+        mDSP.mEffects[msgTag - kMsgEffect1Changed] = new DelayEffect<iplug::sample, TABLITSA_MAX_DELAY_SAMP>(GetSampleRate(), &mDSP.mGlobalMetronome);
+        break;
+      case kWaveshaperEffect:
+        mDSP.mEffects[msgTag - kMsgEffect1Changed] = new Waveshaper<iplug::sample>(GetSampleRate());
         break;
       case kSampleAndHoldEffect:
         mDSP.mEffects[msgTag - kMsgEffect1Changed] = new SampleAndHold<iplug::sample>(GetSampleRate());

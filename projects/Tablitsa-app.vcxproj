@@ -351,6 +351,7 @@
     <ClInclude Include="..\SignalProcessing.h" />
     <ClInclude Include="..\Tablitsa.h" />
     <ClInclude Include="..\TablitsaOscillators.h" />
+    <ClInclude Include="..\TablitsaUIFunctions.h" />
     <ClInclude Include="..\Tablitsa_DSP.h" />
     <ClInclude Include="..\resources\resource.h" />
     <ClInclude Include="..\VectorFunctions.h" />
