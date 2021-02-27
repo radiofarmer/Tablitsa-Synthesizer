@@ -1876,8 +1876,12 @@ public:
       }
         break;
       case kParamEffect1Param1: // Effect 1
-        mEffects[0]->SetParam1((T)value);
+      {
+        ENTER_PARAMS_MUTEX
+          mEffects[0]->SetParam1((T)value);
+        LEAVE_PARAMS_MUTEX
         break;
+      }
       case kParamEffect1Param2:
         mEffects[0]->SetParam2((T)value);
         break;
