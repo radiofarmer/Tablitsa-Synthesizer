@@ -1340,7 +1340,7 @@ bool Tablitsa::OnMessage(int msgTag, int ctrlTag, int dataSize, const void* pDat
       switch (effectIdx)
       {
       case kDelayEffect:
-        mDSP.mEffects[msgTag - kMsgEffect1Changed] = new DelayEffect<iplug::sample>(GetSampleRate(), 10000., &mDSP.mGlobalMetronome);
+        mDSP.mEffects[msgTag - kMsgEffect1Changed] = new DelayEffect<iplug::sample, TABLITSA_MAX_DELAY_SAMP>(GetSampleRate(), &mDSP.mGlobalMetronome);
         break;
       case kSampleAndHoldEffect:
         mDSP.mEffects[msgTag - kMsgEffect1Changed] = new SampleAndHold<iplug::sample>(GetSampleRate());

@@ -1948,10 +1948,9 @@ public:
   GlobalModulator<T, FastLFO<T>> mGlobalLFO2{ &mGlobalMetronome };
   GlobalModulator<T, Sequencer<T>> mGlobalSequencer{ &mGlobalMetronome, mSeqSteps };
 
-
   // Effects
   std::vector<Effect<T>*> mEffects{
-    new DelayEffect<T>(DEFAULT_SAMPLE_RATE, 10000., &mGlobalMetronome),
+    new DelayEffect<T, TABLITSA_MAX_DELAY_SAMP>(DEFAULT_SAMPLE_RATE, &mGlobalMetronome),
     new SampleAndHold<T>(DEFAULT_SAMPLE_RATE)
   };
 };

@@ -34,8 +34,10 @@ protected:
 };
 
 #define DELAY_TEMPODIV_VALIST "1/64", "1/32", "1/16T", "1/16", "1/16D", "1/8T", "1/8", "1/8D", "1/4", "1/4D", "1/2", "1/1"
+#define TABLITSA_MAX_DELAY_MS 10000.
+#define TABLITSA_MAX_DELAY_SAMP (int)480000
 
-template<typename T>
+template<typename T, int MaxDelay=TABLITSA_MAX_DELAY_SAMP>
 class DelayEffect final : public Effect<T>
 {
   enum EChannels
@@ -46,17 +48,15 @@ class DelayEffect final : public Effect<T>
   };
 
 public:
-  DelayEffect(T sampleRate, T maxDelayMS = 5000.) :
-    DelayEffect(sampleRate, maxDelayMS, nullptr)
+  DelayEffect(T sampleRate) :
+    DelayEffect(sampleRate, nullptr)
   {
   }
 
-  DelayEffect(double sampleRate, double maxDelayMS = 5000., ModMetronome* metronome=nullptr) :
+  DelayEffect(double sampleRate, ModMetronome* metronome=nullptr) :
     Effect<T>(sampleRate),
-    mMaxDelayMS(maxDelayMS),
-    mMaxDelay(static_cast<int>((mMaxDelayMS / 1000. + 1.)* mSampleRate)),
-    mDelayL(mMaxDelay),
-    mDelayR(mMaxDelay),
+    mMaxDelayMS(TABLITSA_MAX_DELAY_MS),
+    mMaxDelay(MaxDelay),
     mDelayLTime(mMaxDelay / 2),
     mDelayRTime(mMaxDelay / 2),
     mDelayLTimeMS(mMaxDelayMS / 2),
@@ -139,6 +139,8 @@ public:
       mDelayLTime = static_cast<int>(mDelayLTimeMS / 1000. * mSampleRate);
       mDelayRTime = static_cast<int>(mDelayRTimeMS / 1000. * mSampleRate);
     }
+    mDelayLTime = std::min(mDelayLTime, TABLITSA_MAX_DELAY_SAMP);
+    mDelayRTime = std::min(mDelayRTime, TABLITSA_MAX_DELAY_SAMP);
   }
 
   void SetFeedback(const T fb)
@@ -176,8 +178,8 @@ public:
 private:
   const double mMaxDelayMS;
   int mMaxDelay;
-  DelayLine mDelayL;
-  DelayLine mDelayR;
+  DelayLine<T, TABLITSA_MAX_DELAY_SAMP>  mDelayL;
+  DelayLine<T, TABLITSA_MAX_DELAY_SAMP> mDelayR;
   ModMetronome* mMetronome; // For tempo sync
 
   T mDelayLGain{ 0.5 };
