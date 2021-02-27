@@ -13,7 +13,7 @@ public:
   /* Clear the delay line and reset the read/write positions to the start. */
   void DelayLine::reset()
   {
-    memset(mBuffer, (T)0, sizeof(T) * MaxLength);
+    std::fill_n(mBuffer, MaxLength, (T)0);
   }
 
   void DelayLine::SetDelay(const int d)
@@ -50,7 +50,7 @@ public:
   }
 
 private:
-  T mBuffer[MaxLength];
+  T mBuffer[MaxLength]{ 0. };
   int mLength{ MaxLength };
   int mRead{ 0 };
   int mWrite{ 0 };

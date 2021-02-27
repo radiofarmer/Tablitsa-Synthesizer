@@ -328,6 +328,7 @@
     <ClInclude Include="..\TablitsaControls.h" />
     <ClInclude Include="..\TablitsaOscillators.h" />
     <ClInclude Include="..\TablitsaEffects.h" />
+    <ClInclude Include="..\TablitsaUIFunctions.h" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="resources">
