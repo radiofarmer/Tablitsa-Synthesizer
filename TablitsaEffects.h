@@ -308,30 +308,33 @@ class Waveshaper : public Effect<T>
   static constexpr T piOver2{ (T)1.57079632679 };
   static constexpr T pi{ (T)3.14159265359 };
 
-  static inline T SineShaper(T x)
+  static inline T SineShaper(T x, T gain)
   {
+    x *= gain;
     T x2 = piOver2 * std::copysign(x, 0.5 - x);
     return std::copysign(x2 - x2 * x2 * x2 / (T)6 + x2 * x2 * x2 * x2 * x2 / (T)120, x);
   }
 
-  static inline T TanhShaper(T x)
+  static inline T TanhShaper(T x, T gain)
   {
+    x *= gain;
     return std::tanh(x);
   }
 
-  static inline T ParabolicShaper(T x)
+  static inline T ParabolicShaper(T x, T gain)
   {
+    x *= gain;
     return copysign(x * x, x);
   }
 
-  static inline T SoftClipShaper(T x)
+  static inline T SoftClipShaper(T x, T gain)
   {
-    return SoftClip<T>(x, (T)1.);
+    return SoftClip<T>(x, gain);
   }
 
-  static inline T HardClipShaper(T x)
+  static inline T HardClipShaper(T x, T gain)
   {
-    return std::copysign(std::min(std::abs(x), (T)1.), x);
+    return std::copysign(std::min(std::abs(x) * gain, (T)0.25), x) * 2.;
   }
 
 public:
@@ -342,14 +345,14 @@ public:
 
   T Process(T s) override
   {
-    return mShaperFunc(s);
+    return mShaperFunc(s, mGain);
   }
 
   void ProcessStereo(T* s) override
   {
     std::lock_guard<std::mutex> lg(mFuncMutex);
-    s[0] += mMix * (mShaperFunc(s[0] * mGain) - s[0]);
-    s[1] += mMix * (mShaperFunc(s[1] * mGain) - s[1]);
+    s[0] += mMix * (mShaperFunc(s[0], mGain) - s[0]);
+    s[1] += mMix * (mShaperFunc(s[1], mGain) - s[1]);
   }
 
   void SetMode(EWaveshaperMode mode)
@@ -386,6 +389,6 @@ public:
 protected:
   EWaveshaperMode mShaperMode;
   T mGain{ (T)1 };
-  std::function<T(T)> mShaperFunc{ &Waveshaper::SineShaper };
+  std::function<T(T, T)> mShaperFunc{ &Waveshaper::SineShaper };
   std::mutex mFuncMutex;
 };

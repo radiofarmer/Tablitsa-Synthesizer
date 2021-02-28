@@ -8,7 +8,7 @@
 #include <vectorclass.h>
 
 // Set to 1 to use vector functions in debug mode (dramatically slows down execution)
-#define DEBUG_VECTOR 1
+#define DEBUG_VECTOR 0
 
 #if !_DEBUG || DEBUG_VECTOR
 #define OVERSAMPLING 2
