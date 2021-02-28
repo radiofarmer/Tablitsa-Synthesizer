@@ -20,7 +20,6 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
 {
   /*Master Controls*/
   GetParam(kParamGain)->InitGain("Gain", -24., -72., 0.);
-  GetParam(kParamPan)->InitDouble("Pan", 0., -90., 90., 0.5, "°");
   GetParam(kParamNoteGlideTime)->InitMilliseconds("Note Glide Time", 0., 0.0, 3000.);
   GetParam(kParamNoteGlideRate)->InitDouble("Note Glide Rate", 12., 0.5, 128., 0.1, "St/s");
   GetParam(kParamPortamentoMode)->InitBool("Equal Glide Time", true);
@@ -29,6 +28,17 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
   GetParam(kParamUnisonDetune)->InitDouble("Unison Detune", 0., 0., 12., 0.01, "St.");
   GetParam(kParamUnisonChord)->InitEnum("Chord", 0, { UNISON_CHORD_LIST });
   GetParam(kParamStereoSpread)->InitDouble("Stereo Spread", 0., -180., 180., 0.5, "°");
+  // Pan (modulatable)
+  GetParam(kParamPan)->InitDouble("Pan", 0., -90., 90., 0.5, "°");
+  GetParam(kParamPanEnv1)->InitDouble("Pan Env1 Mod", 0., -1., 1., 0.01);
+  GetParam(kParamPanEnv2)->InitDouble("Pan Env2 Mod", 0., -1., 1., 0.01);
+  GetParam(kParamPanAmpEnv)->InitDouble("Pan AmpEnv Mod", 0., -1., 1., 0.01);
+  GetParam(kParamPanLFO1)->InitDouble("Pan LFO1 Mod", 0., -1., 1., 0.01);
+  GetParam(kParamPanLFO2)->InitDouble("Pan LFO2 Mod", 0., -1., 1., 0.01);
+  GetParam(kParamPanSeq)->InitDouble("Pan Seq Mod", 0., -1., 1., 0.01);
+  GetParam(kParamPanVel)->InitDouble("Pan Velocity Mod", 0., -1., 1., 0.01);
+  GetParam(kParamPanKTk)->InitDouble("Pan Ketrack Mod", 0., -1., 1., 0.01);
+  GetParam(kParamPanRnd)->InitDouble("Pan Random Mod", 0., -1., 1., 0.01);
   /*Modulators*/
   // Envelope 1
   GetParam(kParamEnv1Attack)->InitDouble("Env1 Attack", 10., 1., 3000., 0.1, "ms", IParam::kFlagsNone, "ADSR", IParam::ShapePowCurve(3.));

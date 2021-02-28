@@ -29,10 +29,10 @@ Global Modulations (smoothers): These values are computed once per sample and se
 enum EModulations
 {
   kModGainSmoother = 0,
-  kModPanSmoother,
   kModEnv1SustainSmoother,
   kModEnv2SustainSmoother,
   kModAmpEnvSustainSmoother,
+  kModPanSmoother,
   kModWavetable1PitchSmoother,
   kModWavetable1PosSmoother,
   kModWavetable1BendSmoother,
@@ -65,7 +65,8 @@ This needs to be fixed eventually so that both sets of modulations operate off t
 */
 enum EVoiceModParams
 {
-  kVWavetable1PitchOffset = 0,
+  kVPan=0,
+  kVWavetable1PitchOffset,
   kVWavetable1Position,
   kVWavetable1Bend,
   kVWavetable1Formant,
@@ -473,12 +474,11 @@ public:
       mVoiceMetaModParams[kVEnv2Sustain].SetInitialValue(inputs[kModEnv2SustainSmoother][0]);
       mVoiceMetaModParams[kVAmpEnvSustain].SetInitialValue(inputs[kModAmpEnvSustainSmoother][0]);
       mModulators.MetaProcessBlock_Fast(&(inputs[kModEnv1SustainSmoother]), nFrames); // Modulate the modulators
-      // mModulators.ProcessBlock(&(inputs[kModEnv1SustainSmoother]), nFrames);
       // Apply modulation ramps to all modulated parameters
 #if 0
-      mVoiceModParams.ProcessBlockVec4d(&inputs[kModWavetable1PitchSmoother], mModulators.GetList(), mVModulations.GetList(), nFrames);
+      mVoiceModParams.ProcessBlockVec4d(&inputs[kModPanSmoother], mModulators.GetList(), mVModulations.GetList(), nFrames);
 #else
-      mVoiceModParams.ProcessBlock(&inputs[kModWavetable1PitchSmoother], mModulators.GetList(), mVModulations.GetList(), nFrames);
+      mVoiceModParams.ProcessBlock(&inputs[kModPanSmoother], mModulators.GetList(), mVModulations.GetList(), nFrames);
 #endif
 
       const double phaseModFreqFact = pow(2., mVModulations.GetList()[kVPhaseModFreq][0] / 12.);
@@ -493,6 +493,11 @@ public:
         int bufferIdx = i - startIdx;
 //        float noise = mTimbreBuffer.Get()[i] * Rand();
         double ampEnvVal{ mModulators.GetList()[2][bufferIdx] }; // Calculated for easy access
+
+        // Panning
+        double panMod = mVModulations.GetList()[kVPan][bufferIdx];
+        double lPan = std::clamp(mPan[0] - panMod, -1., 1.); // TODO: optimize this somehow
+        double rPan = std::clamp(mPan[1] + panMod, -1., 1.);
 
         // Oscillator Parameters
         double osc1Freq = 440. * pow(2., pitch + mVModulations.GetList()[kVWavetable1PitchOffset][bufferIdx] / 12.);
@@ -516,6 +521,7 @@ public:
         mFilters.at(1)->SetCutoff(mVModulations.GetList()[kVFilter2Cutoff][bufferIdx]); // Filter 2 Cutoff
         mFilters.at(1)->SetQ(mVModulations.GetList()[kVFilter2Resonance][bufferIdx]); // Filter 2 Resonance
         mFilters.at(1)->SetDrive(mVModulations.GetList()[kVFilter2Drive][bufferIdx]); // Filter 2 Drive
+
         
         // Signal Processing
         std::array<T, OUTPUT_SIZE> osc1Output{ mOsc1.ProcessMultiple(osc1Freq) };
@@ -528,8 +534,8 @@ public:
          double osc2FilterOutput = mFilters.at(osc2Filter)->Process(osc2Output[j]);
          double output_summed = osc1FilterOutput * mVModulations.GetList()[kVWavetable1Amp][bufferIdx] + osc2FilterOutput * mVModulations.GetList()[kVWavetable2Amp][bufferIdx];
          double output_scaled = output_summed * ampEnvVal * mGain;
-         outputs[0][i + j] += output_scaled * mPan[0];
-         outputs[1][i + j] += output_scaled * mPan[1];
+         outputs[0][i + j] += output_scaled * lPan;
+         outputs[1][i + j] += output_scaled * rPan;
        }
       }
     }
@@ -672,6 +678,7 @@ public:
   private:
 //    WDL_TypedBuf<float> mTimbreBuffer;
     ModulatedParameterList<T, kNumVoiceModulations> mVoiceModParams{
+      new ParameterModulator<>(-1., 1., "Pan"),
       new ParameterModulator<>(-24., 24., "Wt1 Pitch Offset"),
       new ParameterModulator<>(0., 1., "Wt1 Position"),
       new ParameterModulator<>(-1., 1., "Wt1 Bend"),
@@ -740,7 +747,7 @@ public:
 #pragma mark -
   TablitsaDSP(int nVoices)
   {
-    assert((int)kNumVoiceModulations == (int)(kNumModulations - kModWavetable1PitchSmoother));
+    assert((int)kNumVoiceModulations == (int)(kNumModulations - kModPanSmoother));
     for (auto i = 0; i < nVoices; i++)
     {
       // add a voice to Zone 0.
@@ -783,8 +790,8 @@ public:
       outputs[0][s] = stereo_in[0];
       outputs[1][s] = stereo_in[1];
 
-      outputs[0][s] *= smoothedGain * (2 - mModulations.GetList()[kModPanSmoother][s]);
-      outputs[1][s] *= smoothedGain * mModulations.GetList()[kModPanSmoother][s];
+      outputs[0][s] *= smoothedGain;
+      outputs[1][s] *= smoothedGain;
     }
   }
 
@@ -938,7 +945,7 @@ public:
         break;
       }
       case kParamPan:
-        mParamsToSmooth[kModPanSmoother] = (T)value / 90. + 1.;
+        mParamsToSmooth[kModPanSmoother] = (T)value / 90.;
         break;
       case kParamPanEnv1:
       case kParamPanEnv2:
@@ -950,7 +957,9 @@ public:
       case kParamPanRnd:
       {
         const int modIdx = paramIdx - kParamPan;
-        // TODO : Make this voice-specific?
+        SendParam([paramIdx, modIdx, value](Voice* voice) {
+          voice->UpdateVoiceParam(kVPan, modIdx, value);
+          });
         break;
       }
       case kParamEnv1Sustain:
