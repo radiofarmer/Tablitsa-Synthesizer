@@ -846,26 +846,29 @@ public:
   void UpdateOscillatorWavetable(int wtIdx, int oscIdx)
   {
     ResetAllVoices();
-    WtFile wtFile{ mWavetables.at(wtIdx) };
+    WtFile wtFile{ mWavetableNames.at(wtIdx) };
+    if (mWavetables[oscIdx])
+      delete mWavetables[oscIdx];
+    mWavetables[oscIdx] = new Wavetable<T>(wtFile);
 
     if (oscIdx == 0)
     {
-      mSynth.ForEachVoice([&wtFile, oscIdx](SynthVoice& voice) {
+      /*mSynth.ForEachVoice([&wtFile, oscIdx](SynthVoice& voice) {
         dynamic_cast<Voice&>(voice).mOsc1.LoadNewTable(wtFile, oscIdx);
-        });
-      SendParam([this, oscIdx, &wtFile](Voice* voice) {
-        voice->mOsc1.SetWavetable(oscIdx);
+        });*/
+      SendParam([this, oscIdx](Voice* voice) {
+        voice->mOsc1.SetWavetable(mWavetables[0]);
         voice->mOsc1.ReloadLUT();
         voice->mOsc1.NotifyLoaded();
         });
     }
     else
     {
-      mSynth.ForEachVoice([&wtFile, oscIdx](SynthVoice& voice) {
+      /*mSynth.ForEachVoice([&wtFile, oscIdx](SynthVoice& voice) {
         dynamic_cast<Voice&>(voice).mOsc2.LoadNewTable(wtFile, oscIdx);
-        });
-      SendParam([this, oscIdx, &wtFile](Voice* voice) {
-        voice->mOsc2.SetWavetable(oscIdx);
+        });*/
+      SendParam([this, oscIdx](Voice* voice) {
+        voice->mOsc2.SetWavetable(mWavetables[1]);
         voice->mOsc2.ReloadLUT();
         voice->mOsc2.NotifyLoaded();
         });
@@ -1946,8 +1949,9 @@ public:
   WDL_PtrList<T> mModulations; // Ptrlist for global modulations
   LogParamSmooth<T, kNumModulations> mParamSmoother;
   sample mParamsToSmooth[kNumModulations];
-  std::vector<std::string> mWavetables{ ELEMENT_NAMES };
+  std::vector<std::string> mWavetableNames{ ELEMENT_NAMES };
   std::vector<Voice*> mSynthVoices;
+  Wavetable<T>* mWavetables[2]{ nullptr };
 
   // Polyphonic/Monophonic
   bool mMono{ false };
