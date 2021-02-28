@@ -174,13 +174,14 @@ public:
   */
   void ProcessBlock(T** param_inputs, T** mod_inputs, T** outputs, int nFrames, const int offset = 0)
   {
-    for (auto i{ 0 }; i < nFrames; ++i)
+    for (auto p{ offset }; p < NParams; ++p)
     {
-      T modDepths[NParams]{ 0. };
-      for (auto m{ 0 }; m < DynamicMods; ++m)
-        modDepths[m] = mod_inputs[m][i];
-      for (auto p{ offset }; p < NParams; ++p)
+      for (auto i{ 0 }; i < nFrames; ++i)
       {
+        // Get the values of the modulators for the current frame
+        T modDepths[DynamicMods + StaticMods]{ 0. };
+        for (auto m{ 0 }; m < DynamicMods; ++m)
+          modDepths[m] = mod_inputs[m][i];
 #if _DEBUG
         outputs[p][i] = mParams[p]->AddModulation(param_inputs[p][i], modDepths);
 #else
