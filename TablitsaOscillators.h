@@ -112,7 +112,7 @@ public:
   void SetSampleRate(double sampleRate)
   {
     mSampleRate = sampleRate * mProcessOS;
-    mNyquist = sampleRate / 2.;
+//    mNyquist = sampleRate / 2.;
     mPhaseModulator.SetSampleRate(mSampleRate);
     mRingModulator.SetSampleRate(mSampleRate);
   }
@@ -152,7 +152,7 @@ public:
     // Select by Index
     const double tableFact{ std::log2(mWT->GetMaxSize() / (samplesPerCycle * mTableOS)) }; // Factors of two by which the largest mipmap (at index 0) is larger than the required mipmap
     mTableInterp = tableFact - std::floor(tableFact); // Nearest integer lower than the value calculated above
-    mWtIdx = std::max(static_cast<int>(std::floor(tableFact)), 0);
+    mWtIdx = static_cast<unsigned int>(std::floor(tableFact * mFormant)) & 0xFF;
     SetMipmapLevel_ByIndex(mWtIdx);
   }
 
@@ -203,7 +203,7 @@ public:
   inline void AdjustWavetable(double freqCPS)
   {
     IOscillator<T>::SetFreqCPS(freqCPS);
-    mMaxFormant = MaxNote / freqCPS;
+    mMaxFormant = 0.5 * MaxNote / freqCPS;
 
     if (mPrevFreq != static_cast<int>(freqCPS))
     {
@@ -439,8 +439,8 @@ public:
   {
     double cycle;
     mPhaseInCycle = modf(phase * mWT->mCyclesPerLevel, &cycle);
-    //mPhaseInCycle = mFormant * mPhaseInCycle * static_cast<T>(mPhaseInCycle <= 1 / mFormant); // TODO: check this - inharmonic frequencies may cause adverse effects here
-    return (cycle + std::pow(mPhaseInCycle, 1. + (mWtBend >= 0. ? mWtBend : mWtBend / 2.))) * mCyclesPerLevelRecip;
+    double formantPhase = mFormant * mPhaseInCycle * static_cast<T>(mPhaseInCycle <= mFormantRecip); // TODO: check this - inharmonic frequencies may cause adverse effects here
+    return (cycle + std::pow(formantPhase, 1. + (mWtBend >= 0. ? mWtBend : mWtBend / 2.))) * mCyclesPerLevelRecip;
   }
 
   inline double WrapPhase(double phase)
@@ -500,6 +500,7 @@ public:
   inline void SetFormant(double fmtNorm)
   {
     mFormant = 1. + fmtNorm * mMaxFormant;
+    mFormantRecip = 1. / mFormant;
   }
 
   inline double SampleWavetablePosition(double phase)
@@ -558,7 +559,7 @@ private:
   static constexpr int mProcessOS{ 1 };
 #endif
   ChebyshevBL<T> mAAFilter;
-  double mNyquist{ 20000. };
+//  double mNyquist{ 20000. };
 
   // TODO: Order elements mindful of cache access:
 
@@ -571,6 +572,7 @@ private:
   int mNextTableSize = WT_SIZE / 2;
   int mNextTableSizeM1 = WT_SIZE / 2 - 1;
   int mTableOS{ 8 }; // Wavetable oversampling level (ratio of table size to maximum samples per cycle read from the table)
+  unsigned int mWtIdx{ 0 }; // Mipmap level
   double mTableInterp{ 1 };
   double mPhaseIncrFactor{ 1. }; // Reciprocal of the product of the number of cycles per wavetable level and the processing oversampling level
   double mPhaseInCycle{ 0. }; // The fractional phase (between zero and one) within a single cycle, independent of the number of cycles per wavetable level.
@@ -588,9 +590,9 @@ private:
   double mWtSpacing{ 1. };
   double mWtBend{ 0 };
   double mFormant{ 1. };
+  double mFormantRecip{ 1. };
   double mMaxFormant{ 10. }; // Set according to current pitch
-  int mPrevFreq;
-  int mWtIdx{ 0 }; // Mipmap level
+  double mPrevFreq;
 
   // Thread-related members for wavetable updates
   static inline std::mutex mWtMutex; // Mutex used when swapping out the current wavetable in each oscillator object
