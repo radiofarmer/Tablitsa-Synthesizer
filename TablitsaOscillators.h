@@ -7,8 +7,10 @@
 
 #include <vectorclass.h>
 
-//#if _DEBUG
-#if 1
+// Set to 1 to use vector functions in debug mode (dramatically slows down execution)
+#define DEBUG_VECTOR 1
+
+#if !_DEBUG || DEBUG_VECTOR
 #define OVERSAMPLING 2
 #define VECTOR_SIZE 4
 #define OUTPUT_SIZE VECTOR_SIZE / OVERSAMPLING
@@ -297,7 +299,7 @@ public:
     tableOffset -= std::max(floor(tableOffset - 0.0001), 0.);
 #ifdef VECTOR_TEST
     double phaseNorm = SamplePhaseShift(mPhase / mTableSize); // for phase shift
-
+    double phaseUnshifted = mPhase + (double)UNITBIT32;
     double phase = phaseNorm * mTableSize + (double)UNITBIT32;
     const double phaseIncr = mPhaseIncr * mPhaseIncrFactor * mProcessOS * mTableSize;
     const double phaseIncr2 = mPhaseIncr * mPhaseIncrFactor * mProcessOS * mNextTableSize;
@@ -356,6 +358,7 @@ public:
     
     // Restore mPhase
     tabfudge tf;
+    phase = phaseUnshifted;
     phase += phaseIncr * (double)VECTOR_SIZE;
     tf.d = UNITBIT32 * mTableSize;
     const int normhipart2 = tf.i[HIOFFSET];
@@ -430,12 +433,13 @@ public:
 
   }
 
-  /* Returns a new phase as a power function of the current phase. Also sets mPhaseInCycle to the unshifted value. */
+  /* Returns a new phase as a power function of the current phase in the wavetable (i.e. always between 0. and 1., regardless of the number of cycles in the table).
+  Also sets mPhaseInCycle to the unshifted value. */
   inline double SamplePhaseShift(double phase)
   {
     double cycle;
     mPhaseInCycle = modf(phase * mWT->mCyclesPerLevel, &cycle);
-    mPhaseInCycle = mFormant * mPhaseInCycle * static_cast<T>(mPhaseInCycle <= 1 / mFormant); // TODO: check this - inharmonic frequencies may cause adverse effects here
+    //mPhaseInCycle = mFormant * mPhaseInCycle * static_cast<T>(mPhaseInCycle <= 1 / mFormant); // TODO: check this - inharmonic frequencies may cause adverse effects here
     return (cycle + std::pow(mPhaseInCycle, 1. + (mWtBend >= 0. ? mWtBend : mWtBend / 2.))) * mCyclesPerLevelRecip;
   }
 
