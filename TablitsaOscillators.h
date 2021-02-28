@@ -114,8 +114,8 @@ public:
     const double samplesPerCycle{ 1. / IOscillator<T>::mPhaseIncr };
 
     // Select by Index
-    const double tableFact{ std::log2(mWT->GetMaxSize() / (samplesPerCycle * mTableOS)) };
-    mTableInterp = tableFact - std::floor(tableFact);
+    const double tableFact{ std::log2(mWT->GetMaxSize() / (samplesPerCycle * mTableOS)) }; // Factors of two by which the largest mipmap (at index 0) is larger than the required mipmap
+    mTableInterp = tableFact - std::floor(tableFact); // Nearest integer lower than the value calculated above
     mWtIdx = std::max(static_cast<int>(std::floor(tableFact)), 0);
     SetMipmapLevel_ByIndex(mWtIdx);
   }
@@ -128,9 +128,9 @@ public:
     mWtPositionNorm = 1 - std::modf((1. - mWtPositionAbs) * (mWT->mNumTables - 1), &mWtOffset);
     int tableOffset = std::min(static_cast<int>(mWtOffset), mWT->mNumTables - 2);
     mLUTLo[0] = mWT->GetMipmapLevel_ByIndex(tableOffset, idx, mTableSize);
-    mLUTLo[1] = mWT->GetMipmapLevel_ByIndex(tableOffset + 1, idx, mTableSize);
+    mLUTLo[1] = mWT->GetMipmapLevel_ByIndex(static_cast<size_t>(tableOffset) + 1, idx, mTableSize);
     mLUTHi[0] = mWT->GetMipmapLevel_ByIndex(tableOffset, idx + 1, mNextTableSize);
-    mLUTHi[1] = mWT->GetMipmapLevel_ByIndex(tableOffset + 1, idx + 1, mNextTableSize);
+    mLUTHi[1] = mWT->GetMipmapLevel_ByIndex(static_cast<size_t>(tableOffset) + 1, idx + 1, mNextTableSize);
     mTableSizeM1 = mTableSize - 1;
     mNextTableSizeM1 = mNextTableSize - 1;
   }
@@ -327,7 +327,7 @@ public:
   {
     double cycle;
     mPhaseInCycle = modf(phase * mWT->mCyclesPerLevel, &cycle);
-    mPhaseInCycle = mFormant * mPhaseInCycle * (mPhaseInCycle <= 1 / mFormant);
+    mPhaseInCycle = mFormant * mPhaseInCycle * static_cast<T>(mPhaseInCycle <= 1 / mFormant); // TODO: check this - inharmonic frequencies may cause adverse effects here
     return (cycle + std::pow(mPhaseInCycle, 1. + (mWtBend >= 0. ? mWtBend : mWtBend / 2.))) * mCyclesPerLevelRecip;
   }
 
