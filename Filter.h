@@ -199,7 +199,7 @@ public:
   inline T Process(double s)
   {
     CalculateCoefficients();
-    T overdrive = SoftClip(s, 1. + mDrive * 2.);
+    T overdrive = SoftClip<T>(s, 1. + mDrive * 2.);
     s += mDrive * (overdrive - s);
     return (this->*mProcessFunctions[mMode])(s);
   }
