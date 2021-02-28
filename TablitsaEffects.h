@@ -304,15 +304,15 @@ enum EWaveshaperMode
 template<typename T>
 class Waveshaper : public Effect<T>
 {
-  static constexpr T MaxGain{ (T)2 };
   static constexpr T piOver2{ (T)1.57079632679 };
   static constexpr T pi{ (T)3.14159265359 };
+  static constexpr T MaxGain{ (T)3. };
 
   static inline T SineShaper(T x, T gain)
   {
     x *= gain;
-    T x2 = piOver2 * std::copysign(x, 0.5 - x);
-    return std::copysign(x2 - x2 * x2 * x2 / (T)6 + x2 * x2 * x2 * x2 * x2 / (T)120, x);
+    T x2 = std::copysign(x, piOver2 - x);
+    return std::copysign(x2 - x2 * x2 * x2 / (T)6 + x2 * x2 * x2 * x2 * x2 / (T)120, x) / gain;
   }
 
   static inline T TanhShaper(T x, T gain)
@@ -329,12 +329,12 @@ class Waveshaper : public Effect<T>
 
   static inline T SoftClipShaper(T x, T gain)
   {
-    return SoftClip<T>(x, gain);
+    return SoftClip<T>(x, gain) / gain;
   }
 
   static inline T HardClipShaper(T x, T gain)
   {
-    return std::copysign(std::min(std::abs(x) * gain, (T)0.25), x) * 2.;
+    return std::copysign(std::min(std::abs(x) * gain, 1. / (gain * 2)), x);
   }
 
 public:
