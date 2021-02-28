@@ -4,6 +4,8 @@
 #include "Filter.h"
 #include "Modulators.h"
 
+#include <mutex>
+
 template<typename T>
 class Effect
 {
@@ -288,6 +290,7 @@ protected:
 };
 
 #define WAVESHAPE_TYPES "Sine", "Parabolic", "Hyp. Tan.", "Soft Clip", "Hard Clip"
+
 enum EWaveshaperMode
 {
   kWaveshapeSine,
@@ -301,9 +304,88 @@ enum EWaveshaperMode
 template<typename T>
 class Waveshaper : public Effect<T>
 {
-public:
-  Waveshaper(T sampleRate, EWaveshaperMode mode=kWaveshapeSine) : Effect<T>(sampleRate), mShaperMode(mode) {}
+  static constexpr T MaxGain{ (T)2 };
+  static constexpr T piOver2{ (T)1.57079632679 };
+  static constexpr T pi{ (T)3.14159265359 };
 
-private:
+  static inline T SineShaper(T x)
+  {
+    T x2 = piOver2 * std::copysign(x, 0.5 - x);
+    return std::copysign(x2 - x2 * x2 * x2 / (T)6 + x2 * x2 * x2 * x2 * x2 / (T)120, x);
+  }
+
+  static inline T TanhShaper(T x)
+  {
+    return std::tanh(x);
+  }
+
+  static inline T ParabolicShaper(T x)
+  {
+    return copysign(x * x, x);
+  }
+
+  static inline T SoftClipShaper(T x)
+  {
+    return SoftClip<T>(x, (T)1.);
+  }
+
+  static inline T HardClipShaper(T x)
+  {
+    return std::copysign(std::min(std::abs(x), (T)1.), x);
+  }
+
+public:
+  Waveshaper(T sampleRate, EWaveshaperMode mode = kWaveshapeSine) : Effect<T>(sampleRate), mShaperMode(mode) {}
+
+  virtual void SetParam1(T value) override { SetMode(static_cast<EWaveshaperMode>(value)); }
+  virtual void SetParam2(T value) override { SetGain(value / (T)100); }
+
+  T Process(T s) override
+  {
+    return mShaperFunc(s);
+  }
+
+  void ProcessStereo(T* s) override
+  {
+    std::lock_guard<std::mutex> lg(mFuncMutex);
+    s[0] += mMix * (mShaperFunc(s[0] * mGain) - s[0]);
+    s[1] += mMix * (mShaperFunc(s[1] * mGain) - s[1]);
+  }
+
+  void SetMode(EWaveshaperMode mode)
+  {
+    std::lock_guard<std::mutex> lg(mFuncMutex); // To prevent calling an empty `std::function`
+    switch (mode)
+    {
+    case kWaveshapeSine:
+      mShaperFunc = &Waveshaper::SineShaper;
+      break;
+    case kWaveshapeParabola:
+      mShaperFunc = &Waveshaper::ParabolicShaper;
+      break;
+    case kWaveshapeTanh:
+      mShaperFunc = &Waveshaper::TanhShaper;
+      break;
+    case kWaveshapeSoft:
+      mShaperFunc = &Waveshaper::SoftClipShaper;
+      break;
+    case kWaveshapeHard:
+      mShaperFunc = &Waveshaper::HardClipShaper;
+      break;
+    default:
+      mShaperFunc = &Waveshaper::SineShaper;
+      break;
+    }
+  }
+
+  void SetGain(T gain)
+  {
+    mGain = 1. + gain * MaxGain;
+  }
+
+protected:
   EWaveshaperMode mShaperMode;
+  T mGain{ (T)1 };
+  std::function<T(T)> mShaperFunc{ &Waveshaper::SineShaper };
+  std::mutex mFuncMutex;
 };

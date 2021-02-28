@@ -2,7 +2,8 @@
 
 #include <cmath>
 
-double SoftClip(double s, double gain = 3.);
+template<typename T>
+T SoftClip(T s, T gain = (T)1);
 
 template<typename T, int MaxLength>
 class DelayLine
