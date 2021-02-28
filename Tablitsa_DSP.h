@@ -852,20 +852,21 @@ public:
 
   void UpdateOscillatorWavetable(int wtIdx, int oscIdx)
   {
+    mTableLoading = true; // Used in plugin's midi message function to block new notes while loading a new wavetable
     ResetAllVoices();
     WtFile wtFile{ mWavetableNames.at(wtIdx) };
-    if (mWavetables[oscIdx])
-      delete mWavetables[oscIdx];
-    mWavetables[oscIdx] = new Wavetable<T>(wtFile);
+    Wavetable<T>* pWT = new Wavetable<T>(wtFile);
 
     if (oscIdx == 0)
     {
       /*mSynth.ForEachVoice([&wtFile, oscIdx](SynthVoice& voice) {
         dynamic_cast<Voice&>(voice).mOsc1.LoadNewTable(wtFile, oscIdx);
         });*/
-      SendParam([this, oscIdx](Voice* voice) {
-        voice->mOsc1.SetWavetable(mWavetables[0]);
+      SendParam([this, oscIdx, pWT](Voice* voice) {
+        voice->mOsc1.SetWavetable(pWT);
         voice->mOsc1.ReloadLUT();
+        });
+      SendParam([this, oscIdx](Voice* voice) {
         voice->mOsc1.NotifyLoaded();
         });
     }
@@ -874,12 +875,19 @@ public:
       /*mSynth.ForEachVoice([&wtFile, oscIdx](SynthVoice& voice) {
         dynamic_cast<Voice&>(voice).mOsc2.LoadNewTable(wtFile, oscIdx);
         });*/
-      SendParam([this, oscIdx](Voice* voice) {
-        voice->mOsc2.SetWavetable(mWavetables[1]);
+      SendParam([this, oscIdx, pWT](Voice* voice) {
+        voice->mOsc2.SetWavetable(pWT);
         voice->mOsc2.ReloadLUT();
+        });
+      SendParam([this, oscIdx](Voice* voice) {
         voice->mOsc2.NotifyLoaded();
         });
     }
+
+    if (mWavetables[oscIdx])
+      delete mWavetables[oscIdx];
+    mWavetables[oscIdx] = pWT;
+    mTableLoading = false;
   }
 
   void ResetDetune()
@@ -1963,6 +1971,7 @@ public:
   std::vector<std::string> mWavetableNames{ ELEMENT_NAMES };
   std::vector<Voice*> mSynthVoices;
   Wavetable<T>* mWavetables[2]{ nullptr };
+  bool mTableLoading{ false };
 
   // Polyphonic/Monophonic
   bool mMono{ false };

@@ -1344,6 +1344,8 @@ void Tablitsa::ProcessMidiMsg(const IMidiMsg& msg)
   switch (status)
   {
     case IMidiMsg::kNoteOn:
+      if (mDSP.mTableLoading) // Don't accept new notes when swapping wavetables
+        return;
     case IMidiMsg::kNoteOff:
     case IMidiMsg::kPolyAftertouch:
     case IMidiMsg::kControlChange:

@@ -237,6 +237,7 @@ public:
 
   inline void ProcessOversampling(std::array<T, OUTPUT_SIZE>& pOutput, int nFrames)
   {
+    std::unique_lock<std::mutex> lock(mWtMutex);
 
     double phase; // integer phase
     double frac, frac2; // fractional phases
@@ -595,7 +596,6 @@ private:
   double mPrevFreq;
 
   // Thread-related members for wavetable updates
-  static inline std::mutex mWtMutex; // Mutex used when swapping out the current wavetable in each oscillator object
   static inline std::condition_variable mCV;
   bool TableLoaded{ false };
   static inline std::mutex mMasterMutex; // Static mutex used when loading a new wavetable from a file
@@ -627,4 +627,6 @@ public:
   iplug::VectorOscillator<T> mPhaseModulator;
   iplug::VectorOscillator<T> mRingModulator{ 0.5 }; // Offset start phase by half a cycle
 #endif
+  
+  static inline std::mutex mWtMutex; // Mutex used when swapping out the current wavetable in each oscillator object
 };
