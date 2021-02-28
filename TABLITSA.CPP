@@ -355,7 +355,7 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
   GetParam(kParamFilter1CutoffVel)->InitDouble("Filter 1 Cutoff LFO1 Depth", 0., -1., 1., 0.01, "", IParam::kFlagsNone, "Mod Depth", ModShapePowCurve(3.));
   GetParam(kParamFilter1CutoffKTk)->InitDouble("Filter 1 Cutoff LFO2 Depth", 0., -1., 1., 0.01, "", IParam::kFlagsNone, "Mod Depth", ModShapePowCurve(3.));
   GetParam(kParamFilter1CutoffRnd)->InitDouble("Filter 1 Cutoff Seq Depth", 0., -1., 1., 0.01, "", IParam::kFlagsNone, "Mod Depth", ModShapePowCurve(3.));
-  GetParam(kParamFilter1Resonance)->InitPercentage("Filter 1 Resonance", 0.1, 0., 100., 1);
+  GetParam(kParamFilter1Resonance)->InitPercentage("Filter 1 Resonance", 0.1, 0., 99., 1);
   GetParam(kParamFilter1ResonanceEnv1)->InitDouble("Filter 1 Resonance Env1 Depth", 0., -1., 1., 0.01);
   GetParam(kParamFilter1ResonanceEnv2)->InitDouble("Filter 1 Resonance Env2 Depth", 0., -1., 1., 0.01);
   GetParam(kParamFilter1ResonanceAmpEnv)->InitDouble("Filter 1 Resonance AmpEnv Depth", 0., -1., 1., 0.01);
@@ -378,7 +378,7 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
   // Comb-specific parameters with different ranges (the modulation parameters are common between all filter types, as these always between -1 and 1)
   GetParam(kParamFilter1FF)->InitPercentage("Filter 1 FF");
   GetParam(kParamFilter1FB)->InitPercentage("Filter 1 FB");
-  GetParam(kParamFilter1Delay)->InitInt("Filter 1 Delay", 8, 1, 512);
+  GetParam(kParamFilter1Delay)->InitDouble("Filter 1 Delay", 0.1, 0.1, 10., 0.01, "ms");
 
   // Filter 2
   GetParam(kParamFilter2Type)->InitEnum("Filter 2 Type", kNoFilter, { FILTER_TYPE_LIST });
@@ -395,7 +395,7 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
   GetParam(kParamFilter2CutoffVel)->InitDouble("Filter 2 Cutoff LFO1 Depth", 0., -1., 1., 0.01, "", IParam::kFlagsNone, "Mod Depth", ModShapePowCurve(3.));
   GetParam(kParamFilter2CutoffKTk)->InitDouble("Filter 2 Cutoff LFO2 Depth", 0., -1., 1., 0.01, "", IParam::kFlagsNone, "Mod Depth", ModShapePowCurve(3.));
   GetParam(kParamFilter2CutoffRnd)->InitDouble("Filter 2 Cutoff Seq Depth", 0., -1., 1., 0.01, "", IParam::kFlagsNone, "Mod Depth", ModShapePowCurve(3.));
-  GetParam(kParamFilter2Resonance)->InitPercentage("Filter 2 Resonance", 0.1, 0., 100., 1);
+  GetParam(kParamFilter2Resonance)->InitPercentage("Filter 2 Resonance", 0.1, 0., 99., 1);
   GetParam(kParamFilter2ResonanceEnv1)->InitDouble("Filter 2 Resonance Env1 Depth", 0., -1., 1., 0.01);
   GetParam(kParamFilter2ResonanceEnv2)->InitDouble("Filter 2 Resonance Env2 Depth", 0., -1., 1., 0.01);
   GetParam(kParamFilter2ResonanceAmpEnv)->InitDouble("Filter 2 Resonance AmpEnv Depth", 0., -1., 1., 0.01);
@@ -418,7 +418,7 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
   // Comb-specific parameters with different ranges (the modulation parameters are common between all filter types, as these always between -1 and 1)
   GetParam(kParamFilter2FF)->InitPercentage("Filter 2 FF");
   GetParam(kParamFilter2FB)->InitPercentage("Filter 2 FB");
-  GetParam(kParamFilter2Delay)->InitInt("Filter 2 Delay", 8, 1, 512);
+  GetParam(kParamFilter2Delay)->InitDouble("Filter 2 Delay", 0.1, 0.1, 10., 0.01, "ms");
 
   // Effect Parameters
   //GetParam(kParamEffect1Param1)->InitDouble("Effect 1 Parameter 1", 100., 1., 5000., 1., "ms", IParam::kFlagsNone, "Effect1", IParam::ShapePowCurve(3.));

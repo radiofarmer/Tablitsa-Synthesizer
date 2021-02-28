@@ -1668,7 +1668,7 @@ public:
       case kParamFilter1Drive:
       case kParamFilter1Delay:
       {
-        mParamsToSmooth[kModFilter1DriveSmoother] = value / (mFilter1Comb ? (double)COMB_MAX_DELAY : 100.);
+        mParamsToSmooth[kModFilter1DriveSmoother] = value / (mFilter1Comb ? 1000. / mSampleRate * (double)COMB_MAX_DELAY : 100.);
         break;
       }
       case kParamFilter1DriveEnv1:
@@ -1753,8 +1753,10 @@ public:
       }
       case kParamFilter2Drive:
       case kParamFilter2Delay:
-        mParamsToSmooth[kModFilter2DriveSmoother] = value / (mFilter2Comb ? (double)COMB_MAX_DELAY : 100.);
+      {
+        mParamsToSmooth[kModFilter2DriveSmoother] = value / (mFilter2Comb ? 1000. / mSampleRate * (double)COMB_MAX_DELAY : 100.);
         break;
+      }
       case kParamFilter2DriveEnv1:
       case kParamFilter2DriveEnv2:
       case kParamFilter2DriveAmpEnv:

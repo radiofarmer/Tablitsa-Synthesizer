@@ -14,7 +14,7 @@
 #define FILTER_MODE_LIST_MOOG  "Lowpass I", "Highpass I", "Bandpass I", "Lowpass II", "Highpass II", "Bandpass II"
 #define FILTER_MODE_LIST_COMB  "N/A"
 
-#define COMB_MAX_DELAY 512
+#define COMB_MAX_DELAY 1024
 
 
 enum EFilters
