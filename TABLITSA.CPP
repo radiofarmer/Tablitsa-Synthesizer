@@ -484,10 +484,6 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
 
 #endif
     const ISVG tableImg = pGraphics->LoadSVG(PERIODIC_TABLE_FN);
-    const ISVG incrButtonOn = pGraphics->LoadSVG(INCR_BUTTON_ON);
-    const ISVG incrButtonOff = pGraphics->LoadSVG(INCR_BUTTON_OFF);
-    const ISVG decrButtonOn = pGraphics->LoadSVG(DECR_BUTTON_ON_FN);
-    const ISVG decrButtonOff = pGraphics->LoadSVG(DECR_BUTTON_OFF_FN);
     const IBitmap logoImg = pGraphics->LoadBitmap(LOGO_FN);
     const IBitmap dialImg = pGraphics->LoadBitmap(DIAL_FN, 64);
 
@@ -495,10 +491,10 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
     pGraphics->AttachControl(new PeriodicTable(globalControls.GetReducedFromBottom(globalControls.H() * 0.5f).GetFromLeft(720.f).GetPadded(-30.f).GetVShifted(20.f), tableImg, { kParamWavetable1, kParamWavetable2 }),
       kCtrlTagPeriodicTable);
     dynamic_cast<PeriodicTable*>(pGraphics->GetControlWithTag(kCtrlTagPeriodicTable))->LoadValues();
-    pGraphics->AttachControl(new IBitmapControl(globalControls.GetReducedFromTop(90.f).GetReducedFromLeft(115.f).GetFromTLHC(280.f, 80.), logoImg));
+    pGraphics->AttachControl(new IBitmapControl(globalControls.GetReducedFromTop(90.f).GetReducedFromLeft(110.f).GetFromTLHC(280.f, 80.), logoImg));
 
     // Preset controls
-    const IRECT presetPanel = globalControls.GetFromTop(50.f).GetFromLeft(720.f).GetHPadded(-60.f);
+    const IRECT presetPanel = globalControls.GetFromTop(50.f).GetFromLeft(720.f).GetHPadded(-20.f);
     IActionFunction savePresetFunction = IActionFunction([this](IControl* pControl) {
       bool saveBackup = false;
       SendArbitraryMsgFromUI(kMsgSavePreset, kNoTag, sizeof(bool), reinterpret_cast<const void*>(&saveBackup));
@@ -529,10 +525,10 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
       UnserializeState(presetData, 0);
       UpdateUIControls();
       });
-    pGraphics->AttachControl(new IVButtonControl(presetPanel.GetGridCell(0, 0, 2, 4).GetHPadded(-20.f), SplashClickActionFunc, "Save", pushButtonStyle), kNoTag, "Presets")->SetAnimationEndActionFunction(savePresetFunction);
-    pGraphics->AttachControl(new IVButtonControl(presetPanel.GetGridCell(0, 1, 2, 4).GetHPadded(-20.f), SplashClickActionFunc, "Load", pushButtonStyle), kNoTag, "Presets")->SetAnimationEndActionFunction(loadPresetFunction);
-    pGraphics->AttachControl(new IVButtonControl(presetPanel.GetGridCell(1, 0, 2, 4).GetHPadded(-20.f), SplashClickActionFunc, "Reset", pushButtonStyle), kNoTag, "Presets")->SetAnimationEndActionFunction(resetToDefaultFunction);
-    pGraphics->AttachControl(new IVButtonControl(presetPanel.GetGridCell(1, 1, 2, 4).GetHPadded(-20.f), SplashClickActionFunc, "Load Backup", pushButtonStyle), kNoTag, "Presets")->SetAnimationEndActionFunction(loadBackupFunction);
+    pGraphics->AttachControl(new IVButtonControl(presetPanel.GetGridCell(0, 0, 2, 8).GetPadded(-2.f), SplashClickActionFunc, "Save", pushButtonStyle.WithColor(EVColor::kFG, COLOR_TRANSPARENT).WithColor(EVColor::kFR, COLOR_WHITE)), kNoTag, "Presets")->SetAnimationEndActionFunction(savePresetFunction);
+    pGraphics->AttachControl(new IVButtonControl(presetPanel.GetGridCell(0, 1, 2, 8).GetPadded(-2.f), SplashClickActionFunc, "Load", pushButtonStyle.WithColor(EVColor::kFG, COLOR_TRANSPARENT).WithColor(EVColor::kFR, COLOR_WHITE)), kNoTag, "Presets")->SetAnimationEndActionFunction(loadPresetFunction);
+    pGraphics->AttachControl(new IVButtonControl(presetPanel.GetGridCell(1, 0, 2, 8).GetPadded(-2.f), SplashClickActionFunc, "Reset", pushButtonStyle.WithColor(EVColor::kFG, COLOR_TRANSPARENT).WithColor(EVColor::kFR, COLOR_WHITE)), kNoTag, "Presets")->SetAnimationEndActionFunction(resetToDefaultFunction);
+    pGraphics->AttachControl(new IVButtonControl(presetPanel.GetGridCell(1, 1, 2, 8).GetPadded(-2.f), SplashClickActionFunc, "Backup", pushButtonStyle.WithColor(EVColor::kFG, COLOR_TRANSPARENT).WithColor(EVColor::kFR, COLOR_WHITE)), kNoTag, "Presets")->SetAnimationEndActionFunction(loadBackupFunction);
     // Built-in file selection
 #if !LOAD_WITH_DIALOG
     const IRECT presetMenuBounds = presetPanel.GetGridCell(1, 1, 2, 4).GetVShifted(presetPanel.GetGridCell(1, 1, 2, 5).H()).GetPadded(0.f, 0.f, 100.f, 100.f);
@@ -1398,7 +1394,7 @@ bool Tablitsa::OnMessage(int msgTag, int ctrlTag, int dataSize, const void* pDat
       if (useSystemDialog)
       {
         WDL_String fileStr("NewPreset");
-        WDL_String pathStr(GetDataPath("\\Tablitsa\\presets\\").c_str());
+        WDL_String pathStr(GetDataPath("\\Tablitsa\\presets\\User\\").c_str());
         GetUI()->PromptForFile(fileStr, pathStr, EFileAction::Save, "TPST");
         filePath = fileStr.Get();
         if (filePath == "\0")
@@ -1406,7 +1402,7 @@ bool Tablitsa::OnMessage(int msgTag, int ctrlTag, int dataSize, const void* pDat
       }
       else
       {
-        filePath = GetDataPath("\\Tablitsa\\presets\\") + "TEST.TPST";
+        filePath = GetDataPath("\\Tablitsa\\presets\\User\\") + "TEST.TPST";
       }
 
       SavePreset(newPreset, filePath.c_str(), *backup);
@@ -1424,7 +1420,7 @@ bool Tablitsa::OnMessage(int msgTag, int ctrlTag, int dataSize, const void* pDat
       else if ((bool)LOAD_WITH_DIALOG)
       {
         WDL_String fileStr("UserPreset");
-        WDL_String pathStr(GetDataPath("\\Tablitsa\\presets\\").c_str());
+        WDL_String pathStr(GetDataPath("\\Tablitsa\\presets\\User\\").c_str());
         GetUI()->PromptForFile(fileStr, pathStr, EFileAction::Open, "TPST");
         filePath = fileStr.Get();
         if (filePath == "\0")
@@ -1551,6 +1547,7 @@ void Tablitsa::SavePreset(IByteChunk& byteData, const char* filename, bool isBac
   if (!strcmp(filename, "_Tablitsa_Default.TPST"))
   {
     GetUI()->ShowMessageBox("Cannot overwrite default preset", "Error", EMsgBoxType::kMB_OK);
+    return;
   }
 
   std::ofstream presetFile(filename);
@@ -1581,7 +1578,7 @@ IByteChunk Tablitsa::LoadPreset(const char* filename, bool isBackup)
     if (isBackup)
       GetUI()->ShowMessageBox("Backup file not found", "Error", EMsgBoxType::kMB_OK);
     else
-      GetUI()->ShowMessageBox("Preset file not found", "Error", EMsgBoxType::kMB_OK);
+      GetUI()->ShowMessageBox("Preset file not found or invalid format", "Error", EMsgBoxType::kMB_OK);
     return presetData;
   }
 
@@ -1621,8 +1618,9 @@ std::vector<char> ReadAllBytes(const char* fname)
   }
 
   std::vector<char> allBytes(pos);
+  if (pos == 0)
+    return allBytes;
   ifs.seekg(0, std::ios::beg);
-  // TODO: Exception handling here in case the vector is empty
   ifs.read(&allBytes[0], pos);
   ifs.close();
   return allBytes;

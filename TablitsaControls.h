@@ -87,57 +87,8 @@ public:
   }
 
   // Overridden drawing function to draw the filled area starting in the middle of the track
-  void DrawWidget(IGraphics& g) override
-  {
-    float value = (float)GetValue(); // NB: Value is normalized to between 0. and 1.
-    const IRECT handleBounds = (GetParamIdx() == kNoParameter) ? mTrackBounds.FracRect(mDirection, 0.f) : mTrackBounds.FracRect(mDirection, value);
-    const IRECT filledTrack = mDirection == EDirection::Vertical ? (GetParamIdx() == kNoParameter) ?
-        handleBounds : ((value >= 0.5f) ?
-        mTrackBounds.GetGridCell(0, 0, 2, 1).FracRect(mDirection, 2.f * (value - 0.5f)) :
-        mTrackBounds.GetGridCell(1, 0, 2, 1).FracRect(mDirection, 2.f * (0.5 - value), true)) : // <- Vertical
-      (GetParamIdx() == kNoParameter) ?
-        handleBounds : ((value >= 0.5f) ?
-        mTrackBounds.GetGridCell(0, 1, 1, 2).FracRect(mDirection, 2.f * (value - 0.5f)) :
-        mTrackBounds.GetGridCell(0, 0, 1, 2).FracRect(mDirection, 2.f * (0.5 - value), true)); // <- Horizontal
-
-    if (mTrackSize > 0.f)
-      DrawTrack(g, filledTrack);
-
-    float cx, cy;
-
-    const float offset = (mStyle.drawShadows && mShape != EVShape::Ellipse /* TODO? */) ? mStyle.shadowOffset * 0.5f : 0.f;
-
-    if (mDirection == EDirection::Vertical)
-    {
-      cx = handleBounds.MW() + offset;
-      cy = handleBounds.T;
-    }
-    else
-    {
-      cx = handleBounds.R;
-      cy = handleBounds.MH() + offset;
-    }
-
-    if (mHandleSize > 0.f)
-    {
-      DrawHandle(g, { cx - mHandleSize, cy - mHandleSize, cx + mHandleSize, cy + mHandleSize });
-    }
-  }
-
-  void DrawTrack(IGraphics& g, const IRECT& filledArea) override
-  {
-    const float extra = mHandleInsideTrack ? mHandleSize : 0.f;
-    const IRECT adjustedTrackBounds = mDirection == EDirection::Vertical ? mTrackBounds.GetVPadded(extra) : mTrackBounds.GetHPadded(extra);
-    // Padd the filled area less, to account for the asymmetric rectangular handle
-    const IRECT adjustedFillBounds = mDirection == EDirection::Vertical ? filledArea.GetVPadded(extra / 2.f) : filledArea.GetHPadded(extra / 2.f);
-    const float cr = GetRoundedCornerRadius(mTrackBounds);
-
-    g.FillRoundRect(GetColor(kSH), adjustedTrackBounds, cr, &mBlend);
-    g.FillRoundRect(GetColor(kX1), adjustedFillBounds, cr, &mBlend);
-
-    if (mStyle.drawFrame)
-      g.DrawRoundRect(GetColor(kFR), adjustedTrackBounds, cr, &mBlend, mStyle.frameThickness);
-  }
+  void DrawWidget(IGraphics& g) override;
+  void DrawTrack(IGraphics& g, const IRECT& filledArea) override;
 
 private:
   int mTarget{ -1 }; // The parameter currently linked to the modulation controls
@@ -153,16 +104,7 @@ public:
   }
 
   // Spin-Up Electron Pointer
-  void DrawPointer(IGraphics& g, float angle, float cx, float cy, float radius)
-  {
-    const IColor pointerColor = GetColor(kFR).WithOpacity(1.f);
-    g.DrawRadialLine(pointerColor, cx, cy, angle, mInnerPointerFrac * radius, mOuterPointerFrac * radius, &mBlend, mPointerThickness);
-    float data1[2][2];
-    float data2[2][2];
-    iplug::igraphics::RadialPoints(angle, cx, cy, mInnerPointerFrac * radius, mOuterPointerFrac * radius, 2, data1);
-    iplug::igraphics::RadialPoints(angle - 20., cx, cy, mInnerPointerFrac * radius, mOuterPointerFrac * radius * 0.65f, 2, data2);
-    g.DrawLine(pointerColor, data1[1][0], data1[1][1], data2[1][0], data2[1][1], &mBlend, mPointerThickness);
-  }
+  void DrawPointer(IGraphics& g, float angle, float cx, float cy, float radius);
 };
 
 /* A clone of the normal knob control, but with the ability to receive modulation parameters. */
@@ -224,54 +166,9 @@ public:
       IVKnobControl::OnMouseWheel(x, y, mod, d);
   }
 
-  void LoadModParams()
-  {
-    // TODO make a list of Control Tags that can be looped through
-    if (mActive && GetActiveIdx() == GetUI()->GetControlIdx(this))
-    {
-      for (int i{ kCtrlTagEnv1Depth }; i <= kCtrlTagRndDepth; ++i)
-      {
-        GetUI()->GetControlWithTag(i)->SetParamIdx(kNoParameter);
-        dynamic_cast<ModSliderControl*>(GetUI()->GetControlWithTag(i))->Toggle(-1);
-      }
-      SetActiveIdx(false);
-      mActive = false;
-    }
-    else
-    {
-      // Set all modulator sliders to the values of the currently-selected modulated parameter
-      for (int i{ 0 }; i <= (kCtrlTagRndDepth - kCtrlTagEnv1Depth); ++i)
-      {
-        GetUI()->GetControlWithTag(kCtrlTagEnv1Depth + i)->SetParamIdx(mModParamIdx + i);
-        dynamic_cast<ModSliderControl*>(GetUI()->GetControlWithTag(kCtrlTagEnv1Depth + i))->Toggle(GetUI()->GetControlIdx(this));
-      }
-      SetActiveIdx(true);
-      mActive = true;
-    }
-    // Send values and change this control's active state
-    GetDelegate()->SendCurrentParamValuesFromDelegate();
-    //mActive = !mActive;
-  }
+  void LoadModParams();
 
-  void DrawWidget(IGraphics& g) override
-  {
-    float widgetRadius; // The radius out to the indicator track arc
-
-    if (mWidgetBounds.W() > mWidgetBounds.H())
-      widgetRadius = (mWidgetBounds.H() / 2.f);
-    else
-      widgetRadius = (mWidgetBounds.W() / 2.f);
-
-    const float cx = mWidgetBounds.MW(), cy = mWidgetBounds.MH();
-
-    widgetRadius -= (mTrackSize / 2.f);
-
-    IRECT knobHandleBounds = mWidgetBounds.GetCentredInside((widgetRadius - mTrackToHandleDistance) * 2.f);
-    const float angle = mAngle1 + (static_cast<float>(GetValue()) * (mAngle2 - mAngle1));
-    DrawPressableShape(g, EVShape::Ellipse, knobHandleBounds, mActive && (GetActiveIdx() == GetUI()->GetControlIdx(this)), mMouseIsOver, IsDisabled());
-    DrawIndicatorTrack(g, angle, cx, cy, widgetRadius);
-    DrawPointer(g, angle, cx, cy, knobHandleBounds.W() / 2.f);
-  }
+  void DrawWidget(IGraphics& g) override;
 
   void Draw(IGraphics& g) override
   {
@@ -281,98 +178,7 @@ public:
     DrawValue(g, mValueMouseOver);
   }
 
-  void DrawIndicatorTrack(IGraphics& g, float angle, float cx, float cy, float radius) override
-  {
-    // Set the origin of the track arch to the center of the range for dials with negative minimum values
-    if (GetParam()->GetMin() < 0.)
-      mAnchorAngle = 0.;
-    if (mTrackSize > 0.f)
-    {
-      g.DrawArc(mBaseTrack, cx, cy, radius, angle >= mAnchorAngle ? mAnchorAngle : mAnchorAngle - (mAnchorAngle - angle), angle >= mAnchorAngle ? angle : mAnchorAngle, &mBlend, mTrackSize);
-
-      // Envelope 1
-      float env1Val = static_cast<float>(GetDelegate()->GetParam(mModParamIdx)->Value());
-      if (env1Val)
-      {
-        float modAngle = std::max(std::min(env1Val * (mAngle2 - mAngle1) + angle, mAngle2), mAngle1);
-        g.DrawArc(mModArcColor[0][0], cx, cy, radius, modAngle >= angle ? angle : modAngle, modAngle >= angle ? modAngle : angle, &mBlend, mTrackSize * 3);
-      }
-
-      // Envelope 2
-      radius -= mTrackToHandleDistance / 2.f;
-      float env2Val = static_cast<float>(GetDelegate()->GetParam(mModParamIdx + 1)->Value());
-      if (env2Val)
-      {
-        float modAngle = std::max(std::min(env2Val * (mAngle2 - mAngle1) + angle, mAngle2), mAngle1);
-        g.DrawArc(mModArcColor[1][0], cx, cy, radius, modAngle >= angle ? angle : modAngle, modAngle >= angle ? modAngle : angle, &mBlend, mTrackSize * 2);
-      }
-
-      // AmpEnv
-      radius -= mTrackToHandleDistance / 4.f;
-      float ampEnvVal = static_cast<float>(GetDelegate()->GetParam(mModParamIdx + 2)->Value());
-      if (ampEnvVal)
-      {
-        float modAngle = std::max(std::min(ampEnvVal * (mAngle2 - mAngle1) + angle, mAngle2), mAngle1);
-        g.DrawArc(mModArcColor[2][0], cx, cy, radius, modAngle >= angle ? angle : modAngle, modAngle >= angle ? modAngle : angle, &mBlend, mTrackSize);
-      }
-
-      // LFO 1
-      radius -= 3.f * mTrackToHandleDistance / 4.f;
-      float lfo1Val = static_cast<float>(GetDelegate()->GetParam(mModParamIdx + 3)->Value());
-      if (lfo1Val)
-      {
-        float modAngle = std::max(std::min(lfo1Val * (mAngle2 - mAngle1) + angle, mAngle2), mAngle1);
-        g.DrawArc(mModArcColor[3][0], cx, cy, radius, modAngle >= angle ? angle : modAngle, modAngle >= angle ? modAngle : angle, &mBlend, mTrackSize * 3);
-        modAngle = std::max(std::min(-1.f * lfo1Val * (mAngle2 - mAngle1) + angle, mAngle2), mAngle1);
-        g.DrawArc(mModArcColor[3][1], cx, cy, radius, modAngle >= angle ? angle : modAngle, modAngle >= angle ? modAngle : angle, &mBlend, mTrackSize * 2);
-      }
-
-      // LFO 2
-      radius += mTrackToHandleDistance / 4.f;
-      float lfo2Val = static_cast<float>(GetDelegate()->GetParam(mModParamIdx + 4)->Value());
-      if (lfo2Val)
-      {
-        float modAngle = std::max(std::min(lfo2Val * (mAngle2 - mAngle1) + angle, mAngle2), mAngle1);
-        g.DrawArc(mModArcColor[4][0], cx, cy, radius, modAngle >= angle ? angle : modAngle, modAngle >= angle ? modAngle : angle, &mBlend, mTrackSize * 2);
-        modAngle = std::max(std::min(-1.f * lfo2Val * (mAngle2 - mAngle1) + angle, mAngle2), mAngle1);
-        g.DrawArc(mModArcColor[4][1], cx, cy, radius, modAngle >= angle ? angle : modAngle, modAngle >= angle ? modAngle : angle, &mBlend, mTrackSize);
-      }
-
-      // Sequencer
-      radius += mTrackToHandleDistance / 4.f;
-      float seqVal = static_cast<float>(GetDelegate()->GetParam(mModParamIdx + 5)->Value());
-      if (seqVal)
-      {
-        float modAngle = std::max(std::min(seqVal * (mAngle2 - mAngle1) + angle, mAngle2), mAngle1);
-        g.DrawArc(mModArcColor[5][0], cx, cy, radius, modAngle >= angle ? angle : modAngle, modAngle >= angle ? modAngle : angle, &mBlend, mTrackSize);
-      }
-
-      // Velocity
-      radius -= mTrackToHandleDistance / 4.f;
-      float velVal = static_cast<float>(GetDelegate()->GetParam(mModParamIdx + 6)->Value());
-      if (velVal)
-      {
-        float modAngle = std::max(std::min(velVal * (mAngle2 - mAngle1) + angle, mAngle2), mAngle1);
-        g.DrawArc(mModArcColor[6][0], cx, cy, radius, modAngle >= angle ? angle : modAngle, modAngle >= angle ? modAngle : angle, &mBlend, mTrackSize);
-      }
-
-      // Keytrack
-      float ktrVal = static_cast<float>(GetDelegate()->GetParam(mModParamIdx + 7)->Value());
-      if (ktrVal)
-      {
-        float modAngle = std::max(std::min(ktrVal * (mAngle2 - mAngle1) + angle, mAngle2), mAngle1);
-        g.DrawArc(mModArcColor[7][0], cx, cy, radius, modAngle >= angle ? angle : modAngle, modAngle >= angle ? modAngle : angle, &mBlend, mTrackSize);
-      }
-
-      // Trigger Random
-      float rndVal = static_cast<float>(GetDelegate()->GetParam(mModParamIdx + 8)->Value());
-      if (rndVal)
-      {
-        float modAngle = std::max(std::min(rndVal * (mAngle2 - mAngle1) + angle, mAngle2), mAngle1);
-        g.DrawArc(mModArcColor[8][0], cx, cy, radius, modAngle >= angle ? angle : modAngle, modAngle >= angle ? modAngle : angle, &mBlend, mTrackSize);
-      }
-    }
-  }
+  void DrawIndicatorTrack(IGraphics& g, float angle, float cx, float cy, float radius) override;
 
   inline int GetActiveIdx()
   {
@@ -393,15 +199,15 @@ protected:
   std::vector<ISVG*> mSVG;
   const IColor mDefaultColor;
   const IColor mModArcColor[9][2]{
-    {{200, 200, 100, 100}, {}},
-    {{200, 225, 150, 100}, {}},
-    {{200, 250, 200, 100}, {}},
-    {{200, 160, 0, 225}, {200, 200, 0, 235}},
-    {{200, 225, 0, 190}, {200, 235, 0, 220}},
+    {{255, 255, 50, 50}, {}},
+    {{255, 225, 150, 100}, {}},
+    {{255, 255, 255, 100}, {}},
+    {{255, 180, 0, 225}, {200, 200, 0, 235}},
+    {{200, 50, 0, 220}, {200, 235, 0, 220}},
     {{200, 0, 250, 100}, {}},
-    {{150, 0, 100, 255}, {}},
+    {{255, 0, 100, 255}, {}},
     {{150, 200, 0, 200}, {}},
-    {{150, 0, 255, 255}, {}}
+    {{100, 255, 0, 0}, {}}
   };
   const IColor mWhite{ 200, 255, 255, 255 };
   const IColor mBaseTrack;
@@ -477,177 +283,14 @@ public:
     mSelectedElements[elemIdx] = atomicNumber;
   }
   
-  void Draw(IGraphics& g)
-  {
-    //g.FillRoundRect(IColor(255, 20, 0, 45), mRECT);
-    // Highlight box occupied by mouse
-    if (mCurrentElementCoords)
-    {
-      if (!((mCurrentElement >= 57 && mCurrentElement <= 71) || (mCurrentElement >= 89 && mCurrentElement <= 103)))
-        g.FillRect(IColor(150, 200, 200, 0), mTableBounds.GetReducedFromLeft(std::floor(*(mCurrentElementCoords + 1) / 18. * mTableWidth)) \
-          .GetReducedFromTop(std::floor(*mCurrentElementCoords / 7.f * mTableHeight)) \
-          .GetFromLeft(E_CELL_WIDTH) \
-          .GetFromTop(E_CELL_HEIGHT));
-      else
-        g.FillRect(IColor(150, 200, 200, 0), mLaAcBounds.GetReducedFromLeft(std::floor(*(mCurrentElementCoords + 1) / 15. * mLaAcWidth)) \
-          .GetReducedFromTop(std::floor(*mCurrentElementCoords / 2.f * mLaAcHeight)) \
-          .GetFromLeft(E_CELL_WIDTH) \
-          .GetFromTop(E_CELL_HEIGHT));
-    };
-    for (int i{ 0 }; i < 2; ++i)
-    {
-      auto e = mSelectedElements[i];
-      if (!((e >= 57 && e <= 71) || (e >= 89 && e <= 103)))
-      {
-        int* eCoords = ElementCoords[e - 1];
-        g.FillRect(ElementIconColor[i].WithOpacity(0.8), mTableBounds.GetReducedFromLeft(std::floor(*(eCoords + 1) / 18. * mTableWidth)) \
-          .GetReducedFromTop(std::floor(*eCoords / 7.f * mTableHeight)) \
-          .GetFromLeft(E_CELL_WIDTH) \
-          .GetFromTop(E_CELL_HEIGHT));
-      }
-      else
-      {
-        // Convert atomic number to index in Lanthanide-Actinide table coordinates. Note that Number{Ac} - 74 corresponds to index 15, the first column in the second row
-        int* eCoords = (e >= 89) ? LaAcCoords[e - 74] : LaAcCoords[e - 57];
-        g.FillRect(ElementIconColor[i].WithOpacity(0.8), mLaAcBounds.GetReducedFromLeft(std::floor(*(eCoords + 1) / 15. * mLaAcWidth)) \
-          .GetReducedFromTop(std::floor(*eCoords / 2.f * mLaAcHeight)) \
-          .GetFromLeft(E_CELL_WIDTH) \
-          .GetFromTop(E_CELL_HEIGHT));
-      }
-    };
-
-    // Draw current wavetable icons
-    const IRECT activeElem1 = mRECT.GetFromRight(80.f).GetGridCell(0, 0, 2, 1).GetCentredInside(70.f, 80.f);
-    const IRECT activeElem2 = mRECT.GetFromRight(80.f).GetGridCell(1, 0, 2, 1).GetCentredInside(70.f, 80.f);
-    DrawElement(g, activeElem1, mSelectedElements[0], 0);
-    DrawElement(g, activeElem2, mSelectedElements[1], 1);
-
-    g.DrawSVG(mSVG, mRECT);
-  }
-
-  void DrawElement(IGraphics& g, const IRECT& bounds, int atomicNumber, int idx)
-  {
-    assert(atomicNumber > 0);
-    IColor col{ mTableLoading[idx] ? ElementIconColor[idx].WithOpacity(0.5f) : ElementIconColor[idx] };
-
-    g.DrawRect(col, bounds);
-    g.DrawText(LabelText, (atomicNumber) ? "Wavetable 2" : "Wavetable 1", bounds.GetVShifted(-20.f).GetFromTop(20.f));
-    g.DrawText(ElementIconText.WithSize(42).WithFGColor(col), ElementSymbols[atomicNumber - 1], bounds.GetReducedFromTop(25.f).GetReducedFromBottom(30.f));
-
-    // Check for multiline name and draw name
-    std::string eName = ElementNames[atomicNumber - 1];
-    const size_t breakpoint{ eName.find("\n") };
-    if (breakpoint != std::string::npos)
-    {
-      g.DrawText(ElementIconText.WithSize(16).WithFGColor(col), (" " + eName.substr(0, breakpoint)).c_str(), bounds.GetFromBottom(25.f).GetFromTop(12.f));
-      g.DrawText(ElementIconText.WithSize(16).WithFGColor(col), eName.substr(breakpoint).c_str(), bounds.GetFromBottom(12.f).GetFromTop(12.f));
-    }
-    else
-      g.DrawText(ElementIconText.WithSize(16).WithFGColor(col), eName.c_str(), bounds.GetFromBottom(25.f).GetFromTop(12.f));
-    // Draw atomic number
-    g.DrawText(ElementIconText.WithSize(24).WithFGColor(col), std::to_string(atomicNumber).c_str(), bounds.GetFromTop(24.f));
-  }
-  
-  void OnMouseOver(float x, float y, const IMouseMod& mod)
-  {
-    if (x < mTableTLHC[0] || y < mTableTLHC[1])
-    {
-      mCurrentElementCoords = nullptr;
-      mCurrentElement = -1;
-      goto EndFunction;
-    }
-    float x_adj{ (x - mTableTLHC[0]) / mTableWidth };
-    float y_adj{ (y - mTableTLHC[1]) / mTableHeight };
-    int atomicNumber{ 1 };
-    for (auto e : ElementCoords)
-    {
-      // Check main table (excluding lanthanides and actinides)
-      if (e[0] < 7.)
-      {
-        if (static_cast<int>(y_adj * 7.f) == e[0] && static_cast<int>(x_adj * 18.f) == e[1])
-        {
-          mCurrentElementCoords = e;
-          mCurrentElement = atomicNumber;
-          goto EndFunction;
-        }
-      }
-      // Increment the current atomic number and reset the Current Element index and pointer
-      atomicNumber++;
-      mCurrentElementCoords = nullptr;
-      mCurrentElement = -1;
-    }
-    x_adj = (x - mLaTLHC[0]) / mLaAcWidth;
-    y_adj = (y - mLaTLHC[1]) / mLaAcHeight;
-    atomicNumber = 57;
-    if (x < mLaTLHC[0] || y < mLaTLHC[1])
-    {
-      mCurrentElementCoords = nullptr;
-      mCurrentElement = -1;
-      goto EndFunction;
-    }
-    // Check the lanthanide and actinide table
-    for (auto e : LaAcCoords)
-    {
-      if (static_cast<int>(y_adj * 2.f) == e[0] && static_cast<int>(x_adj * 15.f) == e[1])
-      {
-        mCurrentElementCoords = e;
-        mCurrentElement = atomicNumber;
-        break;
-      }
-      if (++atomicNumber > 71 && atomicNumber < 89)
-        atomicNumber = 89;
-      mCurrentElementCoords = nullptr;
-      mCurrentElement = -1;
-    }
-  EndFunction:
-    if (mCurrentElement > -1 && mIsDragging > -1)
-    {
-      mSelectedElements[mIsDragging] = mCurrentElement;
-    }
-    SetDirty(false);
-  }
-  
-  void OnMouseOut()
-  {
-  }
-
-  void OnMouseDrag(float x, float y, float dx, float dy, const IMouseMod& mod)
-  {
-    OnMouseOver(x, y, mod);
-  }
-
-  void OnMouseDown(float x, float y, const IMouseMod& mod)
-  {
-    for (int i{ 0 }; i < 2; ++i)
-    {
-      if (mCurrentElement == mSelectedElements[i])
-      {
-        mIsDragging = i;
-      }
-    }
-  }
-
-  void OnMouseUp(float x, float y, const IMouseMod& mod)
-  {
-    if (mIsDragging > -1)
-    {
-      // Send new wavetable value (param method)
-      SetValue(static_cast<double>(mSelectedElements[mIsDragging]) / 118., mIsDragging);
-
-      // Send new wavetable value (hidden param method)
-      double newTableIdx = static_cast<double>(mSelectedElements[mIsDragging]) / 118.;
-      GetUI()->GetDelegate()->SendArbitraryMsgFromUI(mIsDragging == 0 ? kMsgWavetable1Changed : kMsgWavetable2Changed, kCtrlTagPeriodicTable, sizeof(double), &newTableIdx);
-//      GetDelegate()->SendParameterValueFromUI(GetParamIdx(mIsDragging), static_cast<double>(mSelectedElements[mIsDragging] - 1) / 118.);
-//      GetDelegate()->OnParamChange(GetParamIdx(mIsDragging));
-    };
-    mIsDragging = -1;
-    SetDirty(false);
-  }
-  
-  void SetTableLoading(const bool isLoading, const int tableIdx)
-  {
-    mTableLoading[tableIdx] = isLoading;
-  }
+  void Draw(IGraphics& g);
+  void DrawElement(IGraphics& g, const IRECT& bounds, int atomicNumber, int idx);
+  void OnMouseOver(float x, float y, const IMouseMod& mod);
+  void OnMouseOut() {}
+  void OnMouseDrag(float x, float y, float dx, float dy, const IMouseMod& mod) { OnMouseOver(x, y, mod); }
+  void OnMouseDown(float x, float y, const IMouseMod& mod);
+  void OnMouseUp(float x, float y, const IMouseMod& mod);
+  void SetTableLoading(const bool isLoading, const int tableIdx) { mTableLoading[tableIdx] = isLoading; }
 
 protected:
   ISVG mSVG;
@@ -820,48 +463,7 @@ public:
     DrawLabel(g);
   }
 
-  void DrawWidget(IGraphics& g) override
-  {
-    const float cr = GetRoundedCornerRadius(mWidgetBounds);
-    const float ft = mStyle.frameThickness;
-    const float hft = ft / 2.f;
-
-    int nPaths = /*mStyle.drawShadows ? 2 :*/ 1;
-
-    auto b = mWidgetBounds.GetPadded(/*mStyle.drawShadows ? -mStyle.shadowOffset :*/ 0.f);
-
-    auto labelT = mLabelBounds.Empty() ? mRECT.MH() : mLabelBounds.T;
-    auto labelB = mLabelBounds.Empty() ? mRECT.MH() : mLabelBounds.B;
-    auto labelR = mLabelBounds.Empty() ? mRECT.MW() : mLabelBounds.R;
-    auto labelL = mLabelBounds.Empty() ? mRECT.MW() : mLabelBounds.L;
-
-    for (int i = 0; i < nPaths; i++)
-    {
-      const float offset = i == 0 ? 0.f : mStyle.shadowOffset;
-      g.PathClear();
-      // Path around label
-      g.PathMoveTo(labelL, b.T + hft - offset);
-      g.PathArc(labelL + cr, labelT + cr + hft - offset, cr, 270.f, 0.f);
-      g.PathArc(labelR - cr, labelT + cr + hft - offset, cr, 0.f, 90.f);
-      g.PathLineTo(labelR, b.T + hft - offset);
-      if (mActive)
-      {
-        // Path around control
-        g.PathArc(b.R - cr - hft - offset, b.T + cr + hft - offset, cr, 0.f, 90.f);
-        g.PathArc(b.R - cr - hft - offset, b.B - cr - hft - offset, cr, 90.f, 180.f);
-        g.PathArc(b.L + cr + hft - offset, b.B - cr - hft - offset, cr, 180.f, 270.f);
-        g.PathArc(b.L + cr + hft - offset, b.T + cr + hft - offset, cr, 270.f, 360.f);
-        g.PathLineTo(labelL, b.T + hft - offset);
-        g.PathFill(IPattern(GetColor(EVColor::kFG).WithOpacity(0.5)), IFillOptions(true), &mBlend);
-        g.PathStroke(mStyle.drawShadows ? GetColor(i == 0 ? kSH : kFR) : GetColor(kFR), ft);
-      }
-      else
-      {
-        g.PathFill(IPattern(GetColor(mMouseIsOverLabel ? EVColor::kHL : EVColor::kBG).WithOpacity(0.85)), IFillOptions(true), &mBlend);
-        g.PathStroke(mStyle.drawShadows ? GetColor(i == 0 ? kSH : kFR) : GetColor(kFR), ft);
-      }
-    }
-  }
+  void DrawWidget(IGraphics& g) override;
 
   void DrawLabel(IGraphics& g)
   {
