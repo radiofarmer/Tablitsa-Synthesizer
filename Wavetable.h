@@ -1,24 +1,15 @@
 #pragma once
 
-#include "IPlugPlatform.h"
-#include <ShlObj.h>
-#include <Shlwapi.h>
-#include <tchar.h>
-#include <string>
-
 
 //#define FFT
 #define FFT_MAX_SIZE 32768
 
-#if _DEBUG && !VST3_API
-#define WT_DIR "..\\resources\\data\\wavetables\\"
-#else
 #define USE_APPDATA_PATH
 #define WT_DIR "\\Tablitsa\\wavetables\\"
 #if VST3_API
-#include <locale>
-#include <codecvt>
-#endif
+typedef wchar_t pathchar_t;
+#else
+typedef char pathchar_t;
 #endif
 
 #define WT_SIZE 1024
@@ -26,23 +17,24 @@
 #define WT_MAX_DEFAULT 16384
 #define WT_MIN_DEFAULT 32
 
+#include "vectormath_exp.h"
+#include "fft.h"
 
 #include <cstdint>
 #include <fstream>
 #include <vector>
-#include <string>
 #include <cmath>
 #include <algorithm>
 #include <mutex>
 
-#include "vectormath_exp.h"
-#include "fft.h"
+#include <ShlObj.h>
+#include <Shlwapi.h>
+#include <tchar.h>
+#include <string>
+#include <locale>
+#include <codecvt>
 
-#include "Filter.h"
-#include "Oscillator.h"
-
-
-void fft_lp_filter(WDL_FFT_REAL* samples, const int length, int max_bin, int decimation=1)
+static void fft_lp_filter(WDL_FFT_REAL* samples, const int length, int max_bin, int decimation=1)
 {
   WDL_fft_init();
   WDL_real_fft(samples, length, 0);
@@ -106,7 +98,6 @@ class WtFile
     uint32_t oversampling;
     //uint32_t numLevels;
   };
-
 public:
 #ifndef USE_APPDATA_PATH
   WtFile(std::string fname) : mPath(WT_DIR + fname + ".wt")
@@ -119,7 +110,7 @@ public:
     constexpr int byteInc = 8;
     
 #ifdef USE_APPDATA_PATH
-    TCHAR szPath[MAX_PATH];
+    pathchar_t szPath[MAX_PATH];
     if (SUCCEEDED(SHGetFolderPath(NULL, CSIDL_APPDATA, NULL, 0, szPath)))
     {
       PathAppend(szPath, _T(WT_DIR));

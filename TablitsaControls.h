@@ -1,13 +1,18 @@
 #pragma once
-#include "Tablitsa.h"
 #include "PeriodicTable.h"
 #include "Modulation.h"
+
+#include "IGraphics.h"
+#include "IControls.h"
+
+BEGIN_IPLUG_NAMESPACE
+BEGIN_IGRAPHICS_NAMESPACE
 
 const IText TABLITSA_TEXT = IText().WithFGColor(COLOR_WHITE);
 const IVStyle TABLITSA_STYLE = IVStyle(DEFAULT_SHOW_LABEL,
   DEFAULT_SHOW_VALUE,
-  /* Background       Foreground      Pressed                   Frame            Highlight        Shadow           Extra 1          Extra 2          Extra 3        */
-  { DEFAULT_BGCOLOR, COLOR_DARK_GRAY, IColor(255, 225, 0, 190), DEFAULT_FRCOLOR, DEFAULT_HLCOLOR, DEFAULT_SHCOLOR, DEFAULT_X1COLOR, DEFAULT_X2COLOR, DEFAULT_X3COLOR },
+  /* Background       Foreground      Pressed                   Frame            Highlight    Shadow           Extra 1          Extra 2          Extra 3        */
+  { DEFAULT_BGCOLOR, COLOR_DARK_GRAY, IColor(255, 225, 0, 190), DEFAULT_FRCOLOR, COLOR_WHITE, DEFAULT_SHCOLOR, DEFAULT_X1COLOR, DEFAULT_X2COLOR, DEFAULT_X3COLOR },
   DEFAULT_LABEL_TEXT.WithFGColor(COLOR_WHITE),
   DEFAULT_VALUE_TEXT.WithFGColor(COLOR_WHITE),
   DEFAULT_HIDE_CURSOR,
@@ -35,9 +40,11 @@ const IVColorSpec knobColorSpec = IVColorSpec{
 
 const IVStyle modKnobStyle{ TABLITSA_STYLE.WithColors(knobColorSpec).WithLabelText(TABLITSA_STYLE.labelText.WithSize(17.f)) };
 
-const IVStyle toggleStyle{ TABLITSA_STYLE.WithDrawFrame(true).WithColor(EVColor::kFG, COLOR_TRANSPARENT).WithShowLabel(false) };
+const IVStyle toggleStyle{ TABLITSA_STYLE.WithDrawFrame(true).WithColor(EVColor::kFG, COLOR_TRANSPARENT).WithColor(EVColor::kHL, IColor(100, 220, 0, 180)).WithShowLabel(false) };
 
 const IText dropdownText{ DEFAULT_TEXT.WithFGColor(COLOR_WHITE) };
+
+const IVStyle pushButtonStyle{ TABLITSA_STYLE.WithLabelText(TABLITSA_STYLE.labelText.WithVAlign(EVAlign::Middle)).WithColor(EVColor::kHL, TABLITSA_STYLE.colorSpec.GetColor(EVColor::kPR).WithContrast(0.5)) };
 
 class TablitsaSliderControl : public IVSliderControl
 {
@@ -53,20 +60,7 @@ public:
     SetColor(EVColor::kX1, COLOR_WHITE);
   }
 
-  void DrawTrack(IGraphics& g, const IRECT& filledArea) override
-  {
-    const float extra = mHandleInsideTrack ? mHandleSize : 0.f;
-    const IRECT adjustedTrackBounds = mDirection == EDirection::Vertical ? mTrackBounds.GetVPadded(extra) : mTrackBounds.GetHPadded(extra);
-    // Padd the filled area less, to account for the asymmetric rectangular handle
-    const IRECT adjustedFillBounds = mDirection == EDirection::Vertical ? filledArea.GetVPadded(extra / 2.f) : filledArea.GetHPadded(extra / 2.f);
-    const float cr = GetRoundedCornerRadius(mTrackBounds);
-
-    g.FillRoundRect(GetColor(kSH), adjustedTrackBounds, cr, &mBlend);
-    g.FillRoundRect(GetColor(kX1), adjustedFillBounds, cr, &mBlend);
-
-    if (mStyle.drawFrame)
-      g.DrawRoundRect(GetColor(kFR), adjustedTrackBounds, cr, &mBlend, mStyle.frameThickness);
-  }
+  void DrawTrack(IGraphics& g, const IRECT& filledArea) override;
 
   void DrawHandle(IGraphics& g, const IRECT& bounds) override
   {
@@ -78,19 +72,9 @@ public:
 class ModSliderControl : public TablitsaSliderControl
 {
 public:
-  ModSliderControl(const IRECT& bounds, int paramIdx = kNoParameter, const char* label = "", const IVStyle& style = TABLITSA_STYLE.WithShowValue(true), bool valueIsEditable = false, EDirection dir = EDirection::Vertical, double gearing = DEFAULT_GEARING, float handleSize = 8.f, float trackSize = 2.f, bool handleInsideTrack = true) :
-    TablitsaSliderControl(bounds, paramIdx, label, style, valueIsEditable, dir, gearing, handleSize, trackSize, handleInsideTrack)
-  {
-    mShape = EVShape::Rectangle;
-    Toggle();
-    SetActionFunction([this](IControl* pControl) {
-      // Update control to whose parameter this slider is linked
-      IControl* pTarget = GetUI()->GetControl(mTarget);
-      if (pTarget)
-        pTarget->SetDirty();
-      });
-  }
-  void Toggle(int targetParam=kNoParameter)
+  ModSliderControl(const IRECT& bounds, int paramIdx = kNoParameter, const char* label = "", const IVStyle& style = TABLITSA_STYLE.WithShowValue(true), bool valueIsEditable = false, EDirection dir = EDirection::Vertical, double gearing = DEFAULT_GEARING, float handleSize = 8.f, float trackSize = 2.f, bool handleInsideTrack = true);
+
+  void Toggle(int targetParam=-1)
   {
     if (GetParamIdx() == kNoParameter)
     {
@@ -199,13 +183,6 @@ public:
     mBaseTrack(style.colorSpec.GetColor(EVColor::kFR))
   {
     GetMouseDblAsSingleClick();
-
-    SetActionFunction([this](IControl* pControl) {
-        if (mActive && GetActiveIdx() == GetParamIdx())
-          SetColor(kFG, GetColor(kPR));
-        else
-          SetColor(kFG, mDefaultColor);
-      });
   }
 
   /* Get modulator values from a different parameter. (For mutually-exclusive parameters) */
@@ -214,9 +191,17 @@ public:
     mModParamIdx = paramIdx + 1;
   }
 
+  void ColorSwap()
+  {
+    if (mActive && GetActiveIdx() == GetUI()->GetControlIdx(this))
+      SetColor(kFG, GetColor(kPR));
+    else
+      SetColor(kFG, mDefaultColor);
+  }
+
   void OnMouseDown(float x, float y, const IMouseMod& mod) override
   {
-    if (!mod.L)
+    if (!mod.L || (mod.L && mod.A))
     {
       LoadModParams();
       mMouseDown = !mMouseDown;
@@ -242,7 +227,7 @@ public:
   void LoadModParams()
   {
     // TODO make a list of Control Tags that can be looped through
-    if (mActive && GetActiveIdx() == GetParamIdx())
+    if (mActive && GetActiveIdx() == GetUI()->GetControlIdx(this))
     {
       for (int i{ kCtrlTagEnv1Depth }; i <= kCtrlTagRndDepth; ++i)
       {
@@ -283,7 +268,7 @@ public:
 
     IRECT knobHandleBounds = mWidgetBounds.GetCentredInside((widgetRadius - mTrackToHandleDistance) * 2.f);
     const float angle = mAngle1 + (static_cast<float>(GetValue()) * (mAngle2 - mAngle1));
-    DrawPressableShape(g, EVShape::Ellipse, knobHandleBounds, mActive && (GetActiveIdx() == GetParamIdx()), mMouseIsOver, IsDisabled());
+    DrawPressableShape(g, EVShape::Ellipse, knobHandleBounds, mActive && (GetActiveIdx() == GetUI()->GetControlIdx(this)), mMouseIsOver, IsDisabled());
     DrawIndicatorTrack(g, angle, cx, cy, widgetRadius);
     DrawPointer(g, angle, cx, cy, knobHandleBounds.W() / 2.f);
   }
@@ -401,7 +386,7 @@ public:
 
   inline void SetActiveIdx(bool isActive)
   {
-    return dynamic_cast<Tablitsa*>(GetDelegate())->SetActiveModIdx(isActive ? GetParamIdx() : -1);
+    return dynamic_cast<Tablitsa*>(GetDelegate())->SetActiveModIdx(isActive ? GetUI()->GetControlIdx(this) : -1);
   }
 
 protected:
@@ -494,7 +479,7 @@ public:
   
   void Draw(IGraphics& g)
   {
-    g.FillRoundRect(IColor(255, 20, 0, 45), mRECT);
+    //g.FillRoundRect(IColor(255, 20, 0, 45), mRECT);
     // Highlight box occupied by mouse
     if (mCurrentElementCoords)
     {
@@ -700,74 +685,6 @@ protected:
   IBitmap mBitmap;
 };
 
-#define GROUP_BOX_ROUNDING 0.1f
-
-const IVStyle TABLITSA_GROUPBOX_STYLE = TABLITSA_STYLE.WithRoundness(GROUP_BOX_ROUNDING).WithColor(EVColor::kFR, COLOR_WHITE).WithLabelText(DEFAULT_LABEL_TEXT.WithFGColor(IColor(255, 220, 200, 0))).WithDrawShadows(false);
-
-class TablitsaVGroupControl : public IVGroupControl
-{
-public:
-  TablitsaVGroupControl(const char* label="", const char* groupName="", float padL=0.f, float padT=0.f, float padR=0.f, float padB=0.f, const IVStyle& style = TABLITSA_GROUPBOX_STYLE) :
-    IVGroupControl(label, groupName, padL, padT, padR, padB, style)
-  {
-    mLabelOffset = 0.f;
-  }
-
-  TablitsaVGroupControl(const IRECT& bounds, const char* label="", float labelOffset=0.f, const IVStyle& style=TABLITSA_GROUPBOX_STYLE) :
-    IVGroupControl(bounds, label, labelOffset, style) {}
-};
-
-class TablitsaVTabBox : public TablitsaVGroupControl
-{
-public:
-  TablitsaVTabBox(const IRECT& bounds, const char* label = "", const IVStyle& style = TABLITSA_GROUPBOX_STYLE) :
-    TablitsaVGroupControl(bounds, label, 0.f, style)
-  {
-  }
-
-  void OnResize() override
-  {
-    TablitsaVGroupControl::OnResize();
-    IRECT textBounds;
-    GetUI()->MeasureText(mText, mLabelStr.Get(), textBounds);
-    mWidgetBounds.ReduceFromTop(textBounds.H() / 2.f);
-  }
-
-  void DrawWidget(IGraphics& g) override
-  {
-    const float cr = GetRoundedCornerRadius(mWidgetBounds);
-    const float ft = mStyle.frameThickness;
-    const float hft = ft / 2.f;
-
-    int nPaths = /*mStyle.drawShadows ? 2 :*/ 1;
-
-    auto b = mWidgetBounds.GetPadded(/*mStyle.drawShadows ? -mStyle.shadowOffset :*/ 0.f);
-
-    auto labelT = mLabelBounds.Empty() ? mRECT.MH() : mLabelBounds.T;
-    auto labelB = mLabelBounds.Empty() ? mRECT.MH() : mLabelBounds.B;
-    auto labelR = mLabelBounds.Empty() ? mRECT.MW() : mLabelBounds.R;
-    auto labelL = mLabelBounds.Empty() ? mRECT.MW() : mLabelBounds.L;
-
-    for (int i = 0; i < nPaths; i++)
-    {
-      const float offset = i == 0 ? 0.f : mStyle.shadowOffset;
-      g.PathClear();
-      // Path around label
-      g.PathMoveTo(labelL, b.T + hft - offset);
-      g.PathArc(labelL + cr, labelT + cr + hft - offset, cr, 270.f, 0.f);
-      g.PathArc(labelR - cr, labelT + cr + hft - offset, cr, 0.f, 90.f);
-      g.PathLineTo(labelR, b.T + hft - offset);
-      // Path around control
-      g.PathArc(b.R - cr - hft - offset, b.T + cr + hft - offset, cr, 0.f, 90.f);
-      g.PathArc(b.R - cr - hft - offset, b.B - cr - hft - offset, cr, 90.f, 180.f);
-      g.PathArc(b.L + cr + hft - offset, b.B - cr - hft - offset, cr, 180.f, 270.f);
-      g.PathArc(b.L + cr + hft - offset, b.T + cr + hft - offset, cr, 270.f, 360.f);
-      g.PathLineTo(labelL, b.T + hft - offset);
-      g.PathStroke(mStyle.drawShadows ? GetColor(i == 0 ? kSH : kFR) : GetColor(kFR), ft);
-    }
-  }
-};
-
 template <int MAXNC = 1>
 class SequencerControl final : public IVMultiSliderControl<MAXNC>
 {
@@ -776,7 +693,7 @@ public:
     IVMultiSliderControl<MAXNC>(bounds, label, style, nSteps, dir)
   {
     SetColor(kX1, GetColor(kPR)); // Set active step color to the pressed step color
-    SetColor(kHL, GetColor(kPR).WithOpacity(0.2)); // Background highlight
+    SetColor(kHL, GetColor(kPR).WithOpacity(0.2f)); // Background highlight
   }
 
   void DrawWidget(IGraphics& g) override
@@ -785,7 +702,7 @@ public:
     int nSteps = mNSteps + mZeroValueStepHasBounds;
 
     // Step labels
-    IText labelText(DEFAULT_TEXT.WithFGColor(mLabelColor));
+    IText labelText(mStyle.labelText);
     IRECT textBounds;
     g.MeasureText(labelText, "10", textBounds);
     const float stepHeight = IVTrackControlBase::mTrackBounds.Get()[0].H() / nSteps;
@@ -825,45 +742,273 @@ private:
   const IColor mLabelColor = mStepMarkerColor.WithOpacity(0.75);
 };
 
-template<int MaxTabs = 4>
-class TablitsaEffectBankControl : public IControl
+#define GROUP_BOX_ROUNDING 0.1f
+
+const IVStyle TABLITSA_GROUPBOX_STYLE = TABLITSA_STYLE.WithRoundness(GROUP_BOX_ROUNDING).WithColor(EVColor::kFR, COLOR_WHITE).WithLabelText(DEFAULT_LABEL_TEXT.WithFGColor(IColor(255, 220, 200, 0))).WithDrawShadows(false);
+
+class TablitsaVGroupControl : public IVGroupControl
 {
 public:
-  TablitsaEffectBankControl(const IRECT& bounds, int paramIdx, std::initializer_list<char *> labels) : 
-    IControl(bounds, paramIdx)
+  TablitsaVGroupControl(const char* label = "", const char* groupName = "", float padL = 0.f, float padT = 0.f, float padR = 0.f, float padB = 0.f, const IVStyle& style = TABLITSA_GROUPBOX_STYLE) :
+    IVGroupControl(label, groupName, padL, padT, padR, padB, style)
   {
-    for (auto l : labels)
-    {
-      int nLabels = mLabels.GetSize();
-      if (nLabels >= MaxTabs)
-        break;
+    mLabelOffset = 0.f;
+  }
 
-      mLabels.Resize(nLabels + 1);
-      WDL_String* pStr = mLabels.Get() + nLabels;
-      pStr->Set(l, MaxLabelLength);
+  TablitsaVGroupControl(const IRECT& bounds, const char* label = "", float labelOffset = 0.f, const IVStyle& style = TABLITSA_GROUPBOX_STYLE) :
+    IVGroupControl(bounds, label, labelOffset, style) {}
+};
+
+#define MAX_TAB_LABEL_LENGTH 32
+
+class TablitsaVTabBox : public TablitsaVGroupControl
+{
+public:
+  TablitsaVTabBox(const IRECT& bounds, const char* label = "", const char* groupName = "", bool active = false, float labelOffset = 0.f, const IVStyle& style = TABLITSA_GROUPBOX_STYLE) :
+    TablitsaVGroupControl(bounds, label, labelOffset, style), mActive(active)
+  {
+    mIgnoreMouse = false;
+    mGroupName.Set(groupName, MAX_PARAM_GROUP_LEN);
+  }
+
+  void OnInit() override {}
+
+  void OnResize() override
+  {
+    TablitsaVGroupControl::OnResize();
+    IRECT textBounds;
+    GetUI()->MeasureText(mText, mLabelStr.Get(), textBounds);
+    mWidgetBounds.ReduceFromTop(textBounds.H() / 1.5);
+  }
+
+  void SetActive(bool active = true);
+
+  const IRECT& GetLabelBounds() const
+  {
+    return mLabelBounds;
+  }
+
+  const bool IsActive() const
+  {
+    return mActive;
+  }
+
+  const bool MouseIsOverLabel() const
+  {
+    return mMouseIsOverLabel;
+  }
+
+  void OnMouseOverLabel(float x, float y, const IMouseMod& mod)
+  {
+    bool prev = mMouseIsOverLabel;
+    mMouseIsOverLabel = true;
+    if (prev == false)
+      SetDirty(false);
+  }
+
+  void OnMouseOutFromLabel()
+  {
+    bool prev = mMouseIsOverLabel;
+    mMouseIsOverLabel = false;
+    if (prev == true)
+      SetDirty(false);
+  }
+
+  void Draw(IGraphics& g) override
+  {
+    DrawWidget(g);
+    DrawLabel(g);
+  }
+
+  void DrawWidget(IGraphics& g) override
+  {
+    const float cr = GetRoundedCornerRadius(mWidgetBounds);
+    const float ft = mStyle.frameThickness;
+    const float hft = ft / 2.f;
+
+    int nPaths = /*mStyle.drawShadows ? 2 :*/ 1;
+
+    auto b = mWidgetBounds.GetPadded(/*mStyle.drawShadows ? -mStyle.shadowOffset :*/ 0.f);
+
+    auto labelT = mLabelBounds.Empty() ? mRECT.MH() : mLabelBounds.T;
+    auto labelB = mLabelBounds.Empty() ? mRECT.MH() : mLabelBounds.B;
+    auto labelR = mLabelBounds.Empty() ? mRECT.MW() : mLabelBounds.R;
+    auto labelL = mLabelBounds.Empty() ? mRECT.MW() : mLabelBounds.L;
+
+    for (int i = 0; i < nPaths; i++)
+    {
+      const float offset = i == 0 ? 0.f : mStyle.shadowOffset;
+      g.PathClear();
+      // Path around label
+      g.PathMoveTo(labelL, b.T + hft - offset);
+      g.PathArc(labelL + cr, labelT + cr + hft - offset, cr, 270.f, 0.f);
+      g.PathArc(labelR - cr, labelT + cr + hft - offset, cr, 0.f, 90.f);
+      g.PathLineTo(labelR, b.T + hft - offset);
+      if (mActive)
+      {
+        // Path around control
+        g.PathArc(b.R - cr - hft - offset, b.T + cr + hft - offset, cr, 0.f, 90.f);
+        g.PathArc(b.R - cr - hft - offset, b.B - cr - hft - offset, cr, 90.f, 180.f);
+        g.PathArc(b.L + cr + hft - offset, b.B - cr - hft - offset, cr, 180.f, 270.f);
+        g.PathArc(b.L + cr + hft - offset, b.T + cr + hft - offset, cr, 270.f, 360.f);
+        g.PathLineTo(labelL, b.T + hft - offset);
+        g.PathFill(IPattern(GetColor(EVColor::kFG).WithOpacity(0.5)), IFillOptions(true), &mBlend);
+        g.PathStroke(mStyle.drawShadows ? GetColor(i == 0 ? kSH : kFR) : GetColor(kFR), ft);
+      }
+      else
+      {
+        g.PathFill(IPattern(GetColor(mMouseIsOverLabel ? EVColor::kHL : EVColor::kBG).WithOpacity(0.85)), IFillOptions(true), &mBlend);
+        g.PathStroke(mStyle.drawShadows ? GetColor(i == 0 ? kSH : kFR) : GetColor(kFR), ft);
+      }
     }
   }
 
-  void TabChanged()
+  void DrawLabel(IGraphics& g)
   {
-
+    IText labelText = mStyle.labelText.WithFGColor(mActive ? COLOR_WHITE : mMouseIsOverLabel ? GetColor(EVColor::kFG) : COLOR_WHITE.WithOpacity(0.8));
+    if (mLabelBounds.H() && mStyle.showLabel)
+    {
+      IBlend blend = mControl->GetBlend();
+      g.DrawText(labelText, mLabelStr.Get(), mLabelBounds, &blend);
+    }
   }
+
+  void SetGroupName(const char* newGroupName);
+
+protected:
+  bool mActive;
+  bool mMouseIsOverLabel{ false };
+};
+
+class TablitsaEffectBankControl : public IControl
+{
+  struct TabText
+  {
+    char mText[MAX_TAB_LABEL_LENGTH];
+  };
+
+public:
+  TablitsaEffectBankControl(const IRECT& bounds, std::initializer_list<char*> labels, std::initializer_list<char*> groupNames = { "" }, const IVStyle& style = TABLITSA_GROUPBOX_STYLE, const int maxTabs = 10);
+
+  void OnMouseDown(float x, float y, const IMouseMod& mod) override
+  {
+    for (int i{ 0 }; i < mMaxTabs; ++i)
+    {
+      if (mTabs[i])
+      {
+        TablitsaVTabBox* tab = dynamic_cast<TablitsaVTabBox*>(mTabs[i]);
+        if (!tab->IsActive() && tab->GetLabelBounds().Contains(x, y))
+        {
+          TabChanged(i);
+        }
+      }
+    }
+  }
+
+  void OnMouseOver(float x, float y, const IMouseMod& mod) override
+  {
+    for (int i{ 0 }; i < mMaxTabs; ++i)
+    {
+      if (mTabs[i])
+      {
+        TablitsaVTabBox* tab = dynamic_cast<TablitsaVTabBox*>(mTabs[i]);
+        if (!tab->IsActive() && tab->GetLabelBounds().Contains(x, y))
+        {
+          tab->OnMouseOverLabel(x, y, mod);
+        }
+        else
+          tab->OnMouseOutFromLabel();
+      }
+    }
+  }
+
+  void OnMouseOut() override
+  {
+    for (int i{ 0 }; i < mMaxTabs; ++i)
+    {
+      if (mTabs[i])
+      {
+        TablitsaVTabBox* tab = dynamic_cast<TablitsaVTabBox*>(mTabs[i]);
+        if (!tab->IsActive())
+        {
+          tab->OnMouseOutFromLabel();
+        }
+      }
+    }
+  }
+
+  void Draw(IGraphics& g) override {}
+
+  void TabChanged(int newIdx);
 
   void OnAttached() override
   {
     const int nLabels = mLabels.GetSize();
-    const float tabWidth = mTabBitmap.W();
+    float labelOffset = 0.f;
     for (int i{ 0 }; i < nLabels; ++i)
     {
-      const IRECT tabBounds{mRECT.L + i * tabWidth, mRECT.T, mRECT.L + (i + 1) * tabWidth, mRECT.T + mTabBitmap.H()};
-      mTabs[i] = new TablitsaVTabBox(mRECT, mLabels.Get()[i].Get())
+      mTabs[i] = GetUI()->AttachControl(new TablitsaVTabBox(IRECT(mRECT), mLabels.Get()[i].mText, mGroups.Get()[i].mText, i==0, labelOffset, mStyle));
+      labelOffset += dynamic_cast<TablitsaVTabBox*>(mTabs[i])->GetLabelBounds().W();
+      // TODO: allow tabs to overlap if they don't all fit in the available space
     }
   }
 
-private:
-  WDL_TypedBuf<WDL_String> mLabels;
-  static const int MaxLabelLength{ 10 };
+  /* TablitsaEffectsBankControl */
+  void SetTabGroup(int tabIdx, const char* newGroupName)
+  {
+    dynamic_cast<TablitsaVTabBox*>(mTabs[tabIdx])->SetGroupName(newGroupName);
+  }
 
-  IBitmap mTabBitmap;
-  TablitsaVTabBox* mTabs[MaxTabs];
+private:
+  const int mMaxTabs{ 10 };
+  int MaxLabelLength{ 20 };
+  WDL_TypedBuf<TabText> mLabels;
+  WDL_TypedBuf<TabText> mGroups;
+
+  IVStyle mStyle;
+  IControl* mTabs[10]{ nullptr }; // Needs to be an IControl pointer in order to attach (or maybe you can down-cast to IControl*?)
 };
+
+class DropdownListControl : public ICaptionControl
+{
+public:
+  DropdownListControl(const IRECT& bounds, std::initializer_list<char*> options, const IText& text = TABLITSA_TEXT, const IColor& bgColor = DEFAULT_BGCOLOR, bool showLabel = false);
+
+  void Draw(IGraphics& g) override;
+  void OnResize() override;
+  void OnMouseDown(float x, float y, const IMouseMod& mod) override;
+
+  /* DropdownList Control */
+  int GetCurrentIndex() { return mCurrentIdx; }
+  const char* GetSelectedString() { return mOptions[mCurrentIdx].c_str(); }
+
+  void AttachPopupMenu()
+  {
+    mMenu = new IPopupMenuControl();
+    GetUI()->AttachControl(mMenu);
+  }
+
+protected:
+  std::vector<std::string> mOptions;
+  IPopupMenu mPopupMenu;
+  IPopupMenuControl* mMenu;
+  int mCurrentIdx{ 0 };
+};
+
+class PresetSelector : public ICaptionControl
+{
+public:
+  PresetSelector(const IRECT& bounds, IPopupMenuControl* menu, std::initializer_list<char*> defaultPresets = { "" });
+
+  void LoadUserPresets(std::initializer_list<char*> userPresets);
+  void Draw(IGraphics& g) override;
+
+protected:
+  std::vector<std::string> mDefaultPresets;
+  std::vector<std::string> mUserPresets;
+  std::vector<std::string> mAllPresets;
+  IPopupMenuControl* mMenu;
+};
+
+END_IPLUG_NAMESPACE
+END_IGRAPHICS_NAMESPACE

@@ -1,8 +1,9 @@
 
 #include "Tablitsa.h"
 #include "IPlug_include_in_plug_src.h"
-#include "LFO.h"
-#include "TablitsaControls.h"
+#include "TablitsaUIFunctions.h"
+
+#include <atlstr.h>
 
 #define UI_NROWS 4
 #define UI_NCOLS 3
@@ -11,15 +12,14 @@
 #define ENVELOPE_PARTITION 0.8
 #define LFO_PARTITION 1.4
 
+// Load/save presets with file dialog or internal controls
+#define LOAD_WITH_DIALOG 1
+
 Tablitsa::Tablitsa(const InstanceInfo& info)
 : Plugin(info, MakeConfig(kNumParams, kNumPresets))
 {
   /*Master Controls*/
-#ifdef VST3_API
-  GetParam(kParamGain)->InitDouble("Gain", 25., 0., 100.0, 0.01, "%", IParam::kFlagsNone, "Master");
-#else
   GetParam(kParamGain)->InitGain("Gain", -24., -72., 0.);
-#endif
   GetParam(kParamPan)->InitDouble("Pan", 0., -90., 90., 0.5, "°");
   GetParam(kParamNoteGlideTime)->InitMilliseconds("Note Glide Time", 0., 0.0, 3000.);
   GetParam(kParamNoteGlideRate)->InitDouble("Note Glide Rate", 12., 0.5, 128., 0.1, "St/s");
@@ -209,17 +209,17 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
   GetParam(kParamWavetable1BendVel)->InitDouble("WT1 Bend Vel Mod", 0., -1., 1., 0.01);
   GetParam(kParamWavetable1BendKTk)->InitDouble("WT1 Bend KTk Mod", 0., -1., 1., 0.01);
   GetParam(kParamWavetable1BendRnd)->InitDouble("WT1 Bend Rnd Mod", 0., -1., 1., 0.01);
-  // Wavetable 1 Sub
-  GetParam(kParamWavetable1Sub)->InitDouble("WT1 Sub", 0., 0., 1., 0.01);
-  GetParam(kParamWavetable1SubEnv1)->InitDouble("WT1 Sub Env1 Mod", 0., -1., 1., 0.01);
-  GetParam(kParamWavetable1SubEnv2)->InitDouble("WT1 Sub Env2 Mod", 0., -1., 1., 0.01);
-  GetParam(kParamWavetable1SubAmpEnv)->InitDouble("WT1 Sub SubEnv Mod", 0., -1., 1., 0.01);
-  GetParam(kParamWavetable1SubLFO1)->InitDouble("WT1 Sub LFO1 Mod", 0., -1., 1., 0.01);
-  GetParam(kParamWavetable1SubLFO2)->InitDouble("WT1 Sub LFO2 Mod", 0., -1., 1., 0.01);
-  GetParam(kParamWavetable1SubSeq)->InitDouble("WT1 Sub Seq Mod", 0., -1., 1., 0.01);
-  GetParam(kParamWavetable1SubVel)->InitDouble("WT1 Sub Vel Mod", 0., -1., 1., 0.01);
-  GetParam(kParamWavetable1SubKTk)->InitDouble("WT1 Sub KTk Mod", 0., -1., 1., 0.01);
-  GetParam(kParamWavetable1SubRnd)->InitDouble("WT1 Sub Rnd Mod", 0., -1., 1., 0.01);
+  // Wavetable 1 Formant
+  GetParam(kParamWavetable1Formant)->InitDouble("WT1 Formant", 1., 0., 1., 0.01);
+  GetParam(kParamWavetable1FormantEnv1)->InitDouble("WT1 Formant Env1 Mod", 0., -1., 1., 0.01);
+  GetParam(kParamWavetable1FormantEnv2)->InitDouble("WT1 Formant Env2 Mod", 0., -1., 1., 0.01);
+  GetParam(kParamWavetable1FormantAmpEnv)->InitDouble("WT1 Formant FormantEnv Mod", 0., -1., 1., 0.01);
+  GetParam(kParamWavetable1FormantLFO1)->InitDouble("WT1 Formant LFO1 Mod", 0., -1., 1., 0.01);
+  GetParam(kParamWavetable1FormantLFO2)->InitDouble("WT1 Formant LFO2 Mod", 0., -1., 1., 0.01);
+  GetParam(kParamWavetable1FormantSeq)->InitDouble("WT1 Formant Seq Mod", 0., -1., 1., 0.01);
+  GetParam(kParamWavetable1FormantVel)->InitDouble("WT1 Formant Vel Mod", 0., -1., 1., 0.01);
+  GetParam(kParamWavetable1FormantKTk)->InitDouble("WT1 Formant KTk Mod", 0., -1., 1., 0.01);
+  GetParam(kParamWavetable1FormantRnd)->InitDouble("WT1 Formant Rnd Mod", 0., -1., 1., 0.01);
   // Wavetable 1 Amp
   GetParam(kParamWavetable1Amp)->InitDouble("WT1 Amp", 0.5, 0., 1., 0.01);
   GetParam(kParamWavetable1AmpEnv1)->InitDouble("WT1 Amp Env1 Mod", 0., -1., 1., 0.01);
@@ -265,17 +265,17 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
   GetParam(kParamWavetable2BendVel)->InitDouble("WT2 Bend Vel Mod", 0., -1., 1., 0.01);
   GetParam(kParamWavetable2BendKTk)->InitDouble("WT2 Bend KTk Mod", 0., -1., 1., 0.01);
   GetParam(kParamWavetable2BendRnd)->InitDouble("WT2 Bend Rnd Mod", 0., -1., 1., 0.01);
-  // Wavetable 2 Sub
-  GetParam(kParamWavetable2Sub)->InitDouble("WT2 Sub", 0., 0., 1., 0.01);
-  GetParam(kParamWavetable2SubEnv1)->InitDouble("WT2 Sub Env1 Mod", 0., -1., 1., 0.01);
-  GetParam(kParamWavetable2SubEnv2)->InitDouble("WT2 Sub Env2 Mod", 0., -1., 1., 0.01);
-  GetParam(kParamWavetable2SubAmpEnv)->InitDouble("WT2 Sub SubEnv Mod", 0., -1., 1., 0.01);
-  GetParam(kParamWavetable2SubLFO1)->InitDouble("WT2 Sub LFO1 Mod", 0., -1., 1., 0.01);
-  GetParam(kParamWavetable2SubLFO2)->InitDouble("WT2 Sub LFO2 Mod", 0., -1., 1., 0.01);
-  GetParam(kParamWavetable2SubSeq)->InitDouble("WT2 Sub Seq Mod", 0., -1., 1., 0.01);
-  GetParam(kParamWavetable2SubVel)->InitDouble("WT2 Sub Vel Mod", 0., -1., 1., 0.01);
-  GetParam(kParamWavetable2SubKTk)->InitDouble("WT2 Sub KTk Mod", 0., -1., 1., 0.01);
-  GetParam(kParamWavetable2SubRnd)->InitDouble("WT2 Sub Rnd Mod", 0., -1., 1., 0.01);
+  // Wavetable 2 Formant
+  GetParam(kParamWavetable2Formant)->InitDouble("WT2 Formant", 1., 0., 1., 0.01);
+  GetParam(kParamWavetable2FormantEnv1)->InitDouble("WT2 Formant Env1 Mod", 0., -1., 1., 0.01);
+  GetParam(kParamWavetable2FormantEnv2)->InitDouble("WT2 Formant Env2 Mod", 0., -1., 1., 0.01);
+  GetParam(kParamWavetable2FormantAmpEnv)->InitDouble("WT2 Formant FormantEnv Mod", 0., -1., 1., 0.01);
+  GetParam(kParamWavetable2FormantLFO1)->InitDouble("WT2 Formant LFO1 Mod", 0., -1., 1., 0.01);
+  GetParam(kParamWavetable2FormantLFO2)->InitDouble("WT2 Formant LFO2 Mod", 0., -1., 1., 0.01);
+  GetParam(kParamWavetable2FormantSeq)->InitDouble("WT2 Formant Seq Mod", 0., -1., 1., 0.01);
+  GetParam(kParamWavetable2FormantVel)->InitDouble("WT2 Formant Vel Mod", 0., -1., 1., 0.01);
+  GetParam(kParamWavetable2FormantKTk)->InitDouble("WT2 Formant KTk Mod", 0., -1., 1., 0.01);
+  GetParam(kParamWavetable2FormantRnd)->InitDouble("WT2 Formant Rnd Mod", 0., -1., 1., 0.01);
   // Wavetable 2 Amp
   GetParam(kParamWavetable2Amp)->InitDouble("WT2 Amp", 0.5, 0., 1., 0.01);
   GetParam(kParamWavetable2AmpEnv1)->InitDouble("WT2 Amp Env1 Mod", 0., -1., 1., 0.01);
@@ -306,7 +306,7 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
   GetParam(kParamPhaseModFreqKTk)->InitDouble("Phase Mod Frequency KTk Mod", 0., -1., 1., 0.01);
   GetParam(kParamPhaseModFreqRnd)->InitDouble("Phase Mod Frequency Rnd Mod", 0., -1., 1., 0.01);
   // Phase Mod Amount
-  GetParam(kParamPhaseModAmount)->InitPercentage("Phase Modulator Amount", 25., 0., 100., 1.);
+  GetParam(kParamPhaseModAmount)->InitPercentage("Phase Modulator Amount", 25., 0., 100.);
   GetParam(kParamPhaseModAmountEnv1)->InitDouble("Phase Mod Depth Env1 Mod", 0., -1., 1., 0.01);
   GetParam(kParamPhaseModAmountEnv2)->InitDouble("Phase Mod Depth Env2 Mod", 0., -1., 1., 0.01);
   GetParam(kParamPhaseModAmountAmpEnv)->InitDouble("Phase Mod Depth AmpEnv Mod", 0., -1., 1., 0.01);
@@ -328,8 +328,8 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
   GetParam(kParamRingModFreqKTk)->InitDouble("Ring Mod Frequency KTk Mod", 0., -1., 1., 0.01);
   GetParam(kParamRingModFreqRnd)->InitDouble("Ring Mod Frequency Rnd Mod", 0., -1., 1., 0.01);
   // Ring Mod Amount
-  GetParam(kParamRingModAmount)->InitPercentage("Ring Modulator Amount", 25., 0., 100., 1.);
-  GetParam(kParamRingModAmount)->InitPercentage("Ring Modulator Amount", 25., 0., 100., 1.);
+  GetParam(kParamRingModAmount)->InitPercentage("Ring Modulator Amount", 25., 0., 100.);
+  GetParam(kParamRingModAmount)->InitPercentage("Ring Modulator Amount", 25., 0., 100.);
   GetParam(kParamRingModAmountEnv1)->InitDouble("Ring Mod Depth Env1 Mod", 0., -1., 1., 0.01);
   GetParam(kParamRingModAmountEnv2)->InitDouble("Ring Mod Depth Env2 Mod", 0., -1., 1., 0.01);
   GetParam(kParamRingModAmountAmpEnv)->InitDouble("Ring Mod Depth AmpEnv Mod", 0., -1., 1., 0.01);
@@ -421,22 +421,37 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
   GetParam(kParamFilter2Delay)->InitInt("Filter 2 Delay", 8, 1, 512);
 
   // Effect Parameters
-  GetParam(kParamDelayTimeLMilliseconds)->InitDouble("Stereo Delay Time L (ms)", 100., 1., 5000., 1., "ms", IParam::kFlagsNone, "Delay", IParam::ShapePowCurve(3.));
-  GetParam(kParamDelayTimeRMilliseconds)->InitDouble("Stereo Delay Time R (ms)", 100., 1., 5000., 1., "ms", IParam::kFlagsNone, "Delay", IParam::ShapePowCurve(3.));
-  GetParam(kParamDelayTimeLBeats)->InitEnum("Stereo Delay Time L (tempo)", LFO<>::k8th, { DELAY_TEMPODIV_VALIST });
-  GetParam(kParamDelayTimeRBeats)->InitEnum("Stereo Delay Time R (tempo)", LFO<>::k8th, { DELAY_TEMPODIV_VALIST });
-  GetParam(kParamDelayTimeMode)->InitBool("Delay Tempo Sync", false);
-  GetParam(kParamDelayFeedback)->InitPercentage("Delay Feedback");
-  GetParam(kParamDelayMix)->InitPercentage("Delay Mix", 0.);
+  //GetParam(kParamEffect1Param1)->InitDouble("Effect 1 Parameter 1", 100., 1., 5000., 1., "ms", IParam::kFlagsNone, "Effect1", IParam::ShapePowCurve(3.));
+  //GetParam(kParamEffect1Param2)->InitDouble("Effect 1 Parameter 2", 100., 1., 5000., 1., "ms", IParam::kFlagsNone, "Effect1", IParam::ShapePowCurve(3.));
+  GetParam(kParamEffect1Param1)->InitPercentage("Effect 1 Parameter 1", 0.);
+  GetParam(kParamEffect1Param2)->InitPercentage("Effect 1 Parameter 2", 0.);
+  GetParam(kParamEffect1Param3)->InitPercentage("Effect 1 Parameter 3", 0.);
+  GetParam(kParamEffect1Param4)->InitPercentage("Effect 1 Parameter 4", 0.);
+  GetParam(kParamEffect1Param5)->InitBool("Effect 1 Parameter 5", false);
+  GetParam(kParamEffect1Param6)->InitBool("Effect 1 Parameter 6", false);
 
-#ifndef VST3_API
-#define KEYBOARD_HEIGHT 150.f
-#else
+  GetParam(kParamEffect2Param1)->InitPercentage("Effect 2 Parameter 1", 0.);
+  GetParam(kParamEffect2Param2)->InitPercentage("Effect 2 Parameter 2", 0.);
+  GetParam(kParamEffect2Param3)->InitPercentage("Effect 2 Parameter 3", 0.);
+  GetParam(kParamEffect2Param4)->InitPercentage("Effect 2 Parameter 4", 0.);
+  GetParam(kParamEffect2Param5)->InitBool("Effect 2 Parameter 5", false);
+  GetParam(kParamEffect2Param6)->InitBool("Effect 2 Parameter 6", false);
+
+  GetParam(kParamEffect3Param1)->InitPercentage("Effect 3 Parameter 1", 0.);
+  GetParam(kParamEffect3Param2)->InitPercentage("Effect 3 Parameter 2", 0.);
+  GetParam(kParamEffect3Param3)->InitPercentage("Effect 3 Parameter 3", 0.);
+  GetParam(kParamEffect3Param4)->InitPercentage("Effect 3 Parameter 4", 0.);
+  GetParam(kParamEffect3Param5)->InitBool("Effect 3 Parameter 5", false);
+  GetParam(kParamEffect3Param6)->InitBool("Effect 3 Parameter 6", false);
+
+#if VST3_API
 #define KEYBOARD_HEIGHT 0.f
+#else
+#define KEYBOARD_HEIGHT 150.f
 #endif
 #if IPLUG_EDITOR // http://bit.ly/2S64BDd
   mMakeGraphicsFunc = [&]() {
-    return MakeGraphics(*this, PLUG_WIDTH, (int)(PLUG_HEIGHT + KEYBOARD_HEIGHT), PLUG_FPS, GetScaleForScreen(PLUG_WIDTH, PLUG_HEIGHT + KEYBOARD_HEIGHT));
+    return MakeGraphics(*this, PLUG_WIDTH, (int)(PLUG_HEIGHT + KEYBOARD_HEIGHT), PLUG_FPS, GetScaleForScreen((int)(PLUG_WIDTH), (int)(PLUG_HEIGHT + KEYBOARD_HEIGHT)));
   };
   mLayoutFunc = [&](IGraphics* pGraphics) {
 
@@ -451,15 +466,17 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
 
     //    pGraphics->EnableLiveEdit(true);
     pGraphics->LoadFont("Roboto-Regular", ROBOTO_FN);
-    const IRECT b = pGraphics->GetBounds().GetPadded(-10.f);
+    constexpr float plugBorders = 10.f;
+    const IRECT b = pGraphics->GetBounds().GetPadded(-plugBorders);
     constexpr float dialSize{ 80.f };
     IRECT globalControls = b.GetOffset(0, 0, 0, -KEYBOARD_HEIGHT).GetHPadded(-5.f).GetReducedFromTop(15.f);
+    const IRECT appControls = b.GetFromTop(30.f);
 #ifndef VST3_API
-    IRECT keyboardBounds = b.GetFromBottom((float)KEYBOARD_HEIGHT).GetPadded(-10.f);
+    IRECT keyboardBounds = b.GetFromBottom((float)KEYBOARD_HEIGHT - plugBorders).GetPadded(-5.f, -25.f, -5.f, -10.f);
     IRECT wheelsBounds = keyboardBounds.ReduceFromLeft(100.f).GetPadded(-10.f);
 
     // Keyboard
-    pGraphics->AttachControl(new IVKeyboardControl(keyboardBounds, 36), kCtrlTagKeyboard);
+    pGraphics->AttachControl(new IVKeyboardControl(keyboardBounds, 19, 79), kCtrlTagKeyboard);
     // Mod wheels
     pGraphics->AttachControl(new IWheelControl(wheelsBounds.FracRectHorizontal(0.5)), kCtrlTagBender);
     pGraphics->AttachControl(new IWheelControl(wheelsBounds.FracRectHorizontal(0.5, true), IMidiMsg::EControlChangeMsg::kModWheel));
@@ -467,30 +484,76 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
 
 #endif
     const ISVG tableImg = pGraphics->LoadSVG(PERIODIC_TABLE_FN);
+    const ISVG incrButtonOn = pGraphics->LoadSVG(INCR_BUTTON_ON);
+    const ISVG incrButtonOff = pGraphics->LoadSVG(INCR_BUTTON_OFF);
+    const ISVG decrButtonOn = pGraphics->LoadSVG(DECR_BUTTON_ON_FN);
+    const ISVG decrButtonOff = pGraphics->LoadSVG(DECR_BUTTON_OFF_FN);
     const IBitmap logoImg = pGraphics->LoadBitmap(LOGO_FN);
     const IBitmap dialImg = pGraphics->LoadBitmap(DIAL_FN, 64);
+
+    // Periodic table
     pGraphics->AttachControl(new PeriodicTable(globalControls.GetReducedFromBottom(globalControls.H() * 0.5f).GetFromLeft(720.f).GetPadded(-30.f).GetVShifted(20.f), tableImg, { kParamWavetable1, kParamWavetable2 }),
-      kCtrlTagPeriodicTable); // TODO: Set action function to store non-modulatable parameter value
+      kCtrlTagPeriodicTable);
     dynamic_cast<PeriodicTable*>(pGraphics->GetControlWithTag(kCtrlTagPeriodicTable))->LoadValues();
     pGraphics->AttachControl(new IBitmapControl(globalControls.GetReducedFromTop(90.f).GetReducedFromLeft(115.f).GetFromTLHC(280.f, 80.), logoImg));
 
-    const IRECT appControls = b.GetFromTop(30.f);
-
+    // Preset controls
+    const IRECT presetPanel = globalControls.GetFromTop(50.f).GetFromLeft(720.f).GetHPadded(-60.f);
+    IActionFunction savePresetFunction = IActionFunction([this](IControl* pControl) {
+      bool saveBackup = false;
+      SendArbitraryMsgFromUI(kMsgSavePreset, kNoTag, sizeof(bool), reinterpret_cast<const void*>(&saveBackup));
+      });
+    IActionFunction loadPresetFunction = IActionFunction([this](IControl* pControl) {
+      bool loadBackup = false;
+      SendArbitraryMsgFromUI(kMsgLoadPreset, kNoTag, sizeof(bool), reinterpret_cast<const void*>(&loadBackup));
+      });
+    IActionFunction resetToDefaultFunction = IActionFunction([this](IControl* pControl) {
+      // Save current state
+      std::string backupPath = GetDataPath("\\Tablitsa\\presets\\") + "_backup.TPST";
+      IByteChunk currentState;
+      SerializeState(currentState);
+      SavePreset(currentState, backupPath.c_str(), true);
+      // Load default state
+      std::string defaultPath = GetDataPath("\\Tablitsa\\presets\\") + "_Tablitsa_Default.TPST";
+      IByteChunk presetData = LoadPreset(defaultPath.c_str(), false);
+      if (presetData.Size() == 0)
+        return;
+      UnserializeState(presetData, 0);
+      UpdateUIControls();
+      });
+    IActionFunction loadBackupFunction = IActionFunction([this](IControl* pControl) {
+      std::string defaultPath = GetDataPath("\\Tablitsa\\presets\\") + "_backup.TPST";
+      IByteChunk presetData = LoadPreset(defaultPath.c_str(), false);
+      if (presetData.Size() == 0)
+        return;
+      UnserializeState(presetData, 0);
+      UpdateUIControls();
+      });
+    pGraphics->AttachControl(new IVButtonControl(presetPanel.GetGridCell(0, 0, 2, 4).GetHPadded(-20.f), SplashClickActionFunc, "Save", pushButtonStyle), kNoTag, "Presets")->SetAnimationEndActionFunction(savePresetFunction);
+    pGraphics->AttachControl(new IVButtonControl(presetPanel.GetGridCell(0, 1, 2, 4).GetHPadded(-20.f), SplashClickActionFunc, "Load", pushButtonStyle), kNoTag, "Presets")->SetAnimationEndActionFunction(loadPresetFunction);
+    pGraphics->AttachControl(new IVButtonControl(presetPanel.GetGridCell(1, 0, 2, 4).GetHPadded(-20.f), SplashClickActionFunc, "Reset", pushButtonStyle), kNoTag, "Presets")->SetAnimationEndActionFunction(resetToDefaultFunction);
+    pGraphics->AttachControl(new IVButtonControl(presetPanel.GetGridCell(1, 1, 2, 4).GetHPadded(-20.f), SplashClickActionFunc, "Load Backup", pushButtonStyle), kNoTag, "Presets")->SetAnimationEndActionFunction(loadBackupFunction);
+    // Built-in file selection
+#if !LOAD_WITH_DIALOG
+    const IRECT presetMenuBounds = presetPanel.GetGridCell(1, 1, 2, 4).GetVShifted(presetPanel.GetGridCell(1, 1, 2, 5).H()).GetPadded(0.f, 0.f, 100.f, 100.f);
+    IPopupMenuControl* presetSelectionMenu = new IPopupMenuControl(kNoParameter, TABLITSA_TEXT);
+    pGraphics->AttachControl(new PresetSelector(presetPanel.GetGridCell(1, 1, 2, 4).GetHPadded(-10.f), presetSelectionMenu, {"Preset 1", "Preset 2"}));
+#endif
     // Wavetable controls
     const IRECT osc1Panel = globalControls.GetReducedFromLeft(720.f).GetReducedFromBottom(globalControls.H() / 2.f).GetGridCell(0, 0, 2, 3).GetPadded(-10.f).GetHPadded(-12.f);
-    pGraphics->AttachControl(new TablitsaIVModKnobControl(osc1Panel.GetGridCell(0, 0, 2, 2).GetCentredInside(dialSize), kParamWavetable1Pitch, "Pitch", modKnobStyle, true, 0.05), kNoTag, "Osc1");
+    pGraphics->AttachControl(new TablitsaIVModKnobControl(osc1Panel.GetGridCell(0, 0, 2, 2).GetCentredInside(dialSize), kParamWavetable1Pitch, "Pitch", modKnobStyle, true), kNoTag, "Osc1");
     pGraphics->AttachControl(new TablitsaIVModKnobControl(osc1Panel.GetGridCell(0, 1, 2, 2).GetCentredInside(dialSize), kParamWavetable1Amp, "Amp"), kNoTag, "Osc1");
     pGraphics->AttachControl(new TablitsaIVModKnobControl(osc1Panel.GetGridCell(1, 0, 2, 3).GetCentredInside(dialSize), kParamWavetable1Pos, "Valency"), kNoTag, "Osc1");
     pGraphics->AttachControl(new TablitsaIVModKnobControl(osc1Panel.GetGridCell(1, 1, 2, 3).GetCentredInside(dialSize), kParamWavetable1Bend, "Energy"), kNoTag, "Osc1");
-    pGraphics->AttachControl(new TablitsaIVModKnobControl(osc1Panel.GetGridCell(1, 2, 2, 3).GetCentredInside(dialSize), kParamWavetable1Sub, "Mass"), kNoTag, "Osc1");
+    pGraphics->AttachControl(new TablitsaIVModKnobControl(osc1Panel.GetGridCell(1, 2, 2, 3).GetCentredInside(dialSize), kParamWavetable1Formant, "Mass"), kNoTag, "Osc1");
     pGraphics->AttachControl(new TablitsaVGroupControl("Wavetable 1", "Osc1", -5.f, 15.f, -5.f, 2.f));
 
     const IRECT osc2Panel = globalControls.GetReducedFromLeft(720.f).GetReducedFromBottom(globalControls.H() / 2.f).GetGridCell(1, 0, 2, 3).GetPadded(-10.f).GetHPadded(-12.f);
-    pGraphics->AttachControl(new TablitsaIVModKnobControl(osc2Panel.GetGridCell(0, 0, 2, 2).GetCentredInside(dialSize), kParamWavetable2Pitch, "Pitch", modKnobStyle, true, 0.05), kNoTag, "Osc2");
+    pGraphics->AttachControl(new TablitsaIVModKnobControl(osc2Panel.GetGridCell(0, 0, 2, 2).GetCentredInside(dialSize), kParamWavetable2Pitch, "Pitch", modKnobStyle, true), kNoTag, "Osc2");
     pGraphics->AttachControl(new TablitsaIVModKnobControl(osc2Panel.GetGridCell(0, 1, 2, 2).GetCentredInside(dialSize), kParamWavetable2Amp, "Amp"), kNoTag, "Osc2");
     pGraphics->AttachControl(new TablitsaIVModKnobControl(osc2Panel.GetGridCell(1, 0, 2, 3).GetCentredInside(dialSize), kParamWavetable2Pos, "Valency"), kNoTag, "Osc2");
     pGraphics->AttachControl(new TablitsaIVModKnobControl(osc2Panel.GetGridCell(1, 1, 2, 3).GetCentredInside(dialSize), kParamWavetable2Bend, "Energy"), kNoTag, "Osc2");
-    pGraphics->AttachControl(new TablitsaIVModKnobControl(osc2Panel.GetGridCell(1, 2, 2, 3).GetCentredInside(dialSize), kParamWavetable2Sub, "Mass"), kNoTag, "Osc2");
+    pGraphics->AttachControl(new TablitsaIVModKnobControl(osc2Panel.GetGridCell(1, 2, 2, 3).GetCentredInside(dialSize), kParamWavetable2Formant, "Mass"), kNoTag, "Osc2");
     pGraphics->AttachControl(new TablitsaVGroupControl("Wavetable 2", "Osc2", -5.f, 15.f, -5.f, 2.f));
 
     /* Master Controls */
@@ -500,11 +563,11 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
     // pGraphics->AttachControl(new IBKnobControl(masterPanel.GetGridCell(0, 0, 4, 6).GetCentredInside(dialSize), dialImg, kParamGain), kNoTag, "Master");
     pGraphics->AttachControl(new TablitsaIVModKnobControl(masterPanel.GetGridCell(0, 1, 4, 6).GetVShifted(-15.f).GetCentredInside(dialSize), kParamPan, "Pan"), kNoTag, "Master");
     // Static modulators
-    const IRECT staticModPanel = masterPanel.GetGridCell(1, 0, 2, 1).GetVShifted(10.f).GetVPadded(-16.f).GetGridCell(0, 0, 1, 3).GetHPadded(-28.f).GetHShifted(-15.f);
+    const IRECT staticModPanel = masterPanel.GetGridCell(1, 0, 2, 3).GetHAlignedTo(masterPanel.GetGridCell(0, 0, 1, 6), EAlign::Near).GetReducedFromRight(25.f).GetPadded(-12.f);
     pGraphics->AttachControl(new ModSliderControl(staticModPanel.GetGridCell(0, 0, 3, 1), kNoParameter, "Velocity", TABLITSA_STYLE, false, EDirection::Horizontal), kCtrlTagVelDepth, "StaticMods");
     pGraphics->AttachControl(new ModSliderControl(staticModPanel.GetGridCell(1, 0, 3, 1), kNoParameter, "Keytrack", TABLITSA_STYLE, false, EDirection::Horizontal), kCtrlTagKTkDepth, "StaticMods");
     pGraphics->AttachControl(new ModSliderControl(staticModPanel.GetGridCell(2, 0, 3, 1), kNoParameter, "Trg. Rnd.", TABLITSA_STYLE, false, EDirection::Horizontal), kCtrlTagRndDepth, "StaticMods");
-    pGraphics->AttachControl(new TablitsaVGroupControl("Midi Mods", "StaticMods", 5.f, 15.f, 5.f, 0.f));
+    pGraphics->AttachControl(new TablitsaVGroupControl("Midi Mods", "StaticMods", 5.f, 20.f, 5.f, 15.f));
     // Polyphony and Portamento
     pGraphics->AttachControl(new IVToggleControl(masterPanel.GetGridCell(3, 1, 12, 6).GetVShifted(-15.f).GetVPadded(-2.f), kParamPortamentoMode, "", toggleStyle, "Rate", "Time"),
       kCtrlTagGlideMode, "Master")->SetAnimationEndActionFunction([pGraphics](IControl* pControl) {
@@ -519,66 +582,286 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
     pGraphics->AttachControl(new IVToggleControl(masterPanel.GetGridCell(4, 1, 12, 6).GetVShifted(-15.f).GetVPadded(-2.f), kParamMonophonic, "", toggleStyle, "Poly", "Mono"));
     pGraphics->AttachControl(new IVToggleControl(masterPanel.GetGridCell(5, 1, 12, 6).GetVShifted(-15.f).GetVPadded(-2.f), kParamLegato, "", toggleStyle, "Retrigger", "Legato"));
     // Unison and Stereo Width
-    const IRECT unisonPanel = masterPanel.GetReducedFromLeft(masterPanel.W() / 3.f).GetReducedFromRight(masterPanel.W() / 6.f).GetGridCell(0, 0, 2, 1).GetVShifted(-12.f).GetHPadded(-10.f);
-    pGraphics->AttachControl(new IVNumberBoxControl(unisonPanel.GetGridCell(0, 0, 2, 2).GetHPadded(-10.f).GetVPadded(-15.f), kParamUnisonVoices, nullptr, "№ Voices", TABLITSA_STYLE.WithValueText(TABLITSA_STYLE.valueText.WithSize(18.f))), kNoTag, "Unison");
+    const IRECT unisonPanel = masterPanel.GetReducedFromLeft(masterPanel.W() / 3.f).GetReducedFromRight(masterPanel.W() / 6.f).GetGridCell(0, 0, 2, 1).GetVShifted(-12.f).GetHPadded(-10.f).GetHShifted(2.f);
+    pGraphics->AttachControl(new TablitsaIVKnobControl(unisonPanel.GetGridCell(0, 0, 2, 2).GetCentredInside(dialSize), kParamUnisonVoices, "№ Voices", modKnobStyle), kNoTag, "Unison");
     pGraphics->AttachControl(new TablitsaIVKnobControl(unisonPanel.GetGridCell(1, 0, 2, 2).GetCentredInside(dialSize), kParamUnisonDetune, "Detune", modKnobStyle), kNoTag, "Unison");
     pGraphics->AttachControl(new TablitsaIVKnobControl(unisonPanel.GetGridCell(0, 1, 2, 2).GetCentredInside(dialSize), kParamUnisonChord, "Chord", modKnobStyle), kNoTag, "Unison");
     pGraphics->AttachControl(new TablitsaIVKnobControl(unisonPanel.GetGridCell(1, 1, 2, 2).GetPadded(-5.f).GetCentredInside(dialSize), kParamStereoSpread, "Spread"), kNoTag, "Unison");
     pGraphics->AttachControl(new TablitsaVGroupControl("Unison", "Unison", 0.f, 13.f, 0.f, 0.f));
-    pGraphics->AttachControl(new IVLEDMeterControl<2>(masterPanel.GetGridCell(0, 5, 2, 6).GetVPadded(-20.f)), kCtrlTagMeter, "Master");
+    pGraphics->AttachControl(new IVLEDMeterControl<2>(masterPanel.GetGridCell(0, 5, 2, 6).GetVShifted(-15.f).GetHShifted(-4.f).GetVPadded(-8.f)), kCtrlTagMeter, "Master");
 
     /* Effects Panel */
-    // Delay
-    auto channelLockFunction = IActionFunction([pGraphics, this](IControl* pControl) {
-      int ctrlTag = pControl->GetTag() == kCtrlTagDelayLMilliseconds || pControl->GetTag() == kCtrlTagDelayLBeats ? pControl->GetTag() + 1 : pControl->GetTag() - 1;
+    const IRECT effectsPanel = IRECT(masterPanel.GetGridCell(1, 1, 2, 7).R, masterPanel.GetGridCell(1, 0, 2, 7).T, masterPanel.GetGridCell(1, 6, 2, 7).R, masterPanel.GetGridCell(1, 6, 2, 7).B).GetHPadded(-5.f).GetHShifted(2.f);
+    const IRECT effectsControlsPanel = effectsPanel.GetReducedFromTop(40.f);
+
+    auto channelLockFunction1 = IActionFunction([pGraphics, this](IControl* pControl) {
+      // Tag of the other channel's control
+      int ctrlTag = pControl->GetTag() == kCtrlTagEffect1Knob1 || pControl->GetTag() == kCtrlTagEffect1Knob1 ? pControl->GetTag() + 1 : pControl->GetTag() - 1;
       pGraphics->GetControlWithTag(ctrlTag)->SetValue(pControl->GetValue());
       GetUI()->GetDelegate()->SendParameterValueFromUI(pGraphics->GetControlWithTag(ctrlTag)->GetParamIdx(), pControl->GetValue());
       pGraphics->GetControlWithTag(ctrlTag)->SetDirty(false);
       });
-    const IRECT delayPanel = IRECT(masterPanel.GetGridCell(2, 1, 4, 7).R, masterPanel.GetGridCell(2, 0, 4, 7).T, masterPanel.GetGridCell(2, 6, 4, 7).R, masterPanel.GetGridCell(2, 6, 4, 7).B).GetHPadded(-5.f).GetVShifted(-5.f);
-    pGraphics->AttachControl(new TablitsaIVKnobControl(delayPanel.GetGridCell(0, 0, 1, 5).GetVPadded(-12.f).GetCentredInside(dialSize), kParamDelayTimeLMilliseconds, "Left", modKnobStyle), kCtrlTagDelayLMilliseconds, "Delay");
-    pGraphics->AttachControl(new TablitsaIVKnobControl(delayPanel.GetGridCell(0, 1, 1, 5).GetVPadded(-12.f).GetCentredInside(dialSize), kParamDelayTimeRMilliseconds, "Right", modKnobStyle), kCtrlTagDelayRMilliseconds, "Delay");
-    pGraphics->AttachControl(new TablitsaIVKnobControl(delayPanel.GetGridCell(0, 0, 1, 5).GetVPadded(-12.f).GetCentredInside(dialSize), kParamDelayTimeLBeats, "Left", modKnobStyle), kCtrlTagDelayLBeats, "Delay")->Hide(true);
-    pGraphics->AttachControl(new TablitsaIVKnobControl(delayPanel.GetGridCell(0, 1, 1, 5).GetVPadded(-12.f).GetCentredInside(dialSize), kParamDelayTimeRBeats, "Right", modKnobStyle), kCtrlTagDelayRBeats, "Delay")->Hide(true);
-    pGraphics->AttachControl(new TablitsaIVKnobControl(delayPanel.GetGridCell(0, 2, 1, 5).GetVPadded(-12.f).GetCentredInside(dialSize), kParamDelayFeedback, "Feedback", modKnobStyle), kNoTag, "Delay");
-    pGraphics->AttachControl(new TablitsaIVKnobControl(delayPanel.GetGridCell(0, 3, 1, 5).GetVPadded(-12.f).GetCentredInside(dialSize), kParamDelayMix, "Mix", modKnobStyle), kNoTag, "Delay");
-    pGraphics->AttachControl(new IVToggleControl(delayPanel.GetGridCell(0, 4, 2, 5).GetVPadded(-10.f), kParamDelayTimeMode, "", toggleStyle, "Time", "Tempo"),
-      kCtrlTagDelayTempoSync, "Delay")->SetActionFunction(
-      [pGraphics, this](IControl* pControl) {
-        mDelayIsSynced = pControl->GetValue();
-        bool isTempoSync = mDelayIsSynced > 0.5;
-        pGraphics->HideControl(kParamDelayTimeLMilliseconds, isTempoSync);
-        pGraphics->HideControl(kParamDelayTimeRMilliseconds, isTempoSync);
-        pGraphics->HideControl(kParamDelayTimeLBeats, !isTempoSync);
-        pGraphics->HideControl(kParamDelayTimeRBeats, !isTempoSync);
-        pGraphics->SetAllControlsDirty();
-      }
-    );
-    pGraphics->AttachControl(new IVToggleControl(delayPanel.GetGridCell(1, 4, 2, 5).GetVPadded(-10.f), kNoParameter, "", TABLITSA_STYLE, "Stereo", "Mono"), kNoTag, "Delay")->SetActionFunction(
-      [pGraphics, channelLockFunction](IControl* pControl) {
-        bool mono = pControl->GetValue() > 0.5;
-        if (mono)
-        {
-          pGraphics->GetControlWithTag(kCtrlTagDelayLMilliseconds)->SetActionFunction(channelLockFunction);
-          pGraphics->GetControlWithTag(kCtrlTagDelayRMilliseconds)->SetActionFunction(channelLockFunction);
-          pGraphics->GetControlWithTag(kCtrlTagDelayLBeats)->SetActionFunction(channelLockFunction);
-          pGraphics->GetControlWithTag(kCtrlTagDelayRBeats)->SetActionFunction(channelLockFunction);
-        }
-        else
-        {
-          pGraphics->GetControlWithTag(kCtrlTagDelayLMilliseconds)->SetActionFunction([pGraphics](IControl* pControl) {});
-          pGraphics->GetControlWithTag(kCtrlTagDelayRMilliseconds)->SetActionFunction([pGraphics](IControl* pControl) {});
-          pGraphics->GetControlWithTag(kCtrlTagDelayLBeats)->SetActionFunction([pGraphics](IControl* pControl) {});
-          pGraphics->GetControlWithTag(kCtrlTagDelayRBeats)->SetActionFunction([pGraphics](IControl* pControl) {});
-        }
-        pGraphics->SetAllControlsDirty();
-      }
-    );;
-    pGraphics->AttachControl(new TablitsaVGroupControl("Delay", "Delay", -15.f, 10.f, 0.f, 0.f));
+    auto channelLockFunction2 = IActionFunction([pGraphics, this](IControl* pControl) {
+      // Tag of the other channel's control
+      int ctrlTag = pControl->GetTag() == kCtrlTagEffect2Knob1 || pControl->GetTag() == kCtrlTagEffect2Knob1 ? pControl->GetTag() + 1 : pControl->GetTag() - 1;
+      pGraphics->GetControlWithTag(ctrlTag)->SetValue(pControl->GetValue());
+      GetUI()->GetDelegate()->SendParameterValueFromUI(pGraphics->GetControlWithTag(ctrlTag)->GetParamIdx(), pControl->GetValue());
+      pGraphics->GetControlWithTag(ctrlTag)->SetDirty(false);
+      });
+    auto channelLockFunction3 = IActionFunction([pGraphics, this](IControl* pControl) {
+      // Tag of the other channel's control
+      int ctrlTag = pControl->GetTag() == kCtrlTagEffect3Knob1 || pControl->GetTag() == kCtrlTagEffect3Knob1 ? pControl->GetTag() + 1 : pControl->GetTag() - 1;
+      pGraphics->GetControlWithTag(ctrlTag)->SetValue(pControl->GetValue());
+      GetUI()->GetDelegate()->SendParameterValueFromUI(pGraphics->GetControlWithTag(ctrlTag)->GetParamIdx(), pControl->GetValue());
+      pGraphics->GetControlWithTag(ctrlTag)->SetDirty(false);
+      });
+    IActionFunction effect1ToggleFunc = [this, pGraphics](IControl* pControl) {
+      const int effectIdx = pControl->GetValue() > 0.5 ? dynamic_cast<DropdownListControl*>(pGraphics->GetControlWithTag(kCtrlTagEffect1List))->GetCurrentIndex() : 0;
+      if (pControl->GetValue())
+        dynamic_cast<IVSlideSwitchControl*>(pControl)->SetValueStr("On");
+      else
+        dynamic_cast<IVSlideSwitchControl*>(pControl)->SetValueStr("Off");
+      SendArbitraryMsgFromUI(kMsgEffect1Changed, effectIdx, sizeof(effectIdx), reinterpret_cast<const void*>(&effectIdx));
+      // Need to set controls dirty so that parameter values are loaded:
+      SetAllEffectControlsDirty(pGraphics, kCtrlTagEffect1Knob1);
+    };
+    IActionFunction effect2ToggleFunc = [this, pGraphics](IControl* pControl) {
+      const int effectIdx = pControl->GetValue() > 0.5 ? dynamic_cast<DropdownListControl*>(pGraphics->GetControlWithTag(kCtrlTagEffect2List))->GetCurrentIndex() : 0;
+      if (pControl->GetValue())
+        dynamic_cast<IVSlideSwitchControl*>(pControl)->SetValueStr("On");
+      else
+        dynamic_cast<IVSlideSwitchControl*>(pControl)->SetValueStr("Off");
+      SendArbitraryMsgFromUI(kMsgEffect2Changed, effectIdx, sizeof(effectIdx), reinterpret_cast<const void*>(&effectIdx));
+      // Need to set controls dirty so that parameter values are loaded:
+      SetAllEffectControlsDirty(pGraphics, kCtrlTagEffect2Knob1);
+    };
+    IActionFunction effect3ToggleFunc = [this, pGraphics](IControl* pControl) {
+      const int effectIdx = pControl->GetValue() > 0.5 ? dynamic_cast<DropdownListControl*>(pGraphics->GetControlWithTag(kCtrlTagEffect3List))->GetCurrentIndex() : 0;
+      if (pControl->GetValue())
+        dynamic_cast<IVSlideSwitchControl*>(pControl)->SetValueStr("On");
+      else
+        dynamic_cast<IVSlideSwitchControl*>(pControl)->SetValueStr("Off");
+      SendArbitraryMsgFromUI(kMsgEffect3Changed, effectIdx, sizeof(effectIdx), reinterpret_cast<const void*>(&effectIdx));
+      // Need to set controls dirty so that parameter values are loaded:
+      SetAllEffectControlsDirty(pGraphics, kCtrlTagEffect3Knob1);
+    };
 
     // Effects tab control
-    const IRECT effectsPanel = delayPanel.GetVShifted(masterPanel.H() / 4.f + 10.f);
-    pGraphics->AttachControl(new TablitsaVTabBox(effectsPanel, "Sample & Hold"), kNoTag, "Effects");
+    pGraphics->AttachControl(new TablitsaEffectBankControl(effectsPanel, { "Effect 1", "Effect2", "Effect3" }, { "E1", "E2", "E3" }), kCtrlTagEffectBank, "Effects");
+    
+    /* EFFECT 1 */
+    // Selector list
+    pGraphics->AttachControl(new DropdownListControl(effectsPanel.GetGridCell(0, 0, 1, 3).GetFromTop(50.f).GetReducedFromTop(20.f).GetPadded(-2.f), TABLITSA_EFFECTS_LIST), kCtrlTagEffect1List, "E1")->SetActionFunction(
+      [pGraphics, this](IControl* pControl) {
+        // Swap out effect parameters (and rearrange controls if necessary)
+        int effectIdx = dynamic_cast<DropdownListControl*>(pControl)->GetCurrentIndex();
+        IControl* knob1 = pGraphics->GetControlWithTag(kCtrlTagEffect1Knob1);
+        IControl* knob2 = pGraphics->GetControlWithTag(kCtrlTagEffect1Knob2);
+        IControl* knob3 = pGraphics->GetControlWithTag(kCtrlTagEffect1Knob3);
+        IControl* knob4 = pGraphics->GetControlWithTag(kCtrlTagEffect1Knob4);
+        IControl* toggle1 = pGraphics->GetControlWithTag(kCtrlTagEffect1Toggle1);
+        IControl* toggle2 = pGraphics->GetControlWithTag(kCtrlTagEffect1Toggle2);
+        std::vector<IControl*> allKnobs{ knob1, knob2, knob3, knob4 };
+        std::vector<IControl*> controls{ knob1, knob2, knob3, knob4, toggle1, toggle2 };
+        std::vector<int> params{ kParamEffect1Param1, kParamEffect1Param2, kParamEffect1Param3, kParamEffect1Param4, kParamEffect1Param5, kParamEffect1Param6 };
+        switch (effectIdx)
+        {
+        case kDelayEffect:
+        {
+          std::vector<char*> paramNames{ "Effect 1 Parameter 1", "Effect 1 Parameter 2" , "Effect 1 Parameter 3", "Effect 1 Parameter 4" };
+          InitDelayUI(this, pGraphics, controls, params, paramNames);
+          break;
+        }
+        case kWaveshaperEffect:
+        {
+          std::vector<char*> paramNames{ "Effect 1 Parameter 1", "Effect 1 Parameter 2" , "Effect 1 Parameter 3", "Effect 1 Parameter 4" };
+          InitWaveshaperUI(this, pGraphics, controls, params, paramNames);
+          break;
+        }
+        case kSampleAndHoldEffect:
+        {
+          std::vector<char*> paramNames{ "Effect 1 Parameter 1", "Effect 1 Parameter 2" , "Effect 1 Parameter 3", "Effect 1 Parameter 4" };
+          InitSampleAndHoldUI(this, pGraphics, controls, params, paramNames);
+          break;
+        }
+        default:
+        {
+          std::vector<char*> paramNames{ "Effect 1 Parameter 1", "Effect 1 Parameter 2" , "Effect 1 Parameter 3", "Effect 1 Parameter 4" };
+          InitDefaultUI(this, pGraphics, controls, params, paramNames);
+          break;
+        }
+        }
+        // If the effect is turned off, load an empty effect object. Otherwise change to the new effect.
+        int effectEnabled = pGraphics->GetControlWithTag(kCtrlTagEffect1Switch)->GetValue() > 0.5 ? 0xFFFF : 0;
+        effectIdx &= effectEnabled;
+        SendArbitraryMsgFromUI(kMsgEffect1Changed, kNoTag, sizeof(effectIdx), reinterpret_cast<void*>(&effectIdx)); // Effects must be swapped before OnParamChange is called
+        for (auto* knob : allKnobs)
+          knob->SetDirty(true);
+      }
+    );
+    pGraphics->AttachControl(new IVSlideSwitchControl(effectsPanel.GetGridCell(0, 1, 1, 3).GetFromTop(45.f).GetReducedFromTop(30.f).GetHPadded(-20.f), effect1ToggleFunc, "", toggleStyle, true, EDirection::Horizontal, 2, 0), kCtrlTagEffect1Switch, "E1");
+    pGraphics->AttachControl(new TablitsaIVKnobControl(effectsControlsPanel.FracRectVertical(2.f / 3, true).GetGridCell(0, 0, 1, 4).GetCentredInside(dialSize), kParamEffect1Param1, "Left", modKnobStyle), kCtrlTagEffect1Knob1, "E1");
+    pGraphics->AttachControl(new TablitsaIVKnobControl(effectsControlsPanel.FracRectVertical(2.f / 3, true).GetGridCell(0, 1, 1, 4).GetCentredInside(dialSize), kParamEffect1Param2, "Right", modKnobStyle), kCtrlTagEffect1Knob2, "E1");
+    pGraphics->AttachControl(new TablitsaIVKnobControl(effectsControlsPanel.FracRectVertical(2.f / 3, true).GetGridCell(0, 2, 1, 4).GetCentredInside(dialSize), kParamEffect1Param3, "Feedback", modKnobStyle), kCtrlTagEffect1Knob3, "E1");
+    pGraphics->AttachControl(new TablitsaIVKnobControl(effectsControlsPanel.FracRectVertical(2.f / 3, true).GetGridCell(0, 3, 1, 4).GetCentredInside(dialSize), kParamEffect1Param4, "Mix", modKnobStyle), kCtrlTagEffect1Knob4, "E1");
+    pGraphics->AttachControl(new IVToggleControl(effectsControlsPanel.FracRectVertical(1.f / 3).GetGridCell(0,  1, 1, 4).GetPadded(-10.f), kParamEffect1Param5, "", toggleStyle, "Time", "Tempo"),
+      kCtrlTagEffect1Toggle1, "E1")->SetActionFunction(
+      [pGraphics, this](IControl* pControl) {
+        mDelayIsSynced = pControl->GetValue();
+        std::vector<int> params{ kParamEffect1Param1, kParamEffect1Param2 };
+        DelayTempoSyncToggle(this, pGraphics, params, mDelayIsSynced, kCtrlTagEffect1List);
+      }
+    );
+    pGraphics->AttachControl(new IVToggleControl(effectsControlsPanel.FracRectVertical(1.f / 3).GetGridCell(0, 2, 1, 4).GetPadded(-10.f), kNoParameter, "", toggleStyle, "Stereo", "Mono"), kCtrlTagEffect1Toggle2, "E1")->SetActionFunction(
+      [pGraphics, channelLockFunction1](IControl* pControl) {
+        bool mono = pControl->GetValue() > 0.5;
+        std::vector<int> ctrlTags{ kCtrlTagEffect1Knob1, kCtrlTagEffect1Knob2 };
+        DelayStereoToggle(pGraphics, ctrlTags, mono, channelLockFunction1, kCtrlTagEffect1List);
+      }
+    );
+
+    /* EFFECT 2 */
+    pGraphics->AttachControl(new DropdownListControl(effectsPanel.FracRectHorizontal(0.4f, false).GetFromTop(40.f).GetReducedFromTop(20.f).GetPadded(-2.f), TABLITSA_EFFECTS_LIST), kCtrlTagEffect2List, "E2")->SetActionFunction(
+      [pGraphics, this](IControl* pControl) {
+        // Swap out effect parameters (and rearrange controls if necessary)
+        int effectIdx = dynamic_cast<DropdownListControl*>(pControl)->GetCurrentIndex();
+        IControl* knob1 = pGraphics->GetControlWithTag(kCtrlTagEffect2Knob1);
+        IControl* knob2 = pGraphics->GetControlWithTag(kCtrlTagEffect2Knob2);
+        IControl* knob3 = pGraphics->GetControlWithTag(kCtrlTagEffect2Knob3);
+        IControl* knob4 = pGraphics->GetControlWithTag(kCtrlTagEffect2Knob4);
+        IControl* toggle1 = pGraphics->GetControlWithTag(kCtrlTagEffect2Toggle1);
+        IControl* toggle2 = pGraphics->GetControlWithTag(kCtrlTagEffect2Toggle2);
+        std::vector<IControl*> allKnobs{ knob1, knob2, knob3, knob4 };
+        std::vector<IControl*> controls{ knob1, knob2, knob3, knob4, toggle1, toggle2 };
+        std::vector<int> params{ kParamEffect2Param1, kParamEffect2Param2, kParamEffect2Param3, kParamEffect2Param4, kParamEffect2Param5, kParamEffect2Param6 };
+        switch (effectIdx)
+        {
+        case kDelayEffect:
+        {
+          std::vector<char*> paramNames{ "Effect 2 Parameter 1", "Effect 2 Parameter 2" , "Effect 2 Parameter 3", "Effect 2 Parameter 4" };
+          InitDelayUI(this, pGraphics, controls, params, paramNames);
+          break;
+        }
+        case kWaveshaperEffect:
+        {
+          std::vector<char*> paramNames{ "Effect 2 Parameter 1", "Effect 2 Parameter 2" , "Effect 2 Parameter 3", "Effect 2 Parameter 4" };
+          InitWaveshaperUI(this, pGraphics, controls, params, paramNames);
+          break;
+        }
+        case kSampleAndHoldEffect:
+        {
+          std::vector<char*> paramNames{ "Effect 2 Parameter 1", "Effect 2 Parameter 2" , "Effect 2 Parameter 3", "Effect 2 Parameter 4" };
+          InitSampleAndHoldUI(this, pGraphics, controls, params, paramNames);
+          break;
+        }
+        default:
+        {
+          std::vector<char*> paramNames{ "Effect 2 Parameter 1", "Effect 2 Parameter 2" , "Effect 2 Parameter 3", "Effect 2 Parameter 4" };
+          InitDefaultUI(this, pGraphics, controls, params, paramNames);
+          break;
+        }
+        }
+        SendArbitraryMsgFromUI(kMsgEffect2Changed, kNoTag, sizeof(effectIdx), reinterpret_cast<void*>(&effectIdx)); // Effects must be swapped before OnParamChange is called
+        for (auto* knob : allKnobs)
+          knob->SetDirty(true);
+      }
+    );
+    pGraphics->AttachControl(new IVSlideSwitchControl(effectsPanel.GetGridCell(0, 1, 1, 3).GetFromTop(45.f).GetReducedFromTop(25.f).GetHPadded(-20.f), effect2ToggleFunc, "", toggleStyle, true, EDirection::Horizontal, 2, 0), kCtrlTagEffect2Switch, "E2");
+    pGraphics->AttachControl(new TablitsaIVKnobControl(effectsControlsPanel.FracRectVertical(2.f / 3, true).GetGridCell(0, 0, 1, 4).GetCentredInside(dialSize), kParamEffect2Param1, "Left", modKnobStyle), kCtrlTagEffect2Knob1, "E2");
+    pGraphics->AttachControl(new TablitsaIVKnobControl(effectsControlsPanel.FracRectVertical(2.f / 3, true).GetGridCell(0, 1, 1, 4).GetCentredInside(dialSize), kParamEffect2Param2, "Right", modKnobStyle), kCtrlTagEffect2Knob2, "E2");
+    pGraphics->AttachControl(new TablitsaIVKnobControl(effectsControlsPanel.FracRectVertical(2.f / 3, true).GetGridCell(0, 2, 1, 4).GetCentredInside(dialSize), kParamEffect2Param3, "Feedback", modKnobStyle), kCtrlTagEffect2Knob3, "E2");
+    pGraphics->AttachControl(new TablitsaIVKnobControl(effectsControlsPanel.FracRectVertical(2.f / 3, true).GetGridCell(0, 3, 1, 4).GetCentredInside(dialSize), kParamEffect2Param4, "Mix", modKnobStyle), kCtrlTagEffect2Knob4, "E2");
+    pGraphics->AttachControl(new IVToggleControl(effectsControlsPanel.FracRectVertical(1.f / 3).GetGridCell(0, 1, 1, 4).GetPadded(-10.f), kParamEffect2Param5, "", toggleStyle, "Time", "Tempo"),
+      kCtrlTagEffect2Toggle1, "E2")->SetActionFunction(
+        [pGraphics, this](IControl* pControl) {
+          mDelayIsSynced = pControl->GetValue();
+          std::vector<int> params{ kParamEffect2Param1, kParamEffect2Param2 };
+          DelayTempoSyncToggle(this, pGraphics, params, mDelayIsSynced, kCtrlTagEffect2List);
+        }
+    );
+    pGraphics->AttachControl(new IVToggleControl(effectsControlsPanel.FracRectVertical(1.f / 3).GetGridCell(0, 2, 1, 4).GetPadded(-10.f), kNoParameter, "", toggleStyle, "Stereo", "Mono"), kCtrlTagEffect2Toggle2, "E2")->SetActionFunction(
+      [pGraphics, channelLockFunction2](IControl* pControl) {
+        bool mono = pControl->GetValue() > 0.5;
+        std::vector<int> ctrlTags{ kCtrlTagEffect2Knob1, kCtrlTagEffect2Knob2 };
+        DelayStereoToggle(pGraphics, ctrlTags, mono, channelLockFunction2, kCtrlTagEffect2List);
+      }
+    );
+
+    /* EFFECT 3 */
+    pGraphics->AttachControl(new DropdownListControl(effectsPanel.FracRectHorizontal(0.4f, false).GetFromTop(40.f).GetReducedFromTop(20.f).GetPadded(-2.f), TABLITSA_EFFECTS_LIST), kCtrlTagEffect3List, "E3")->SetActionFunction(
+      [pGraphics, this](IControl* pControl) {
+        // Swap out effect parameters (and rearrange controls if necessary)
+        int effectIdx = dynamic_cast<DropdownListControl*>(pControl)->GetCurrentIndex();
+        IControl* knob1 = pGraphics->GetControlWithTag(kCtrlTagEffect3Knob1);
+        IControl* knob2 = pGraphics->GetControlWithTag(kCtrlTagEffect3Knob2);
+        IControl* knob3 = pGraphics->GetControlWithTag(kCtrlTagEffect3Knob3);
+        IControl* knob4 = pGraphics->GetControlWithTag(kCtrlTagEffect3Knob4);
+        IControl* toggle1 = pGraphics->GetControlWithTag(kCtrlTagEffect3Toggle1);
+        IControl* toggle2 = pGraphics->GetControlWithTag(kCtrlTagEffect3Toggle2);
+        std::vector<IControl*> allKnobs{ knob1, knob2, knob3, knob4 };
+        std::vector<IControl*> controls{ knob1, knob2, knob3, knob4, toggle1, toggle2 };
+        std::vector<int> params{ kParamEffect2Param1, kParamEffect2Param2, kParamEffect2Param3, kParamEffect2Param4, kParamEffect2Param5, kParamEffect2Param6 };
+        switch (effectIdx)
+        {
+        case kDelayEffect:
+        {
+          std::vector<char*> paramNames{ "Effect 3 Parameter 1", "Effect 3 Parameter 2" , "Effect 3 Parameter 3", "Effect 3 Parameter 4" };
+          InitDelayUI(this, pGraphics, controls, params, paramNames);
+          break;
+        }
+        case kWaveshaperEffect:
+        {
+          std::vector<char*> paramNames{ "Effect 3 Parameter 1", "Effect 3 Parameter 2" , "Effect 3 Parameter 3", "Effect 3 Parameter 4" };
+          InitWaveshaperUI(this, pGraphics, controls, params, paramNames);
+          break;
+        }
+        case kSampleAndHoldEffect:
+        {
+          std::vector<char*> paramNames{ "Effect 3 Parameter 1", "Effect 3 Parameter 2" , "Effect 3 Parameter 3", "Effect 3 Parameter 4" };
+          InitSampleAndHoldUI(this, pGraphics, controls, params, paramNames);
+          break;
+        }
+        default:
+        {
+          std::vector<char*> paramNames{ "Effect 3 Parameter 1", "Effect 3 Parameter 2" , "Effect 3 Parameter 3", "Effect 3 Parameter 4" };
+          InitDefaultUI(this, pGraphics, controls, params, paramNames);
+          break;
+        }
+        }
+        SendArbitraryMsgFromUI(kMsgEffect3Changed, kNoTag, sizeof(effectIdx), reinterpret_cast<void*>(&effectIdx)); // Effects must be swapped before OnParamChange is called
+        for (auto* knob : allKnobs)
+          knob->SetDirty(true);
+      }
+    );
+    pGraphics->AttachControl(new IVSlideSwitchControl(effectsPanel.GetGridCell(0, 1, 1, 3).GetFromTop(45.f).GetReducedFromTop(25.f).GetHPadded(-20.f), effect3ToggleFunc, "", toggleStyle, true, EDirection::Horizontal, 2, 0), kCtrlTagEffect3Switch, "E3");
+    pGraphics->AttachControl(new TablitsaIVKnobControl(effectsControlsPanel.FracRectVertical(2.f / 3, true).GetGridCell(0, 0, 1, 4).GetCentredInside(dialSize), kParamEffect3Param1, "Left", modKnobStyle), kCtrlTagEffect3Knob1, "E3")->Hide(true);
+    pGraphics->AttachControl(new TablitsaIVKnobControl(effectsControlsPanel.FracRectVertical(2.f / 3, true).GetGridCell(0, 1, 1, 4).GetCentredInside(dialSize), kParamEffect3Param2, "Right", modKnobStyle), kCtrlTagEffect3Knob2, "E3")->Hide(true);
+    pGraphics->AttachControl(new TablitsaIVKnobControl(effectsControlsPanel.FracRectVertical(2.f / 3, true).GetGridCell(0, 2, 1, 4).GetCentredInside(dialSize), kParamEffect3Param3, "Feedback", modKnobStyle), kCtrlTagEffect3Knob3, "E3")->Hide(true);
+    pGraphics->AttachControl(new TablitsaIVKnobControl(effectsControlsPanel.FracRectVertical(2.f / 3, true).GetGridCell(0, 3, 1, 4).GetCentredInside(dialSize), kParamEffect3Param4, "Mix", modKnobStyle), kCtrlTagEffect3Knob4, "E3")->Hide(true);
+    pGraphics->AttachControl(new IVToggleControl(effectsControlsPanel.FracRectVertical(1.f / 3).GetGridCell(0, 1, 1, 4).GetPadded(-10.f), kParamEffect3Param5, "", toggleStyle, "Time", "Tempo"),
+      kCtrlTagEffect3Toggle1, "E3")->SetActionFunction(
+        [pGraphics, this](IControl* pControl) {
+          mDelayIsSynced = pControl->GetValue();
+          std::vector<int> params{ kParamEffect3Param1, kParamEffect3Param2 };
+          DelayTempoSyncToggle(this, pGraphics, params, mDelayIsSynced, kCtrlTagEffect3List);
+        }
+    );
+    pGraphics->AttachControl(new IVToggleControl(effectsControlsPanel.FracRectVertical(1.f / 3).GetGridCell(0, 2, 1, 4).GetPadded(-10.f), kNoParameter, "", toggleStyle, "Stereo", "Mono"), kCtrlTagEffect3Toggle2, "E3")->SetActionFunction(
+      [pGraphics, channelLockFunction3](IControl* pControl) {
+        bool mono = pControl->GetValue() > 0.5;
+        std::vector<int> ctrlTags{ kCtrlTagEffect3Knob1, kCtrlTagEffect3Knob2 };
+        DelayStereoToggle(pGraphics, ctrlTags, mono, channelLockFunction3, kCtrlTagEffect3List);
+      }
+    );
+
+    // Initialize all tab displays
+    dynamic_cast<TablitsaEffectBankControl*>(pGraphics->GetControlWithTag(kCtrlTagEffectBank))->TabChanged(0);
+    // Initialize all effect panels
+    pGraphics->GetControlWithTag(kCtrlTagEffect1List)->SetDirty(true);
+    pGraphics->GetControlWithTag(kCtrlTagEffect2List)->SetDirty(true);
+    pGraphics->GetControlWithTag(kCtrlTagEffect3List)->SetDirty(true);
+    dynamic_cast<IVSwitchControl*>(pGraphics->GetControlWithTag(kCtrlTagEffect2Switch))->SetValueStr("Off");
+    dynamic_cast<IVSwitchControl*>(pGraphics->GetControlWithTag(kCtrlTagEffect3Switch))->SetValueStr("Off");
 
     /* LOWER-HALF CONTROLS */
     constexpr float modulePad[4]{-10.f, -5.f, -10.f, -15.f};
@@ -720,7 +1003,7 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
     pGraphics->AttachControl(new TablitsaIVModKnobControl(filter2Panel.GetGridCell(0, 1, 1, 5).GetHShifted(16.f).GetCentredInside(dialSize), kParamFilter2Cutoff, "Cutoff"), kNoTag, "Flt2");
     pGraphics->AttachControl(new TablitsaIVModKnobControl(filter2Panel.GetGridCell(0, 2, 1, 5).GetHShifted(16.f).GetCentredInside(dialSize), kParamFilter2Resonance, "Res."), kNoTag, "Flt2");
     pGraphics->AttachControl(new TablitsaIVModKnobControl(filter2Panel.GetGridCell(0, 3, 1, 5).GetHShifted(16.f).GetCentredInside(dialSize), kParamFilter2Drive, "Drive"), kNoTag, "Flt2");
-    pGraphics->AttachControl(new IVTabSwitchControl(filter2Panel.GetGridCell(0, 4, 1, 5).GetPadded(-10.f).GetVPadded(-20.f).GetHShifted(-6.f), setFilterOscillator, { "Osc 1", "Osc 2" }, "", TABLITSA_STYLE, EVShape::Rectangle, EDirection::Vertical), kCtrlTagFilter2Osc, "Flt2")->SetValue(1.);
+    pGraphics->AttachControl(new IVTabSwitchControl(filter2Panel.GetGridCell(0, 4, 1, 5).GetPadded(-10.f).GetVPadded(-20.f).GetHShifted(-6.f), setFilterOscillator, { "Osc 1", "Osc 2" }, "", toggleStyle, EVShape::Rectangle, EDirection::Vertical), kCtrlTagFilter2Osc, "Flt2")->SetValue(1.);
     // FF/FB/Delay Time (comb filter)
     pGraphics->AttachControl(new TablitsaIVModKnobControl(filter2Panel.GetGridCell(0, 1, 1, 5).GetHShifted(16.f).GetCentredInside(dialSize), kParamFilter2FF, "F/F"), kCtrlTagFilter2FF, "Flt1")->Hide(true);
     pGraphics->AttachControl(new TablitsaIVModKnobControl(filter2Panel.GetGridCell(0, 2, 1, 5).GetHShifted(16.f).GetCentredInside(dialSize), kParamFilter2FB, "F/B"), kCtrlTagFilter2FB, "Flt1")->Hide(true);
@@ -843,8 +1126,8 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
     pGraphics->AttachControl(new TablitsaVGroupControl(lfoPanel.GetGridCell(1, 0, 3, 1).GetPadded(modulePad[0], modulePad[1], modulePad[2], modulePad[3]), "LFO 2"));
 
     /* Sequencer */
-    const IRECT sequencerDisplayPanel = lowerPanel.GetGridCell(2, 2, 3, 3).GetFromLeft(PLUG_WIDTH - lfoPanel.L).GetPadded(0.f, 10.f, 0.f, 0.f);
-    const IRECT sequencerParamsPanel = IRECT(lowerPanel.R, lowerPanel.T, globalControls.R, lowerPanel.B - lowerPanel.H() / 3.f).GetHShifted(-5.f);
+    const IRECT sequencerDisplayPanel = lowerPanel.GetGridCell(2, 2, 3, 3).GetFromLeft(PLUG_WIDTH - lfoPanel.L).GetVShifted(9.f).GetPadded(10.f, 12.f, 0.f, 0.f);
+    const IRECT sequencerParamsPanel = IRECT(lowerPanel.R, lowerPanel.T, globalControls.R, lowerPanel.B - lowerPanel.H() / 3.f).GetHShifted(-2.f);
 
     // Sequencer Action Functions
     auto stepRandomizeAction = [pGraphics](IControl* pCaller) {
@@ -857,7 +1140,7 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
     pGraphics->AttachControl(new TablitsaIVKnobControl(sequencerParamsPanel.GetGridCell(0, 1, 2, 3).GetCentredInside(dialSize), kParamSequencerRateTempo, "Rate"), kNoTag, "SequencerParams");
     pGraphics->AttachControl(new TablitsaIVModKnobControl(sequencerParamsPanel.GetGridCell(0, 2, 2, 3).GetCentredInside(dialSize), kParamSequencerAmp, "Amp"), kNoTag, "SequencerParams");
     pGraphics->AttachControl(new TablitsaIVKnobControl(sequencerParamsPanel.GetGridCell(1, 0, 2, 3).GetCentredInside(dialSize), kParamSequencerGlide, "Glide"), kNoTag, "SequencerParams");
-    pGraphics->AttachControl(new IVToggleControl(sequencerParamsPanel.GetGridCell(4, 1, 7, 3).GetHPadded(-5.f), kParamSequencerRateMode, "", toggleStyle, "Sync Off", "Sync On"),
+    pGraphics->AttachControl(new IVToggleControl(sequencerParamsPanel.GetGridCell(4, 1, 7, 3).GetPadded(-10.f, -2.f, -10.f, -2.f), kParamSequencerRateMode, "", toggleStyle, "Sync Off", "Sync On"),
       kCtrlTagSequencerRateMode, "Sequencer")->SetAnimationEndActionFunction([pGraphics](IControl* pControl) {
         bool sync = pControl->GetValue() > 0.5;
         pGraphics->HideControl(kParamSequencerRateTempo, !sync);
@@ -878,25 +1161,25 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
         pGraphics->GetDelegate()->SendArbitraryMsgFromUI(kMsgSeqSliderChanged, kCtrlTagSequencer, sizeof(ParamTuple), &data);
       }
       });
-    pGraphics->AttachControl(new IVToggleControl(sequencerParamsPanel.GetGridCell(5, 1, 7, 3).GetHPadded(-5.f), kParamSequencerRestart, "", toggleStyle, "Free Run", "Restart"), kNoTag, "SequencerParams");
+    pGraphics->AttachControl(new IVToggleControl(sequencerParamsPanel.GetGridCell(5, 1, 7, 3).GetPadded(-10.f, -2.f, -10.f, -2.f), kParamSequencerRestart, "", toggleStyle, "Free Run", "Restart"), kNoTag, "SequencerParams");
     pGraphics->AttachControl(new ModSliderControl(sequencerDisplayPanel.GetGridCell(0, 5, 1, 6).GetVPadded(-18.f).GetVShifted(-5.f).GetMidHPadded(20.f), kNoParameter, "Depth"), kCtrlTagSequencerDepth, "Sequencer");
-    pGraphics->AttachControl(new IVToggleControl(sequencerParamsPanel.GetGridCell(4, 2, 7, 3).GetHPadded(-5.f), kNoParameter, "", toggleStyle, "Cont.", "Quant."), kCtrlTagSequencerQuant, "SequencerParams")->SetActionFunction(
+    pGraphics->AttachControl(new IVToggleControl(sequencerParamsPanel.GetGridCell(4, 2, 7, 3).GetPadded(-15.f, -2.f, -15.f, -2.f), kNoParameter, "", toggleStyle, "Cont.", "Quant."), kCtrlTagSequencerQuant, "SequencerParams")->SetActionFunction(
       [pGraphics, this](IControl* pControl) {
         mSequencerIsQuantized = pControl->GetValue();
         int nSteps = mSequencerIsQuantized > 0.5 ? 12 : 0;
         dynamic_cast<IVTrackControlBase*>(pGraphics->GetControlWithTag(kCtrlTagSequencer))->SetNSteps(nSteps);
       });
-    pGraphics->AttachControl(new IVButtonControl(sequencerParamsPanel.GetGridCell(5, 2, 7, 3).GetHPadded(-5.f), stepRandomizeAction, "Randomize", TABLITSA_STYLE.WithLabelText(IText(12.f))), kNoTag, "SequencerParams");
+    pGraphics->AttachControl(new IVButtonControl(sequencerParamsPanel.GetGridCell(5, 2, 7, 3).GetPadded(-15.f, -2.f, -15.f, -2.f), stepRandomizeAction, "Randomize", pushButtonStyle.WithLabelText(pushButtonStyle.labelText.WithSize(12.f))), kNoTag, "SequencerParams");
     pGraphics->AttachControl(new TablitsaVGroupControl(sequencerParamsPanel.GetPadded(modulePad[0], modulePad[1] + 5.f, modulePad[2], modulePad[3]), "Sequencer"));
 
     
 #ifndef VST3_API
-    pGraphics->AttachControl(new IVButtonControl(keyboardBounds.GetFromTRHC(200, 30).GetTranslated(0, -30.f), SplashClickActionFunc,
+    pGraphics->AttachControl(new IVButtonControl(b.GetFromBottom(KEYBOARD_HEIGHT + 15.f).GetFromRight(170.f).GetFromTop(30.), SplashClickActionFunc,
       "Show/Hide Keyboard", TABLITSA_STYLE.WithColor(kFG, COLOR_WHITE).WithLabelText({15.f, EVAlign::Middle})))->SetAnimationEndActionFunction(
       [pGraphics, globalControls](IControl* pCaller) {
         static bool hide = false;
         pGraphics->GetControlWithTag(kCtrlTagKeyboard)->Hide(hide = !hide);
-        pGraphics->Resize((float)PLUG_WIDTH, hide ? (float)PLUG_HEIGHT : (float)PLUG_HEIGHT + (float)KEYBOARD_HEIGHT, pGraphics->GetDrawScale());
+        pGraphics->Resize((int)PLUG_WIDTH, hide ? (int)PLUG_HEIGHT : (float)PLUG_HEIGHT + (float)KEYBOARD_HEIGHT, pGraphics->GetDrawScale());
     });
     pGraphics->SetQwertyMidiKeyHandlerFunc([pGraphics](const IMidiMsg& msg) {
                                               dynamic_cast<IVKeyboardControl*>(pGraphics->GetControlWithTag(kCtrlTagKeyboard))->SetNoteFromMidi(msg.NoteNumber(), msg.StatusMsg() == IMidiMsg::kNoteOn);
@@ -911,7 +1194,12 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
                              }, "BTMIDI"));
     }
 #endif
-    
+
+    // Popup Menus
+    dynamic_cast<DropdownListControl*>(pGraphics->GetControlWithTag(kCtrlTagEffect1List))->AttachPopupMenu();
+    dynamic_cast<DropdownListControl*>(pGraphics->GetControlWithTag(kCtrlTagEffect2List))->AttachPopupMenu();
+    dynamic_cast<DropdownListControl*>(pGraphics->GetControlWithTag(kCtrlTagEffect3List))->AttachPopupMenu();
+
   };
 #endif
 }
@@ -954,6 +1242,9 @@ int Tablitsa::UnserializeState(const IByteChunk& chunk, int startPos)
   // Delay tempo sync
   startPos = chunk.Get(&v, startPos);
   mDelayIsSynced = v;
+
+  assert(mDSP.mLoadedWavetables[0] == static_cast<int>(mDSP.mLoadedWavetables[0]));
+  assert(mDSP.mLoadedWavetables[1] == static_cast<int>(mDSP.mLoadedWavetables[1]));
   
   // If UI exists
   if (GetUI())
@@ -989,22 +1280,18 @@ void Tablitsa::UpdateUIControls()
   SendCurrentParamValuesFromDelegate();
   GetUI()->SetAllControlsDirty();
 
-  // Trigger the ActionFunctions of controls that change the user interface
-  /*GetUI()->GetControlWithTag(kCtrlTagLFO1RateMode)->SetDirty(true);
-  GetUI()->GetControlWithTag(kCtrlTagLFO2RateMode)->SetDirty(true);
-  GetUI()->GetControlWithTag(kCtrlTagSequencerRateMode)->SetDirty(true);
-  GetUI()->GetControlWithTag(kCtrlTagSequencerQuant)->SetDirty(true);
-  GetUI()->GetControlWithTag(kCtrlTagFilter1Type)->SetDirty(true);
-  GetUI()->GetControlWithTag(kCtrlTagFilter2Type)->SetDirty(true);
-  GetUI()->GetControlWithTag(kCtrlTagGlideMode)->SetDirty(true);*/
-  for (auto i{0}; i < std::size(kStartupTriggerControls); ++i)
-    GetUI()->GetControlWithTag(kStartupTriggerControls[i])->SetDirty(true);
+  for (auto i{ 0 }; i < std::size(kStartupTriggerControls); ++i)
+  {
+    IControl* pControl = GetUI()->GetControlWithTag(kStartupTriggerControls[i]);
+    if (!pControl->IsHidden())
+      pControl->SetDirty(true);
+  }
 }
 
 #if IPLUG_DSP
 void Tablitsa::ProcessBlock(sample** inputs, sample** outputs, int nFrames)
 {
-  mDSP.ProcessBlock(nullptr, outputs, 2, nFrames, mTimeInfo.mPPQPos, mTimeInfo.mTransportIsRunning);
+  mDSP.ProcessBlock(nullptr, outputs, 2, nFrames, mTimeInfo.mPPQPos, mTimeInfo.mTransportIsRunning, mTimeInfo.mTempo);
   mMeterSender.ProcessBlock(outputs, nFrames, kCtrlTagMeter);
 //  mLFO1VisSender.PushData({ kCtrlTagLFO1Vis, {float(mDSP.mGlobalLFO1.GetLastOutput())}});
 //  mLFO2VisSender.PushData({ kCtrlTagLFO2Vis, {float(TablitsaDSP<sample>::mGlobalLFO2.GetLastOutput())} });
@@ -1020,17 +1307,20 @@ void Tablitsa::OnIdle()
   GetTimeSig(mDSP.mTSNum, mDSP.mTSDenom);
   mDSP.mTempo = GetTempo();
 
-  if (mDSP.mStepPos != mDSP.mPrevPos)
+  /*if (mDSP.mStepPos != mDSP.mPrevPos)
   {
     mDSP.mPrevPos = mDSP.mStepPos;
     SendControlMsgFromDelegate(kCtrlTagSequencer, IVMultiSliderControl<>::kMsgTagSetHighlight, sizeof(int), &mDSP.mPrevPos);
-  }
+  }*/
 
-  // Update Sequencer Position
-  if (mDSP.GetSequencerStep() != mDSP.mSeqPos)
+  if (GetUI())
   {
-    mDSP.mSeqPos = mDSP.GetSequencerStep();
-    SendControlMsgFromDelegate(kCtrlTagSequencer, IVMultiSliderControl<>::kMsgTagSetHighlight, sizeof(int), &mDSP.mSeqPos);
+    // Update Sequencer Position
+    if (mDSP.GetSequencerStep() != mDSP.mSeqPos)
+    {
+      mDSP.mSeqPos = mDSP.GetSequencerStep();
+      SendControlMsgFromDelegate(kCtrlTagSequencer, IVMultiSliderControl<>::kMsgTagSetHighlight, sizeof(int), &mDSP.mSeqPos);
+    }
   }
 }
 
@@ -1097,60 +1387,137 @@ bool Tablitsa::OnMessage(int msgTag, int ctrlTag, int dataSize, const void* pDat
   {
     switch (msgTag)
     {
-      case kMsgWavetable1Changed:
+    case kMsgSavePreset:
+    {
+      auto* backup = reinterpret_cast<const bool*>(pData);
+      std::string filePath;
+      IByteChunk newPreset;
+      SerializeState(newPreset);
+
+      bool useSystemDialog{ (bool)LOAD_WITH_DIALOG };
+      if (useSystemDialog)
       {
-        PeriodicTable* pTableControl = dynamic_cast<PeriodicTable*>(GetUI()->GetControlWithTag(kCtrlTagPeriodicTable));
-        pTableControl->SetTableLoading(true, 0);
-        const double wtIdx = *static_cast<const double*>(pData); //Semi-Normalized value (between 1/118 and 1)
-        mDSP.mLoadedWavetables[0] = wtIdx * 118.; // Corresponds to the atomic number (not the 0-indexed vector item)
-        mDSP.UpdateOscillatorWavetable(static_cast<int>(mDSP.mLoadedWavetables[0]) - 1, 0);
-        pTableControl->SetTableLoading(false, 0);
+        WDL_String fileStr("NewPreset");
+        WDL_String pathStr(GetDataPath("\\Tablitsa\\presets\\").c_str());
+        GetUI()->PromptForFile(fileStr, pathStr, EFileAction::Save, "TPST");
+        filePath = fileStr.Get();
+        if (filePath == "\0")
+          break;
+      }
+      else
+      {
+        filePath = GetDataPath("\\Tablitsa\\presets\\") + "TEST.TPST";
+      }
+
+      SavePreset(newPreset, filePath.c_str(), *backup);
+
+      break;
+    }
+    case kMsgLoadPreset:
+    {
+      auto* backup = reinterpret_cast<const bool*>(pData);
+      std::string filePath;
+      if (*backup)
+      {
+        filePath = GetDataPath("\\Tablitsa\\presets\\") + "_tablitsa.bkp";
+      }
+      else if ((bool)LOAD_WITH_DIALOG)
+      {
+        WDL_String fileStr("UserPreset");
+        WDL_String pathStr(GetDataPath("\\Tablitsa\\presets\\").c_str());
+        GetUI()->PromptForFile(fileStr, pathStr, EFileAction::Open, "TPST");
+        filePath = fileStr.Get();
+        if (filePath == "\0")
+          break;
+      }
+      else
+        filePath = GetDataPath("\\Tablitsa\\presets\\") + "TEST.TPST";
+
+      IByteChunk presetData = LoadPreset(filePath.c_str(), *backup);
+      if (presetData.Size() == 0)
         break;
-      }
-      case kMsgWavetable2Changed:
+      UnserializeState(presetData, 0);
+      UpdateUIControls();
+      break;
+    }
+    case kMsgWavetable1Changed:
+    {
+      PeriodicTable* pTableControl = dynamic_cast<PeriodicTable*>(GetUI()->GetControlWithTag(kCtrlTagPeriodicTable));
+      pTableControl->SetTableLoading(true, 0);
+      const double wtIdx = *static_cast<const double*>(pData); //Semi-Normalized value (between 1/118 and 1)
+      mDSP.mLoadedWavetables[0] = wtIdx * 118.; // Corresponds to the atomic number (not the 0-indexed vector item)
+      mDSP.UpdateOscillatorWavetable(static_cast<int>(mDSP.mLoadedWavetables[0]) - 1, 0);
+      pTableControl->SetTableLoading(false, 0);
+      break;
+    }
+    case kMsgWavetable2Changed:
+    {
+      PeriodicTable* pTableControl = dynamic_cast<PeriodicTable*>(GetUI()->GetControlWithTag(kCtrlTagPeriodicTable));
+      pTableControl->SetTableLoading(true, 1);
+      const double wtIdx = *static_cast<const double*>(pData);
+      mDSP.mLoadedWavetables[1] = wtIdx * 118.;
+      mDSP.UpdateOscillatorWavetable(static_cast<int>(mDSP.mLoadedWavetables[1]) - 1, 1);
+      pTableControl->SetTableLoading(false, 1);
+      break;
+    }
+    case kMsgSeqSliderChanged:
+    {
+      // Read incoming data as a tuple
+      auto* pConverted = reinterpret_cast<const ParamTuple*>(pData);
+      mDSP.mSeqSteps[pConverted->idx] = pConverted->value;
+      break;
+    }
+    case kMsgRandomizeSequencer:
+    {
+      auto* pSequencer = dynamic_cast<SequencerControl<kNumSeqSteps>*>(GetUI()->GetControlWithTag(kCtrlTagSequencer));
+      for (auto i{ 0 }; i < kNumSeqSteps; ++i)
       {
-        PeriodicTable* pTableControl = dynamic_cast<PeriodicTable*>(GetUI()->GetControlWithTag(kCtrlTagPeriodicTable));
-        pTableControl->SetTableLoading(true, 1);
-        const double wtIdx = *static_cast<const double*>(pData);
-        mDSP.mLoadedWavetables[1] = wtIdx * 118.;
-        mDSP.UpdateOscillatorWavetable(static_cast<int>(mDSP.mLoadedWavetables[1]) - 1, 1);
-        pTableControl->SetTableLoading(false, 1);
+        mDSP.mSeqSteps[i] = static_cast<double>(std::rand() % 1000) / 1000.;
+        pSequencer->SetValue(mDSP.mSeqSteps[i], i);
+      }
+      pSequencer->SetDirty(true);
+      break;
+    }
+    case kMsgFilterOscChanged:
+    {
+      IControl* pControl = GetUI()->GetControlWithTag(ctrlTag);
+      if (ctrlTag == kCtrlTagFilter1Osc)
+      {
+        mDSP.UpdateFilterSource(0, static_cast<int>(pControl->GetValue()));
+        mDSP.UpdateFilterSource(1, 1 - static_cast<int>(pControl->GetValue()));
+      }
+      else
+      {
+        mDSP.UpdateFilterSource(1, static_cast<int>(pControl->GetValue()));
+        mDSP.UpdateFilterSource(0, 1 - static_cast<int>(pControl->GetValue()));
+      }
+      break;
+    }
+    case kMsgEffect1Changed:
+    case kMsgEffect2Changed:
+    case kMsgEffect3Changed:
+    {
+      int effectIdx = *reinterpret_cast<const int*>(pData);
+      switch (effectIdx)
+      {
+      case kDelayEffect:
+        mDSP.mEffects[msgTag - kMsgEffect1Changed] = new DelayEffect<iplug::sample, TABLITSA_MAX_DELAY_SAMP>(GetSampleRate(), &mDSP.mGlobalMetronome);
         break;
-      }
-      case kMsgSeqSliderChanged:
-      {
-        // Read incoming data as a tuple
-        auto* pConverted = reinterpret_cast<const ParamTuple*>(pData);
-        mDSP.mSeqSteps[pConverted->idx] = pConverted->value;
+      case kWaveshaperEffect:
+        mDSP.mEffects[msgTag - kMsgEffect1Changed] = new Waveshaper<iplug::sample>(GetSampleRate());
         break;
-      }
-      case kMsgRandomizeSequencer:
-      {
-        auto* pSequencer = dynamic_cast<SequencerControl<kNumSeqSteps>*>(GetUI()->GetControlWithTag(kCtrlTagSequencer));
-        for (auto i{ 0 }; i < kNumSeqSteps; ++i)
-        {
-          mDSP.mSeqSteps[i] = static_cast<double>(std::rand() % 1000) / 1000.;
-          pSequencer->SetValue(mDSP.mSeqSteps[i], i);
-        }
-        pSequencer->SetDirty(true);
+      case kSampleAndHoldEffect:
+        mDSP.mEffects[msgTag - kMsgEffect1Changed] = new SampleAndHold<iplug::sample>(GetSampleRate());
         break;
-      }
-      case kMsgFilterOscChanged:
-      {
-        IControl* pControl = GetUI()->GetControlWithTag(ctrlTag);
-        if (ctrlTag == kCtrlTagFilter1Osc)
-        {
-          mDSP.UpdateFilterSource(0, static_cast<int>(pControl->GetValue()));
-          mDSP.UpdateFilterSource(1, 1 - static_cast<int>(pControl->GetValue()));
-        }
-        else
-        {
-          mDSP.UpdateFilterSource(1, static_cast<int>(pControl->GetValue()));
-          mDSP.UpdateFilterSource(0, 1 - static_cast<int>(pControl->GetValue()));
-        }
-      }
       default:
+        mDSP.mEffects[msgTag - kMsgEffect1Changed] = new Effect<iplug::sample>(GetSampleRate());
         break;
+      }
+      SendCurrentParamValuesFromDelegate();
+      break;
+    }
+    default:
+      break;
     }
   }
   return false;
@@ -1169,6 +1536,94 @@ int Tablitsa::GetActiveModIdx() const
 
 void Tablitsa::SetActiveModIdx(int idx)
 {
+  int prev = mActiveModIdx;
   mActiveModIdx = idx;
+  if (idx > -1)
+    dynamic_cast<TablitsaIVModKnobControl*>(GetUI()->GetControl(idx))->ColorSwap();
+  if (prev > -1)
+    dynamic_cast<TablitsaIVModKnobControl*>(GetUI()->GetControl(prev))->ColorSwap();
+}
+
+void Tablitsa::SavePreset(IByteChunk& byteData, const char* filename, bool isBackup)
+{
+  assert(byteData.Size() != 0);
+
+  if (!strcmp(filename, "_Tablitsa_Default.TPST"))
+  {
+    GetUI()->ShowMessageBox("Cannot overwrite default preset", "Error", EMsgBoxType::kMB_OK);
+  }
+
+  std::ofstream presetFile(filename);
+
+  if (!presetFile.is_open())
+  {
+    if (isBackup)
+      GetUI()->ShowMessageBox("Could not open backup file. Check directory and try again.", "Error", EMsgBoxType::kMB_OK);
+    else
+      GetUI()->ShowMessageBox("Cannot access selected file path.", "Error", EMsgBoxType::kMB_OK);
+    presetFile.close();
+    return;
+  }
+
+  unsigned char* allBytes = static_cast<unsigned char*>(byteData.GetData());
+  presetFile.write(reinterpret_cast<char*>(allBytes), byteData.Size());
+  presetFile.close();
+}
+
+IByteChunk Tablitsa::LoadPreset(const char* filename, bool isBackup)
+{
+  IByteChunk presetData;
+
+  std::vector<char> fileData = ReadAllBytes(filename);
+
+  if (fileData.size() == 0)
+  {
+    if (isBackup)
+      GetUI()->ShowMessageBox("Backup file not found", "Error", EMsgBoxType::kMB_OK);
+    else
+      GetUI()->ShowMessageBox("Preset file not found", "Error", EMsgBoxType::kMB_OK);
+    return presetData;
+  }
+
+  for (auto b : fileData)
+    presetData.Put(&b);
+
+  return presetData;
 }
 #endif
+
+std::string GetDataPath(char* appendPath)
+{
+  USES_CONVERSION;
+  TCHAR szPath[MAX_PATH];
+  if (SUCCEEDED(SHGetFolderPath(NULL, CSIDL_APPDATA, NULL, 0, szPath)))
+  {
+    PathAppend(szPath, A2T(appendPath));
+  }
+#if VST3_API
+  // In the standalone app builds, `TCHAR` is type `char`. In VST3 builds, it's `wchar_t`, requiring a different conversion method.
+  std::wstring wpath(szPath);
+  std::string path = std::wstring_convert<std::codecvt_utf8<wchar_t>>().to_bytes(wpath);
+#else
+  std::string path = szPath;
+#endif
+  return path;
+}
+
+std::vector<char> ReadAllBytes(const char* fname)
+{
+  std::ifstream ifs(fname, std::ios::binary | std::ios::ate);
+  std::ifstream::pos_type pos = ifs.tellg();
+
+  if (!ifs.is_open())
+  {
+    return std::vector<char>(0);
+  }
+
+  std::vector<char> allBytes(pos);
+  ifs.seekg(0, std::ios::beg);
+  // TODO: Exception handling here in case the vector is empty
+  ifs.read(&allBytes[0], pos);
+  ifs.close();
+  return allBytes;
+}

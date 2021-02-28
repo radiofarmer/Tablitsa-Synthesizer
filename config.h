@@ -23,11 +23,15 @@
 #define PLUG_DOES_MPE 1
 #define PLUG_DOES_STATE_CHUNKS 1
 #define PLUG_HAS_UI 1
+/* High-DPI pixel dimensions: */
 #define PLUG_WIDTH 1400
 #define PLUG_HEIGHT 770
+/* Low-DPI pixel dimensions */
+//#define PLUG_WIDTH 1120
+//#define PLUG_HEIGHT 616
 #define PLUG_FPS 60
 #define PLUG_SHARED_RESOURCES 0
-#define PLUG_HOST_RESIZE 0
+#define PLUG_HOST_RESIZE 1
 
 #define AUV2_ENTRY Tablitsa_Entry
 #define AUV2_ENTRY_STR "Tablitsa_Entry"
@@ -48,9 +52,14 @@
 #define APP_MULT 1
 #define APP_COPY_AUV3 0
 #define APP_SIGNAL_VECTOR_SIZE 64
+
 // NB: Remember to edit main.rc compile-time directives
 #define ROBOTO_FN "Roboto-Regular.ttf"
 #define BG_FN "tablitsa_background.png"
 #define PERIODIC_TABLE_FN "periodic_table.svg"
 #define LOGO_FN "logo.png"
 #define DIAL_FN "test_dial.png"
+#define DECR_BUTTON_ON_FN "incr_buttons-01.svg"
+#define INCR_BUTTON_ON "incr_buttons-02.svg"
+#define DECR_BUTTON_OFF_FN "incr_buttons-03.svg"
+#define INCR_BUTTON_OFF "incr_buttons-04.svg"

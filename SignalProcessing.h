@@ -2,30 +2,33 @@
 
 #include <cmath>
 
-double SoftClip(double s, double gain = 3.);
+template<typename T>
+T SoftClip(T s, T gain = (T)1);
 
+template<typename T, int MaxLength>
 class DelayLine
 {
 public:
-  DelayLine(const int length);
-
-  ~DelayLine()
-  {
-    delete[] mBuffer;
-  }
+  DelayLine() {}
 
   /* Clear the delay line and reset the read/write positions to the start. */
-  void reset();
+  void DelayLine::reset()
+  {
+    std::fill_n(mBuffer, MaxLength, (T)0);
+  }
 
-  void SetDelay(const int d);
+  void DelayLine::SetDelay(const int d)
+  {
+    mLength = std::min(d, MaxDelay);
+  }
 
   /* Get a pointer to the start of the delay line */
-  const double* GetPointer() {return mBuffer;}
+  const T* GetPointer() {return mBuffer;}
 
-  const double* GetReadPtr() { return &(mBuffer[mRead]); }
+  const T* GetReadPtr() { return &(mBuffer[mRead]); }
 
   /* Add a new sample to the first (most recent) position on the delay line, and adjust the read/write positions accordingly. */
-  inline void push(const double s)
+  inline void push(const T s)
   {
     mRead = mWrite;
     mBuffer[mWrite++] = s;
@@ -34,7 +37,7 @@ public:
   }
 
   /* The the value in the delay line `offset` samples ago. (same as `operator[]`) */
-  inline double at(const int offset = 0)
+  inline T at(const int offset = 0)
   {
     int readPoint{ mRead - offset };
     if (readPoint < 0)
@@ -42,14 +45,14 @@ public:
     return mBuffer[readPoint];
   }
   /* The the value in the delay line `offset` samples ago. (same as `at`) */
-  inline double operator[](const int idx)
+  inline T operator[](const int idx)
   {
     return at(idx);
   }
 
 private:
-  int mLength;
-  double* mBuffer;
+  T mBuffer[MaxLength]{ 0. };
+  int mLength{ MaxLength };
   int mRead{ 0 };
   int mWrite{ 0 };
 };

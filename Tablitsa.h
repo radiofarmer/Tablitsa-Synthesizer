@@ -2,8 +2,8 @@
 
 #include "IPlug_include_in_plug_hdr.h"
 #include "IControls.h"
-// #include <vectorclass.h>
 
+#define TABLITSA_EFFECTS_LIST {"None", "Delay", "Waveshaper", "Sample & Hold"}
 
 const int kNumPresets = 1;
 constexpr int kNumVoices = 16;
@@ -197,16 +197,16 @@ enum EParams
   kParamWavetable1AmpVel,
   kParamWavetable1AmpKTk,
   kParamWavetable1AmpRnd,
-  kParamWavetable1Sub,
-  kParamWavetable1SubEnv1,
-  kParamWavetable1SubEnv2,
-  kParamWavetable1SubAmpEnv,
-  kParamWavetable1SubLFO1,
-  kParamWavetable1SubLFO2,
-  kParamWavetable1SubSeq,
-  kParamWavetable1SubVel,
-  kParamWavetable1SubKTk,
-  kParamWavetable1SubRnd,
+  kParamWavetable1Formant,
+  kParamWavetable1FormantEnv1,
+  kParamWavetable1FormantEnv2,
+  kParamWavetable1FormantAmpEnv,
+  kParamWavetable1FormantLFO1,
+  kParamWavetable1FormantLFO2,
+  kParamWavetable1FormantSeq,
+  kParamWavetable1FormantVel,
+  kParamWavetable1FormantKTk,
+  kParamWavetable1FormantRnd,
   kParamWavetable2Pitch,
   kParamWavetable2PitchEnv1,
   kParamWavetable2PitchEnv2,
@@ -247,16 +247,16 @@ enum EParams
   kParamWavetable2AmpVel,
   kParamWavetable2AmpKTk,
   kParamWavetable2AmpRnd,
-  kParamWavetable2Sub,
-  kParamWavetable2SubEnv1,
-  kParamWavetable2SubEnv2,
-  kParamWavetable2SubAmpEnv,
-  kParamWavetable2SubLFO1,
-  kParamWavetable2SubLFO2,
-  kParamWavetable2SubSeq,
-  kParamWavetable2SubVel,
-  kParamWavetable2SubKTk,
-  kParamWavetable2SubRnd,
+  kParamWavetable2Formant,
+  kParamWavetable2FormantEnv1,
+  kParamWavetable2FormantEnv2,
+  kParamWavetable2FormantAmpEnv,
+  kParamWavetable2FormantLFO1,
+  kParamWavetable2FormantLFO2,
+  kParamWavetable2FormantSeq,
+  kParamWavetable2FormantVel,
+  kParamWavetable2FormantKTk,
+  kParamWavetable2FormantRnd,
   kParamFilter1Cutoff,
   kParamFilter1CutoffEnv1,
   kParamFilter1CutoffEnv2,
@@ -394,17 +394,24 @@ enum EParams
   kParamRingModAmountVel,
   kParamRingModAmountKTk,
   kParamRingModAmountRnd, // !Ring Mod
-  kParamDelayTimeLMilliseconds, // Delay
-  kParamDelayTimeRMilliseconds,
-  kParamDelayTimeLBeats,
-  kParamDelayTimeRBeats,
-  kParamDelayTimeMode,
-  kParamDelayFeedback,
-  kParamDelayMix, // !Delay
-  kParamSampleAndHold, // Sample-and-Hold
-  kParamSaHRate,
-  kParamSaHDecay,
-  kParamSaHMix, // !Sample-and-Hold
+  kParamEffect1Param1, // Effects
+  kParamEffect1Param2,
+  kParamEffect1Param3,
+  kParamEffect1Param4,
+  kParamEffect1Param5,
+  kParamEffect1Param6,
+  kParamEffect2Param1,
+  kParamEffect2Param2,
+  kParamEffect2Param3,
+  kParamEffect2Param4,
+  kParamEffect2Param5,
+  kParamEffect2Param6,
+  kParamEffect3Param1,
+  kParamEffect3Param2,
+  kParamEffect3Param3,
+  kParamEffect3Param4,
+  kParamEffect3Param5,
+  kParamEffect3Param6,
   kNumParams
 };
 
@@ -460,11 +467,31 @@ enum EControlTags
   kCtrlTagOsc1ModSwitch,
   kCtrlTagOsc2ModSwitch,
   kCtrlTagSequencer,
-  kCtrlTagDelayLMilliseconds,
-  kCtrlTagDelayRMilliseconds,
-  kCtrlTagDelayLBeats,
-  kCtrlTagDelayRBeats,
-  kCtrlTagDelayTempoSync,
+  kCtrlTagEffectBank,
+  kCtrlTagEffect1List,
+  kCtrlTagEffect1Switch,
+  kCtrlTagEffect1Knob1,
+  kCtrlTagEffect1Knob2,
+  kCtrlTagEffect1Knob3,
+  kCtrlTagEffect1Knob4,
+  kCtrlTagEffect1Toggle1,
+  kCtrlTagEffect1Toggle2,
+  kCtrlTagEffect2List,
+  kCtrlTagEffect2Switch,
+  kCtrlTagEffect2Knob1,
+  kCtrlTagEffect2Knob2,
+  kCtrlTagEffect2Knob3,
+  kCtrlTagEffect2Knob4,
+  kCtrlTagEffect2Toggle1,
+  kCtrlTagEffect2Toggle2,
+  kCtrlTagEffect3List,
+  kCtrlTagEffect3Switch,
+  kCtrlTagEffect3Knob1,
+  kCtrlTagEffect3Knob2,
+  kCtrlTagEffect3Knob3,
+  kCtrlTagEffect3Knob4,
+  kCtrlTagEffect3Toggle1,
+  kCtrlTagEffect3Toggle2,
   kNumCtrlTags
 };
 
@@ -475,6 +502,11 @@ enum EMsgTags
   kMsgSeqSliderChanged,
   kMsgRandomizeSequencer,
   kMsgFilterOscChanged,
+  kMsgSavePreset,
+  kMsgLoadPreset,
+  kMsgEffect1Changed,
+  kMsgEffect2Changed,
+  kMsgEffect3Changed
 };
 
 enum EModulators
@@ -491,6 +523,14 @@ enum EModulators
   kNumMods
 };
 
+enum EEffectTypes
+{
+  kNoEffect,
+  kDelayEffect,
+  kWaveshaperEffect,
+  kSampleAndHoldEffect
+};
+
 constexpr EControlTags kStartupTriggerControls[]{
   kCtrlTagLFO1RateMode,
   kCtrlTagLFO2RateMode,
@@ -499,7 +539,18 @@ constexpr EControlTags kStartupTriggerControls[]{
   kCtrlTagFilter1Type,
   kCtrlTagFilter2Type,
   kCtrlTagGlideMode,
-  kCtrlTagDelayTempoSync
+  kCtrlTagEffect1List,
+  kCtrlTagEffect1Toggle1,
+  kCtrlTagEffect1Toggle2,
+  kCtrlTagEffect2List,
+  kCtrlTagEffect2Toggle1,
+  kCtrlTagEffect2Toggle2,
+  kCtrlTagEffect3List,
+  kCtrlTagEffect3Toggle1,
+  kCtrlTagEffect3Toggle2,
+  kCtrlTagEffect1Switch,
+  kCtrlTagEffect2Switch,
+  kCtrlTagEffect3Switch,
 };
 
 using namespace iplug;
@@ -528,8 +579,13 @@ public:
   /* implement this and return true to trigger your custom help info, when someone clicks help in the menu of a standalone app or VST3 plugin */
   bool OnHostRequestingProductHelp() override;
 
+  IByteChunk LoadPreset(const char* filename="UserPreset", bool isBackup=false);
+  void SavePreset(IByteChunk& byteData, const char* filename = "UserPreset", bool isBackup=false);
+
   int GetActiveModIdx() const;
   void SetActiveModIdx(int idx);
+  int GetFirstModCtrlTag() const { return kCtrlTagEnv1Depth; }
+  int GetLastModCtrlTag() const { return kCtrlTagRndDepth; }
 
 private:
   TablitsaDSP<sample> mDSP {kNumVoices}; // sample is an alias for double
@@ -544,3 +600,9 @@ private:
   int mActiveModIdx{ -1 };
 #endif
 };
+
+std::string GetDataPath(char* appendPath="\\");
+
+std::vector<char> ReadAllBytes(const char* fname); // For reading preset files of arbitrary length
+
+#include "TablitsaControls.h"

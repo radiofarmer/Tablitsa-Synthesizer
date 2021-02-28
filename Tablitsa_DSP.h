@@ -1,11 +1,11 @@
 #pragma once
 
 #include "PeriodicTable.h"
-#include "Effects.h"
+#include "TablitsaEffects.h"
 #include "TablitsaOscillators.h"
-
-
 #include "Modulation.h"
+
+
 #include "IPlugConstants.h"
 #include "Oscillator.h"
 #include "MidiSynth.h"
@@ -36,12 +36,12 @@ enum EModulations
   kModWavetable1PitchSmoother,
   kModWavetable1PosSmoother,
   kModWavetable1BendSmoother,
-  kModWavetable1SubSmoother,
+  kModWavetable1FormantSmoother,
   kModWavetable1AmpSmoother,
   kModWavetable2PitchSmoother,
   kModWavetable2PosSmoother,
   kModWavetable2BendSmoother,
-  kModWavetable2SubSmoother,
+  kModWavetable2FormantSmoother,
   kModWavetable2AmpSmoother,
   kModFilter1CutoffSmoother,
   kModFilter1ResonanceSmoother,
@@ -68,12 +68,12 @@ enum EVoiceModParams
   kVWavetable1PitchOffset = 0,
   kVWavetable1Position,
   kVWavetable1Bend,
-  kVWavetable1Sub,
+  kVWavetable1Formant,
   kVWavetable1Amp,
   kVWavetable2PitchOffset,
   kVWavetable2Position,
   kVWavetable2Bend,
-  kVWavetable2Sub,
+  kVWavetable2Formant,
   kVWavetable2Amp,
   kVFilter1Cutoff,
   kVFilter1Resonance,
@@ -337,8 +337,6 @@ public:
 
     void Trigger(double level, bool isRetrigger) override
     {
-      mOsc1.Reset();
-      mOsc2.Reset();
 
       mVelocity = level; // TODO: Handling of different velocity settings (i.e. which envelopes are affected by velocity)
       mTriggerRand = static_cast<double>(std::rand()) / static_cast<double>(RAND_MAX);
@@ -398,6 +396,9 @@ public:
         mAmpEnv.Start(1. - velSubtr * mAmpEnvVelocityMod, 1. - mAmpEnvVelocityMod * kMaxEnvTimeScalar * level);
         mEnv1.Start(1. - velSubtr * mEnv1VelocityMod, 1. - mEnv1VelocityMod * kMaxEnvTimeScalar * level);
         mEnv2.Start(1. - velSubtr * mEnv2VelocityMod, 1. - mEnv2VelocityMod * kMaxEnvTimeScalar * level);
+        // Don't reset oscillators in legato mode - the phase sync will case clicks
+        mOsc1.Reset();
+        mOsc2.Reset();
       }
       else
       {
@@ -456,7 +457,6 @@ public:
 
     void ProcessSamplesAccumulating(T** inputs, T** outputs, int nInputs, int nOutputs, int startIdx, int nFrames) override
     {
-      constexpr double ktShelfIncr{ 0.001 };
       // inputs to the synthesizer can just fetch a value every block, like this:
 //      double gate = mInputs[kVoiceControlGate].endValue;
       double pitch = mInputs[kVoiceControlPitch].endValue + mDetune; // pitch = (MidiKey - 69) / 12
@@ -498,14 +498,14 @@ public:
         double osc1Freq = 440. * pow(2., pitch + mVModulations.GetList()[kVWavetable1PitchOffset][bufferIdx] / 12.);
         mOsc1.SetWtPosition(1 - mVModulations.GetList()[kVWavetable1Position][bufferIdx]); // Wavetable 1 Position
         mOsc1.SetWtBend(mVModulations.GetList()[kVWavetable1Bend][bufferIdx]); // Wavetable 1 Bend
-        mOsc1Sat.SetLevel(mVModulations.GetList()[kVWavetable1Sub][bufferIdx], keytrack * ktShelfIncr);
+        mOsc1.SetFormant(1. - mVModulations.GetList()[kVWavetable1Formant][bufferIdx]);
         mOsc1.SetPhaseModulation(mVModulations.GetList()[kVPhaseModAmt][bufferIdx], osc1Freq * phaseModFreqFact);
         mOsc1.SetRingModulation(mVModulations.GetList()[kVRingModAmt][bufferIdx], osc1Freq * ringModFreqFact);
 
         double osc2Freq = 440. * pow(2., pitch + mVModulations.GetList()[kVWavetable2PitchOffset][bufferIdx] / 12.);
         mOsc2.SetWtPosition(1 - mVModulations.GetList()[kVWavetable2Position][bufferIdx]); // Wavetable 2 Position
         mOsc2.SetWtBend(mVModulations.GetList()[kVWavetable2Bend][bufferIdx]); // Wavetable 2 Bend
-        mOsc2Sat.SetLevel(mVModulations.GetList()[kVWavetable2Sub][bufferIdx], keytrack * ktShelfIncr);
+        mOsc2.SetFormant(1. - mVModulations.GetList()[kVWavetable2Formant][bufferIdx]);
         mOsc2.SetPhaseModulation(mVModulations.GetList()[kVPhaseModAmt][bufferIdx], osc2Freq * phaseModFreqFact);
         mOsc2.SetRingModulation(mVModulations.GetList()[kVRingModAmt][bufferIdx], osc2Freq * ringModFreqFact);
         
@@ -523,16 +523,10 @@ public:
         
        for (auto j = 0; j < FRAME_INTERVAL; ++j)
        {
-         // Amp scaling
-         osc1Output[j] *= mVModulations.GetList()[kVWavetable1Amp][bufferIdx];
-         osc2Output[j] *= mVModulations.GetList()[kVWavetable2Amp][bufferIdx];
-         // Saturation
-         osc1Output[j] = mOsc1Sat.Process(osc1Output[j]);
-         osc2Output[j] = mOsc2Sat.Process(osc2Output[j]);
          // Filters
          double osc1FilterOutput = mFilters.at(osc1Filter)->Process(osc1Output[j]);
          double osc2FilterOutput = mFilters.at(osc2Filter)->Process(osc2Output[j]);
-         double output_summed = osc1FilterOutput + osc2FilterOutput;
+         double output_summed = osc1FilterOutput * mVModulations.GetList()[kVWavetable1Amp][bufferIdx] + osc2FilterOutput * mVModulations.GetList()[kVWavetable2Amp][bufferIdx];
          double output_scaled = output_summed * ampEnvVal * mGain;
          outputs[0][i + j] += output_scaled * mPan[0];
          outputs[1][i + j] += output_scaled * mPan[1];
@@ -552,9 +546,6 @@ public:
 
       mFilters[0]->SetSampleRate(sampleRate);
       mFilters[1]->SetSampleRate(sampleRate);
-
-      mOsc1Sat.SetSampleRate(sampleRate);
-      mOsc2Sat.SetSampleRate(sampleRate);
       
       mVModulationsData.Resize(blockSize * kNumModulations);
       mVModulations.Empty();
@@ -645,8 +636,6 @@ public:
 
     WavetableOscillator<T> mOsc1{ 0, "Hydrogen" };
     WavetableOscillator<T> mOsc2{ 1, "Helium" };
-    SaturationEQ<T> mOsc1Sat;
-    SaturationEQ<T> mOsc2Sat;
 
     // Static Modulators
     T mKey{ 69. };
@@ -686,12 +675,12 @@ public:
       new ParameterModulator<>(-24., 24., "Wt1 Pitch Offset"),
       new ParameterModulator<>(0., 1., "Wt1 Position"),
       new ParameterModulator<>(-1., 1., "Wt1 Bend"),
-      new ParameterModulator<>(0., 1., "Wt1 Sub"),
+      new ParameterModulator<>(0., 1., "Wt1 Formant"),
       new ParameterModulator<>(0., 1., "Wt1 Amp"),
       new ParameterModulator<>(-24., 24., "Wt1 Pitch Offset"),
       new ParameterModulator<>(0., 1., "Wt2 Position"),
       new ParameterModulator<>(-1., 1., "Wt2 Bend"),
-      new ParameterModulator<>(0., 1., "Wt2 Sub"),
+      new ParameterModulator<>(0., 1., "Wt2 Formant"),
       new ParameterModulator<>(0., 1., "Wt2 Amp"),
       new ParameterModulator<>(0.001, 0.5, "Flt1 Cutoff", true),
       new ParameterModulator<>(0., 1., "Flt1 Resonance"),
@@ -778,22 +767,21 @@ public:
 
     // Process voices
     mParamSmoother.ProcessBlock(mParamsToSmooth, mModulations.GetList(), nFrames); // Populate modulations list (to be sent to mSynth as inputs)
-    SetTempoAndBeat(qnPos, transportIsRunning, tempo);
+    SetTempoAndBeat(qnPos, transportIsRunning, tempo, mTSNum, mTSDenom);
     mSynth.ProcessBlock(mModulations.GetList(), outputs, 0, nOutputs, nFrames);
 
     for(int s=0; s < nFrames;s++)
     {
       const T smoothedGain = mModulations.GetList()[kModGainSmoother][s];
+
       // Master effects processing
-#if _DEBUG
-      const T* delay = mDelayEffect.ProcessStereo(outputs[0][s], outputs[0][s]); // This gets optimized out in the release build apparently???
-#else
-      T delay_in[2]{ outputs[0][s], outputs[1][s] };
-      const T* delay = mDelayEffect.ProcessStereo(delay_in);
-      //const T delay[2]{ mDelayEffect.Process(outputs[0][s]), mDelayEffect.Process(outputs[0][s]) };
-#endif
-      outputs[0][s] += delay[0];
-      outputs[1][s] += delay[1];
+      T stereo_in[2]{ outputs[0][s], outputs[1][s] };
+      mEffects[0]->ProcessStereo(stereo_in);
+      mEffects[1]->ProcessStereo(stereo_in);
+      mEffects[2]->ProcessStereo(stereo_in);
+
+      outputs[0][s] = stereo_in[0];
+      outputs[1][s] = stereo_in[1];
 
       outputs[0][s] *= smoothedGain * (2 - mModulations.GetList()[kModPanSmoother][s]);
       outputs[1][s] *= smoothedGain * mModulations.GetList()[kModPanSmoother][s];
@@ -823,7 +811,8 @@ public:
     mModulations.Empty();
 
     // Effects
-    mDelayEffect.SetSampleRate(sampleRate);
+    mEffects[0]->SetSampleRate(sampleRate);
+    mEffects[1]->SetSampleRate(sampleRate);
     
     for(auto i = 0; i < kNumModulations; i++)
     {
@@ -849,9 +838,9 @@ public:
     mSynth.AddMidiMsgToQueue(msg);
   }
 
-  inline void SetTempoAndBeat(double qnPos, bool transportIsRunning, double tempo)
+  inline void SetTempoAndBeat(double qnPos, bool transportIsRunning, double tempo, const int tsNum, const int tsDenom)
   {
-    mGlobalMetronome.Set(qnPos, tempo, transportIsRunning);
+    mGlobalMetronome.Set(qnPos, tempo, transportIsRunning, tsNum, tsDenom);
   }
 
   void UpdateOscillatorWavetable(int wtIdx, int oscIdx)
@@ -942,11 +931,7 @@ public:
       }
       case kParamGain:
       {
-#ifdef VST3_API
-        mParamsToSmooth[kModGainSmoother] = (T)value / 100.;
-#else
         mParamsToSmooth[kModGainSmoother] = std::pow(10., value / 20.);
-#endif
         break;
       }
       case kParamPan:
@@ -1351,6 +1336,7 @@ public:
         mSynth.ForEachVoice([glideNorm](SynthVoice& voice) {
           dynamic_cast<TablitsaDSP::Voice&>(voice).mSequencer.SetGlide(glideNorm);
           });
+        break;
       }
       case kParamLegato:
       {
@@ -1494,22 +1480,22 @@ public:
           });
         break;
       }
-      case kParamWavetable1Sub:
-        mParamsToSmooth[kModWavetable1SubSmoother] = value;
+      case kParamWavetable1Formant:
+        mParamsToSmooth[kModWavetable1FormantSmoother] = value;
         break;
-      case kParamWavetable1SubEnv1:
-      case kParamWavetable1SubEnv2:
-      case kParamWavetable1SubAmpEnv:
-      case kParamWavetable1SubLFO1:
-      case kParamWavetable1SubLFO2:
-      case kParamWavetable1SubSeq:
-      case kParamWavetable1SubVel:
-      case kParamWavetable1SubKTk:
-      case kParamWavetable1SubRnd:
+      case kParamWavetable1FormantEnv1:
+      case kParamWavetable1FormantEnv2:
+      case kParamWavetable1FormantAmpEnv:
+      case kParamWavetable1FormantLFO1:
+      case kParamWavetable1FormantLFO2:
+      case kParamWavetable1FormantSeq:
+      case kParamWavetable1FormantVel:
+      case kParamWavetable1FormantKTk:
+      case kParamWavetable1FormantRnd:
       {
-        const int modIdx = paramIdx - kParamWavetable1Sub;
+        const int modIdx = paramIdx - kParamWavetable1Formant;
         mSynth.ForEachVoice([paramIdx, modIdx, value](SynthVoice& voice) {
-          dynamic_cast<TablitsaDSP::Voice&>(voice).UpdateVoiceParam(kVWavetable1Sub, modIdx, value);
+          dynamic_cast<TablitsaDSP::Voice&>(voice).UpdateVoiceParam(kVWavetable1Formant, modIdx, value);
           });
         break;
       }
@@ -1593,22 +1579,22 @@ public:
           });
         break;
       }
-      case kParamWavetable2Sub:
-        mParamsToSmooth[kModWavetable2SubSmoother] = value;
+      case kParamWavetable2Formant:
+        mParamsToSmooth[kModWavetable2FormantSmoother] = value;
         break;
-      case kParamWavetable2SubEnv1:
-      case kParamWavetable2SubEnv2:
-      case kParamWavetable2SubAmpEnv:
-      case kParamWavetable2SubLFO1:
-      case kParamWavetable2SubLFO2:
-      case kParamWavetable2SubSeq:
-      case kParamWavetable2SubVel:
-      case kParamWavetable2SubKTk:
-      case kParamWavetable2SubRnd:
+      case kParamWavetable2FormantEnv1:
+      case kParamWavetable2FormantEnv2:
+      case kParamWavetable2FormantAmpEnv:
+      case kParamWavetable2FormantLFO1:
+      case kParamWavetable2FormantLFO2:
+      case kParamWavetable2FormantSeq:
+      case kParamWavetable2FormantVel:
+      case kParamWavetable2FormantKTk:
+      case kParamWavetable2FormantRnd:
       {
-        const int modIdx = paramIdx - kParamWavetable2Sub;
+        const int modIdx = paramIdx - kParamWavetable2Formant;
         mSynth.ForEachVoice([paramIdx, modIdx, value](SynthVoice& voice) {
-          dynamic_cast<TablitsaDSP::Voice&>(voice).UpdateVoiceParam(kVWavetable2Sub, modIdx, value);
+          dynamic_cast<TablitsaDSP::Voice&>(voice).UpdateVoiceParam(kVWavetable2Formant, modIdx, value);
           });
         break;
       }
@@ -1890,26 +1876,64 @@ public:
           });
         break;
       }
-      case kParamDelayTimeMode:
-        mDelayEffect.SetTempoSync(value > 0.5);
         break;
-      case kParamDelayTimeLMilliseconds:
-      case kParamDelayTimeRMilliseconds:
-        mDelayEffect.SetDelayMS(value, paramIdx - kParamDelayTimeLMilliseconds);
-        break;
-      case kParamDelayTimeLBeats:
-      case kParamDelayTimeRBeats:
+      case kParamEffect1Param1: // Effect 1
       {
-        double qnScalar = LFO<T>::GetQNScalar(static_cast<LFO<T>::ETempoDivision>(Clip((int)value, 0, (int)LFO<T>::ETempoDivision::kNumDivisions)));
-        double qnPerMeasure = 4. / mTSDenom * mTSNum;
-        mDelayEffect.SetDelayTempo(1. / qnScalar / qnPerMeasure, paramIdx - kParamDelayTimeLBeats, mTempo);
+        ENTER_PARAMS_MUTEX
+          mEffects[0]->SetParam1((T)value);
+        LEAVE_PARAMS_MUTEX
         break;
       }
-      case kParamDelayFeedback:
-        mDelayEffect.SetFeedback((T)value / 100.);
+      case kParamEffect1Param2:
+        mEffects[0]->SetParam2((T)value);
         break;
-      case kParamDelayMix:
-        mDelayEffect.SetGain((T)value / 100.);
+      case kParamEffect1Param3:
+        mEffects[0]->SetParam3((T)value);
+        break;
+      case kParamEffect1Param4:
+        mEffects[0]->SetParam4((T)value);
+        break;
+      case kParamEffect1Param5:
+        mEffects[0]->SetParam5((T)value);
+        break;
+      case kParamEffect1Param6:
+        mEffects[0]->SetParam6((T)value);
+        break;
+      case kParamEffect2Param1: // Effect 2
+        mEffects[1]->SetParam1((T)value);
+        break;
+      case kParamEffect2Param2:
+        mEffects[1]->SetParam2((T)value);
+        break;
+      case kParamEffect2Param3:
+        mEffects[1]->SetParam3((T)value);
+        break;
+      case kParamEffect2Param4:
+        mEffects[1]->SetParam4((T)value);
+        break;
+      case kParamEffect2Param5:
+        mEffects[1]->SetParam5((T)value);
+        break;
+      case kParamEffect2Param6:
+        mEffects[1]->SetParam6((T)value);
+        break;
+      case kParamEffect3Param1: // Efect 3
+        mEffects[2]->SetParam1((T)value);
+        break;
+      case kParamEffect3Param2:
+        mEffects[2]->SetParam2((T)value);
+        break;
+      case kParamEffect3Param3:
+        mEffects[2]->SetParam3((T)value);
+        break;
+      case kParamEffect3Param4:
+        mEffects[2]->SetParam4((T)value);
+        break;
+      case kParamEffect3Param5:
+        mEffects[2]->SetParam5((T)value);
+        break;
+      case kParamEffect3Param6:
+        mEffects[2]->SetParam6((T)value);
         break;
       default:
         break;
@@ -1957,10 +1981,6 @@ public:
   int mStepPos{ 0 };
   int mPrevPos{ -1 };
 
-  // Effects
-  std::vector<Effect<T>*> mEffects;
-  DelayEffect<T> mDelayEffect{ DEFAULT_SAMPLE_RATE, DEFAULT_SAMPLE_RATE * 12. };
-
   // Pointers to master modulators, for free-run and legato modes
   std::vector<Envelope<T>*> Env1Queue;
   std::vector<Envelope<T>*> Env2Queue;
@@ -1974,4 +1994,11 @@ public:
   GlobalModulator<T, FastLFO<T>> mGlobalLFO1{ &mGlobalMetronome };
   GlobalModulator<T, FastLFO<T>> mGlobalLFO2{ &mGlobalMetronome };
   GlobalModulator<T, Sequencer<T>> mGlobalSequencer{ &mGlobalMetronome, mSeqSteps };
+
+  // Effects
+  std::vector<Effect<T>*> mEffects{
+    new DelayEffect<T, TABLITSA_MAX_DELAY_SAMP>(DEFAULT_SAMPLE_RATE, &mGlobalMetronome),
+    new Effect<T>(DEFAULT_SAMPLE_RATE),
+    new Effect<T>(DEFAULT_SAMPLE_RATE)
+  };
 };

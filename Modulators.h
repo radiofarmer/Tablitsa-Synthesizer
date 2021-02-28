@@ -22,15 +22,19 @@ struct ModMetronome
 {
   ModMetronome() {}
 
-  void Set(double qnPos, double tempo, bool transportIsRunning)
+  void Set(double qnPos, double tempo, bool transportIsRunning, int tsNum, int tsDenom)
   {
     mQNPos = qnPos;
     mTempo = tempo;
     mTransportIsRunning = transportIsRunning;
+    mTSNum = tsNum;
+    mTSDenom = tsDenom;
   }
 
   double mQNPos{ 0. };
   double mTempo{ iplug::DEFAULT_TEMPO };
+  int mTSNum{ 4 };
+  int mTSDenom{ 4 };
   bool mTransportIsRunning;
 };
 
@@ -348,7 +352,7 @@ public:
     {
       phaseIncr *= LFO<T>::mQNScalar;
       if (transportIsRunning)
-        phase = std::fmod(sampleAccurateQnPos, oneOverQNScalar) * LFO<T>::mQNScalar;
+        phase = std::fmod(sampleAccurateQnPos, oneOverQNScalar) * LFO<T>::mQNScalar * mTableSize;
     }
 
     T s_out = Lookup(phase);
