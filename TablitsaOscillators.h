@@ -1,12 +1,14 @@
 #pragma once
 
+#include "VectorFunctions.h"
 #include "Wavetable.h"
 
 #include "Oscillator.h"
 
 #include <vectorclass.h>
 
-#if !_DEBUG
+//#if _DEBUG
+#if 1
 #define OVERSAMPLING 2
 #define VECTOR_SIZE 4
 #define OUTPUT_SIZE VECTOR_SIZE / OVERSAMPLING
@@ -30,12 +32,44 @@ class VectorOscillator final : public FastSinOscillator<T>
 
 public:
   VectorOscillator(T startPhase=0.) : FastSinOscillator<T>(startPhase) {}
+  
+  inline Vec4d __vectorcall ProcessBlock4_Vector()
+  {
+    double phase = IOscillator<T>::mPhase + (double)UNITBIT32;
+    const double phaseIncr = IOscillator<T>::mPhaseIncr * FastSinOscillator<T>::tableSize;
+    Vec4d vPhase = phase + phaseIncr * mIncrVector;
+
+    // Read 4 doubles as 8 integers (signed ints are used, but the AND operations later make this irrelevant)
+    Vec8i viPhase = reinterpret_i(vPhase);
+    // Upper 32 bits of 3*2^19 in ______ indices, 0xFFFF in _____: i.e. 0xFFFF, 0x18, 0xFFFF, ...
+    Vec8i normhipart = blend8<HIOFFSET_V, 8, HIOFFSET_V, 8, HIOFFSET_V, 8, HIOFFSET_V, 8>(reinterpret_i(Vec4d((double)UNITBIT32)), Vec8i(0xFFFFFFFF));
+    // Mask the 8-item vector of 32-bit ints with one less than the table size, pad the upper bits (lower indices) with zeros, and reinterpret as a 4-item vector of 64-bit ints
+    Vec8i offsets32 = viPhase & tableSizeM1;
+    Vec4q offsets = reinterpret_i(permute8<HIOFFSET_V, -1, HIOFFSET_V + 2, -1, HIOFFSET_V + 4, -1, HIOFFSET_V + 6, -1>(offsets32));
+    // Force the double to wrap. (AND the upper bits with the upper 32 bits of UNITBIT32)
+    viPhase &= normhipart;
+    Vec4d frac = reinterpret_d(viPhase) - (double)UNITBIT32; // get the fractional part
+    const Vec4d f1 = lookup<tableSize>(offsets, mLUT);
+    const Vec4d f2 = lookup<tableSize>(offsets, mLUT + 1);
+    Vec4d output = mul_add((f2 - f1), frac, f1);
+
+    // Restore mPhase
+    tabfudge tf;
+    phase += phaseIncr * 4.;
+    tf.d = UNITBIT32 * tableSize;
+    const int normhipart2 = tf.i[HIOFFSET];
+    tf.d = phase + (UNITBIT32 * tableSize - UNITBIT32); // Remove the offset we introduced at the start of UNITBIT32.
+    tf.i[HIOFFSET] = normhipart2;
+    IOscillator<T>::mPhase = tf.d - UNITBIT32 * tableSize;
+    return output;
+  }
 
   inline Vec4d __vectorcall Process_Vector()
   {
-    double output[4];
-    FastSinOscillator<T>::ProcessBlock(output, 4);
-    return Vec4d().load_a(output);
+//    double output[4];
+//    FastSinOscillator<T>::ProcessBlock(output, 4);
+//    return Vec4d().load_a(output);
+    return ProcessBlock4_Vector();
   }
 
 private:
@@ -232,7 +266,7 @@ public:
       const T f2 = addr[0][1] * sampleWtPosition + addr[1][1] * sampleWtPositionInv;
       const T f3 = addr[2][0] * sampleWtPosition + addr[3][0] * sampleWtPositionInv;
       const T f4 = addr[2][1] * sampleWtPosition + addr[3][1] * sampleWtPositionInv;
-      // Send output
+      
       T lowerTable = (f1 + frac * (f2 - f1));
 #if OVERSAMPLING > 1
       oversampled[s] = lowerTable + mTableInterp * ((f3 + frac2 * (f4 - f3)) - lowerTable);
@@ -256,13 +290,86 @@ public:
 
   }
 
+#define VECTOR_TEST
   inline Vec4d __vectorcall ProcessOversamplingVec4()
   {
     double tableOffset{ mWtPositionAbs * (mWT->mNumTables - 1) };
     tableOffset -= std::max(floor(tableOffset - 0.0001), 0.);
+#ifdef VECTOR_TEST
+    double phaseNorm = SamplePhaseShift(mPhase / mTableSize); // for phase shift
 
+    double phase = phaseNorm * mTableSize + (double)UNITBIT32;
+    const double phaseIncr = mPhaseIncr * mPhaseIncrFactor * mProcessOS * mTableSize;
+    const double phaseIncr2 = mPhaseIncr * mPhaseIncrFactor * mProcessOS * mNextTableSize;
+    Vec4d vPhase = phase + phaseIncr * mIncrVec;
+
+    // Read 4 doubles as 8 integers (signed ints are used, but the AND operations later make this irrelevant)
+    Vec8i viPhase = reinterpret_i(vPhase);
+    // Upper 32 bits of 3*2^19 in ______ indices, 0xFFFF in _____: i.e. 0xFFFF, 0x18, 0xFFFF, ...
+    Vec8i normhipart = blend8<8, HIOFFSET_V, 8, HIOFFSET_V, 8, HIOFFSET_V, 8, HIOFFSET_V>(reinterpret_i(Vec4d((double)UNITBIT32)), Vec8i(0));//Vec8i(0xFFFFFFFF));
+    // Mask the 8-item vector of 32-bit ints with one less than the table size, pad the upper bits (lower indices) with zeros, and reinterpret as a 4-item vector of 64-bit ints
+    Vec8i offsets32 = viPhase & mTableSizeM1;
+    Vec4q offsets = reinterpret_i(permute8<HIOFFSET_V, -1, HIOFFSET_V + 2, -1, HIOFFSET_V + 4, -1, HIOFFSET_V + 6, -1>(offsets32));
+    Vec4q phaseMod = to_int64_in_range(PhaseMod(), mTableSize);
+    offsets = (offsets + phaseMod) & mTableSizeM1;
+    Vec4q offsets1 = (offsets + 1); // &mTableSizeM1;
+    // Force the double to wrap. (AND the upper bits with the upper 32 bits of UNITBIT32)
+    viPhase &= normhipart;
+    Vec4d phaseFrac = reinterpret_d(viPhase) - (double)UNITBIT32; // get the fractional part
+
+    // Larger/lower table
+    constexpr int maxTableSize = 16384 * 12;
+    const Vec4d tb0s0lo = lookup<maxTableSize>(offsets, mLUTLo[0]);
+    const Vec4d tb0s1lo = lookup<maxTableSize>(offsets1, mLUTLo[0]);
+    const Vec4d tb1s1lo = lookup<maxTableSize>(offsets1, mLUTLo[1]);
+    const Vec4d tb1s0lo = lookup<maxTableSize>(offsets, mLUTLo[1]);
+    const Vec4d tb0lo = mul_add((tb0s1lo - tb0s0lo), phaseFrac, tb0s0lo);
+    const Vec4d tb1lo = mul_add((tb1s1lo - tb1s0lo), phaseFrac, tb1s0lo);
+
+    // Recalculate offsets for the smaller table
+    vPhase = phaseNorm * mNextTableSize + (double)UNITBIT32 + phaseIncr2 * mIncrVec;
+
+    // Read 4 doubles as 8 integers (signed ints are used, but the AND operations later make this irrelevant)
+    viPhase = reinterpret_i(vPhase);
+    offsets32 = viPhase & mNextTableSizeM1;
+    offsets = reinterpret_i(permute8<HIOFFSET_V, -1, HIOFFSET_V + 2, -1, HIOFFSET_V + 4, -1, HIOFFSET_V + 6, -1>(offsets32));
+    // Add the phase mod, this time just bit-shifting the previous value, and AND-out bits of or above the MSB of the table size
+    offsets = (offsets + (phaseMod >> (mNextTableSize != mTableSize))) & mNextTableSizeM1;
+//    offsets = ((offsets >> (mNextTableSize != mTableSize)) + to_int64_in_range(PhaseMod(), mNextTableSize)) & mNextTableSizeM1;
+    offsets1 = (offsets + 1); // & mNextTableSizeM1;
+    // Force the double to wrap. (AND the upper bits with the upper 32 bits of UNITBIT32)
+    viPhase &= normhipart;
+    phaseFrac = reinterpret_d(viPhase) - (double)UNITBIT32; // get the fractional part
+    
+    // Smaller/higher table
+    const Vec4d tb0s0hi = lookup<maxTableSize>(offsets, mLUTHi[0]);
+    const Vec4d tb0s1hi = lookup<maxTableSize>(offsets1, mLUTHi[0]);
+    const Vec4d tb1s0hi = lookup<maxTableSize>(offsets, mLUTHi[1]);
+    const Vec4d tb1s1hi = lookup<maxTableSize>(offsets1, mLUTHi[1]);
+    // Interpolate samples
+    const Vec4d tb0hi = mul_add(tb0s1hi - tb0s0hi, phaseFrac, tb0s0hi);
+    const Vec4d tb1hi = mul_add(tb1s1hi - tb1s0hi, phaseFrac, tb1s0hi);
+
+    // Interpolate mipmap levels
+    Vec4d tb0 = mul_add(tb0hi - tb0lo, mTableInterp, tb0lo);
+    Vec4d tb1 = mul_add(tb1hi - tb1lo, mTableInterp, tb1lo);
+    
+    // Restore mPhase
+    tabfudge tf;
+    phase += phaseIncr * (double)VECTOR_SIZE;
+    tf.d = UNITBIT32 * mTableSize;
+    const int normhipart2 = tf.i[HIOFFSET];
+    tf.d = phase + (UNITBIT32 * mTableSize - UNITBIT32); // Remove the offset we introduced at the start of UNITBIT32.
+    tf.i[HIOFFSET] = normhipart2; // Reset the upper 32 bits
+    IOscillator<T>::mPhase = tf.d - UNITBIT32 * mTableSize;
+
+    // Mix wavtables
+    Vec4d mixed = mul_add(tb1 - tb0, 1 - tableOffset, tb0);
+    Vec4d ringMod = RingMod();
+    mixed = mul_add(ringMod - 1., mRM * mRingModAmt * mixed, mixed);
+#else
     const double phaseIncr = mPhaseIncr * mPhaseIncrFactor * mProcessOS;
-    Vec4d phaseMod = PhaseModVec(); //Vec4d(PhaseMod(), PhaseMod(), PhaseMod(), PhaseMod());
+    Vec4d phaseMod = PhaseMod(); //Vec4d(PhaseMod(), PhaseMod(), PhaseMod(), PhaseMod());
     Vec4d phase = phaseMod + SamplePhaseShift(IOscillator<T>::mPhase);
     Vec4d phaseDouble = mul_add(mIncrVec, phaseIncr, phase) * mTableSize; // Next four phase positions in samples, including fractional position
     Vec4q phaseInt = truncatei(phaseDouble); // Indices of the (left) samples to read
@@ -301,12 +408,13 @@ public:
     Vec4d tb1 = mul_add(tb1hi - tb1lo, mTableInterp, tb1lo);
 
     // Mix wavetables
-    Vec4d ringMod = RingModVec();
+    Vec4d ringMod = RingMod();
     Vec4d mixed = mul_add(tb1 - tb0, 1 - tableOffset, tb0);
     mixed = mul_add(ringMod - 1., mRM * mRingModAmt * mixed, mixed);
 
     IOscillator<T>::mPhase += phaseIncr * (double)VECTOR_SIZE;
     IOscillator<T>::mPhase -= floor(IOscillator<T>::mPhase);
+#endif
 
 #if !RECURSION
     T oversampled[VECTOR_SIZE];
@@ -352,14 +460,13 @@ public:
     return mRingModulator.Process();
   }
 #else
-
-  inline Vec4d __vectorcall RingModVec()
+  inline Vec4d __vectorcall RingMod()
   {
     return mRingModulator.Process_Vector();
   }
 
   // TODO: use enable_if to choose between vector lengths
-  inline Vec4d __vectorcall PhaseModVec()
+  inline Vec4d __vectorcall PhaseMod()
   {
     return mPM * mPhaseModAmt * mPhaseModulator.Process_Vector() * mCyclesPerLevelRecip;
   }

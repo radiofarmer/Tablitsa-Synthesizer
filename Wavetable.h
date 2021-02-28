@@ -301,8 +301,10 @@ public:
     mSize(size), mMaxLevel(maxLevel), mMinLevel(minLevel), mCyclesPerLevel(cyclesPerLevel), mFactor(factor)
   {
     // This ought to be the rate-limiting step in loading a new wavetable into the oscillator
-    mValues = new T[size]{};
+    mValues = new T[size + 1]{};
     memcpy(mValues, values, size * sizeof(values[0]));
+    // Set last entry equal to first (to avoid having to wrap integers twice during interpolated lookup functions)
+    mValues[size] = mValues[0];
 
     // Calculate Sizes of all levels
     int pos{ 0 };
