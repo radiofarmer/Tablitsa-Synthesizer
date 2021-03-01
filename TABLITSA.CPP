@@ -104,7 +104,7 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
   GetParam(kParamLFO1RateHzKTk)->InitDouble("LFO1 Amp Keytrack Depth", 0., -1., 1., 0.01);
   GetParam(kParamLFO1RateHzRnd)->InitDouble("LFO1 Amp Depth", 0., -1., 1., 0.01);
   // LFO 1
-  GetParam(kParamLFO1Shape)->InitEnum("LFO1 Shape", LFO<>::kTriangle, {LFO_SHAPE_VALIST});
+  GetParam(kParamLFO1Shape)->InitEnum("LFO1 Shape", LFO<>::kTriangle, {TABLITSA_LFO_SHAPE_VALIST});
   GetParam(kParamLFO1Phase)->InitDouble("LFO1 Phase", 0., 0., 1., 0.01);
   GetParam(kParamLFO1RateHz)->InitFrequency("LFO1 Rate", 1., 0.01, 40.);
   GetParam(kParamLFO1RateTempo)->InitEnum("LFO1 Rate", LFO<>::k1, {LFO_TEMPODIV_VALIST});
@@ -129,7 +129,7 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
   GetParam(kParamLFO1AmpKTk)->InitDouble("LFO1 Amp Keytrack Depth", 0., -1., 1., 0.01);
   GetParam(kParamLFO1AmpRnd)->InitDouble("LFO1 Amp Random Depth", 0., -1., 1., 0.01);
   // LFO 2
-  GetParam(kParamLFO2Shape)->InitEnum("LFO2 Shape", LFO<>::kTriangle, { LFO_SHAPE_VALIST });
+  GetParam(kParamLFO2Shape)->InitEnum("LFO2 Shape", LFO<>::kTriangle, { TABLITSA_LFO_SHAPE_VALIST });
   GetParam(kParamLFO2Phase)->InitDouble("LFO2 Phase", 0., 0., 1., 0.01);
   GetParam(kParamLFO2RateHz)->InitFrequency("LFO2 Rate", 1., 0.01, 40.);
   GetParam(kParamLFO2RateTempo)->InitEnum("LFO2 Rate", LFO<>::k1, { LFO_TEMPODIV_VALIST });
@@ -1220,7 +1220,7 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
 #ifndef VST3_API
     pGraphics->Resize(PLUG_WIDTH, PLUG_HEIGHT + (int)KEYBOARD_HEIGHT, 0.8, true);
 #else
-    pGraphics->Resize(PLUG_WIDTH, PLUG_HEIGHT, 0.8, false);
+    pGraphics->Resize(PLUG_WIDTH, PLUG_HEIGHT, 0.8, true);
 #endif
   };
 #endif

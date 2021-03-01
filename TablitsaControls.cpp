@@ -642,5 +642,7 @@ void ModPlotControl::SetPlotTable(const double* pTable)
 void ModPlotControl::OnMouseDrag(float x, float y, float dX, float dY, const IMouseMod& mod)
 {
   mTablePhase += static_cast<int>(dX * mGearing);
-  SetValue(static_cast<double>(mTablePhase) / mTableSize);
+  mTablePhase %= mTableSize;
+  SetValue(static_cast<double>((mTablePhase - mTableSize) % mTableSize) / mTableSize);
+  SetDirty();
 }
