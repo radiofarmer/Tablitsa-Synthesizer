@@ -1439,7 +1439,7 @@ bool Tablitsa::OnMessage(int msgTag, int ctrlTag, int dataSize, const void* pDat
           break;
       }
       else
-        filePath = GetDataPath("\\Tablitsa\\presets\\") + "TEST.TPST";
+        filePath = GetDataPath("\\Tablitsa\\presets\\User\\") + "TEST.TPST";
 
       IByteChunk presetData = LoadPreset(filePath.c_str(), *backup);
       if (presetData.Size() == 0)
