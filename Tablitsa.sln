@@ -13,8 +13,6 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Tablitsa-aax", "projects\Ta
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{D5987FE7-BD4E-4DCC-A5B7-874D9B689EA4}"
 EndProject
-Project("{54435603-DBB4-11D2-8724-00A0C9A8B90C}") = "Tablitsa-Installer-win_x64", "Tablitsa-Installer\Tablitsa-Installer.vdproj", "{8E17BFDE-B38C-444F-AF7E-89B3A2B80686}"
-EndProject
 Project("{930C7802-8A8C-48F9-8165-68863BCCD9DD}") = "Tablitsa-Installer-WiX", "Tablitsa-Installer-WiX\Tablitsa-Installer-WiX.wixproj", "{75D8B623-B2BC-4835-BEC0-62FDAA906123}"
 EndProject
 Global
@@ -75,12 +73,6 @@ Global
 		{DC4B5920-933D-4C82-B842-F34431D55A93}.Tracer|Win32.Build.0 = Tracer|Win32
 		{DC4B5920-933D-4C82-B842-F34431D55A93}.Tracer|x64.ActiveCfg = Tracer|x64
 		{DC4B5920-933D-4C82-B842-F34431D55A93}.Tracer|x64.Build.0 = Tracer|x64
-		{8E17BFDE-B38C-444F-AF7E-89B3A2B80686}.Debug|Win32.ActiveCfg = Debug
-		{8E17BFDE-B38C-444F-AF7E-89B3A2B80686}.Debug|x64.ActiveCfg = Debug
-		{8E17BFDE-B38C-444F-AF7E-89B3A2B80686}.Release|Win32.ActiveCfg = Release
-		{8E17BFDE-B38C-444F-AF7E-89B3A2B80686}.Release|x64.ActiveCfg = Release
-		{8E17BFDE-B38C-444F-AF7E-89B3A2B80686}.Tracer|Win32.ActiveCfg = Debug
-		{8E17BFDE-B38C-444F-AF7E-89B3A2B80686}.Tracer|x64.ActiveCfg = Debug
 		{75D8B623-B2BC-4835-BEC0-62FDAA906123}.Debug|Win32.ActiveCfg = Debug|x86
 		{75D8B623-B2BC-4835-BEC0-62FDAA906123}.Debug|Win32.Build.0 = Debug|x86
 		{75D8B623-B2BC-4835-BEC0-62FDAA906123}.Debug|x64.ActiveCfg = Debug|x86

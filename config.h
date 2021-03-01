@@ -1,11 +1,11 @@
 #define PLUG_NAME "Tablitsa"
 #define PLUG_MFR "RadioFarmer"
-#define PLUG_VERSION_HEX 0x00000001
-#define PLUG_VERSION_STR "0.0.1"
+#define PLUG_VERSION_HEX 0x00010002
+#define PLUG_VERSION_STR "0.1.0.2"
 #define PLUG_UNIQUE_ID 'BWcP'
-#define PLUG_MFR_ID 'Acme'
+#define PLUG_MFR_ID 'RadioFarmer'
 #define PLUG_URL_STR "https://github.com/radiofarmer/Tablitsa-Synthesizer"
-#define PLUG_EMAIL_STR "spam@me.com"
+#define PLUG_EMAIL_STR ""
 #define PLUG_COPYRIGHT_STR "Copyright 2021 Bram Osterhout"
 #define PLUG_CLASS_NAME Tablitsa
 
@@ -23,12 +23,8 @@
 #define PLUG_DOES_MPE 1
 #define PLUG_DOES_STATE_CHUNKS 1
 #define PLUG_HAS_UI 1
-/* High-DPI pixel dimensions: */
 #define PLUG_WIDTH 1400
 #define PLUG_HEIGHT 770
-/* Low-DPI pixel dimensions */
-//#define PLUG_WIDTH 1120
-//#define PLUG_HEIGHT 616
 #define PLUG_FPS 60
 #define PLUG_SHARED_RESOURCES 0
 #define PLUG_HOST_RESIZE 1
@@ -59,7 +55,3 @@
 #define PERIODIC_TABLE_FN "periodic_table.svg"
 #define LOGO_FN "logo.png"
 #define DIAL_FN "test_dial.png"
-#define DECR_BUTTON_ON_FN "incr_buttons-01.svg"
-#define INCR_BUTTON_ON "incr_buttons-02.svg"
-#define DECR_BUTTON_OFF_FN "incr_buttons-03.svg"
-#define INCR_BUTTON_OFF "incr_buttons-04.svg"
