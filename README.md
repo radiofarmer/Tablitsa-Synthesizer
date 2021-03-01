@@ -14,7 +14,7 @@ The final version will include
   * Master effects including delay and sample-and-hold
   
 ## Compatibility
-*built binaries are currently not available in the repository*
+*See Releases in sidebar for binaries and installation packages*
 
 The stand-alone app is built for Windows has only been tested on Windows 10---iPlug2 apps can be compiled for MacOS but must be compiled in that environment, and I currently don't have access to a machine running MacOS. The VST3 build has only been tested in REAPER but should work in any other DAW which supports the VST3 standard. All release versions use the AVX2 instruction set and will only work on new-ish processors. A maximum-compatibility version without vector instructions will eventually be included in the release. Wavetables are expected to be located in the folder `%AppData%\Tablitsa\wavetables\` (i.e. in the the `AppData\Roaming` folder) in release builds. (For debug builds, their location within the repository is used.) If this doesn't work on your machine, see `Wavetable.h` for the IO functions.
 
