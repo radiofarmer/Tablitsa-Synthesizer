@@ -1217,6 +1217,11 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
     dynamic_cast<DropdownListControl*>(pGraphics->GetControlWithTag(kCtrlTagEffect2List))->AttachPopupMenu();
     dynamic_cast<DropdownListControl*>(pGraphics->GetControlWithTag(kCtrlTagEffect3List))->AttachPopupMenu();
 
+#ifndef VST3_API
+    pGraphics->Resize(PLUG_WIDTH, PLUG_HEIGHT + (int)KEYBOARD_HEIGHT, 0.8, true);
+#else
+    pGraphics->Resize(PLUG_WIDTH, PLUG_HEIGHT, 0.8, false);
+#endif
   };
 #endif
 }
