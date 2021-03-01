@@ -286,7 +286,7 @@ public:
     for (int i{ 0 }; i < mTableSize; ++i)
     {
       double x = static_cast<double>(i) / static_cast<double>(mTableSize);
-      FastLFO<T>::mLUT[LFO<T>::EShape::kTriangle][i] = (2. * (1. - std::abs((WrapPhase(x + 0.25) * 2.) - 1.))) - 1.;
+      FastLFO<T>::mLUT[LFO<T>::EShape::kTriangle][i] = -2. * std::abs(2. * x - 1.) + 1.;
       FastLFO<T>::mLUT[LFO<T>::EShape::kSquare][i] = std::copysign(1., x - 0.5);;
       FastLFO<T>::mLUT[LFO<T>::EShape::kRampUp][i] = (x * 2.) - 1.;
       FastLFO<T>::mLUT[LFO<T>::EShape::kRampDown][i] = ((1. - x) * 2.) - 1.;
@@ -311,6 +311,11 @@ public:
     return f1 + frac * (f2 - f1);
   }
 
+  const T* GetCurrentTable() const
+  {
+    return mLUT[mShape];
+  }
+
   const double GetPhase()
   {
     return IOscillator<T>::mPhase;
@@ -321,6 +326,10 @@ public:
     IOscillator<T>::mPhase = newPhase;
   }
 
+  void SetPhaseOffset(double offset)
+  {
+    mPhaseOffset = offset * mTableSize;
+  }
 
   virtual inline T Process()
   {
@@ -337,7 +346,7 @@ public:
   inline T ProcessSynced(double qnPos = 0., bool transportIsRunning = false, double tempo = 120.)
   {
     T oneOverQNScalar = 1. / LFO<T>::mQNScalar;
-    T phase = IOscillator<T>::mPhase;
+    T phase = IOscillator<T>::mPhase + mPhaseOffset;
 
     if (mRateMode == ERateMode::kBPM && !transportIsRunning)
       IOscillator<T>::SetFreqCPS(tempo / 60.);
@@ -382,11 +391,10 @@ public:
   }
 
 protected:
-
+  double mPhaseOffset{ 0. };
   static inline constexpr int mTableSize{ 1024 };
   static inline constexpr int mTableSizeM1{ 1023 };
   T mLastOutput;
-
   T mLUT[LFO<T>::EShape::kNumShapes][mTableSize];
 
   ModMetronome* mMetronome{ nullptr };

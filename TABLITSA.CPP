@@ -105,6 +105,7 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
   GetParam(kParamLFO1RateHzRnd)->InitDouble("LFO1 Amp Depth", 0., -1., 1., 0.01);
   // LFO 1
   GetParam(kParamLFO1Shape)->InitEnum("LFO1 Shape", LFO<>::kTriangle, {LFO_SHAPE_VALIST});
+  GetParam(kParamLFO1Phase)->InitDouble("LFO1 Phase", 0., 0., 1., 0.01);
   GetParam(kParamLFO1RateHz)->InitFrequency("LFO1 Rate", 1., 0.01, 40.);
   GetParam(kParamLFO1RateTempo)->InitEnum("LFO1 Rate", LFO<>::k1, {LFO_TEMPODIV_VALIST});
   GetParam(kParamLFO1RateMode)->InitBool("LFO1 Sync", false);
@@ -129,6 +130,7 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
   GetParam(kParamLFO1AmpRnd)->InitDouble("LFO1 Amp Random Depth", 0., -1., 1., 0.01);
   // LFO 2
   GetParam(kParamLFO2Shape)->InitEnum("LFO2 Shape", LFO<>::kTriangle, { LFO_SHAPE_VALIST });
+  GetParam(kParamLFO2Phase)->InitDouble("LFO2 Phase", 0., 0., 1., 0.01);
   GetParam(kParamLFO2RateHz)->InitFrequency("LFO2 Rate", 1., 0.01, 40.);
   GetParam(kParamLFO2RateTempo)->InitEnum("LFO2 Rate", LFO<>::k1, { LFO_TEMPODIV_VALIST });
   GetParam(kParamLFO2RateMode)->InitBool("LFO2 Sync", false);
@@ -1102,7 +1104,11 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
     pGraphics->AttachControl(new TablitsaIVModKnobControl(lfoPanel.GetGridCell(0, 0, 3, 5).GetCentredInside(dialSize), kParamLFO1RateHz, "Rate"), kNoTag, "LFO1");
     pGraphics->AttachControl(new TablitsaIVKnobControl(lfoPanel.GetGridCell(0, 0, 3, 5).GetCentredInside(dialSize), kParamLFO1RateTempo, "Rate"), kNoTag, "LFO1")->Hide(true);
     pGraphics->AttachControl(new TablitsaIVModKnobControl(lfoPanel.GetGridCell(0, 2, 3, 5).GetCentredInside(dialSize), kParamLFO1Amp, "Amp"), kNoTag, "LFO1");
-    pGraphics->AttachControl(new ICaptionControl(lfoPanel.GetGridCell(0, 1, 6, 5).GetVPadded(-20.f), kParamLFO1Shape, dropdownText), kNoTag, "LFO1")->DisablePrompt(false);
+    pGraphics->AttachControl(new ICaptionControl(lfoPanel.GetGridCell(0, 1, 6, 5).GetVPadded(-20.f), kParamLFO1Shape, dropdownText), kNoTag, "LFO1")->SetActionFunction(
+      [pGraphics, this](IControl* pControl) {
+        SendArbitraryMsgFromUI(kMsgUpdateLFO1Plot);
+      }
+    );
     pGraphics->AttachControl(new IVToggleControl(lfoPanel.GetGridCell(1, 1, 9, 5).GetVPadded(-6.f), kParamLFO1RateMode, "", toggleStyle, "Sync Off", "Sync On"),
       kCtrlTagLFO1RateMode, "LFO1")->SetAnimationEndActionFunction([pGraphics](IControl* pControl) {
       bool sync = pControl->GetValue() > 0.5;
@@ -1112,13 +1118,18 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
     });
     pGraphics->AttachControl(new IVToggleControl(lfoPanel.GetGridCell(2, 1, 9, 5).GetVPadded(-6.f).GetVShifted(-15.f), kParamLFO1Restart, "Restart", toggleStyle, "Free Run", "Retrigger"), kNoTag, "LFO1");
     pGraphics->AttachControl(new ModSliderControl(lfoPanel.GetGridCell(0, 4, 3, 5).GetVPadded(-18.f), kNoParameter, "Depth"), kCtrlTagLFO1Depth, "LFO1");
+    pGraphics->AttachControl(new ModPlotControl(lfoPanel.GetGridCell(0, 3, 3, 5).GetVPadded(-20.f), kParamLFO1Phase, nullptr, 1024, 25), kCtrlTagLFO1Plot, "LFO1");
     pGraphics->AttachControl(new TablitsaVGroupControl(lfoPanel.GetGridCell(0, 0, 3, 1).GetPadded(modulePad[0], modulePad[1], modulePad[2], modulePad[3]), "LFO 1"));
 
     // LFO 2
     pGraphics->AttachControl(new TablitsaIVModKnobControl(lfoPanel.GetGridCell(1, 0, 3, 5).GetCentredInside(dialSize), kParamLFO2RateHz, "Rate"), kNoTag, "LFO2");
     pGraphics->AttachControl(new TablitsaIVKnobControl(lfoPanel.GetGridCell(1, 0, 3, 5).GetCentredInside(dialSize), kParamLFO2RateTempo, "Rate"), kNoTag, "LFO2")->Hide(true);
     pGraphics->AttachControl(new TablitsaIVModKnobControl(lfoPanel.GetGridCell(1, 2, 3, 5).GetCentredInside(dialSize), kParamLFO2Amp, "Amp"), kNoTag, "LFO2");
-    pGraphics->AttachControl(new ICaptionControl(lfoPanel.GetGridCell(2, 1, 6, 5).GetVPadded(-20.f), kParamLFO2Shape, dropdownText), kNoTag, "LFO2")->DisablePrompt(false);
+    pGraphics->AttachControl(new ICaptionControl(lfoPanel.GetGridCell(2, 1, 6, 5).GetVPadded(-20.f), kParamLFO2Shape, dropdownText), kNoTag, "LFO2")->SetActionFunction(
+      [pGraphics, this](IControl* pControl) {
+        SendArbitraryMsgFromUI(kMsgUpdateLFO2Plot);
+      }
+    );
     pGraphics->AttachControl(new IVToggleControl(lfoPanel.GetGridCell(4, 1, 9, 5).GetVPadded(-6.f), kParamLFO2RateMode, "", toggleStyle, "Sync Off", "Sync On"),
       kCtrlTagLFO2RateMode, "LFO2")->SetAnimationEndActionFunction([pGraphics](IControl* pControl) {
         bool sync = pControl->GetValue() > 0.5;
@@ -1127,8 +1138,8 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
         //pGraphics->SetAllControlsDirty();
         });
     pGraphics->AttachControl(new IVToggleControl(lfoPanel.GetGridCell(5, 1, 9, 5).GetVPadded(-6.f).GetVShifted(-15.f), kParamLFO2Restart, "Restart", toggleStyle, "Free Run", "Retrigger"), kNoTag, "LFO2");
-//    pGraphics->AttachControl(new IVPlotControl(lfoPanel.GetGridCell(1, 3, 3, 5).GetVPadded(-20.f), ...), kCtrlTagLFO2Vis, "LFO2");
     pGraphics->AttachControl(new ModSliderControl(lfoPanel.GetGridCell(1, 4, 3, 5).GetVPadded(-18.f), kNoParameter, "Depth"), kCtrlTagLFO2Depth, "LFO2");
+    pGraphics->AttachControl(new ModPlotControl(lfoPanel.GetGridCell(1, 3, 3, 5).GetVPadded(-20.f), nullptr, 1024, 25), kCtrlTagLFO2Plot, "LFO1");
     pGraphics->AttachControl(new TablitsaVGroupControl(lfoPanel.GetGridCell(1, 0, 3, 1).GetPadded(modulePad[0], modulePad[1], modulePad[2], modulePad[3]), "LFO 2"));
 
     /* Sequencer */
@@ -1283,6 +1294,10 @@ void Tablitsa::UpdateUIControls()
   mDSP.UpdateOscillatorWavetable(static_cast<int>(mDSP.mLoadedWavetables[1]) - 1, 1);
   GetUI()->GetControlWithTag(kCtrlTagSequencerQuant)->SetValue(mSequencerIsQuantized);
 
+  // LFOPlots
+  dynamic_cast<ModPlotControl*>(GetUI()->GetControlWithTag(kCtrlTagLFO1Plot))->SetPlotTable(static_cast<const double*>(mDSP.mGlobalLFO1.GetCurrentTable()));
+  dynamic_cast<ModPlotControl*>(GetUI()->GetControlWithTag(kCtrlTagLFO2Plot))->SetPlotTable(static_cast<const double*>(mDSP.mGlobalLFO2.GetCurrentTable()));
+
   SendCurrentParamValuesFromDelegate();
   GetUI()->SetAllControlsDirty();
 
@@ -1312,12 +1327,6 @@ void Tablitsa::OnIdle()
   // Send time signature to DSP class
   GetTimeSig(mDSP.mTSNum, mDSP.mTSDenom);
   mDSP.mTempo = GetTempo();
-
-  /*if (mDSP.mStepPos != mDSP.mPrevPos)
-  {
-    mDSP.mPrevPos = mDSP.mStepPos;
-    SendControlMsgFromDelegate(kCtrlTagSequencer, IVMultiSliderControl<>::kMsgTagSetHighlight, sizeof(int), &mDSP.mPrevPos);
-  }*/
 
   if (GetUI())
   {
@@ -1468,6 +1477,12 @@ bool Tablitsa::OnMessage(int msgTag, int ctrlTag, int dataSize, const void* pDat
       pTableControl->SetTableLoading(false, 1);
       break;
     }
+    case kMsgUpdateLFO1Plot:
+      dynamic_cast<ModPlotControl*>(GetUI()->GetControlWithTag(kCtrlTagLFO1Plot))->SetPlotTable(static_cast<const double*>(mDSP.mGlobalLFO1.GetCurrentTable()));
+      break;
+    case kMsgUpdateLFO2Plot:
+      dynamic_cast<ModPlotControl*>(GetUI()->GetControlWithTag(kCtrlTagLFO2Plot))->SetPlotTable(static_cast<const double*>(mDSP.mGlobalLFO2.GetCurrentTable()));
+      break;
     case kMsgSeqSliderChanged:
     {
       // Read incoming data as a tuple

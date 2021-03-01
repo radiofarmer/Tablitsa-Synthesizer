@@ -1187,6 +1187,14 @@ public:
           });
         break;
       }
+      case kParamLFO1Phase:
+      {
+        mGlobalLFO1.SetPhaseOffset(value);
+        mSynth.ForEachVoice([value](SynthVoice& voice) {
+          dynamic_cast<TablitsaDSP::Voice&>(voice).mLFO1.SetPhaseOffset(value);
+          });
+        break;
+      }
       case kParamLFO1Restart:
         mSynth.ForEachVoice([value](SynthVoice& voice) {
           dynamic_cast<TablitsaDSP::Voice&>(voice).mLFO1Restart = (value > 0.5);
@@ -1261,6 +1269,14 @@ public:
         mGlobalLFO2.SetShape(static_cast<int>(value));
         mSynth.ForEachVoice([value](SynthVoice& voice) {
           dynamic_cast<TablitsaDSP::Voice&>(voice).mLFO2.SetShape(static_cast<int>(value));
+          });
+        break;
+      }
+      case kParamLFO2Phase:
+      {
+        mGlobalLFO2.SetPhaseOffset(value);
+        mSynth.ForEachVoice([value](SynthVoice& voice) {
+          dynamic_cast<TablitsaDSP::Voice&>(voice).mLFO2.SetPhaseOffset(value);
           });
         break;
       }

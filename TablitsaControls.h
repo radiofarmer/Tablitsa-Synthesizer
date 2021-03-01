@@ -612,5 +612,25 @@ protected:
   IPopupMenuControl* mMenu;
 };
 
+class ModPlotControl : public virtual IVPlotControl
+{
+public:
+  ModPlotControl(const IRECT& bounds, double* table, const int tableSize, const int numPoints, const IColor& color = TABLITSA_STYLE.colorSpec.mColors[EVColor::kHL], const IVStyle& style = TABLITSA_STYLE, float gearing=4.f);
+
+  ModPlotControl(const IRECT& bounds, int paramIdx, double* table, const int tableSize, const int numPoints, const IColor& color = TABLITSA_STYLE.colorSpec.mColors[EVColor::kHL], const IVStyle& style = TABLITSA_STYLE, float gearing = 4.f);
+
+  void SetPlotTable(const double* pTable);
+  void OnMouseDrag(float x, float y, float dX, float dY, const IMouseMod& mod) override;
+
+  ~ModPlotControl() { if (mEmptyTable) delete[] mEmptyTable; }
+
+protected:
+  const double* mTable;
+  double* mEmptyTable{ nullptr };
+  float mGearing;
+  unsigned int mTablePhase{ 0 };
+  unsigned int mTableSize;
+};
+
 END_IPLUG_NAMESPACE
 END_IGRAPHICS_NAMESPACE
