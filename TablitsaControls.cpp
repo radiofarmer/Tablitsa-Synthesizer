@@ -616,3 +616,33 @@ EndFunction:
   }
   SetDirty(false);
 }
+
+ModPlotControl::ModPlotControl(const IRECT& bounds, double* table, const int tableSize, const int numPoints, const IColor& color, const IVStyle& style, float gearing) :
+  ModPlotControl(bounds, kNoParameter, table, tableSize, numPoints, color, style, gearing)
+{}
+
+ModPlotControl::ModPlotControl(const IRECT& bounds, int paramIdx, double* table, const int tableSize, const int numPoints, const IColor& color, const IVStyle& style, float gearing) :
+  IVPlotControl(bounds, { {color, [this](double x) {return mTable[(static_cast<unsigned int>(x * static_cast<int>(mTableSize) + 1) - mTablePhase) % mTableSize];}} }, numPoints, "", style),
+  mTableSize(tableSize), mGearing(gearing)
+{
+  mEmptyTable = new double[mTableSize] {0.};
+  if (table)
+    mTable = table;
+  else
+    mTable = mEmptyTable;
+
+  SetParamIdx(paramIdx);
+}
+
+void ModPlotControl::SetPlotTable(const double* pTable)
+{
+  mTable = pTable;
+}
+
+void ModPlotControl::OnMouseDrag(float x, float y, float dX, float dY, const IMouseMod& mod)
+{
+  mTablePhase += static_cast<int>(dX * mGearing);
+  mTablePhase %= mTableSize;
+  SetValue(static_cast<double>((mTablePhase - mTableSize) % mTableSize) / mTableSize);
+  SetDirty();
+}

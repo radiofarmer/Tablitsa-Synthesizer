@@ -254,6 +254,8 @@ protected:
 /*
 A fast LFO using lookup tables
 */
+#define TABLITSA_LFO_SHAPE_VALIST "Triangle", "Sine", "Square", "Ramp Up", "Ramp Down"
+
 template<typename T = double>
 class FastLFO : public LFO<T>, public GenericModulator<T>
 {
@@ -264,6 +266,16 @@ class FastLFO : public LFO<T>, public GenericModulator<T>
   } ALIGNED(8);
 
 public:
+
+  enum EShape
+  {
+    kTriangle,
+    kSine,
+    kSquare,
+    kRampUp,
+    kRampDown,
+    kNumShapes
+  };
 
   FastLFO(T initialValue = 0.) : FastLFO<T>(nullptr, initialValue)
   {
@@ -286,12 +298,17 @@ public:
     for (int i{ 0 }; i < mTableSize; ++i)
     {
       double x = static_cast<double>(i) / static_cast<double>(mTableSize);
-      FastLFO<T>::mLUT[LFO<T>::EShape::kTriangle][i] = (2. * (1. - std::abs((WrapPhase(x + 0.25) * 2.) - 1.))) - 1.;
-      FastLFO<T>::mLUT[LFO<T>::EShape::kSquare][i] = std::copysign(1., x - 0.5);;
-      FastLFO<T>::mLUT[LFO<T>::EShape::kRampUp][i] = (x * 2.) - 1.;
-      FastLFO<T>::mLUT[LFO<T>::EShape::kRampDown][i] = ((1. - x) * 2.) - 1.;
-      FastLFO<T>::mLUT[LFO<T>::EShape::kSine][i] = std::sin(x * 6.283185307179586);
+      FastLFO<T>::mLUT[FastLFO<T>::EShape::kTriangle][i] = -2. * std::abs(2. * x - 1.) + 1.;
+      FastLFO<T>::mLUT[FastLFO<T>::EShape::kSine][i] = std::sin(x * 6.283185307179586);
+      FastLFO<T>::mLUT[FastLFO<T>::EShape::kSquare][i] = std::copysign(1., x - 0.5);;
+      FastLFO<T>::mLUT[FastLFO<T>::EShape::kRampUp][i] = (x * 2.) - 1.;
+      FastLFO<T>::mLUT[FastLFO<T>::EShape::kRampDown][i] = ((1. - x) * 2.) - 1.;
     }
+  }
+
+  void SetShape(int lfoShape)
+  {
+    mShape = (FastLFO<T>::EShape)Clip(lfoShape, 0, kNumShapes - 1);
   }
 
   inline T Lookup(double phaseNorm)
@@ -311,6 +328,11 @@ public:
     return f1 + frac * (f2 - f1);
   }
 
+  const T* GetCurrentTable() const
+  {
+    return mLUT[mShape];
+  }
+
   const double GetPhase()
   {
     return IOscillator<T>::mPhase;
@@ -321,6 +343,10 @@ public:
     IOscillator<T>::mPhase = newPhase;
   }
 
+  void SetPhaseOffset(double offset)
+  {
+    mPhaseOffset = offset * mTableSize;
+  }
 
   virtual inline T Process()
   {
@@ -355,7 +381,7 @@ public:
         phase = std::fmod(sampleAccurateQnPos, oneOverQNScalar) * LFO<T>::mQNScalar * mTableSize;
     }
 
-    T s_out = Lookup(phase);
+    T s_out = Lookup(phase - mPhaseOffset);
     IOscillator<T>::mPhase = WrapPhase(IOscillator<T>::mPhase + phaseIncr * mTableSize, 0., static_cast<double>(mTableSize));
     mLastOutput = s_out;
     return s_out * mLevelScalar;
@@ -382,11 +408,11 @@ public:
   }
 
 protected:
-
+  double mPhaseOffset{ 0. };
   static inline constexpr int mTableSize{ 1024 };
   static inline constexpr int mTableSizeM1{ 1023 };
+  FastLFO<T>::EShape mShape{ EShape::kTriangle }; // Override base member for a different shape order
   T mLastOutput;
-
   T mLUT[LFO<T>::EShape::kNumShapes][mTableSize];
 
   ModMetronome* mMetronome{ nullptr };
