@@ -1333,6 +1333,19 @@ void Tablitsa::OnIdle()
   GetTimeSig(mDSP.mTSNum, mDSP.mTSDenom);
   mDSP.mTempo = GetTempo();
 
+  // Only allow the sequencer to retrigger gates in mono mode
+  if (mDSP.mActiveSequencer && mDSP.mMono && mDSP.mGlobalSequencer.GetMode() == Sequencer<sample>::kTriggerGate)
+  {
+    bool retrigger = mDSP.mActiveSequencer->GetTrigger();
+    if (retrigger)
+    {
+      mDSP.ForEachVoice([](TablitsaDSP<sample>::Voice* voice) {
+        if (voice->GetBusy() && !voice->JustTriggered())
+          voice->Retrigger();
+        });
+    }
+  }
+
   if (GetUI())
   {
     // Update Sequencer Position

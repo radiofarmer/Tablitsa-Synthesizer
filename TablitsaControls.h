@@ -38,7 +38,7 @@ const IVColorSpec knobColorSpec = IVColorSpec{
   DEFAULT_X3COLOR
 };
 
-const IVStyle modKnobStyle{ TABLITSA_STYLE.WithColors(knobColorSpec).WithLabelText(TABLITSA_STYLE.labelText.WithSize(17.f)) };
+const IVStyle modKnobStyle{ TABLITSA_STYLE.WithShowLabel(true).WithColors(knobColorSpec).WithLabelText(TABLITSA_STYLE.labelText.WithSize(17.f)) };
 
 const IVStyle toggleStyle{ TABLITSA_STYLE.WithDrawFrame(true).WithColor(EVColor::kFG, COLOR_TRANSPARENT).WithColor(EVColor::kHL, IColor(100, 220, 0, 180)).WithShowLabel(false) };
 

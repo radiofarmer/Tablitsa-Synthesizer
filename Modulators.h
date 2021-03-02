@@ -527,8 +527,6 @@ public:
       if (mStepMode == EStepMode::kTriggerGate)
         mGate = 1.;
     }
-    else if(mStepMode == EStepMode::kTriggerGate)
-      mGate = 0.;
 
     // Increment phase
     constexpr double nSteps{ static_cast<double>(NSteps) };
@@ -557,6 +555,13 @@ public:
   inline const bool GetGate() const
   {
     return mGate > 0.5;
+  }
+
+  inline const bool GetTrigger()
+  {
+    bool doTrigger = GetGate();
+    mGate = 0.;
+    return doTrigger;
   }
 
   const EStepMode GetMode() const

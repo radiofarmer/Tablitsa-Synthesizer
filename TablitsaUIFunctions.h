@@ -72,9 +72,9 @@ void InitSampleAndHoldUI(Plugin* plug, IGraphics* pGraphics, std::vector<IContro
 
 void InitDefaultUI(Plugin* plug, IGraphics* pGraphics, std::vector<IControl*> controls, const std::vector<int>& params, const std::vector<char*>& paramNames)
 {
-  dynamic_cast<IVKnobControl*>(controls[0])->SetLabelStr("");
-  dynamic_cast<IVKnobControl*>(controls[1])->SetLabelStr("");
-  dynamic_cast<IVKnobControl*>(controls[2])->SetLabelStr("");
+  dynamic_cast<IVKnobControl*>(controls[0])->SetLabelStr(" ");
+  dynamic_cast<IVKnobControl*>(controls[1])->SetLabelStr(" ");
+  dynamic_cast<IVKnobControl*>(controls[2])->SetLabelStr(" ");
   controls[0]->SetDisabled(true);
   controls[1]->SetDisabled(true);
   controls[2]->SetDisabled(true);
