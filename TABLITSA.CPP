@@ -155,6 +155,7 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
   GetParam(kParamLFO2AmpRnd)->InitDouble("LFO2 Amp Random Depth", 0., -1., 1., 0.01);
   // Sequencer
   GetParam(kParamSequencerRateHz)->InitFrequency("Sequencer Rate", 1., 0.01, 40.);
+  GetParam(kParamSequencerStepMode)->InitEnum("Sequencer Step Mode", Sequencer<iplug::sample>::EStepMode::kAuto, { "Auto", "Gate", "Trigger" });
   GetParam(kParamSequencerRateTempo)->InitEnum("Sequencer Rate", LFO<>::k4th, { LFO_TEMPODIV_VALIST });
   GetParam(kParamSequencerRateMode)->InitBool("Sequencer Sync", true);
   GetParam(kParamSequencerRestart)->InitBool("Sequencer Retrigger", false);
@@ -1096,9 +1097,7 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
         pGraphics->HideControl(kParamAmpEnvReleaseCurve, !editCurve);
         });
 
-    /*
-    LFO Panels
-    */
+    /* LFO Panels */
     const IRECT lfoPanel = lowerPanel.GetGridCell(0, 2, 1, 3);
     // LFO1
     pGraphics->AttachControl(new TablitsaIVModKnobControl(lfoPanel.GetGridCell(0, 0, 3, 5).GetCentredInside(dialSize), kParamLFO1RateHz, "Rate"), kNoTag, "LFO1");
@@ -1144,7 +1143,7 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
 
     /* Sequencer */
     const IRECT sequencerDisplayPanel = lowerPanel.GetGridCell(2, 2, 3, 3).GetFromLeft(PLUG_WIDTH - lfoPanel.L).GetVShifted(9.f).GetPadded(10.f, 12.f, 0.f, 0.f);
-    const IRECT sequencerParamsPanel = IRECT(lowerPanel.R, lowerPanel.T, globalControls.R, lowerPanel.B - lowerPanel.H() / 3.f).GetHShifted(-2.f);
+    const IRECT sequencerParamsPanel = IRECT(lfoPanel.R, lfoPanel.T, globalControls.R, lowerPanel.B - sequencerDisplayPanel.H()).GetPadded(-5.f, -5.f, -5.f, -10.f);
 
     // Sequencer Action Functions
     auto stepRandomizeAction = [pGraphics](IControl* pCaller) {
@@ -1157,7 +1156,7 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
     pGraphics->AttachControl(new TablitsaIVKnobControl(sequencerParamsPanel.GetGridCell(0, 1, 2, 3).GetCentredInside(dialSize), kParamSequencerRateTempo, "Rate"), kNoTag, "SequencerParams");
     pGraphics->AttachControl(new TablitsaIVModKnobControl(sequencerParamsPanel.GetGridCell(0, 2, 2, 3).GetCentredInside(dialSize), kParamSequencerAmp, "Amp"), kNoTag, "SequencerParams");
     pGraphics->AttachControl(new TablitsaIVKnobControl(sequencerParamsPanel.GetGridCell(1, 0, 2, 3).GetCentredInside(dialSize), kParamSequencerGlide, "Glide"), kNoTag, "SequencerParams");
-    pGraphics->AttachControl(new IVToggleControl(sequencerParamsPanel.GetGridCell(4, 1, 7, 3).GetPadded(-10.f, -2.f, -10.f, -2.f), kParamSequencerRateMode, "", toggleStyle, "Sync Off", "Sync On"),
+    pGraphics->AttachControl(new IVToggleControl(sequencerParamsPanel.GetGridCell(4, 2, 7, 3).GetPadded(-15.f, -2.f, -15.f, -2.f), kParamSequencerRateMode, "", toggleStyle, "Sync Off", "Sync On"),
       kCtrlTagSequencerRateMode, "Sequencer")->SetAnimationEndActionFunction([pGraphics](IControl* pControl) {
         bool sync = pControl->GetValue() > 0.5;
         pGraphics->HideControl(kParamSequencerRateTempo, !sync);
@@ -1178,16 +1177,17 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
         pGraphics->GetDelegate()->SendArbitraryMsgFromUI(kMsgSeqSliderChanged, kCtrlTagSequencer, sizeof(ParamTuple), &data);
       }
       });
-    pGraphics->AttachControl(new IVToggleControl(sequencerParamsPanel.GetGridCell(5, 1, 7, 3).GetPadded(-10.f, -2.f, -10.f, -2.f), kParamSequencerRestart, "", toggleStyle, "Free Run", "Restart"), kNoTag, "SequencerParams");
+    pGraphics->AttachControl(new IVToggleControl(sequencerParamsPanel.GetGridCell(5, 2, 7, 3).GetPadded(-15.f, -2.f, -15.f, -2.f), kParamSequencerRestart, "", toggleStyle, "Free Run", "Restart"), kNoTag, "SequencerParams");
     pGraphics->AttachControl(new ModSliderControl(sequencerDisplayPanel.GetGridCell(0, 5, 1, 6).GetVPadded(-18.f).GetVShifted(-5.f).GetMidHPadded(20.f), kNoParameter, "Depth"), kCtrlTagSequencerDepth, "Sequencer");
-    pGraphics->AttachControl(new IVToggleControl(sequencerParamsPanel.GetGridCell(4, 2, 7, 3).GetPadded(-15.f, -2.f, -15.f, -2.f), kNoParameter, "", toggleStyle, "Cont.", "Quant."), kCtrlTagSequencerQuant, "SequencerParams")->SetActionFunction(
+    pGraphics->AttachControl(new IVSlideSwitchControl(sequencerParamsPanel.SubRectVertical(2, 1).SubRectHorizontal(3, 1).GetReducedFromBottom(sequencerParamsPanel.H() / 7.f).GetHPadded(-15.f), kParamSequencerStepMode, "Step Mode", TABLITSA_STYLE.WithLabelText(TABLITSA_TEXT.WithSize(13.f)).WithColor(EVColor::kSH, IColor(150, 55, 55, 55)), true, EDirection::Vertical), kNoTag, "SequencerParams");
+    pGraphics->AttachControl(new IVToggleControl(sequencerParamsPanel.GetGridCell(6, 1, 7, 3).GetPadded(-15.f, -2.f, -15.f, -2.f), kNoParameter, "", toggleStyle, "Cont.", "Quant."), kCtrlTagSequencerQuant, "SequencerParams")->SetActionFunction(
       [pGraphics, this](IControl* pControl) {
         mSequencerIsQuantized = pControl->GetValue();
         int nSteps = mSequencerIsQuantized > 0.5 ? 12 : 0;
         dynamic_cast<IVTrackControlBase*>(pGraphics->GetControlWithTag(kCtrlTagSequencer))->SetNSteps(nSteps);
       });
-    pGraphics->AttachControl(new IVButtonControl(sequencerParamsPanel.GetGridCell(5, 2, 7, 3).GetPadded(-15.f, -2.f, -15.f, -2.f), stepRandomizeAction, "Randomize", pushButtonStyle.WithLabelText(pushButtonStyle.labelText.WithSize(12.f))), kNoTag, "SequencerParams");
-    pGraphics->AttachControl(new TablitsaVGroupControl(sequencerParamsPanel.GetPadded(modulePad[0], modulePad[1] + 5.f, modulePad[2], modulePad[3]), "Sequencer"));
+    pGraphics->AttachControl(new IVButtonControl(sequencerParamsPanel.GetGridCell(6, 2, 7, 3).GetPadded(-15.f, -2.f, -15.f, -2.f), stepRandomizeAction, "Randomize", pushButtonStyle.WithLabelText(pushButtonStyle.labelText.WithSize(12.f))), kNoTag, "SequencerParams");
+    pGraphics->AttachControl(new TablitsaVGroupControl("Sequencer", "SequencerParams", 2.f, 15.f, 2.f, 5.f));
 
     
 #ifndef VST3_API
@@ -1332,6 +1332,19 @@ void Tablitsa::OnIdle()
   // Send time signature to DSP class
   GetTimeSig(mDSP.mTSNum, mDSP.mTSDenom);
   mDSP.mTempo = GetTempo();
+
+  // Only allow the sequencer to retrigger gates in mono mode
+  if (mDSP.mActiveSequencer && mDSP.mMono && mDSP.mGlobalSequencer.GetMode() == Sequencer<sample>::kTriggerGate)
+  {
+    bool retrigger = mDSP.mActiveSequencer->GetTrigger();
+    if (retrigger)
+    {
+      mDSP.ForEachVoice([](TablitsaDSP<sample>::Voice* voice) {
+        if (voice->GetBusy() && !voice->JustTriggered())
+          voice->Retrigger();
+        });
+    }
+  }
 
   if (GetUI())
   {

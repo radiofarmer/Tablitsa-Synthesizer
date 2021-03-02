@@ -336,9 +336,20 @@ public:
       GetDetuner().SetNextPan(mPan);
     }
 
+    const bool JustTriggered()
+    {
+      bool wasJustTriggered = mTriggered;
+      mTriggered = false;
+      return wasJustTriggered;
+    }
+
+    void Retrigger()
+    {
+      Trigger(mVelocity, true);
+    }
+
     void Trigger(double level, bool isRetrigger) override
     {
-
       mVelocity = level; // TODO: Handling of different velocity settings (i.e. which envelopes are affected by velocity)
       mTriggerRand = static_cast<double>(std::rand()) / static_cast<double>(RAND_MAX);
 
@@ -369,11 +380,12 @@ public:
       {
         mModulators.ReplaceModulator(dynamic_cast<FastLFO<T>*>(&GetMaster()->mGlobalLFO2), 1);
       }
-
+      
       if (mSequencerRestart)
       {
         mModulators.ReplaceModulator(dynamic_cast<Sequencer<T>*>(&mSequencer), 0);
-        mSequencer.Reset();
+        if (!isRetrigger) // Only reset the sequencer if this is not a retrigger call (i.e. not evoked by the sequencer gate itself)
+          mSequencer.Reset();
         // Update sequencer display with this voice's phase
         GetMaster()->mActiveSequencer = &mSequencer;
       }
@@ -385,13 +397,7 @@ public:
       }
 
 
-      if (isRetrigger)
-      {
-        mAmpEnv.Retrigger(level);
-        mEnv1.Retrigger(1., 1. - mEnv1VelocityMod);
-        mEnv2.Retrigger(1.);
-      }
-      else if (!mLegato)
+      if (!mLegato)
       {
         double velSubtr = 1. - level;
         mAmpEnv.Start(1. - velSubtr * mAmpEnvVelocityMod, 1. - mAmpEnvVelocityMod * kMaxEnvTimeScalar * level);
@@ -443,6 +449,9 @@ public:
         GetMaster()->Env2Queue[mID] = &mEnv2;
         GetMaster()->AmpEnvQueue[mID] = &mAmpEnv;
       }
+
+      if (!isRetrigger)
+        mTriggered = true;
     }
     
     void Release() override
@@ -458,12 +467,13 @@ public:
 
     void ProcessSamplesAccumulating(T** inputs, T** outputs, int nInputs, int nOutputs, int startIdx, int nFrames) override
     {
-      // inputs to the synthesizer can just fetch a value every block, like this:
-//      double gate = mInputs[kVoiceControlGate].endValue;
+       /* // inputs to the synthesizer can just fetch a value every block, like this:
+      double gate = mInputs[kVoiceControlGate].endValue;
+      // or write the entire control ramp to a buffer, like this, to get sample-accurate ramps:
+      mInputs[kVoiceControlTimbre].Write(mTimbreBuffer.Get(), startIdx, nFrames); */
+
       double pitch = mInputs[kVoiceControlPitch].endValue + mDetune; // pitch = (MidiKey - 69) / 12
 //      double pitchBend = mInputs[kVoiceControlPitchBend].endValue;
-      // or write the entire control ramp to a buffer, like this, to get sample-accurate ramps:
-//      mInputs[kVoiceControlTimbre].Write(mTimbreBuffer.Get(), startIdx, nFrames);
 
       // Set the static (note-constant) modulator values
       T keytrack = (pitch * 12. + 69.) / 128.;
@@ -662,6 +672,7 @@ public:
     bool mLFO2Restart{ false };
     bool mSequencerRestart{ false };
     bool mLegato{ false };
+    bool mTriggered{ false }; // Set to true to prevent the note being retriggered immediately after the initial trigger
 
     // Static Modulators
     double mEnv1VelocityMod{ 0. };
@@ -842,6 +853,13 @@ public:
       mSynth.SetNoteGlideTime(std::abs(static_cast<double>(msg.NoteNumber()) - mLastNoteOn) / mGlideRateScalar);
       mLastNoteOn = static_cast<double>(msg.NoteNumber());
     }
+    if (mGlobalSequencer.GetMode() == Sequencer<T>::EStepMode::kLockToGate && msg.StatusMsg() == IMidiMsg::kNoteOn)
+    {
+      mGlobalSequencer.GateOn();
+      mSynth.ForEachVoice([](SynthVoice& voice) {
+        dynamic_cast<TablitsaDSP::Voice&>(voice).mSequencer.GateOn();
+        });
+    }
     mSynth.AddMidiMsgToQueue(msg);
   }
 
@@ -862,11 +880,11 @@ public:
       /*mSynth.ForEachVoice([&wtFile, oscIdx](SynthVoice& voice) {
         dynamic_cast<Voice&>(voice).mOsc1.LoadNewTable(wtFile, oscIdx);
         });*/
-      SendParam([this, oscIdx, pWT](Voice* voice) {
+      ForEachVoice([this, oscIdx, pWT](Voice* voice) {
         voice->mOsc1.SetWavetable(pWT);
         voice->mOsc1.ReloadLUT();
         });
-      SendParam([this, oscIdx](Voice* voice) {
+      ForEachVoice([this, oscIdx](Voice* voice) {
         voice->mOsc1.NotifyLoaded();
         });
     }
@@ -875,11 +893,11 @@ public:
       /*mSynth.ForEachVoice([&wtFile, oscIdx](SynthVoice& voice) {
         dynamic_cast<Voice&>(voice).mOsc2.LoadNewTable(wtFile, oscIdx);
         });*/
-      SendParam([this, oscIdx, pWT](Voice* voice) {
+      ForEachVoice([this, oscIdx, pWT](Voice* voice) {
         voice->mOsc2.SetWavetable(pWT);
         voice->mOsc2.ReloadLUT();
         });
-      SendParam([this, oscIdx](Voice* voice) {
+      ForEachVoice([this, oscIdx](Voice* voice) {
         voice->mOsc2.NotifyLoaded();
         });
     }
@@ -910,15 +928,7 @@ public:
       });
   }
 
-  inline void SendParam(std::function<void(Voice* voice)> func)
-  {
-    for (Voice* v : mSynthVoices)
-    {
-      func(v);
-    }
-  }
-
-  inline void SendData(std::function<void(Voice* voice)> func)
+  inline void ForEachVoice(std::function<void(Voice* voice)> func)
   {
     for (Voice* v : mSynthVoices)
     {
@@ -965,7 +975,7 @@ public:
       case kParamPanRnd:
       {
         const int modIdx = paramIdx - kParamPan;
-        SendParam([paramIdx, modIdx, value](Voice* voice) {
+        ForEachVoice([paramIdx, modIdx, value](Voice* voice) {
           voice->UpdateVoiceParam(kVPan, modIdx, value);
           });
         break;
@@ -973,7 +983,7 @@ public:
       case kParamEnv1Sustain:
       {
         mParamsToSmooth[kModEnv1SustainSmoother] = (T)value / 100.;
-        SendParam([paramIdx, value](Voice* voice) {
+        ForEachVoice([paramIdx, value](Voice* voice) {
           voice->UpdateVoiceModulatorParam(kVEnv1Sustain, 0, (T)value / 100.);
           });
         break;
@@ -989,7 +999,7 @@ public:
       case kParamEnv1SustainRnd:
       {
         const int modIdx = paramIdx - kParamEnv1Velocity;
-        SendParam([paramIdx, modIdx, value](Voice* voice) {
+        ForEachVoice([paramIdx, modIdx, value](Voice* voice) {
           voice->UpdateVoiceModulatorParam(kVEnv1Sustain, modIdx, value);
           });
         break;
@@ -1032,7 +1042,7 @@ public:
       case kParamEnv2Sustain:
       {
         mParamsToSmooth[kModEnv2SustainSmoother] = (T)value / 100.;
-        SendParam([paramIdx, value](Voice* voice) {
+        ForEachVoice([paramIdx, value](Voice* voice) {
           voice->UpdateVoiceModulatorParam(kVEnv2Sustain, 0, (T)value / 100.);
           });
         break;
@@ -1048,7 +1058,7 @@ public:
       case kParamEnv2SustainRnd:
       {
         const int modIdx = paramIdx - kParamEnv2Velocity;
-        SendParam([paramIdx, modIdx, value](Voice* voice) {
+        ForEachVoice([paramIdx, modIdx, value](Voice* voice) {
           voice->UpdateVoiceModulatorParam(kVEnv2Sustain, modIdx, value);
           });
         break;
@@ -1081,7 +1091,7 @@ public:
       case kParamAmpEnvSustain:
       {
         mParamsToSmooth[kModAmpEnvSustainSmoother] = (T)value / 100.;
-        SendParam([paramIdx, value](Voice* voice) {
+        ForEachVoice([paramIdx, value](Voice* voice) {
           voice->UpdateVoiceModulatorParam(kVAmpEnvSustain, 0, (T)value / 100.);
           });
         break;
@@ -1097,7 +1107,7 @@ public:
       case kParamAmpEnvSustainRnd:
       {
         const int modIdx = paramIdx - kParamAmpEnvVelocity;
-        SendParam([paramIdx, modIdx, value](Voice* voice) {
+        ForEachVoice([paramIdx, modIdx, value](Voice* voice) {
           voice->UpdateVoiceModulatorParam(kVAmpEnvSustain, modIdx, value);
           });
         break;
@@ -1135,7 +1145,7 @@ public:
       case kParamLFO1AmpRnd:
       {
         const int modIdx = paramIdx - kParamLFO1Amp;
-        SendParam([paramIdx, modIdx, value](Voice* voice) {
+        ForEachVoice([paramIdx, modIdx, value](Voice* voice) {
           voice->UpdateVoiceModulatorParam(kVLFO1Amp, modIdx, value);
           });
         break;
@@ -1166,7 +1176,7 @@ public:
       case kParamLFO1RateHzRnd:
       {
         const int modIdx = paramIdx - kParamLFO1RateHz;
-        SendParam([paramIdx, modIdx, value](Voice* voice) {
+        ForEachVoice([paramIdx, modIdx, value](Voice* voice) {
           voice->UpdateVoiceModulatorParam(kVLFO1RateHz, modIdx, value);
           });
         break;
@@ -1219,7 +1229,7 @@ public:
       case kParamLFO2AmpRnd:
       {
         const int modIdx = paramIdx - kParamLFO2Amp;
-        SendParam([paramIdx, modIdx, value](Voice* voice) {
+        ForEachVoice([paramIdx, modIdx, value](Voice* voice) {
           voice->UpdateVoiceModulatorParam(kVLFO2Amp, modIdx, value);
           });
         break;
@@ -1251,7 +1261,7 @@ public:
       case kParamLFO2RateHzRnd:
       {
         const int modIdx = paramIdx - kParamLFO2RateHz;
-        SendParam([paramIdx, modIdx, value](Voice* voice) {
+        ForEachVoice([paramIdx, modIdx, value](Voice* voice) {
           voice->UpdateVoiceModulatorParam(kVLFO2RateHz, modIdx, value);
           });
         break;
@@ -1304,7 +1314,7 @@ public:
       case kParamSequencerAmpRnd:
       {
         const int modIdx = paramIdx - kParamSequencerAmp;
-        SendParam([paramIdx, modIdx, value](Voice* voice) {
+        ForEachVoice([paramIdx, modIdx, value](Voice* voice) {
           voice->UpdateVoiceModulatorParam(kVSequencerAmp, modIdx, value);
           });
         break;
@@ -1315,6 +1325,15 @@ public:
         mSynth.ForEachVoice([value](SynthVoice& voice) {
           dynamic_cast<TablitsaDSP::Voice&>(voice).mSequencer.SetLength(static_cast<int>(value));
           });
+        break;
+      }
+      case kParamSequencerStepMode:
+      {
+        Sequencer<T>::EStepMode mode = static_cast<Sequencer<T>::EStepMode>(value);
+        mGlobalSequencer.SetStepMode(mode);
+        mSynth.ForEachVoice([mode](SynthVoice& voice) {
+        dynamic_cast<TablitsaDSP::Voice&>(voice).mSequencer.SetStepMode(mode);
+        });
         break;
       }
       case kParamSequencerRateTempo:
@@ -1344,7 +1363,7 @@ public:
       case kParamSequencerRateHzRnd:
       {
         const int modIdx = paramIdx - kParamSequencerRateHz;
-        SendParam([paramIdx, modIdx, value](Voice* voice) {
+        ForEachVoice([paramIdx, modIdx, value](Voice* voice) {
           voice->UpdateVoiceModulatorParam(kVSequencerRateHz, modIdx, value);
           });
         break;
@@ -1454,7 +1473,7 @@ public:
       case kParamWavetable1PitchRnd:
       {
         const int modIdx = paramIdx - kParamWavetable1Pitch;
-        SendParam([paramIdx, modIdx, value](Voice* voice) {
+        ForEachVoice([paramIdx, modIdx, value](Voice* voice) {
           voice->UpdateVoiceParam(kVWavetable1PitchOffset, modIdx, value);
           });
         break;
@@ -1473,7 +1492,7 @@ public:
       case kParamWavetable1AmpRnd:
       {
         const int modIdx = paramIdx - kParamWavetable1Amp;
-        SendParam([value, modIdx](Voice* voice) {
+        ForEachVoice([value, modIdx](Voice* voice) {
           voice->UpdateVoiceParam(kVWavetable1Amp, modIdx, value);
           });
         break;
@@ -1492,7 +1511,7 @@ public:
       case kParamWavetable1PosRnd:
       {
         const int modIdx = paramIdx - kParamWavetable1Pos;
-        SendParam([paramIdx, modIdx, value](Voice* voice) {
+        ForEachVoice([paramIdx, modIdx, value](Voice* voice) {
           voice->UpdateVoiceParam(kVWavetable1Position, modIdx, value);
           });
         break;
@@ -1572,7 +1591,7 @@ public:
       case kParamWavetable2AmpRnd:
       {
         const int modIdx = paramIdx - kParamWavetable2Amp;
-        SendParam([value, modIdx](Voice* voice) {
+        ForEachVoice([value, modIdx](Voice* voice) {
           voice->UpdateVoiceParam(kVWavetable2Amp, modIdx, value);
           });
           break;
@@ -1637,7 +1656,7 @@ public:
       case kParamFilter1Type:
       {
         mFilter1Comb = static_cast<int>(value) == kComb;
-        SendParam([value](Voice* voice) {
+        ForEachVoice([value](Voice* voice) {
           voice->SetFilterType(0, static_cast<int>(value));
           });
         break;
@@ -1693,7 +1712,7 @@ public:
       case kParamFilter1ResonanceRnd:
       {
         const int modIdx = paramIdx - kParamFilter1Resonance;
-        SendParam([paramIdx, modIdx, value](Voice* voice) {
+        ForEachVoice([paramIdx, modIdx, value](Voice* voice) {
           voice->UpdateVoiceParam(kVFilter1Resonance, modIdx, value);
           });
         break;
@@ -1723,7 +1742,7 @@ public:
       case kParamFilter2Type:
       {
         mFilter2Comb = static_cast<int>(value) == kComb;
-        SendParam([value](Voice* voice) {
+        ForEachVoice([value](Voice* voice) {
           voice->SetFilterType(1, static_cast<int>(value));
           });
         break;
@@ -1809,7 +1828,7 @@ public:
       case kParamOsc1PM:
       {
         const bool phaseModOn = value > 0.5;
-        SendParam([phaseModOn](Voice* voice) {
+        ForEachVoice([phaseModOn](Voice* voice) {
           voice->mOsc1.SetPhaseModulation(phaseModOn);
           });
         break;
@@ -1817,7 +1836,7 @@ public:
       case kParamOsc2PM:
       {
         const bool phaseModOn = value > 0.5;
-        SendParam([phaseModOn](Voice* voice) {
+        ForEachVoice([phaseModOn](Voice* voice) {
           voice->mOsc2.SetPhaseModulation(phaseModOn);
           });
         break;
@@ -1836,7 +1855,7 @@ public:
       case kParamPhaseModFreqRnd:
       {
         const int modIdx = paramIdx - kParamPhaseModFreq;
-        SendParam([value, modIdx](Voice* voice) {
+        ForEachVoice([value, modIdx](Voice* voice) {
           voice->UpdateVoiceParam(kVPhaseModFreq, modIdx, value);
           });
         break;
@@ -1855,7 +1874,7 @@ public:
       case kParamPhaseModAmountRnd:
       {
         const int modIdx = paramIdx - kParamPhaseModAmount;
-        SendParam([value, modIdx](Voice* voice) {
+        ForEachVoice([value, modIdx](Voice* voice) {
           voice->UpdateVoiceParam(kVPhaseModAmt, modIdx, value);
           });
         break;
@@ -1863,7 +1882,7 @@ public:
       case kParamOsc1RM:
       {
         const bool ringModOn = value > 0.5;
-        SendParam([ringModOn](Voice* voice) {
+        ForEachVoice([ringModOn](Voice* voice) {
           voice->mOsc1.SetRingModulation(ringModOn);
           });
         break;
@@ -1871,7 +1890,7 @@ public:
       case kParamOsc2RM:
       {
         const bool ringModOn = value > 0.5;
-        SendParam([ringModOn](Voice* voice) {
+        ForEachVoice([ringModOn](Voice* voice) {
           voice->mOsc2.SetRingModulation(ringModOn);
           });
         break;
@@ -1890,7 +1909,7 @@ public:
       case kParamRingModFreqRnd:
       {
         const int modIdx = paramIdx - kParamRingModFreq;
-        SendParam([value, modIdx](Voice* voice) {
+        ForEachVoice([value, modIdx](Voice* voice) {
           voice->UpdateVoiceParam(kVRingModFreq, modIdx, value);
           });
         break;
@@ -1909,7 +1928,7 @@ public:
       case kParamRingModAmountRnd:
       {
         const int modIdx = paramIdx - kParamRingModAmount;
-        SendParam([value, modIdx](Voice* voice) {
+        ForEachVoice([value, modIdx](Voice* voice) {
           voice->UpdateVoiceParam(kVRingModAmt, modIdx, value);
           });
         break;
