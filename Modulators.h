@@ -428,6 +428,13 @@ class Sequencer : public FastLFO<T>
   };
 
 public:
+  enum EStepMode
+  {
+    kAuto,
+    kLockToGate,
+    kTriggerGate
+  };
+
   Sequencer(ModMetronome* metronome, T* stepValues) : FastLFO<T>(metronome, 0.), mStepValues(stepValues) {}
 
   Sequencer(T* stepValues) : FastLFO<T>(0.), mStepValues(stepValues)
@@ -450,12 +457,22 @@ public:
     CalculateGlideSamples();
   }
 
+  inline void GateOn()
+  {
+    mGate = 1.;
+  }
+
   /* Set the glide time, as a fraction of the time from one step to the next. (i.e. the fraction of the step-time required to reach the next step's value)
   */
   void SetGlide(double glideNorm)
   {
     mGlide = glideNorm;
     CalculateGlideSamples();
+  }
+
+  void SetStepMode(EStepMode mode)
+  {
+    mStepMode = mode;
   }
 
   inline void CalculateGlideSamples()
@@ -482,17 +499,16 @@ public:
   {
     T oneOverQNScalar = 1. / LFO<T>::mQNScalar;
     T phase = IOscillator<T>::mPhase;
+
     bool tempoSync = FastLFO<T>::mRateMode == FastLFO<T>::ERateMode::kBPM;
 
     if (tempoSync && !transportIsRunning)
       IOscillator<T>::SetFreqCPS(tempo / 60.);
-
-    double samplesPerBeat = IOscillator<T>::mSampleRate * (60.0 / (tempo == 0.0 ? 1.0 : tempo)); // samples per beat
-
     T phaseIncr = IOscillator<T>::mPhaseIncr;
 
     if (tempoSync)
     {
+      double samplesPerBeat = IOscillator<T>::mSampleRate * (60.0 / (tempo == 0.0 ? 1.0 : tempo));
       double sampleAccurateQnPos = qnPos + (phase / samplesPerBeat);
       phaseIncr *= LFO<T>::mQNScalar;
       if (transportIsRunning)
@@ -508,11 +524,23 @@ public:
     {
       mPrevValue = tempValue;
       mPrevStepPos = mStepPos;
+      if (mStepMode == EStepMode::kTriggerGate)
+        mGate = 1.;
     }
+    else if(mStepMode == EStepMode::kTriggerGate)
+      mGate = 0.;
 
     // Increment phase
     constexpr double nSteps{ static_cast<double>(NSteps) };
-    IOscillator<T>::mPhase = FastLFO<T>::WrapPhase(IOscillator<T>::mPhase + phaseIncr, 0., mLength / nSteps);
+    if (mStepMode == EStepMode::kLockToGate)
+    {
+      IOscillator<T>::mPhase = FastLFO<T>::WrapPhase(IOscillator<T>::mPhase + mGate / nSteps, 0., mLength / nSteps);
+      mGate = 0.;
+    }
+    else
+    {
+      IOscillator<T>::mPhase = FastLFO<T>::WrapPhase(IOscillator<T>::mPhase + phaseIncr, 0., mLength / nSteps);
+    }
     return s_out * mLevelScalar;
   }
 
@@ -526,6 +554,16 @@ public:
     return mStepPos;
   }
 
+  inline const bool GetGate() const
+  {
+    return mGate > 0.5;
+  }
+
+  const EStepMode GetMode() const
+  {
+    return mStepMode;
+  }
+
 protected:
   T* mStepValues;
   T mPrevValue{ 0. };
@@ -533,6 +571,8 @@ protected:
   int mPrevStepPos{ NSteps };
   int mPrevStep{ -1 };
   int mLength{ NSteps };
+  EStepMode mStepMode{ EStepMode::kAuto };
+  T mGate{ 0. }; // 1. when a note has just started, otherwise 0.
   T mGlide{ 0. };
   T mGlidePerSample{ 0. };
   T mSamplesPerStep;

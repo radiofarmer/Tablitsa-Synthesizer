@@ -256,13 +256,13 @@ public:
     // The amount by which the SVG is scaled in order to fit in the control
     mScaleFact = std::min((mRECT.W() - 80.f) / mSVG.W(), mRECT.H() / mSVG.H());
     // Table height in plugin (without lanthanides and actinides)
-    mTableWidth = std::ceil(TableWidth * mScaleFact) + TABLE_ADJ;
-    mTableHeight = std::ceil(TableHeight * mScaleFact) + TABLE_ADJ;
+    mTableWidth = std::ceilf(TableWidth * mScaleFact) + TABLE_ADJ;
+    mTableHeight = std::ceilf(TableHeight * mScaleFact) + TABLE_ADJ;
     mTableTLHC[0] = mRECT.L + 37.f * mScaleFact;
     mTableTLHC[1] = mRECT.T + 37.f * mScaleFact;
     // Lanthanides and Actinides
-    mLaAcWidth = std::ceil(LaAcWidth * mScaleFact) + TABLE_ADJ;
-    mLaAcHeight = std::ceil(LaAcHeight * mScaleFact) + TABLE_ADJ;
+    mLaAcWidth = std::ceilf(LaAcWidth * mScaleFact) + TABLE_ADJ;
+    mLaAcHeight = std::ceilf(LaAcHeight * mScaleFact) + TABLE_ADJ;
     mLaTLHC[0] = mRECT.L + LaTLHC[0] * mScaleFact;
     mLaTLHC[1] = mRECT.T + LaTLHC[1] * mScaleFact;
     mTableBounds = IRECT(mTableTLHC[0], mTableTLHC[1], mTableTLHC[0] + mTableWidth, mTableTLHC[1] + mTableHeight);

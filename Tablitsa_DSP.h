@@ -336,6 +336,11 @@ public:
       GetDetuner().SetNextPan(mPan);
     }
 
+    void Retrigger(double level)
+    {
+      Trigger(mVelocity, false);
+    }
+
     void Trigger(double level, bool isRetrigger) override
     {
 
@@ -842,6 +847,13 @@ public:
       mSynth.SetNoteGlideTime(std::abs(static_cast<double>(msg.NoteNumber()) - mLastNoteOn) / mGlideRateScalar);
       mLastNoteOn = static_cast<double>(msg.NoteNumber());
     }
+    if (mGlobalSequencer.GetMode() == Sequencer<T>::EStepMode::kLockToGate && msg.StatusMsg() == IMidiMsg::kNoteOn)
+    {
+      mGlobalSequencer.GateOn();
+      mSynth.ForEachVoice([](SynthVoice& voice) {
+        dynamic_cast<TablitsaDSP::Voice&>(voice).mSequencer.GateOn();
+        });
+    }
     mSynth.AddMidiMsgToQueue(msg);
   }
 
@@ -1315,6 +1327,15 @@ public:
         mSynth.ForEachVoice([value](SynthVoice& voice) {
           dynamic_cast<TablitsaDSP::Voice&>(voice).mSequencer.SetLength(static_cast<int>(value));
           });
+        break;
+      }
+      case kParamSequencerStepMode:
+      {
+        Sequencer<T>::EStepMode mode = static_cast<Sequencer<T>::EStepMode>(value);
+        mGlobalSequencer.SetStepMode(mode);
+        mSynth.ForEachVoice([mode](SynthVoice& voice) {
+        dynamic_cast<TablitsaDSP::Voice&>(voice).mSequencer.SetStepMode(mode);
+        });
         break;
       }
       case kParamSequencerRateTempo:

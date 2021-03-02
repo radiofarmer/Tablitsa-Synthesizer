@@ -132,6 +132,7 @@ enum EParams
   kParamLFO2RateMode,
   kParamLFO2Restart,
   kParamSequencerSteps,
+  kParamSequencerStepMode,
   kParamSequencerGlide,
   kParamSequencerCurve,
   kParamSequencerRateHz,
