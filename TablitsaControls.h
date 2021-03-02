@@ -576,6 +576,14 @@ class DropdownListControl : public ICaptionControl
 public:
   DropdownListControl(const IRECT& bounds, std::initializer_list<char*> options, const IText& text = TABLITSA_TEXT, const IColor& bgColor = DEFAULT_BGCOLOR, bool showLabel = false);
 
+  void AttachPopupMenu()
+  {
+    mMenu = new IPopupMenuControl();
+    GetUI()->AttachControl(mMenu);
+  }
+
+  void SetCurrentIdx(const int newIdx, const bool triggerAction = false);
+
   void Draw(IGraphics& g) override;
   void OnResize() override;
   void OnMouseDown(float x, float y, const IMouseMod& mod) override;
@@ -583,12 +591,6 @@ public:
   /* DropdownList Control */
   int GetCurrentIndex() { return mCurrentIdx; }
   const char* GetSelectedString() { return mOptions[mCurrentIdx].c_str(); }
-
-  void AttachPopupMenu()
-  {
-    mMenu = new IPopupMenuControl();
-    GetUI()->AttachControl(mMenu);
-  }
 
 protected:
   std::vector<std::string> mOptions;

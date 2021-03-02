@@ -321,6 +321,7 @@ void TablitsaVTabBox::SetGroupName(const char* newGroupName)
 TablitsaEffectBankControl::TablitsaEffectBankControl(const IRECT& bounds, std::initializer_list<char*> labels, std::initializer_list<char*> groupNames, const IVStyle& style, const int maxTabs) :
   IControl(bounds, kNoParameter), mMaxTabs(maxTabs), mStyle(style)
 {
+  // Text to display on each tab
   for (auto l : labels)
   {
     int nLabels = mLabels.GetSize();
@@ -332,6 +333,7 @@ TablitsaEffectBankControl::TablitsaEffectBankControl(const IRECT& bounds, std::i
     strcpy(pLab->mText, l);
   }
 
+  // The groups associated with each tab
   for (auto g : groupNames)
   {
     int nGroups = mGroups.GetSize();
@@ -380,6 +382,12 @@ DropdownListControl::DropdownListControl(const IRECT& bounds, std::initializer_l
       mCurrentIdx = pControl->GetChosenItemIdx();
     this->SetDirty(true); // Tablitsa: Trigger action function to update the tab control
     });
+}
+
+void DropdownListControl::SetCurrentIdx(const int newIdx, const bool triggerAction)
+{
+  mCurrentIdx = newIdx;
+  SetDirty(triggerAction);
 }
 
 void DropdownListControl::Draw(IGraphics& g)

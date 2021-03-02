@@ -1934,62 +1934,62 @@ public:
         break;
       }
         break;
-      case kParamEffect1Param1: // Effect 1
+      case kParamMasterEffect1Param1: // Effect 1
       {
         ENTER_PARAMS_MUTEX
           mEffects[0]->SetParam1((T)value);
         LEAVE_PARAMS_MUTEX
         break;
       }
-      case kParamEffect1Param2:
+      case kParamMasterEffect1Param2:
         mEffects[0]->SetParam2((T)value);
         break;
-      case kParamEffect1Param3:
+      case kParamMasterEffect1Param3:
         mEffects[0]->SetParam3((T)value);
         break;
-      case kParamEffect1Param4:
+      case kParamMasterEffect1Param4:
         mEffects[0]->SetParam4((T)value);
         break;
-      case kParamEffect1Param5:
+      case kParamMasterEffect1Param5:
         mEffects[0]->SetParam5((T)value);
         break;
-      case kParamEffect1Param6:
+      case kParamMasterEffect1Param6:
         mEffects[0]->SetParam6((T)value);
         break;
-      case kParamEffect2Param1: // Effect 2
+      case kParamMasterEffect2Param1: // Effect 2
         mEffects[1]->SetParam1((T)value);
         break;
-      case kParamEffect2Param2:
+      case kParamMasterEffect2Param2:
         mEffects[1]->SetParam2((T)value);
         break;
-      case kParamEffect2Param3:
+      case kParamMasterEffect2Param3:
         mEffects[1]->SetParam3((T)value);
         break;
-      case kParamEffect2Param4:
+      case kParamMasterEffect2Param4:
         mEffects[1]->SetParam4((T)value);
         break;
-      case kParamEffect2Param5:
+      case kParamMasterEffect2Param5:
         mEffects[1]->SetParam5((T)value);
         break;
-      case kParamEffect2Param6:
+      case kParamMasterEffect2Param6:
         mEffects[1]->SetParam6((T)value);
         break;
-      case kParamEffect3Param1: // Efect 3
+      case kParamMasterEffect3Param1: // Efect 3
         mEffects[2]->SetParam1((T)value);
         break;
-      case kParamEffect3Param2:
+      case kParamMasterEffect3Param2:
         mEffects[2]->SetParam2((T)value);
         break;
-      case kParamEffect3Param3:
+      case kParamMasterEffect3Param3:
         mEffects[2]->SetParam3((T)value);
         break;
-      case kParamEffect3Param4:
+      case kParamMasterEffect3Param4:
         mEffects[2]->SetParam4((T)value);
         break;
-      case kParamEffect3Param5:
+      case kParamMasterEffect3Param5:
         mEffects[2]->SetParam5((T)value);
         break;
-      case kParamEffect3Param6:
+      case kParamMasterEffect3Param6:
         mEffects[2]->SetParam6((T)value);
         break;
       default:
