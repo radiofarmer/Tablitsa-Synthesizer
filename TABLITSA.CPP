@@ -1052,6 +1052,7 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
     // Popup Menus
     dynamic_cast<DropdownListControl*>(pGraphics->GetControlWithTag(kCtrlTagVoiceEffectsList))->AttachPopupMenu();
     dynamic_cast<DropdownListControl*>(pGraphics->GetControlWithTag(kCtrlTagMasterEffectsList))->AttachPopupMenu();
+    pGraphics->AttachPopupMenuControl();
 
 #ifndef VST3_API
     pGraphics->Resize(PLUG_WIDTH, PLUG_HEIGHT + (int)KEYBOARD_HEIGHT, 0.8, true);
@@ -1174,9 +1175,9 @@ void Tablitsa::OnIdle()
     bool retrigger = mDSP.mActiveSequencer->GetTrigger();
     if (retrigger)
     {
-      mDSP.ForEachVoice([](TablitsaDSP<sample>::Voice* voice) {
-        if (voice->GetBusy() && !voice->JustTriggered())
-          voice->Retrigger();
+      mDSP.ForEachVoice([](TablitsaDSP<sample>::Voice& voice) {
+        if (voice.GetBusy() && !voice.JustTriggered())
+          voice.Retrigger();
         });
     }
   }
@@ -1373,7 +1374,9 @@ bool Tablitsa::OnMessage(int msgTag, int ctrlTag, int dataSize, const void* pDat
     case kMsgMasterEffect2Changed:
     case kMsgMasterEffect3Changed:
     {
+      std::lock_guard<std::mutex> lg(mDSP.mProcMutex);
       int effectIdx = *reinterpret_cast<const int*>(pData);
+      delete mDSP.mEffects[msgTag - kMsgMasterEffect1Changed];
       switch (effectIdx)
       {
       case kDelayEffect:
