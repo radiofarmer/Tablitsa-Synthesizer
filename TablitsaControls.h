@@ -576,11 +576,7 @@ class DropdownListControl : public ICaptionControl
 public:
   DropdownListControl(const IRECT& bounds, std::initializer_list<char*> options, const IText& text = TABLITSA_TEXT, const IColor& bgColor = DEFAULT_BGCOLOR, bool showLabel = false);
 
-  void AttachPopupMenu()
-  {
-    mMenu = new IPopupMenuControl();
-    GetUI()->AttachControl(mMenu);
-  }
+  void AttachPopupMenu();
 
   void SetCurrentIdx(const int newIdx, const bool triggerAction = false);
 
@@ -591,12 +587,15 @@ public:
   /* DropdownList Control */
   int GetCurrentIndex() { return mCurrentIdx; }
   const char* GetSelectedString() { return mOptions[mCurrentIdx].c_str(); }
+  const bool MenuIsOpen() const { return mMenuOpen; }
+  void Collapse() { if (mMenu->GetExpanded()) mMenu->CollapseEverything(); }
 
 protected:
   std::vector<std::string> mOptions;
   IPopupMenu mPopupMenu;
   IPopupMenuControl* mMenu;
   int mCurrentIdx{ 0 };
+  bool mMenuOpen{ false };
 };
 
 class PresetSelector : public ICaptionControl

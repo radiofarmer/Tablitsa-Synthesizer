@@ -365,6 +365,8 @@ void TablitsaEffectBankControl::TabChanged(int newIdx)
       tab->SetActive(i == newIdx);
     }
   }
+  if (GetActionFunction())
+    (GetActionFunction())(this);
 }
 
 /* Generic Dropdown List */
@@ -380,8 +382,15 @@ DropdownListControl::DropdownListControl(const IRECT& bounds, std::initializer_l
   mPopupMenu.SetFunction([this](IPopupMenu* pControl) {
     if (pControl->GetChosenItemIdx() >= 0)
       mCurrentIdx = pControl->GetChosenItemIdx();
+    mMenuOpen = false;
     this->SetDirty(true); // Tablitsa: Trigger action function to update the tab control
     });
+}
+
+void DropdownListControl::AttachPopupMenu()
+{
+  mMenu = new IPopupMenuControl();
+  GetUI()->AttachControl(mMenu);
 }
 
 void DropdownListControl::SetCurrentIdx(const int newIdx, const bool triggerAction)
@@ -419,6 +428,7 @@ void DropdownListControl::OnMouseDown(float x, float y, const IMouseMod& mod)
     mPopupMenu.SetRootTitle(mOptions[mCurrentIdx].c_str());
   }
   mMenu->CreatePopupMenu(mPopupMenu, mRECT);
+  mMenuOpen = true;
 }
 
 void DropdownListControl::OnResize()

@@ -716,6 +716,7 @@ public:
   void SavePreset(IByteChunk& byteData, const char* filename = "UserPreset", bool isBackup=false);
 
   void SetMasterFXSlot(int slotIdx, EMasterEffectTypes effectIdx) { mMasterEffectSlots[slotIdx] = effectIdx; }
+  void SetVoiceFXSlot(int slotIdx, EVoiceEffectTypes effectIdx) { mVoiceEffectSlots[slotIdx] = effectIdx; }
 
   int GetActiveModIdx() const;
   void SetActiveModIdx(int idx);
@@ -728,7 +729,7 @@ private:
   IControl* mActiveControl{};
 
   // Holds the ID number of the effect in each slot for the voice or master effects
-  EMasterEffectTypes mVoiceEffectSlots[TABLITSA_MAX_VOICE_EFFECTS]{};
+  EVoiceEffectTypes mVoiceEffectSlots[TABLITSA_MAX_VOICE_EFFECTS]{};
   EMasterEffectTypes mMasterEffectSlots[TABLITSA_MAX_MASTER_EFFECTS]{};
   // The effect slot current open for editing. Controled by the Slide-Switch controls
   int mCurrentVoiceFXSlot{ 0 };

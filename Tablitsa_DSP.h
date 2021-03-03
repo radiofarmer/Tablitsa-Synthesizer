@@ -655,14 +655,16 @@ public:
 
     void SetEffect(const int effectSlot, const int effectId)
     {
+      // Note: Remember to set the min and max of the `ParameterModulator` object if any of the effects have different scales from the rest
+      std::lock_guard<std::mutex> lg(mMaster->mProcMutex);
       delete mEffects[effectSlot];
       switch (effectId)
       {
       case kWaveshaperEffect:
-        mEffects[effectSlot] = new Waveshaper<T>(mSampleRate);
+        mEffects[effectSlot] = new Waveshaper<T>(mMaster->mSampleRate);
         break;
       default:
-        mEffects[effectSlot] = new Effect<T>(mSampleRate);
+        mEffects[effectSlot] = new Effect<T>(mMaster->mSampleRate);
         break;
 
       }

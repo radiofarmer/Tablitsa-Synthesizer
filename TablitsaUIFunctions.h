@@ -115,16 +115,16 @@ void InitDelayUI(Plugin* plug, IGraphics* pGraphics, std::vector<IControl*> cont
   for (auto* knob : allKnobs)
     knob->SetDisabled(false);
 }
-void InitWaveshaperUI(Plugin* plug, IGraphics* pGraphics, std::vector<IControl*> controls, const std::vector<int>& params, const std::vector<char*>& paramNames)
+void InitWaveshaperUI(Plugin* plug, IGraphics* pGraphics, std::vector<IControl*> controls, const std::vector<int>& params, const std::vector<char*>& paramNames, const bool reset=true)
 {
   std::vector<IControl*> allKnobs;
   allKnobs.insert(allKnobs.begin(), controls.begin(), controls.begin() + 4);
   for (auto* knob : allKnobs)
     knob->SetDisabled(false);
-  plug->GetParam(params[0])->InitEnum(paramNames[0], EWaveshaperMode::kWaveshapeSine, { WAVESHAPE_TYPES });
-  plug->GetParam(params[1])->InitPercentage(paramNames[1], 0.);
+  plug->GetParam(params[0])->InitEnum(paramNames[0], reset ? EWaveshaperMode::kWaveshapeSine : plug->GetParam(params[0])->Value(), { WAVESHAPE_TYPES });
+  plug->GetParam(params[1])->InitPercentage(paramNames[1], reset ? 0. : plug->GetParam(params[1])->Value());
   controls[2]->SetDisabled(true);
-  plug->GetParam(params[3])->InitPercentage(paramNames[3], 0.);
+  plug->GetParam(params[3])->InitPercentage(paramNames[3], reset ? 0. : plug->GetParam(params[3])->Value());
   pGraphics->HideControl(params[4], true);
   pGraphics->HideControl(params[5], true);
   dynamic_cast<IVKnobControl*>(controls[0])->SetLabelStr("Type");
@@ -137,14 +137,14 @@ void InitWaveshaperUI(Plugin* plug, IGraphics* pGraphics, std::vector<IControl*>
   controls[5]->Hide(true);
 }
 
-void InitSampleAndHoldUI(Plugin* plug, IGraphics* pGraphics, std::vector<IControl*> controls, const std::vector<int>& params, const std::vector<char*>& paramNames)
+void InitSampleAndHoldUI(Plugin* plug, IGraphics* pGraphics, std::vector<IControl*> controls, const std::vector<int>& params, const std::vector<char*>& paramNames, const bool reset=true)
 {
   std::vector<IControl*> allKnobs;
   allKnobs.insert(allKnobs.begin(), controls.begin(), controls.begin() + 4);
-  plug->GetParam(params[0])->InitDouble(paramNames[0], 10., 1., 20., 0.1, "ms", IParam::kFlagsNone, "Effect", IParam::ShapePowCurve(3.));
-  plug->GetParam(params[1])->InitDouble(paramNames[1], 0., 1., 100., 1., "%", IParam::kFlagsNone, "Effect", IParam::ShapePowCurve(3.));
-  plug->GetParam(params[2])->InitPercentage(paramNames[2], 0.);
-  plug->GetParam(params[3])->InitPercentage(paramNames[3], 0.);
+  plug->GetParam(params[0])->InitDouble(paramNames[0], reset ? 10. : plug->GetParam(params[0])->Value(), 1., 20., 0.1, "ms", IParam::kFlagsNone, "Effect", IParam::ShapePowCurve(3.));
+  plug->GetParam(params[1])->InitPercentage(paramNames[1], reset ? 0. : plug->GetParam(params[1])->Value());
+  plug->GetParam(params[2])->InitPercentage(paramNames[2], reset ? 10. : plug->GetParam(params[2])->Value());
+  plug->GetParam(params[3])->InitPercentage(paramNames[3], reset ? 10. : plug->GetParam(params[3])->Value());
   pGraphics->HideControl(params[4], true);
   pGraphics->HideControl(params[5], true);
   dynamic_cast<IVKnobControl*>(controls[0])->SetLabelStr("Rate");
@@ -212,6 +212,62 @@ void SwapMasterEffectsUI(IControl* pEffectsList, IGraphics* pGraphics, Plugin* p
   default:
   {
     std::vector<char*> paramNames{ "MasterEffect 1 Parameter 1", "MasterEffect 1 Parameter 2" , "MasterEffect 1 Parameter 3", "MasterEffect 1 Parameter 4" };
+    InitDefaultUI(pPlugin, pGraphics, controls, params, paramNames);
+    break;
+  }
+  }
+  pPlugin->SendArbitraryMsgFromUI(msg, kNoTag, sizeof(effectIdx), reinterpret_cast<void*>(&effectIdx)); // Effects must be swapped before OnParamChange is called
+  for (auto* knob : allKnobs)
+    knob->SetDirty(true);
+}
+
+void SwapVoiceEffectsUI(IControl* pEffectsList, IGraphics* pGraphics, Plugin* pPlugin, const bool reset)
+{
+  constexpr int numEffectParams = kParamVoiceEffect2Param1 - kParamVoiceEffect1Param1;
+
+  int effectIdx = dynamic_cast<DropdownListControl*>(pEffectsList)->GetCurrentIndex(); // ID number of the effect
+  int effectSlot = static_cast<int>(pGraphics->GetControlWithTag(kCtrlTagVoiceEffectsSwitch)->GetValue() * (TABLITSA_MAX_VOICE_EFFECTS - 1)); // ID number of the slot into which the effect will be inserted
+  // Save the ID number of newly inserted effect in the plugin class effects bank list:
+  dynamic_cast<Tablitsa*>(pPlugin)->SetVoiceFXSlot(effectSlot, static_cast<EVoiceEffectTypes>(effectIdx));
+
+  int msg{ kMsgVoiceEffect1Changed + effectSlot };
+  std::vector<int> params{
+    kParamVoiceEffect1Param1 + effectSlot * numEffectParams,
+    kParamVoiceEffect1Param2 + effectSlot * numEffectParams,
+    kParamVoiceEffect1Param3 + effectSlot * numEffectParams,
+    kParamVoiceEffect1Param4 + effectSlot * numEffectParams,
+    kParamVoiceEffect1Param5 + effectSlot * numEffectParams,
+    kParamVoiceEffect1Param6 + effectSlot * numEffectParams
+  };
+
+  // Pointers to the knobs that control the selected effect slot
+  IControl* knob1 = pGraphics->GetControlWithTag(kCtrlTagVoiceEffectsKnob1);
+  IControl* knob2 = pGraphics->GetControlWithTag(kCtrlTagVoiceEffectsKnob2);
+  IControl* knob3 = pGraphics->GetControlWithTag(kCtrlTagVoiceEffectsKnob3);
+  IControl* knob4 = pGraphics->GetControlWithTag(kCtrlTagVoiceEffectsKnob4);
+  IControl* toggle1 = pGraphics->GetControlWithTag(kCtrlTagVoiceEffectsToggle1);
+  IControl* toggle2 = pGraphics->GetControlWithTag(kCtrlTagVoiceEffectsToggle2);
+  std::vector<IControl*> allKnobs{ knob1, knob2, knob3, knob4 };
+  std::vector<IControl*> controls{ knob1, knob2, knob3, knob4, toggle1, toggle2 };
+
+  // Swap out effect parameters (and rearrange controls if necessary)
+  switch (effectIdx)
+  {
+  case kWaveshaperEffect:
+  {
+    std::vector<char*> paramNames{ "Waveshaper Mode", "Waveshaper Gain" , "", "Waveshaper Wet Mix" };
+    InitWaveshaperUI(pPlugin, pGraphics, controls, params, paramNames, reset);
+    break;
+  }
+  case kSampleAndHoldEffect:
+  {
+    std::vector<char*> paramNames{ "Sample & Hold Rate", "Sample & Hold Decay" , "Sample & Hold Noise", "Sample & Hold Wet Mix" };
+    InitSampleAndHoldUI(pPlugin, pGraphics, controls, params, paramNames, reset);
+    break;
+  }
+  default:
+  {
+    std::vector<char*> paramNames{ "Voice Effect 1 Parameter 1", "Voice Effect 1 Parameter 2" , "Voice Effect 1 Parameter 3", "Voice Effect 1 Parameter 4" };
     InitDefaultUI(pPlugin, pGraphics, controls, params, paramNames);
     break;
   }
