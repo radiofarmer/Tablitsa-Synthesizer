@@ -1,4 +1,5 @@
 #define TABLITSA_MAX_EFFECT_DELAY_MS 5000.
+#define TABLITSA_EFFECT_PARAMS 6
 
 void PercentDisplayFunc(double value, WDL_String& str)
 {
@@ -82,11 +83,12 @@ void InitDelayUI(Plugin* plug, IGraphics* pGraphics, std::vector<IControl*> cont
   plug->GetParam(params[1])->InitDouble(paramNames[1], reset ? 100. : plug->GetParam(params[1])->Value(), 1., TABLITSA_MAX_DELAY_MS, 1., "ms", IParam::kFlagsNone, "Effect", IParam::ShapePowCurve(3.));
   plug->GetParam(params[2])->InitPercentage(paramNames[2], reset ? 0. : plug->GetParam(params[2])->Value());
   plug->GetParam(params[3])->InitPercentage(paramNames[3], reset ? 0. : plug->GetParam(params[3])->Value());
-  plug->GetParam(params[4])->InitBool(paramNames[2], reset ? false : plug->GetParam(params[4])->Value());
-  plug->GetParam(params[5])->InitBool(paramNames[3], reset ? false : plug->GetParam(params[5])->Value());
+  plug->GetParam(params[4])->InitBool(paramNames[2], reset ? false : plug->GetParam(params[4])->Value() > 0.5);
+  plug->GetParam(params[5])->InitBool(paramNames[3], reset ? false : plug->GetParam(params[5])->Value() > 0.5);
 
-  pGraphics->HideControl(params[4], false);
-  pGraphics->HideControl(params[5], true);
+  for (int i{ 0 }; i < TABLITSA_EFFECT_PARAMS; ++i)
+    controls[i]->SetValue(plug->GetParam(params[i])->GetNormalized());
+
   dynamic_cast<IVKnobControl*>(controls[0])->SetLabelStr("Left");
   dynamic_cast<IVKnobControl*>(controls[1])->SetLabelStr("Right");
   dynamic_cast<IVKnobControl*>(controls[2])->SetLabelStr("Feedback");
@@ -107,6 +109,8 @@ void InitDelayUI(Plugin* plug, IGraphics* pGraphics, std::vector<IControl*> cont
   // Show toggle buttons
   controls[4]->Hide(false);
   controls[5]->Hide(false);
+  controls[4]->SetDisabled(false);
+  controls[5]->SetDisabled(false);
   controls[4]->SetDirty(true);
   controls[5]->SetDirty(true);
   // Enable all knobs
@@ -123,13 +127,21 @@ void InitWaveshaperUI(Plugin* plug, IGraphics* pGraphics, std::vector<IControl*>
     knob->SetDisabled(false);
   plug->GetParam(params[0])->InitEnum(paramNames[0], reset ? EWaveshaperMode::kWaveshapeSine : plug->GetParam(params[0])->Value(), { WAVESHAPE_TYPES });
   plug->GetParam(params[1])->InitPercentage(paramNames[1], reset ? 0. : plug->GetParam(params[1])->Value());
-  controls[2]->SetDisabled(true);
   plug->GetParam(params[3])->InitPercentage(paramNames[3], reset ? 0. : plug->GetParam(params[3])->Value());
   pGraphics->HideControl(params[4], true);
   pGraphics->HideControl(params[5], true);
+
+  for (int i{ 0 }; i < TABLITSA_EFFECT_PARAMS; ++i)
+    controls[i]->SetValue(plug->GetParam(params[i])->Value());
+
+  // Knob 3 is not used
+  controls[2]->SetDisabled(true);
+  // Labels
   dynamic_cast<IVKnobControl*>(controls[0])->SetLabelStr("Type");
   dynamic_cast<IVKnobControl*>(controls[1])->SetLabelStr("Gain");
   dynamic_cast<IVKnobControl*>(controls[2])->SetLabelStr("");
+  // Modulation off for knob 1
+  dynamic_cast<TablitsaIVModKnobControl*>(controls[0])->EnableModulation(false);
   // Toggle action functions
   controls[4]->SetActionFunction(nullptr);
   controls[5]->SetActionFunction(nullptr);
@@ -145,11 +157,16 @@ void InitSampleAndHoldUI(Plugin* plug, IGraphics* pGraphics, std::vector<IContro
   plug->GetParam(params[1])->InitPercentage(paramNames[1], reset ? 0. : plug->GetParam(params[1])->Value());
   plug->GetParam(params[2])->InitPercentage(paramNames[2], reset ? 10. : plug->GetParam(params[2])->Value());
   plug->GetParam(params[3])->InitPercentage(paramNames[3], reset ? 10. : plug->GetParam(params[3])->Value());
+
+  for (int i{ 0 }; i < TABLITSA_EFFECT_PARAMS; ++i)
+    controls[i]->SetValue(plug->GetParam(params[i])->Value());
+
   pGraphics->HideControl(params[4], true);
   pGraphics->HideControl(params[5], true);
   dynamic_cast<IVKnobControl*>(controls[0])->SetLabelStr("Rate");
   dynamic_cast<IVKnobControl*>(controls[1])->SetLabelStr("Decay");
   dynamic_cast<IVKnobControl*>(controls[2])->SetLabelStr("Noise");
+  dynamic_cast<TablitsaIVModKnobControl*>(controls[0])->EnableModulation(true);
   // Toggle action functions
   controls[4]->SetActionFunction(nullptr);
   controls[5]->SetActionFunction(nullptr);
@@ -171,15 +188,9 @@ void InitDefaultUI(Plugin* plug, IGraphics* pGraphics, std::vector<IControl*> co
     ctrl->SetActionFunction(nullptr);
 }
 
-void SwapMasterEffectsUI(IControl* pEffectsList, IGraphics* pGraphics, Plugin* pPlugin, const bool reset)
+void SwapMasterEffectsUI(int effectSlot, IControl * pEffectsList, IGraphics * pGraphics, Plugin * pPlugin, const bool reset)
 {
   constexpr int numEffectParams = 6;
-
-  int effectIdx = dynamic_cast<DropdownListControl*>(pEffectsList)->GetCurrentIndex(); // ID number of the effect
-  int effectSlot = static_cast<int>(pGraphics->GetControlWithTag(kCtrlTagMasterEffectsSwitch)->GetValue() * (TABLITSA_MAX_MASTER_EFFECTS - 1)); // ID number of the slot into which the effect will be inserted
-  // Save the ID number of newly inserted effect in the plugin class effects bank list:
-  dynamic_cast<Tablitsa*>(pPlugin)->SetMasterFXSlot(effectSlot, static_cast<EMasterEffectTypes>(effectIdx));
-
   int msg{ kMsgMasterEffect1Changed + effectSlot };
   std::vector<int> params{
     kParamMasterEffect1Param1 + effectSlot * numEffectParams,
@@ -201,6 +212,7 @@ void SwapMasterEffectsUI(IControl* pEffectsList, IGraphics* pGraphics, Plugin* p
   std::vector<IControl*> controls{ knob1, knob2, knob3, knob4, toggle1, toggle2 };
 
   // Swap out effect parameters (and rearrange controls if necessary)
+  int effectIdx = dynamic_cast<DropdownListControl*>(pEffectsList)->GetCurrentIndex(); // ID number of the effect
   switch (effectIdx)
   {
   case kDelayEffect:
@@ -221,14 +233,18 @@ void SwapMasterEffectsUI(IControl* pEffectsList, IGraphics* pGraphics, Plugin* p
     knob->SetDirty(true);
 }
 
-void SwapVoiceEffectsUI(IControl* pEffectsList, IGraphics* pGraphics, Plugin* pPlugin, const bool reset)
+void SwapMasterEffectsUI(IControl* pEffectsList, IGraphics* pGraphics, Plugin* pPlugin, const bool reset)
+{
+  int effectSlot = static_cast<int>(pGraphics->GetControlWithTag(kCtrlTagMasterEffectsSwitch)->GetValue() * (TABLITSA_MAX_MASTER_EFFECTS - 1)); // ID number of the slot into which the effect will be inserted
+  // Save the ID number of newly inserted effect in the plugin class effects bank list:
+  int effectIdx = dynamic_cast<DropdownListControl*>(pEffectsList)->GetCurrentIndex(); // ID number of the effect
+  dynamic_cast<Tablitsa*>(pPlugin)->SetMasterFXSlot(effectSlot, static_cast<EMasterEffectTypes>(effectIdx));
+  SwapMasterEffectsUI(effectSlot, pEffectsList, pGraphics, pPlugin, reset);
+}
+
+void SwapVoiceEffectsUI(int effectSlot, IControl * pEffectsList, IGraphics * pGraphics, Plugin * pPlugin, const bool reset)
 {
   constexpr int numEffectParams = kParamVoiceEffect2Param1 - kParamVoiceEffect1Param1;
-
-  int effectIdx = dynamic_cast<DropdownListControl*>(pEffectsList)->GetCurrentIndex(); // ID number of the effect
-  int effectSlot = static_cast<int>(pGraphics->GetControlWithTag(kCtrlTagVoiceEffectsSwitch)->GetValue() * (TABLITSA_MAX_VOICE_EFFECTS - 1)); // ID number of the slot into which the effect will be inserted
-  // Save the ID number of newly inserted effect in the plugin class effects bank list:
-  dynamic_cast<Tablitsa*>(pPlugin)->SetVoiceFXSlot(effectSlot, static_cast<EVoiceEffectTypes>(effectIdx));
 
   int msg{ kMsgVoiceEffect1Changed + effectSlot };
   std::vector<int> params{
@@ -251,6 +267,7 @@ void SwapVoiceEffectsUI(IControl* pEffectsList, IGraphics* pGraphics, Plugin* pP
   std::vector<IControl*> controls{ knob1, knob2, knob3, knob4, toggle1, toggle2 };
 
   // Swap out effect parameters (and rearrange controls if necessary)
+  int effectIdx = dynamic_cast<DropdownListControl*>(pEffectsList)->GetCurrentIndex(); // ID number of the effect
   switch (effectIdx)
   {
   case kWaveshaperEffect:
@@ -275,4 +292,15 @@ void SwapVoiceEffectsUI(IControl* pEffectsList, IGraphics* pGraphics, Plugin* pP
   pPlugin->SendArbitraryMsgFromUI(msg, kNoTag, sizeof(effectIdx), reinterpret_cast<void*>(&effectIdx)); // Effects must be swapped before OnParamChange is called
   for (auto* knob : allKnobs)
     knob->SetDirty(true);
+}
+
+void SwapVoiceEffectsUI(IControl* pEffectsList, IGraphics* pGraphics, Plugin* pPlugin, const bool reset)
+{
+  constexpr int numEffectParams = kParamVoiceEffect2Param1 - kParamVoiceEffect1Param1;
+
+  int effectIdx = dynamic_cast<DropdownListControl*>(pEffectsList)->GetCurrentIndex(); // ID number of the effect
+  // Save the ID number of newly inserted effect in the plugin class effects bank list:
+  int effectSlot = static_cast<int>(pGraphics->GetControlWithTag(kCtrlTagVoiceEffectsSwitch)->GetValue() * (TABLITSA_MAX_VOICE_EFFECTS - 1)); // ID number of the slot into which the effect will be inserted
+  dynamic_cast<Tablitsa*>(pPlugin)->SetVoiceFXSlot(effectSlot, static_cast<EVoiceEffectTypes>(effectIdx));
+  SwapVoiceEffectsUI(effectSlot, pEffectsList, pGraphics, pPlugin, reset);
 }

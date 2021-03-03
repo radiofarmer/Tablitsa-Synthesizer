@@ -740,12 +740,19 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
 
       // Set the controls' parameters to those of the current effect slot
       constexpr int numEffectParams = kParamVoiceEffect2Param1 - kParamVoiceEffect1Param1;
-      pGraphics->GetControlWithTag(kCtrlTagVoiceEffectsKnob1)->SetParamIdx(kParamVoiceEffect1Param1 + currentSlot * numEffectParams);
-      pGraphics->GetControlWithTag(kCtrlTagVoiceEffectsKnob2)->SetParamIdx(kParamVoiceEffect1Param2 + currentSlot * numEffectParams);
-      pGraphics->GetControlWithTag(kCtrlTagVoiceEffectsKnob3)->SetParamIdx(kParamVoiceEffect1Param3 + currentSlot * numEffectParams);
-      pGraphics->GetControlWithTag(kCtrlTagVoiceEffectsKnob4)->SetParamIdx(kParamVoiceEffect1Param4 + currentSlot * numEffectParams);
+      dynamic_cast<TablitsaIVModKnobControl*>(pGraphics->GetControlWithTag(kCtrlTagVoiceEffectsKnob1))->SetParamIdx(kParamVoiceEffect1Param1 + currentSlot * numEffectParams);
+      dynamic_cast<TablitsaIVModKnobControl*>(pGraphics->GetControlWithTag(kCtrlTagVoiceEffectsKnob2))->SetParamIdx(kParamVoiceEffect1Param2 + currentSlot * numEffectParams);
+      dynamic_cast<TablitsaIVModKnobControl*>(pGraphics->GetControlWithTag(kCtrlTagVoiceEffectsKnob3))->SetParamIdx(kParamVoiceEffect1Param3 + currentSlot * numEffectParams);
+      dynamic_cast<TablitsaIVModKnobControl*>(pGraphics->GetControlWithTag(kCtrlTagVoiceEffectsKnob4))->SetParamIdx(kParamVoiceEffect1Param4 + currentSlot * numEffectParams);
       pGraphics->GetControlWithTag(kCtrlTagVoiceEffectsToggle1)->SetParamIdx(kParamVoiceEffect1Param5 + currentSlot * numEffectParams);
       pGraphics->GetControlWithTag(kCtrlTagVoiceEffectsToggle2)->SetParamIdx(kParamVoiceEffect1Param6 + currentSlot * numEffectParams);
+
+      for (int tag{ kCtrlTagVoiceEffectsKnob1 }; tag <= kCtrlTagVoiceEffectsKnob4; ++tag)
+      {
+        TablitsaIVModKnobControl* modKnob = dynamic_cast<TablitsaIVModKnobControl*>(pGraphics->GetControlWithTag(tag));
+        if (modKnob->IsActive())
+         modKnob->LoadModParams();
+      }
 
       // Set the dropdown list's index to that of the effect which is currently active in this slot
       dynamic_cast<DropdownListControl*>(pGraphics->GetControlWithTag(kCtrlTagVoiceEffectsList))->SetCurrentIdx(mVoiceEffectSlots[currentSlot], false);
@@ -776,29 +783,23 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
       [pGraphics](IControl* pControl) {
         dynamic_cast<DropdownListControl*>(pGraphics->GetControlWithTag(kCtrlTagVoiceEffectsList))->Collapse();
         dynamic_cast<DropdownListControl*>(pGraphics->GetControlWithTag(kCtrlTagMasterEffectsList))->Collapse();
-      }
-    );
+      });
     
     /* Voice Effects */
+    pGraphics->AttachControl(new IVSlideSwitchControl(effectsPanel.GetGridCell(0, 1, 1, 3).GetFromTop(45.f).GetReducedFromTop(30.f).GetHPadded(-20.f), voiceFxSlotChanged, "", toggleStyle, true, EDirection::Horizontal, TABLITSA_MAX_VOICE_EFFECTS, 0), kCtrlTagVoiceEffectsSwitch, "E1");
+    pGraphics->AttachControl(new TablitsaIVModKnobControl(effectsControlsPanel.FracRectVertical(2.f / 3, true).GetGridCell(0, 0, 1, 4).GetCentredInside(dialSize), kParamVoiceEffect1Param1, "Left", modKnobStyle), kCtrlTagVoiceEffectsKnob1, "E1");
+    pGraphics->AttachControl(new TablitsaIVModKnobControl(effectsControlsPanel.FracRectVertical(2.f / 3, true).GetGridCell(0, 1, 1, 4).GetCentredInside(dialSize), kParamVoiceEffect1Param2, "Right", modKnobStyle), kCtrlTagVoiceEffectsKnob2, "E1");
+    pGraphics->AttachControl(new TablitsaIVModKnobControl(effectsControlsPanel.FracRectVertical(2.f / 3, true).GetGridCell(0, 2, 1, 4).GetCentredInside(dialSize), kParamVoiceEffect1Param3, "Feedback", modKnobStyle), kCtrlTagVoiceEffectsKnob3, "E1");
+    pGraphics->AttachControl(new TablitsaIVModKnobControl(effectsControlsPanel.FracRectVertical(2.f / 3, true).GetGridCell(0, 3, 1, 4).GetCentredInside(dialSize), kParamVoiceEffect1Param4, "Mix", modKnobStyle), kCtrlTagVoiceEffectsKnob4, "E1");
+    pGraphics->AttachControl(new IVToggleControl(effectsControlsPanel.FracRectVertical(1.f / 3).GetGridCell(0, 1, 1, 4).GetPadded(-10.f), kParamVoiceEffect1Param5, "", toggleStyle, "Time", "Tempo"), kCtrlTagVoiceEffectsToggle1, "E1");
+    pGraphics->AttachControl(new IVToggleControl(effectsControlsPanel.FracRectVertical(1.f / 3).GetGridCell(0, 2, 1, 4).GetPadded(-10.f), kNoParameter, "", toggleStyle, "Stereo", "Mono"), kCtrlTagVoiceEffectsToggle2, "E1");
     // Selector list
     pGraphics->AttachControl(new DropdownListControl(effectsPanel.FracRectHorizontal(0.4f, false).GetFromTop(40.f).GetReducedFromTop(20.f).GetPadded(-2.f), TABLITSA_VOICE_EFFECTS_LIST), kCtrlTagVoiceEffectsList, "E1")->SetActionFunction(
       [pGraphics, this](IControl* pControl) {
-          SwapVoiceEffectsUI(pControl, pGraphics, this, true);
-        });
-    pGraphics->AttachControl(new IVSlideSwitchControl(effectsPanel.GetGridCell(0, 1, 1, 3).GetFromTop(45.f).GetReducedFromTop(30.f).GetHPadded(-20.f), voiceFxSlotChanged, "", toggleStyle, true, EDirection::Horizontal, TABLITSA_MAX_VOICE_EFFECTS, 0), kCtrlTagVoiceEffectsSwitch, "E1");
-    pGraphics->AttachControl(new TablitsaIVKnobControl(effectsControlsPanel.FracRectVertical(2.f / 3, true).GetGridCell(0, 0, 1, 4).GetCentredInside(dialSize), kParamVoiceEffect1Param1, "Left", modKnobStyle), kCtrlTagVoiceEffectsKnob1, "E1");
-    pGraphics->AttachControl(new TablitsaIVKnobControl(effectsControlsPanel.FracRectVertical(2.f / 3, true).GetGridCell(0, 1, 1, 4).GetCentredInside(dialSize), kParamVoiceEffect1Param2, "Right", modKnobStyle), kCtrlTagVoiceEffectsKnob2, "E1");
-    pGraphics->AttachControl(new TablitsaIVKnobControl(effectsControlsPanel.FracRectVertical(2.f / 3, true).GetGridCell(0, 2, 1, 4).GetCentredInside(dialSize), kParamVoiceEffect1Param3, "Feedback", modKnobStyle), kCtrlTagVoiceEffectsKnob3, "E1");
-    pGraphics->AttachControl(new TablitsaIVKnobControl(effectsControlsPanel.FracRectVertical(2.f / 3, true).GetGridCell(0, 3, 1, 4).GetCentredInside(dialSize), kParamVoiceEffect1Param4, "Mix", modKnobStyle), kCtrlTagVoiceEffectsKnob4, "E1");
-    pGraphics->AttachControl(new IVToggleControl(effectsControlsPanel.FracRectVertical(1.f / 3).GetGridCell(0, 1, 1, 4).GetPadded(-10.f), kParamVoiceEffect1Param5, "", toggleStyle, "Time", "Tempo"), kCtrlTagVoiceEffectsToggle1, "E1");
-    pGraphics->AttachControl(new IVToggleControl(effectsControlsPanel.FracRectVertical(1.f / 3).GetGridCell(0, 2, 1, 4).GetPadded(-10.f), kNoParameter, "", toggleStyle, "Stereo", "Mono"), kCtrlTagVoiceEffectsToggle2, "E1");
+        SwapVoiceEffectsUI(pControl, pGraphics, this, true);
+      });
 
     /* MASTER EFFECTS */
-    pGraphics->AttachControl(new DropdownListControl(effectsPanel.FracRectHorizontal(0.4f, false).GetFromTop(40.f).GetReducedFromTop(20.f).GetPadded(-2.f), TABLITSA_MASTER_EFFECTS_LIST), kCtrlTagMasterEffectsList, "E2")->SetActionFunction(
-      [pGraphics, this](IControl* pControl) {
-        SwapMasterEffectsUI(pControl, pGraphics, this, true);
-      }
-    );
     pGraphics->AttachControl(new IVSlideSwitchControl(effectsPanel.GetGridCell(0, 1, 1, 3).GetFromTop(45.f).GetReducedFromTop(25.f).GetHPadded(-20.f), masterFxSlotChanged, "", toggleStyle, true, EDirection::Horizontal, 3, 0), kCtrlTagMasterEffectsSwitch, "E2");
     pGraphics->AttachControl(new TablitsaIVKnobControl(effectsControlsPanel.FracRectVertical(2.f / 3, true).GetGridCell(0, 0, 1, 4).GetCentredInside(dialSize), kParamMasterEffect1Param1, "Left", modKnobStyle), kCtrlTagMasterEffectsKnob1, "E2");
     pGraphics->AttachControl(new TablitsaIVKnobControl(effectsControlsPanel.FracRectVertical(2.f / 3, true).GetGridCell(0, 1, 1, 4).GetCentredInside(dialSize), kParamMasterEffect1Param2, "Right", modKnobStyle), kCtrlTagMasterEffectsKnob2, "E2");
@@ -806,6 +807,10 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
     pGraphics->AttachControl(new TablitsaIVKnobControl(effectsControlsPanel.FracRectVertical(2.f / 3, true).GetGridCell(0, 3, 1, 4).GetCentredInside(dialSize), kParamMasterEffect1Param4, "Mix", modKnobStyle), kCtrlTagMasterEffectsKnob4, "E2");
     pGraphics->AttachControl(new IVToggleControl(effectsControlsPanel.FracRectVertical(1.f / 3).GetGridCell(0, 1, 1, 4).GetPadded(-10.f), kParamMasterEffect1Param5, "", toggleStyle, "Time", "Tempo"), kCtrlTagMasterEffectsToggle1, "E2");
     pGraphics->AttachControl(new IVToggleControl(effectsControlsPanel.FracRectVertical(1.f / 3).GetGridCell(0, 2, 1, 4).GetPadded(-10.f), kNoParameter, "", toggleStyle, "Stereo", "Mono"), kCtrlTagMasterEffectsToggle2, "E2");
+    pGraphics->AttachControl(new DropdownListControl(effectsPanel.FracRectHorizontal(0.4f, false).GetFromTop(40.f).GetReducedFromTop(20.f).GetPadded(-2.f), TABLITSA_MASTER_EFFECTS_LIST), kCtrlTagMasterEffectsList, "E2")->SetActionFunction(
+      [pGraphics, this](IControl* pControl) {
+        SwapMasterEffectsUI(pControl, pGraphics, this, true);
+      });
 
     /* LOWER-HALF CONTROLS */
     constexpr float modulePad[4]{-10.f, -5.f, -10.f, -15.f};
@@ -1171,7 +1176,16 @@ bool Tablitsa::SerializeState(IByteChunk& chunk) const
   chunk.Put(&mDSP.mLoadedWavetables[0]);
   chunk.Put(&mDSP.mLoadedWavetables[1]);
   chunk.Put(&mSequencerIsQuantized);
-  chunk.Put(&mDelayIsSynced);
+
+  // Save effect panel states
+  for (int i{ 0 }; i < TABLITSA_MAX_VOICE_EFFECTS; ++i)
+  {
+    chunk.Put(&mVoiceEffectSlots[i]);
+  }
+  for (int i{ 0 }; i < TABLITSA_MAX_MASTER_EFFECTS; ++i)
+  {
+    chunk.Put(&mMasterEffectSlots[i]);
+  }
   
   return SerializeParams(chunk); // must remember to call SerializeParams at the end
 }
@@ -1197,12 +1211,18 @@ int Tablitsa::UnserializeState(const IByteChunk& chunk, int startPos)
   startPos = chunk.Get(&v, startPos);
   mSequencerIsQuantized = v;
 
+  // Load effect panel states
+  for (int i{ 0 }; i < TABLITSA_MAX_VOICE_EFFECTS; ++i)
+  {
+    startPos = chunk.Get(&mVoiceEffectSlots[i], startPos);
+  }
+  for (int i{ 0 }; i < TABLITSA_MAX_MASTER_EFFECTS; ++i)
+  {
+    startPos = chunk.Get(&mMasterEffectSlots[i], startPos);
+  }
+
   assert(mDSP.mLoadedWavetables[0] == static_cast<int>(mDSP.mLoadedWavetables[0]));
   assert(mDSP.mLoadedWavetables[1] == static_cast<int>(mDSP.mLoadedWavetables[1]));
-  
-  // If UI exists
-  if (GetUI())
-    UpdateUIControls(); 
 
   // must remember to call UnserializeParams at the end
   return UnserializeParams(chunk, startPos);
@@ -1245,7 +1265,19 @@ void Tablitsa::UpdateUIControls()
       pControl->SetDirty(true);
   }
 
+  // Set initial tab
   dynamic_cast<TablitsaEffectBankControl*>(GetUI()->GetControlWithTag(kCtrlTagEffectBank))->TabChanged(mCurrentEffectsTab);
+  // Set up effect slots (without reseting the parameters!)
+  for (int i{ TABLITSA_MAX_MASTER_EFFECTS - 1}; i >= 0; --i)
+  {
+    int effectIdx = mMasterEffectSlots[i];
+    DropdownListControl* effectList = dynamic_cast<DropdownListControl*>(GetUI()->GetControlWithTag(kCtrlTagMasterEffectsList));
+    effectList->SetCurrentIdx(effectIdx);
+    int msg = kMsgMasterEffect1Changed + i;
+    SendArbitraryMsgFromUI(msg, kNoTag, sizeof(effectIdx), reinterpret_cast<void*>(&effectIdx));
+  }
+  // Current status: Controls load correctly and display the proper values, but the loaded parameter values only seem
+  // to take effect once the slot switch's action function has been called
 }
 
 #if IPLUG_DSP

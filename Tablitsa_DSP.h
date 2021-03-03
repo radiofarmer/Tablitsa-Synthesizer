@@ -556,6 +556,14 @@ public:
         mFilters.at(1)->SetQ(mVModulations.GetList()[kVFilter2Resonance][bufferIdx]); // Filter 2 Resonance
         mFilters.at(1)->SetDrive(mVModulations.GetList()[kVFilter2Drive][bufferIdx]); // Filter 2 Drive
 
+        constexpr int nEffectParams = kVEffect2Param1 - kVEffect1Param1;
+        for (auto e{ 0 }; e < TABLITSA_MAX_VOICE_EFFECTS; ++e)
+        {
+          mEffects[e]->SetParam1(mVModulations.GetList()[kVEffect1Param1 + e * nEffectParams][bufferIdx]);
+          mEffects[e]->SetParam2(mVModulations.GetList()[kVEffect1Param2 + e * nEffectParams][bufferIdx]);
+          mEffects[e]->SetParam3(mVModulations.GetList()[kVEffect1Param3 + e * nEffectParams][bufferIdx]);
+          mEffects[e]->SetParam4(mVModulations.GetList()[kVEffect1Param4 + e * nEffectParams][bufferIdx]);
+        }
         
         // Signal Processing
         std::array<T, OUTPUT_SIZE> osc1Output{ mOsc1.ProcessMultiple(osc1Freq) };
@@ -567,9 +575,15 @@ public:
          double osc1FilterOutput = mFilters.at(osc1Filter)->Process(osc1Output[j]);
          double osc2FilterOutput = mFilters.at(osc2Filter)->Process(osc2Output[j]);
          double output_summed = osc1FilterOutput * mVModulations.GetList()[kVWavetable1Amp][bufferIdx] + osc2FilterOutput * mVModulations.GetList()[kVWavetable2Amp][bufferIdx];
-         double output_scaled = output_summed * ampEnvVal * mGain;
-         outputs[0][i + j] += output_scaled * lPan;
-         outputs[1][i + j] += output_scaled * rPan;
+         double output_scaled = output_summed * ampEnvVal;
+         double output_stereo[]{ output_scaled * lPan, output_scaled * rPan };
+
+         // Voice effects
+         for (auto* fx : mEffects)
+           fx->ProcessStereo(output_stereo);
+
+         outputs[0][i + j] += output_stereo[0] * mGain;
+         outputs[1][i + j] += output_stereo[1] * mGain;
        }
       }
     }
@@ -756,18 +770,18 @@ public:
       new ParameterModulator<>(0., 1., "Phase Mod Depth"),
       new ParameterModulator<>(-24., 24., "Ring Mod Freq"),
       new ParameterModulator<>(0., 1., "Ring Mod Depth"),
-      new ParameterModulator<>(0., 1., "Effect 1 Param 1"),
-      new ParameterModulator<>(0., 1., "Effect 1 Param 2"),
-      new ParameterModulator<>(0., 1., "Effect 1 Param 3"),
-      new ParameterModulator<>(0., 1., "Effect 1 Param 4"),
-      new ParameterModulator<>(0., 1., "Effect 2 Param 1"),
-      new ParameterModulator<>(0., 1., "Effect 2 Param 2"),
-      new ParameterModulator<>(0., 1., "Effect 2 Param 3"),
-      new ParameterModulator<>(0., 1., "Effect 2 Param 4"),
-      new ParameterModulator<>(0., 1., "Effect 3 Param 1"),
-      new ParameterModulator<>(0., 1., "Effect 3 Param 2"),
-      new ParameterModulator<>(0., 1., "Effect 3 Param 3"),
-      new ParameterModulator<>(0., 1., "Effect 3 Param 4"), };
+      new ParameterModulator<>(0., 100., "Effect 1 Param 1"),
+      new ParameterModulator<>(0., 100., "Effect 1 Param 2"),
+      new ParameterModulator<>(0., 100., "Effect 1 Param 3"),
+      new ParameterModulator<>(0., 100., "Effect 1 Param 4"),
+      new ParameterModulator<>(0., 100., "Effect 2 Param 1"),
+      new ParameterModulator<>(0., 100., "Effect 2 Param 2"),
+      new ParameterModulator<>(0., 100., "Effect 2 Param 3"),
+      new ParameterModulator<>(0., 100., "Effect 2 Param 4"),
+      new ParameterModulator<>(0., 100., "Effect 3 Param 1"),
+      new ParameterModulator<>(0., 100., "Effect 3 Param 2"),
+      new ParameterModulator<>(0., 100., "Effect 3 Param 3"),
+      new ParameterModulator<>(0., 100., "Effect 3 Param 4"), };
 
     // Modulator parameters that can themselves be modulated
     ModulatedParameterList<T, kNumVoiceMetaModulations> mVoiceMetaModParams{
@@ -1994,6 +2008,8 @@ public:
       }
         break;
       case kParamVoiceEffect1Param1: // Voice Effects
+        mParamsToSmooth[kModVoiceEffect1Param1Smoother] = value;
+        break;
       case kParamVoiceEffect1Param1Env1:
       case kParamVoiceEffect1Param1Env2:
       case kParamVoiceEffect1Param1AmpEnv:
@@ -2003,7 +2019,16 @@ public:
       case kParamVoiceEffect1Param1Vel:
       case kParamVoiceEffect1Param1KTk:
       case kParamVoiceEffect1Param1Rnd:
+      {
+        const int modIdx = paramIdx - kParamVoiceEffect1Param1;
+        ForEachVoice([value, modIdx](Voice& voice) {
+          voice.UpdateVoiceParam(kVEffect1Param1, modIdx, value);
+          });
+        break;
+      }
       case kParamVoiceEffect1Param2:
+        mParamsToSmooth[kModVoiceEffect1Param2Smoother] = value;
+        break;
       case kParamVoiceEffect1Param2Env1:
       case kParamVoiceEffect1Param2Env2:
       case kParamVoiceEffect1Param2AmpEnv:
@@ -2013,7 +2038,16 @@ public:
       case kParamVoiceEffect1Param2Vel:
       case kParamVoiceEffect1Param2KTk:
       case kParamVoiceEffect1Param2Rnd:
+      {
+        const int modIdx = paramIdx - kParamVoiceEffect1Param2;
+        ForEachVoice([value, modIdx](Voice& voice) {
+          voice.UpdateVoiceParam(kVEffect1Param2, modIdx, value);
+          });
+        break;
+      }
       case kParamVoiceEffect1Param3:
+        mParamsToSmooth[kModVoiceEffect1Param3Smoother] = value;
+        break;
       case kParamVoiceEffect1Param3Env1:
       case kParamVoiceEffect1Param3Env2:
       case kParamVoiceEffect1Param3AmpEnv:
@@ -2023,7 +2057,16 @@ public:
       case kParamVoiceEffect1Param3Vel:
       case kParamVoiceEffect1Param3KTk:
       case kParamVoiceEffect1Param3Rnd:
+      {
+        const int modIdx = paramIdx - kParamVoiceEffect1Param3;
+        ForEachVoice([value, modIdx](Voice& voice) {
+          voice.UpdateVoiceParam(kVEffect1Param3, modIdx, value);
+          });
+        break;
+      }
       case kParamVoiceEffect1Param4:
+        mParamsToSmooth[kModVoiceEffect1Param4Smoother] = value;
+        break;
       case kParamVoiceEffect1Param4Env1:
       case kParamVoiceEffect1Param4Env2:
       case kParamVoiceEffect1Param4AmpEnv:
@@ -2033,7 +2076,165 @@ public:
       case kParamVoiceEffect1Param4Vel:
       case kParamVoiceEffect1Param4KTk:
       case kParamVoiceEffect1Param4Rnd:
-            break;
+      {
+        const int modIdx = paramIdx - kParamVoiceEffect1Param4;
+        ForEachVoice([value, modIdx](Voice& voice) {
+          voice.UpdateVoiceParam(kVEffect1Param4, modIdx, value);
+          });
+        break;
+      }
+      case kParamVoiceEffect2Param1: // Voice Effects
+        mParamsToSmooth[kModVoiceEffect2Param1Smoother] = value;
+        break;
+      case kParamVoiceEffect2Param1Env1:
+      case kParamVoiceEffect2Param1Env2:
+      case kParamVoiceEffect2Param1AmpEnv:
+      case kParamVoiceEffect2Param1LFO1:
+      case kParamVoiceEffect2Param1LFO2:
+      case kParamVoiceEffect2Param1Seq:
+      case kParamVoiceEffect2Param1Vel:
+      case kParamVoiceEffect2Param1KTk:
+      case kParamVoiceEffect2Param1Rnd:
+      {
+        const int modIdx = paramIdx - kParamVoiceEffect2Param1;
+        ForEachVoice([value, modIdx](Voice& voice) {
+          voice.UpdateVoiceParam(kVEffect2Param1, modIdx, value);
+          });
+        break;
+      }
+      case kParamVoiceEffect2Param2:
+        mParamsToSmooth[kModVoiceEffect2Param2Smoother] = value;
+        break;
+      case kParamVoiceEffect2Param2Env1:
+      case kParamVoiceEffect2Param2Env2:
+      case kParamVoiceEffect2Param2AmpEnv:
+      case kParamVoiceEffect2Param2LFO1:
+      case kParamVoiceEffect2Param2LFO2:
+      case kParamVoiceEffect2Param2Seq:
+      case kParamVoiceEffect2Param2Vel:
+      case kParamVoiceEffect2Param2KTk:
+      case kParamVoiceEffect2Param2Rnd:
+      {
+        const int modIdx = paramIdx - kParamVoiceEffect2Param2;
+        ForEachVoice([value, modIdx](Voice& voice) {
+          voice.UpdateVoiceParam(kVEffect2Param2, modIdx, value);
+          });
+        break;
+      }
+      case kParamVoiceEffect2Param3:
+        mParamsToSmooth[kModVoiceEffect2Param3Smoother] = value;
+        break;
+      case kParamVoiceEffect2Param3Env1:
+      case kParamVoiceEffect2Param3Env2:
+      case kParamVoiceEffect2Param3AmpEnv:
+      case kParamVoiceEffect2Param3LFO1:
+      case kParamVoiceEffect2Param3LFO2:
+      case kParamVoiceEffect2Param3Seq:
+      case kParamVoiceEffect2Param3Vel:
+      case kParamVoiceEffect2Param3KTk:
+      case kParamVoiceEffect2Param3Rnd:
+      {
+        const int modIdx = paramIdx - kParamVoiceEffect2Param3;
+        ForEachVoice([value, modIdx](Voice& voice) {
+          voice.UpdateVoiceParam(kVEffect2Param3, modIdx, value);
+          });
+        break;
+      }
+      case kParamVoiceEffect2Param4:
+        mParamsToSmooth[kModVoiceEffect2Param4Smoother] = value;
+        break;
+      case kParamVoiceEffect2Param4Env1:
+      case kParamVoiceEffect2Param4Env2:
+      case kParamVoiceEffect2Param4AmpEnv:
+      case kParamVoiceEffect2Param4LFO1:
+      case kParamVoiceEffect2Param4LFO2:
+      case kParamVoiceEffect2Param4Seq:
+      case kParamVoiceEffect2Param4Vel:
+      case kParamVoiceEffect2Param4KTk:
+      case kParamVoiceEffect2Param4Rnd:
+      {
+        const int modIdx = paramIdx - kParamVoiceEffect2Param4;
+        ForEachVoice([value, modIdx](Voice& voice) {
+          voice.UpdateVoiceParam(kVEffect2Param4, modIdx, value);
+          });
+        break;
+      }
+      case kParamVoiceEffect3Param1: // Voice Effects
+        mParamsToSmooth[kModVoiceEffect3Param1Smoother] = value;
+        break;
+      case kParamVoiceEffect3Param1Env1:
+      case kParamVoiceEffect3Param1Env2:
+      case kParamVoiceEffect3Param1AmpEnv:
+      case kParamVoiceEffect3Param1LFO1:
+      case kParamVoiceEffect3Param1LFO2:
+      case kParamVoiceEffect3Param1Seq:
+      case kParamVoiceEffect3Param1Vel:
+      case kParamVoiceEffect3Param1KTk:
+      case kParamVoiceEffect3Param1Rnd:
+      {
+        const int modIdx = paramIdx - kParamVoiceEffect3Param1;
+        ForEachVoice([value, modIdx](Voice& voice) {
+          voice.UpdateVoiceParam(kVEffect3Param1, modIdx, value);
+          });
+        break;
+      }
+      case kParamVoiceEffect3Param2:
+        mParamsToSmooth[kModVoiceEffect3Param2Smoother] = value;
+        break;
+      case kParamVoiceEffect3Param2Env1:
+      case kParamVoiceEffect3Param2Env2:
+      case kParamVoiceEffect3Param2AmpEnv:
+      case kParamVoiceEffect3Param2LFO1:
+      case kParamVoiceEffect3Param2LFO2:
+      case kParamVoiceEffect3Param2Seq:
+      case kParamVoiceEffect3Param2Vel:
+      case kParamVoiceEffect3Param2KTk:
+      case kParamVoiceEffect3Param2Rnd:
+      {
+        const int modIdx = paramIdx - kParamVoiceEffect3Param2;
+        ForEachVoice([value, modIdx](Voice& voice) {
+          voice.UpdateVoiceParam(kVEffect3Param2, modIdx, value);
+          });
+        break;
+      }
+      case kParamVoiceEffect3Param3:
+        mParamsToSmooth[kModVoiceEffect3Param3Smoother] = value;
+        break;
+      case kParamVoiceEffect3Param3Env1:
+      case kParamVoiceEffect3Param3Env2:
+      case kParamVoiceEffect3Param3AmpEnv:
+      case kParamVoiceEffect3Param3LFO1:
+      case kParamVoiceEffect3Param3LFO2:
+      case kParamVoiceEffect3Param3Seq:
+      case kParamVoiceEffect3Param3Vel:
+      case kParamVoiceEffect3Param3KTk:
+      case kParamVoiceEffect3Param3Rnd:
+      {
+        const int modIdx = paramIdx - kParamVoiceEffect3Param3;
+        ForEachVoice([value, modIdx](Voice& voice) {
+          voice.UpdateVoiceParam(kVEffect3Param3, modIdx, value);
+          });
+        break;
+      }
+      case kParamVoiceEffect3Param4:
+        mParamsToSmooth[kModVoiceEffect3Param4Smoother] = value;
+        break;
+      case kParamVoiceEffect3Param4Env1:
+      case kParamVoiceEffect3Param4Env2:
+      case kParamVoiceEffect3Param4AmpEnv:
+      case kParamVoiceEffect3Param4LFO1:
+      case kParamVoiceEffect3Param4LFO2:
+      case kParamVoiceEffect3Param4Seq:
+      case kParamVoiceEffect3Param4Vel:
+      case kParamVoiceEffect3Param4KTk:
+      case kParamVoiceEffect3Param4Rnd:
+      {
+        const int modIdx = paramIdx - kParamVoiceEffect3Param4;
+        ForEachVoice([value, modIdx](Voice& voice) {
+          voice.UpdateVoiceParam(kVEffect3Param4, modIdx, value);
+          });
+        break;
+      }
       case kParamMasterEffect1Param1: // Master Effects
       case kParamMasterEffect2Param1:
       case kParamMasterEffect3Param1:

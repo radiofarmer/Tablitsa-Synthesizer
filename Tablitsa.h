@@ -675,15 +675,7 @@ constexpr EControlTags kStartupTriggerControls[]{
   kCtrlTagSequencerQuant,
   kCtrlTagFilter1Type,
   kCtrlTagFilter2Type,
-  kCtrlTagGlideMode,
-  kCtrlTagVoiceEffectsList,
-  kCtrlTagVoiceEffectsToggle1,
-  kCtrlTagVoiceEffectsToggle2,
-  kCtrlTagVoiceEffectsSwitch,
-  kCtrlTagMasterEffectsList,
-  kCtrlTagMasterEffectsToggle1,
-  kCtrlTagMasterEffectsToggle2,
-  kCtrlTagMasterEffectsSwitch,
+  kCtrlTagGlideMode
 };
 
 using namespace iplug;
@@ -728,16 +720,14 @@ private:
   IPeakSender<2> mMeterSender;
   IControl* mActiveControl{};
 
-  // Holds the ID number of the effect in each slot for the voice or master effects
-  EVoiceEffectTypes mVoiceEffectSlots[TABLITSA_MAX_VOICE_EFFECTS]{};
-  EMasterEffectTypes mMasterEffectSlots[TABLITSA_MAX_MASTER_EFFECTS]{};
-  // The effect slot current open for editing. Controled by the Slide-Switch controls
-  int mCurrentVoiceFXSlot{ 0 };
+
+  // UI Status variables not stored as parameters
+  EVoiceEffectTypes mVoiceEffectSlots[TABLITSA_MAX_VOICE_EFFECTS]{}; // Holds the ID number of the effect in each slot for the voice effects
+  EMasterEffectTypes mMasterEffectSlots[TABLITSA_MAX_MASTER_EFFECTS]{}; // Holds the ID number of the effect in each slot for the master effects
+  int mCurrentVoiceFXSlot{ 0 }; // The effect slot current open for editing. Controled by the Slide-Switch controls
   int mCurrentMasterFXSlot{ 0 };
   int mCurrentEffectsTab{ 1 };
-
   double mSequencerIsQuantized{ 0. };
-  double mDelayIsSynced{ 0. };
 
   int mActiveModIdx{ -1 };
 #endif

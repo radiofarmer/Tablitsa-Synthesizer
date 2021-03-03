@@ -127,7 +127,48 @@ public:
     GetMouseDblAsSingleClick();
   }
 
+  void SetParamIdx(int paramIdx, bool updateModIdx = true)
+  {
+    if (updateModIdx)
+      mModParamIdx = paramIdx + 1;
+    IVKnobControl::SetParamIdx(paramIdx);
+  }
+
+  void OnMouseDown(float x, float y, const IMouseMod& mod) override
+  {
+    if (!mod.L || (mod.L && mod.A))
+    {
+      if(mModulationEnabled)
+        LoadModParams();
+      mMouseDown = !mMouseDown;
+      /* By default, center-clicking causes the control to be captured such that it still responds to the mouse wheel when
+      the mouse is not actually over it. ReleaseMouseCapture() empties the captured-control queue. */
+      GetUI()->ReleaseMouseCapture();
+      GetUI()->SetAllControlsDirty();
+    }
+    else
+      IVKnobControl::OnMouseDown(x, y, mod);
+  }
+
+  void OnMouseWheel(float x, float y, const IMouseMod& mod, float d) override
+  {
+    if (mMouseIsOver)
+      IVKnobControl::OnMouseWheel(x, y, mod, d);
+  }
+
+  void Draw(IGraphics& g) override
+  {
+    DrawBackground(g, mRECT);
+    DrawLabel(g);
+    DrawWidget(g);
+    DrawValue(g, mValueMouseOver);
+  }
+  void DrawWidget(IGraphics& g) override;
+  void DrawIndicatorTrack(IGraphics& g, float angle, float cx, float cy, float radius) override;
+
   /* Get modulator values from a different parameter. (For mutually-exclusive parameters) */
+  void LoadModParams();
+
   void GetModulationFrom(int paramIdx)
   {
     mModParamIdx = paramIdx + 1;
@@ -141,44 +182,7 @@ public:
       SetColor(kFG, mDefaultColor);
   }
 
-  void OnMouseDown(float x, float y, const IMouseMod& mod) override
-  {
-    if (!mod.L || (mod.L && mod.A))
-    {
-      LoadModParams();
-      mMouseDown = !mMouseDown;
-      /* By default, center-clicking causes the control to be captured such that it still responds to the mouse wheel when
-      the mouse is not actually over it. ReleaseMouseCapture() empties the captured-control queue. */
-      GetUI()->ReleaseMouseCapture();
-      GetUI()->SetAllControlsDirty();
-    }
-    else
-      IVKnobControl::OnMouseDown(x, y, mod);
-  }
-  void OnMouseOut() override
-  {
-    IVKnobControl::OnMouseOut();
-  }
-
-  void OnMouseWheel(float x, float y, const IMouseMod& mod, float d) override
-  {
-    if (mMouseIsOver)
-      IVKnobControl::OnMouseWheel(x, y, mod, d);
-  }
-
-  void LoadModParams();
-
-  void DrawWidget(IGraphics& g) override;
-
-  void Draw(IGraphics& g) override
-  {
-    DrawBackground(g, mRECT);
-    DrawLabel(g);
-    DrawWidget(g);
-    DrawValue(g, mValueMouseOver);
-  }
-
-  void DrawIndicatorTrack(IGraphics& g, float angle, float cx, float cy, float radius) override;
+  const bool IsActive() const { return mActive; }
 
   inline int GetActiveIdx()
   {
@@ -195,8 +199,10 @@ public:
     return dynamic_cast<Tablitsa*>(GetDelegate())->SetActiveModIdx(isActive ? GetUI()->GetControlIdx(this) : -1);
   }
 
+  void EnableModulation(bool enabled);
+
 protected:
-  std::vector<ISVG*> mSVG;
+  bool mModulationEnabled{ true };
   const IColor mDefaultColor;
   const IColor mModArcColor[9][2]{
     {{255, 255, 50, 50}, {}},

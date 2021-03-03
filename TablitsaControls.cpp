@@ -246,6 +246,11 @@ void TablitsaIVModKnobControl::DrawIndicatorTrack(IGraphics& g, float angle, flo
   }
 }
 
+void TablitsaIVModKnobControl::EnableModulation(bool enabled)
+{
+  mModulationEnabled = enabled;
+}
+
 /* Tab Controls */
 
 void TablitsaVTabBox::DrawWidget(IGraphics& g)
