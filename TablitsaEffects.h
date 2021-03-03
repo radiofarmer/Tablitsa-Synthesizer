@@ -12,9 +12,9 @@ class Effect
 public:
   Effect(T sampleRate) : mSampleRate(sampleRate) {}
 
-  virtual T Process(T s) { return s; }
+  virtual T Process(T s);
 
-  virtual void ProcessStereo(T* s) {}
+  virtual void ProcessStereo(T* s);
 
   virtual void SetSampleRate(T sampleRate)
   {
