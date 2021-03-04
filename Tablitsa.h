@@ -3,7 +3,10 @@
 #include "IPlug_include_in_plug_hdr.h"
 #include "IControls.h"
 
-#define TABLITSA_EFFECTS_LIST {"None", "Delay", "Waveshaper", "Sample & Hold"}
+#define TABLITSA_MAX_VOICE_EFFECTS 3
+#define TABLITSA_MAX_MASTER_EFFECTS 3
+#define TABLITSA_VOICE_EFFECTS_LIST {"None", "Waveshaper", "Sample & Hold"}
+#define TABLITSA_MASTER_EFFECTS_LIST {"None", "Delay", "EQ"}
 
 const int kNumPresets = 1;
 constexpr int kNumVoices = 16;
@@ -260,7 +263,7 @@ enum EParams
   kParamWavetable2FormantVel,
   kParamWavetable2FormantKTk,
   kParamWavetable2FormantRnd,
-  kParamFilter1Cutoff,
+  kParamFilter1Cutoff, // Filter 1
   kParamFilter1CutoffEnv1,
   kParamFilter1CutoffEnv2,
   kParamFilter1CutoffAmpEnv,
@@ -305,8 +308,8 @@ enum EParams
   kParamFilter1Type,
   kParamFilter1ModeVSF,
   kParamFilter1ModeMoog,
-  kParamFilter1ModeComb,
-  kParamFilter2Cutoff,
+  kParamFilter1ModeComb, // !Filter 1
+  kParamFilter2Cutoff, // Filter 2
   kParamFilter2CutoffEnv1,
   kParamFilter2CutoffEnv2,
   kParamFilter2CutoffAmpEnv,
@@ -351,13 +354,13 @@ enum EParams
   kParamFilter2Type,
   kParamFilter2ModeVSF,
   kParamFilter2ModeMoog,
-  kParamFilter2ModeComb,
+  kParamFilter2ModeComb, // !Filter 2
   kParamOscModulator,
   kParamOsc1PM,
   kParamOsc1RM,
   kParamOsc2PM,
   kParamOsc2RM,
-  kParamPhaseModFreq,
+  kParamPhaseModFreq, // !Phase Mod
   kParamPhaseModFreqEnv1,
   kParamPhaseModFreqEnv2,
   kParamPhaseModFreqAmpEnv,
@@ -376,7 +379,7 @@ enum EParams
   kParamPhaseModAmountSeq,
   kParamPhaseModAmountVel,
   kParamPhaseModAmountKTk,
-  kParamPhaseModAmountRnd,
+  kParamPhaseModAmountRnd, // !Phase Mod
   kParamRingModFreq, // Ring Mod
   kParamRingModFreqEnv1,
   kParamRingModFreqEnv2,
@@ -397,26 +400,155 @@ enum EParams
   kParamRingModAmountVel,
   kParamRingModAmountKTk,
   kParamRingModAmountRnd, // !Ring Mod
-  kParamEffect1Param1, // Effects
-  kParamEffect1Param2,
-  kParamEffect1Param3,
-  kParamEffect1Param4,
-  kParamEffect1Param5,
-  kParamEffect1Param6,
-  kParamEffect2Param1,
-  kParamEffect2Param2,
-  kParamEffect2Param3,
-  kParamEffect2Param4,
-  kParamEffect2Param5,
-  kParamEffect2Param6,
-  kParamEffect3Param1,
-  kParamEffect3Param2,
-  kParamEffect3Param3,
-  kParamEffect3Param4,
-  kParamEffect3Param5,
-  kParamEffect3Param6,
+  kParamVoiceEffect1Param1, // Voice Effects
+  kParamVoiceEffect1Param1Env1,
+  kParamVoiceEffect1Param1Env2,
+  kParamVoiceEffect1Param1AmpEnv,
+  kParamVoiceEffect1Param1LFO1,
+  kParamVoiceEffect1Param1LFO2,
+  kParamVoiceEffect1Param1Seq,
+  kParamVoiceEffect1Param1Vel,
+  kParamVoiceEffect1Param1KTk,
+  kParamVoiceEffect1Param1Rnd,
+  kParamVoiceEffect1Param2,
+  kParamVoiceEffect1Param2Env1,
+  kParamVoiceEffect1Param2Env2,
+  kParamVoiceEffect1Param2AmpEnv,
+  kParamVoiceEffect1Param2LFO1,
+  kParamVoiceEffect1Param2LFO2,
+  kParamVoiceEffect1Param2Seq,
+  kParamVoiceEffect1Param2Vel,
+  kParamVoiceEffect1Param2KTk,
+  kParamVoiceEffect1Param2Rnd,
+  kParamVoiceEffect1Param3,
+  kParamVoiceEffect1Param3Env1,
+  kParamVoiceEffect1Param3Env2,
+  kParamVoiceEffect1Param3AmpEnv,
+  kParamVoiceEffect1Param3LFO1,
+  kParamVoiceEffect1Param3LFO2,
+  kParamVoiceEffect1Param3Seq,
+  kParamVoiceEffect1Param3Vel,
+  kParamVoiceEffect1Param3KTk,
+  kParamVoiceEffect1Param3Rnd,
+  kParamVoiceEffect1Param4,
+  kParamVoiceEffect1Param4Env1,
+  kParamVoiceEffect1Param4Env2,
+  kParamVoiceEffect1Param4AmpEnv,
+  kParamVoiceEffect1Param4LFO1,
+  kParamVoiceEffect1Param4LFO2,
+  kParamVoiceEffect1Param4Seq,
+  kParamVoiceEffect1Param4Vel,
+  kParamVoiceEffect1Param4KTk,
+  kParamVoiceEffect1Param4Rnd, // !Voice Effect 1
+  kParamVoiceEffect1Param5,
+  kParamVoiceEffect1Param6,
+  kParamVoiceEffect2Param1, // Voice Effect 2
+  kParamVoiceEffect2Param1Env1, 
+  kParamVoiceEffect2Param1Env2,
+  kParamVoiceEffect2Param1AmpEnv,
+  kParamVoiceEffect2Param1LFO1,
+  kParamVoiceEffect2Param1LFO2,
+  kParamVoiceEffect2Param1Seq,
+  kParamVoiceEffect2Param1Vel,
+  kParamVoiceEffect2Param1KTk,
+  kParamVoiceEffect2Param1Rnd,
+  kParamVoiceEffect2Param2,
+  kParamVoiceEffect2Param2Env1,
+  kParamVoiceEffect2Param2Env2,
+  kParamVoiceEffect2Param2AmpEnv,
+  kParamVoiceEffect2Param2LFO1,
+  kParamVoiceEffect2Param2LFO2,
+  kParamVoiceEffect2Param2Seq,
+  kParamVoiceEffect2Param2Vel,
+  kParamVoiceEffect2Param2KTk,
+  kParamVoiceEffect2Param2Rnd,
+  kParamVoiceEffect2Param3,
+  kParamVoiceEffect2Param3Env1,
+  kParamVoiceEffect2Param3Env2,
+  kParamVoiceEffect2Param3AmpEnv,
+  kParamVoiceEffect2Param3LFO1,
+  kParamVoiceEffect2Param3LFO2,
+  kParamVoiceEffect2Param3Seq,
+  kParamVoiceEffect2Param3Vel,
+  kParamVoiceEffect2Param3KTk,
+  kParamVoiceEffect2Param3Rnd,
+  kParamVoiceEffect2Param4,
+  kParamVoiceEffect2Param4Env1,
+  kParamVoiceEffect2Param4Env2,
+  kParamVoiceEffect2Param4AmpEnv,
+  kParamVoiceEffect2Param4LFO1,
+  kParamVoiceEffect2Param4LFO2,
+  kParamVoiceEffect2Param4Seq,
+  kParamVoiceEffect2Param4Vel,
+  kParamVoiceEffect2Param4KTk,
+  kParamVoiceEffect2Param4Rnd,
+  kParamVoiceEffect2Param5,
+  kParamVoiceEffect2Param6, // !Voice Effect 2
+  kParamVoiceEffect3Param1, // Voice Effect 3
+  kParamVoiceEffect3Param1Env1,
+  kParamVoiceEffect3Param1Env2,
+  kParamVoiceEffect3Param1AmpEnv,
+  kParamVoiceEffect3Param1LFO1,
+  kParamVoiceEffect3Param1LFO2,
+  kParamVoiceEffect3Param1Seq,
+  kParamVoiceEffect3Param1Vel,
+  kParamVoiceEffect3Param1KTk,
+  kParamVoiceEffect3Param1Rnd,
+  kParamVoiceEffect3Param2,
+  kParamVoiceEffect3Param2Env1,
+  kParamVoiceEffect3Param2Env2,
+  kParamVoiceEffect3Param2AmpEnv,
+  kParamVoiceEffect3Param2LFO1,
+  kParamVoiceEffect3Param2LFO2,
+  kParamVoiceEffect3Param2Seq,
+  kParamVoiceEffect3Param2Vel,
+  kParamVoiceEffect3Param2KTk,
+  kParamVoiceEffect3Param2Rnd,
+  kParamVoiceEffect3Param3,
+  kParamVoiceEffect3Param3Env1,
+  kParamVoiceEffect3Param3Env2,
+  kParamVoiceEffect3Param3AmpEnv,
+  kParamVoiceEffect3Param3LFO1,
+  kParamVoiceEffect3Param3LFO2,
+  kParamVoiceEffect3Param3Seq,
+  kParamVoiceEffect3Param3Vel,
+  kParamVoiceEffect3Param3KTk,
+  kParamVoiceEffect3Param3Rnd,
+  kParamVoiceEffect3Param4,
+  kParamVoiceEffect3Param4Env1,
+  kParamVoiceEffect3Param4Env2,
+  kParamVoiceEffect3Param4AmpEnv,
+  kParamVoiceEffect3Param4LFO1,
+  kParamVoiceEffect3Param4LFO2,
+  kParamVoiceEffect3Param4Seq,
+  kParamVoiceEffect3Param4Vel,
+  kParamVoiceEffect3Param4KTk,
+  kParamVoiceEffect3Param4Rnd,
+  kParamVoiceEffect3Param5,
+  kParamVoiceEffect3Param6, // !Voice Effect 3
+  kParamMasterEffect1Param1, // Master Effects
+  kParamMasterEffect1Param2,
+  kParamMasterEffect1Param3,
+  kParamMasterEffect1Param4,
+  kParamMasterEffect1Param5,
+  kParamMasterEffect1Param6,
+  kParamMasterEffect2Param1,
+  kParamMasterEffect2Param2,
+  kParamMasterEffect2Param3,
+  kParamMasterEffect2Param4,
+  kParamMasterEffect2Param5,
+  kParamMasterEffect2Param6,
+  kParamMasterEffect3Param1,
+  kParamMasterEffect3Param2,
+  kParamMasterEffect3Param3,
+  kParamMasterEffect3Param4,
+  kParamMasterEffect3Param5,
+  kParamMasterEffect3Param6,
   kNumParams
 };
+
+constexpr int kNumVoiceEffectParams = kParamVoiceEffect2Param1 - kParamVoiceEffect1Param1;
+constexpr int kNumMasterEffectParams = kParamMasterEffect2Param1 - kParamMasterEffect1Param1;
 
 #if IPLUG_DSP
 // will use EParams in Tablitsa_DSP.h
@@ -473,30 +605,22 @@ enum EControlTags
   kCtrlTagLFO2Plot,
   kCtrlTagSequencer,
   kCtrlTagEffectBank,
-  kCtrlTagEffect1List,
-  kCtrlTagEffect1Switch,
-  kCtrlTagEffect1Knob1,
-  kCtrlTagEffect1Knob2,
-  kCtrlTagEffect1Knob3,
-  kCtrlTagEffect1Knob4,
-  kCtrlTagEffect1Toggle1,
-  kCtrlTagEffect1Toggle2,
-  kCtrlTagEffect2List,
-  kCtrlTagEffect2Switch,
-  kCtrlTagEffect2Knob1,
-  kCtrlTagEffect2Knob2,
-  kCtrlTagEffect2Knob3,
-  kCtrlTagEffect2Knob4,
-  kCtrlTagEffect2Toggle1,
-  kCtrlTagEffect2Toggle2,
-  kCtrlTagEffect3List,
-  kCtrlTagEffect3Switch,
-  kCtrlTagEffect3Knob1,
-  kCtrlTagEffect3Knob2,
-  kCtrlTagEffect3Knob3,
-  kCtrlTagEffect3Knob4,
-  kCtrlTagEffect3Toggle1,
-  kCtrlTagEffect3Toggle2,
+  kCtrlTagVoiceEffectsList, // Voice effect controls
+  kCtrlTagVoiceEffectsSwitch,
+  kCtrlTagVoiceEffectsKnob1,
+  kCtrlTagVoiceEffectsKnob2,
+  kCtrlTagVoiceEffectsKnob3,
+  kCtrlTagVoiceEffectsKnob4,
+  kCtrlTagVoiceEffectsToggle1,
+  kCtrlTagVoiceEffectsToggle2,
+  kCtrlTagMasterEffectsList, // Master effect controls
+  kCtrlTagMasterEffectsSwitch,
+  kCtrlTagMasterEffectsKnob1,
+  kCtrlTagMasterEffectsKnob2,
+  kCtrlTagMasterEffectsKnob3,
+  kCtrlTagMasterEffectsKnob4,
+  kCtrlTagMasterEffectsToggle1,
+  kCtrlTagMasterEffectsToggle2,
   kNumCtrlTags
 };
 
@@ -511,9 +635,12 @@ enum EMsgTags
   kMsgRandomizeSequencer,
   kMsgSavePreset,
   kMsgLoadPreset,
-  kMsgEffect1Changed,
-  kMsgEffect2Changed,
-  kMsgEffect3Changed
+  kMsgVoiceEffect1Changed,
+  kMsgVoiceEffect2Changed,
+  kMsgVoiceEffect3Changed,
+  kMsgMasterEffect1Changed,
+  kMsgMasterEffect2Changed,
+  kMsgMasterEffect3Changed
 };
 
 enum EModulators
@@ -530,12 +657,18 @@ enum EModulators
   kNumMods
 };
 
-enum EEffectTypes
+enum EVoiceEffectTypes
 {
-  kNoEffect,
-  kDelayEffect,
+  kNoVoiceEffect=0,
   kWaveshaperEffect,
   kSampleAndHoldEffect
+};
+
+enum EMasterEffectTypes
+{
+  kNoMasterEffect=0,
+  kDelayEffect,
+  kEQEffect
 };
 
 constexpr EControlTags kStartupTriggerControls[]{
@@ -545,19 +678,7 @@ constexpr EControlTags kStartupTriggerControls[]{
   kCtrlTagSequencerQuant,
   kCtrlTagFilter1Type,
   kCtrlTagFilter2Type,
-  kCtrlTagGlideMode,
-  kCtrlTagEffect1List,
-  kCtrlTagEffect1Toggle1,
-  kCtrlTagEffect1Toggle2,
-  kCtrlTagEffect2List,
-  kCtrlTagEffect2Toggle1,
-  kCtrlTagEffect2Toggle2,
-  kCtrlTagEffect3List,
-  kCtrlTagEffect3Toggle1,
-  kCtrlTagEffect3Toggle2,
-  kCtrlTagEffect1Switch,
-  kCtrlTagEffect2Switch,
-  kCtrlTagEffect3Switch,
+  kCtrlTagGlideMode
 };
 
 using namespace iplug;
@@ -589,6 +710,13 @@ public:
   IByteChunk LoadPreset(const char* filename="UserPreset", bool isBackup=false);
   void SavePreset(IByteChunk& byteData, const char* filename = "UserPreset", bool isBackup=false);
 
+  void SetMasterFXSlot(int slotIdx, EMasterEffectTypes effectIdx) { mCurrentMasterFXSlot = slotIdx; mMasterEffectSlots[slotIdx] = effectIdx; }
+  void SetVoiceFXSlot(int slotIdx, EVoiceEffectTypes effectIdx) { mCurrentVoiceFXSlot = slotIdx; mVoiceEffectSlots[slotIdx] = effectIdx; }
+
+  // Store the status of the tempo sync control, required for setting the correct parameter range during preset loading
+  void SetDelayTempoSync(int slotIdx, bool tempoSync) { mDelayTempoSync[slotIdx] = tempoSync; }
+  void SetDelayTempoSync(bool tempoSync) { SetDelayTempoSync(mCurrentMasterFXSlot, tempoSync); }
+
   int GetActiveModIdx() const;
   void SetActiveModIdx(int idx);
   int GetFirstModCtrlTag() const { return kCtrlTagEnv1Depth; }
@@ -597,12 +725,17 @@ public:
 private:
   TablitsaDSP<sample> mDSP {kNumVoices}; // sample is an alias for double
   IPeakSender<2> mMeterSender;
-  ISender<1> mLFO1VisSender;
-  ISender<1> mLFO2VisSender;
   IControl* mActiveControl{};
 
+  // UI Status variables not stored as parameters
+  EVoiceEffectTypes mVoiceEffectSlots[TABLITSA_MAX_VOICE_EFFECTS]{}; // Holds the ID number of the effect in each slot for the voice effects
+  EMasterEffectTypes mMasterEffectSlots[TABLITSA_MAX_MASTER_EFFECTS]{}; // Holds the ID number of the effect in each slot for the master effects
+  int mCurrentVoiceFXSlot{ 0 }; // The effect slot current open for editing. Controled by the Slide-Switch controls
+  int mCurrentMasterFXSlot{ 0 };
+  int mCurrentEffectsTab{ 1 };
+  bool mDelayTempoSync[TABLITSA_MAX_MASTER_EFFECTS]{};
+  bool mMonoDelay[TABLITSA_MAX_MASTER_EFFECTS]{};
   double mSequencerIsQuantized{ 0. };
-  double mDelayIsSynced{ 0. };
 
   int mActiveModIdx{ -1 };
 #endif

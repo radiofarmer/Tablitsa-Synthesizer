@@ -246,6 +246,11 @@ void TablitsaIVModKnobControl::DrawIndicatorTrack(IGraphics& g, float angle, flo
   }
 }
 
+void TablitsaIVModKnobControl::EnableModulation(bool enabled)
+{
+  mModulationEnabled = enabled;
+}
+
 /* Tab Controls */
 
 void TablitsaVTabBox::DrawWidget(IGraphics& g)
@@ -321,6 +326,7 @@ void TablitsaVTabBox::SetGroupName(const char* newGroupName)
 TablitsaEffectBankControl::TablitsaEffectBankControl(const IRECT& bounds, std::initializer_list<char*> labels, std::initializer_list<char*> groupNames, const IVStyle& style, const int maxTabs) :
   IControl(bounds, kNoParameter), mMaxTabs(maxTabs), mStyle(style)
 {
+  // Text to display on each tab
   for (auto l : labels)
   {
     int nLabels = mLabels.GetSize();
@@ -332,6 +338,7 @@ TablitsaEffectBankControl::TablitsaEffectBankControl(const IRECT& bounds, std::i
     strcpy(pLab->mText, l);
   }
 
+  // The groups associated with each tab
   for (auto g : groupNames)
   {
     int nGroups = mGroups.GetSize();
@@ -363,6 +370,8 @@ void TablitsaEffectBankControl::TabChanged(int newIdx)
       tab->SetActive(i == newIdx);
     }
   }
+  if (GetActionFunction())
+    (GetActionFunction())(this);
 }
 
 /* Generic Dropdown List */
@@ -378,13 +387,27 @@ DropdownListControl::DropdownListControl(const IRECT& bounds, std::initializer_l
   mPopupMenu.SetFunction([this](IPopupMenu* pControl) {
     if (pControl->GetChosenItemIdx() >= 0)
       mCurrentIdx = pControl->GetChosenItemIdx();
+    mMenuOpen = false;
     this->SetDirty(true); // Tablitsa: Trigger action function to update the tab control
     });
 }
 
+void DropdownListControl::AttachPopupMenu()
+{
+  mMenu = new IPopupMenuControl();
+  GetUI()->AttachControl(mMenu);
+}
+
+void DropdownListControl::SetCurrentIdx(const int newIdx, const bool triggerAction)
+{
+  mCurrentIdx = newIdx;
+  SetDirty(triggerAction);
+}
+
 void DropdownListControl::Draw(IGraphics& g)
 {
-  mStr.Set(mOptions[mCurrentIdx].c_str());
+  if (mCurrentIdx >= 0)
+    mStr.Set(mOptions[mCurrentIdx].c_str());
 
   ITextControl::Draw(g);
 
@@ -411,6 +434,7 @@ void DropdownListControl::OnMouseDown(float x, float y, const IMouseMod& mod)
     mPopupMenu.SetRootTitle(mOptions[mCurrentIdx].c_str());
   }
   mMenu->CreatePopupMenu(mPopupMenu, mRECT);
+  mMenuOpen = true;
 }
 
 void DropdownListControl::OnResize()

@@ -12,9 +12,9 @@ class Effect
 public:
   Effect(T sampleRate) : mSampleRate(sampleRate) {}
 
-  virtual T Process(T s) { return s; }
+  virtual T Process(T s);
 
-  virtual void ProcessStereo(T* s) {}
+  virtual void ProcessStereo(T* s);
 
   virtual void SetSampleRate(T sampleRate)
   {
@@ -50,6 +50,23 @@ class DelayEffect final : public Effect<T>
   };
 
 public:
+  enum ETempoDivision
+  {
+    k64th = 0,   // 1 sixty fourth of a beat
+    k32nd,       // 1 thirty second of a beat
+    k16thT,      // 1 sixteenth note triplet
+    k16th,       // 1 sixteenth note
+    k16thD,      // 1 dotted sixteenth note
+    k8thT,       // 1 eighth note triplet
+    k8th,        // 1 eighth note
+    k8thD,       // 1 dotted eighth note
+    k4th,        // 1 quater note a.k.a 1 beat @ 4/4
+    k4thD,       // 1 dotted beat @ 4/4
+    k2th,        // 2 beats @ 4/4
+    k1,          // 1 bar @ 4/4
+    kNumDivisions
+  };
+
   DelayEffect(T sampleRate) :
     DelayEffect(sampleRate, nullptr)
   {
@@ -226,7 +243,7 @@ public:
   T Process(T s) override
   {
     T out = mHold;
-    mHold *= mDecay;
+    mHold = mHold + mDecay * mRateAdj / mSampleCounter * (out - mHold);
     if (mSampleCounter++ >= mRateAdj)
     {
       out = mHold = s;
@@ -289,12 +306,13 @@ protected:
   xor128 mRandGen{ 0xAF31, 0x1234, 0xFF2E, 0xDCBA };
 };
 
-#define WAVESHAPE_TYPES "Sine", "Parabolic", "Hyp. Tan.", "Soft Clip", "Hard Clip"
+#define WAVESHAPE_TYPES "Sine", "Parabolic", "Cubic", "Hyp. Tan.", "Soft Clip", "Hard Clip"
 
 enum EWaveshaperMode
 {
   kWaveshapeSine,
   kWaveshapeParabola,
+  kWaveshapeCubic,
   kWaveshapeTanh,
   kWaveshapeSoft,
   kWaveshapeHard,
@@ -306,53 +324,62 @@ class Waveshaper : public Effect<T>
 {
   static constexpr T piOver2{ (T)1.57079632679 };
   static constexpr T pi{ (T)3.14159265359 };
-  static constexpr T MaxGain{ (T)3. };
 
-  static inline T SineShaper(T x, T gain)
+  static inline T SineShaper(T x, T gain, T gainRecip=1.)
   {
     x *= gain;
     T x2 = std::copysign(x, piOver2 - x);
-    return std::copysign(x2 - x2 * x2 * x2 / (T)6 + x2 * x2 * x2 * x2 * x2 / (T)120, x) / gain;
+    return std::copysign(x2 - x2 * x2 * x2 / (T)6 + x2 * x2 * x2 * x2 * x2 / (T)120, x) * gainRecip;
   }
 
-  static inline T TanhShaper(T x, T gain)
+  static inline T TanhShaper(T x, T gain, T gainRecip = 1.)
   {
     x *= gain;
-    return std::tanh(x);
+    return std::tanh(x) * gainRecip;
   }
 
-  static inline T ParabolicShaper(T x, T gain)
+  static inline T ParabolicShaper(T x, T gain, T gainRecip = 1.)
   {
     x *= gain;
-    return copysign(x * x, x);
+    return SoftClipShaper(copysign(x * x, x), 1., gainRecip);
   }
 
-  static inline T SoftClipShaper(T x, T gain)
+  static inline T CubicShaper(T x, T gain, T gainRecip = 1.)
   {
-    return SoftClip<T>(x, gain) / gain;
+    x *= gain;
+    return SoftClipShaper(x * x * x, 1., gainRecip);
   }
 
-  static inline T HardClipShaper(T x, T gain)
+  static inline T SoftClipShaper(T x, T gain, T gainRecip = 1.)
   {
-    return std::copysign(std::min(std::abs(x) * gain, 1. / (gain * 2)), x);
+    return SoftClip<T>(x, gain) * gainRecip;
+  }
+
+  static inline T HardClipShaper(T x, T gain, T gainRecip = 1.)
+  {
+    return std::copysign(std::min(std::abs(x) * gain, gainRecip), x);
   }
 
 public:
-  Waveshaper(T sampleRate, EWaveshaperMode mode = kWaveshapeSine) : Effect<T>(sampleRate), mShaperMode(mode) {}
+  Waveshaper(T sampleRate, T maxGain=2., EWaveshaperMode mode = kWaveshapeSine) :
+    Effect<T>(sampleRate), mMaxGain(maxGain), mMaxGainRecip(1. / mMaxGain), mShaperMode(mode) {}
 
-  virtual void SetParam1(T value) override { SetMode(static_cast<EWaveshaperMode>(value)); }
+  virtual void SetParam1(T value) override
+  {
+    SetMode(static_cast<EWaveshaperMode>(value + 0.01));
+  }
   virtual void SetParam2(T value) override { SetGain(value / (T)100); }
 
   T Process(T s) override
   {
-    return mShaperFunc(s, mGain);
+    return mShaperFunc(s, mGain, mGainRecip);
   }
 
   void ProcessStereo(T* s) override
   {
     std::lock_guard<std::mutex> lg(mFuncMutex);
-    s[0] += mMix * (mShaperFunc(s[0], mGain) - s[0]);
-    s[1] += mMix * (mShaperFunc(s[1], mGain) - s[1]);
+    s[0] += mMix * (mShaperFunc(s[0], mGain, mGainRecip) - s[0]);
+    s[1] += mMix * (mShaperFunc(s[1], mGain, mGainRecip) - s[1]);
   }
 
   void SetMode(EWaveshaperMode mode)
@@ -383,12 +410,16 @@ public:
 
   void SetGain(T gain)
   {
-    mGain = 1. + gain * MaxGain;
+    mGain = (T)1. + gain * mMaxGain;
+    mGainRecip = (T)1. / (gain + 1.);
   }
 
 protected:
-  EWaveshaperMode mShaperMode;
+  const T mMaxGain; // Can be used to normalize inputs, since a waveshaper's behavior is amplitude-dependent
+  const T mMaxGainRecip;
   T mGain{ (T)1 };
-  std::function<T(T, T)> mShaperFunc{ &Waveshaper::SineShaper };
+  T mGainRecip{ (T)1 }; // Used to keep the maximum amplitude relatively constant, so that the waveshaper mostly just affects harmonic content rather than volume
+  EWaveshaperMode mShaperMode;
+  std::function<T(T, T, T)> mShaperFunc{ &Waveshaper::SineShaper };
   std::mutex mFuncMutex;
 };
