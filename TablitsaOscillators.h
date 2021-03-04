@@ -10,11 +10,10 @@
 // Set to 1 to use vector functions in debug mode (dramatically slows down execution)
 #define DEBUG_VECTOR 0
 
-#if !_DEBUG || DEBUG_VECTOR
+#ifdef VECTOR || DEBUG_VECTOR
 #define OVERSAMPLING 2
 #define VECTOR_SIZE 4
 #define OUTPUT_SIZE VECTOR_SIZE / OVERSAMPLING
-#define VECTOR
 #define RECURSION 1
 #else
 #define OVERSAMPLING 1
