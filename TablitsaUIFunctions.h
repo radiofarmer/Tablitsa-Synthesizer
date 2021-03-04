@@ -159,12 +159,17 @@ void InitWaveshaperUI(Plugin* plug, IGraphics* pGraphics, std::vector<IControl*>
 
 void InitSampleAndHoldUI(Plugin* plug, IGraphics* pGraphics, std::vector<IControl*> controls, const std::vector<int>& params, const std::vector<char*>& paramNames, const bool reset=true)
 {
+
   std::vector<IControl*> allKnobs;
   allKnobs.insert(allKnobs.begin(), controls.begin(), controls.begin() + 4);
-  plug->GetParam(params[0])->InitDouble(paramNames[0], reset ? 10. : plug->GetParam(params[0])->Value(), 1., 20., 0.1, "ms", IParam::kFlagsNone, "Effect", IParam::ShapePowCurve(3.));
+  plug->GetParam(params[0])->InitDouble(paramNames[0], reset ? 10. : plug->GetParam(params[0])->Value(), 0.5, 20., 0.1, "ms", IParam::kFlagsNone, "Effect", IParam::ShapePowCurve(3.));
   plug->GetParam(params[1])->InitPercentage(paramNames[1], reset ? 0. : plug->GetParam(params[1])->Value());
-  plug->GetParam(params[2])->InitPercentage(paramNames[2], reset ? 10. : plug->GetParam(params[2])->Value());
-  plug->GetParam(params[3])->InitPercentage(paramNames[3], reset ? 10. : plug->GetParam(params[3])->Value());
+  plug->GetParam(params[2])->InitPercentage(paramNames[2], reset ? 0. : plug->GetParam(params[2])->Value());
+  plug->GetParam(params[3])->InitPercentage(paramNames[3], reset ? 0. : plug->GetParam(params[3])->Value());
+
+  // Reset param 1 display texts
+  auto* p1 = plug->GetParam(params[0]);
+  p1->SetDisplayPrecision(2);
 
   for (int i{ 0 }; i < TABLITSA_EFFECT_PARAMS; ++i)
     controls[i]->SetValue(plug->GetParam(params[i])->Value());

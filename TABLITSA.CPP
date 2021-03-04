@@ -1569,9 +1569,13 @@ bool Tablitsa::OnMessage(int msgTag, int ctrlTag, int dataSize, const void* pDat
           });
         break;
       case kSampleAndHoldEffect:
-      default:
         mDSP.ForEachVoice([msgTag, this](TablitsaDSP<sample>::Voice& voice) {
           voice.SetEffect(msgTag - kMsgVoiceEffect1Changed, kSampleAndHoldEffect);
+          });
+        break;
+      default:
+        mDSP.ForEachVoice([msgTag, this](TablitsaDSP<sample>::Voice& voice) {
+          voice.SetEffect(msgTag - kMsgVoiceEffect1Changed, kNoVoiceEffect);
           });
         break;
         break;

@@ -677,6 +677,9 @@ public:
       case kWaveshaperEffect:
         mEffects[effectSlot] = new Waveshaper<T>(mMaster->mSampleRate);
         break;
+      case kSampleAndHoldEffect:
+        mEffects[effectSlot] = new SampleAndHold<T>(mMaster->mSampleRate);
+        break;
       default:
         mEffects[effectSlot] = new Effect<T>(mMaster->mSampleRate);
         break;

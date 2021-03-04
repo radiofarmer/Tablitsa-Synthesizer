@@ -243,7 +243,7 @@ public:
   T Process(T s) override
   {
     T out = mHold;
-    mHold *= mDecay;
+    mHold = mHold + mDecay * mRateAdj / mSampleCounter * (out - mHold);
     if (mSampleCounter++ >= mRateAdj)
     {
       out = mHold = s;
