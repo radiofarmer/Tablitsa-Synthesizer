@@ -312,7 +312,9 @@ enum EParams
   kParamFilter1Type,
   kParamFilter1ModeVSF,
   kParamFilter1ModeMoog,
-  kParamFilter1ModeComb, // !Filter 1
+  kParamFilter1ModeComb,
+  kParamFilter1Osc1Send,
+  kParamFilter1Osc2Send, // !Filter 1
   kParamFilter2Cutoff, // Filter 2
   kParamFilter2CutoffEnv1,
   kParamFilter2CutoffEnv2,
@@ -358,7 +360,9 @@ enum EParams
   kParamFilter2Type,
   kParamFilter2ModeVSF,
   kParamFilter2ModeMoog,
-  kParamFilter2ModeComb, // !Filter 2
+  kParamFilter2ModeComb,
+  kParamFilter2Osc1Send,
+  kParamFilter2Osc2Send, // !Filter 2
   kParamOscModulator,
   kParamOsc1PM,
   kParamOsc1RM,
@@ -591,7 +595,8 @@ enum EControlTags
   kCtrlTagFilter1Delay,
   kCtrlTagFilter1Mode,
   kCtrlTagFilter1Type,
-  kCtrlTagFilter1Osc,
+  kCtrlTagFilter1Osc1,
+  kCtrlTagFilter1Osc2,
   kCtrlTagFilter2Cutoff,
   kCtrlTagFilter2Resonance,
   kCtrlTagFilter2Drive,
@@ -600,7 +605,8 @@ enum EControlTags
   kCtrlTagFilter2Delay,
   kCtrlTagFilter2Mode,
   kCtrlTagFilter2Type,
-  kCtrlTagFilter2Osc,
+  kCtrlTagFilter2Osc1,
+  kCtrlTagFilter2Osc2,
   kCtrlTagOscModFreq,
   kCtrlTagOscModAmt,
   kCtrlTagOsc1ModSwitch,
@@ -633,7 +639,6 @@ enum EMsgTags
   kMsgWavetable1Changed = 0,
   kMsgWavetable2Changed,
   kMsgSeqSliderChanged,
-  kMsgFilterOscChanged,
   kMsgUpdateLFO1Plot,
   kMsgUpdateLFO2Plot,
   kMsgRandomizeSequencer,
@@ -665,14 +670,16 @@ enum EVoiceEffectTypes
 {
   kNoVoiceEffect=0,
   kWaveshaperEffect,
-  kSampleAndHoldEffect
+  kSampleAndHoldEffect,
+  kNumVoiceEffectTypes
 };
 
 enum EMasterEffectTypes
 {
   kNoMasterEffect=0,
   kDelayEffect,
-  kEQEffect
+  kEQEffect,
+  kNumMasterEffectTypes
 };
 
 constexpr EControlTags kStartupTriggerControls[]{

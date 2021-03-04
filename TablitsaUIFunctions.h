@@ -31,6 +31,9 @@ void SetAllEffectControlsDirty(IGraphics* pGraphics, int idx)
     ctrl->SetDirty(true);
 }
 
+
+/* DELAY (MASTER) */
+
 void DelayTempoSyncToggle(Plugin* plug, IGraphics* pGraphics, const std::vector<int>& params, bool isTempoSync, const bool reset = false)
 {
   dynamic_cast<Tablitsa*>(plug)->SetDelayTempoSync(isTempoSync);
@@ -102,6 +105,7 @@ void InitDelayUI(Plugin* plug, IGraphics* pGraphics, std::vector<IControl*> cont
   dynamic_cast<IVKnobControl*>(controls[0])->SetLabelStr("Left");
   dynamic_cast<IVKnobControl*>(controls[1])->SetLabelStr("Right");
   dynamic_cast<IVKnobControl*>(controls[2])->SetLabelStr("Feedback");
+  dynamic_cast<IVKnobControl*>(controls[2])->SetLabelStr("Mix");
 
   // Toggle Control Action Functions
   controls[4]->SetActionFunction(
@@ -127,37 +131,38 @@ void InitDelayUI(Plugin* plug, IGraphics* pGraphics, std::vector<IControl*> cont
   for (auto* knob : allKnobs)
     knob->SetDisabled(false);
 }
-void InitWaveshaperUI(Plugin* plug, IGraphics* pGraphics, std::vector<IControl*> controls, const std::vector<int>& params, const std::vector<char*>& paramNames, const bool reset=true)
+
+/* EQ */
+
+void InitEqualizerUI(Plugin* pPlugin, IGraphics* pGraphics, std::vector<IControl*> controls, const std::vector<int>& params, const std::vector<char*>& paramNames, const bool reset = true)
 {
-  std::vector<IControl*> allKnobs;
-  allKnobs.insert(allKnobs.begin(), controls.begin(), controls.begin() + 4);
-  for (auto* knob : allKnobs)
-    knob->SetDisabled(false);
-  plug->GetParam(params[0])->InitEnum(paramNames[0], reset ? EWaveshaperMode::kWaveshapeSine : plug->GetParam(params[0])->Value(), { WAVESHAPE_TYPES });
-  plug->GetParam(params[1])->InitPercentage(paramNames[1], reset ? 0. : plug->GetParam(params[1])->Value());
-  plug->GetParam(params[3])->InitPercentage(paramNames[3], reset ? 0. : plug->GetParam(params[3])->Value());
-  pGraphics->HideControl(params[4], true);
-  pGraphics->HideControl(params[5], true);
+  pPlugin->GetParam(params[0])->InitDouble(paramNames[0], reset ? 1. : pPlugin->GetParam(params[0])->Value(), 0., 2., 0.01);
+  pPlugin->GetParam(params[1])->InitDouble(paramNames[1], reset ? 1. : pPlugin->GetParam(params[0])->Value(), 0., 2., 0.01);
+  pPlugin->GetParam(params[2])->InitDouble(paramNames[2], reset ? 0.5 : pPlugin->GetParam(params[0])->Value(), 0., 1., 0.01);
+  pPlugin->GetParam(params[3])->InitDouble(paramNames[3], reset ? 1. : pPlugin->GetParam(params[0])->Value(), 0., 2., 0.01);
 
   for (int i{ 0 }; i < TABLITSA_EFFECT_PARAMS; ++i)
-    controls[i]->SetValue(plug->GetParam(params[i])->Value());
+    controls[i]->SetValue(pPlugin->GetParam(params[i])->GetNormalized());
 
-  // Knob 3 is not used
-  controls[2]->SetDisabled(true);
-  // Labels
-  dynamic_cast<IVKnobControl*>(controls[0])->SetLabelStr("Type");
-  dynamic_cast<IVKnobControl*>(controls[1])->SetLabelStr("Gain");
-  dynamic_cast<IVKnobControl*>(controls[2])->SetLabelStr("");
-  // Modulation off for knob 1
-  dynamic_cast<TablitsaIVModKnobControl*>(controls[0])->EnableModulation(false);
-  // Toggle action functions
-  controls[4]->SetActionFunction(nullptr);
-  controls[5]->SetActionFunction(nullptr);
+  dynamic_cast<IVKnobControl*>(controls[0])->SetLabelStr("Low Gain");
+  dynamic_cast<IVKnobControl*>(controls[1])->SetLabelStr("Mid Gain");
+  dynamic_cast<IVKnobControl*>(controls[2])->SetLabelStr("Mid Pos");
+  dynamic_cast<IVKnobControl*>(controls[3])->SetLabelStr("High Gain");
+
+  controls[2]->Hide(false);
+  controls[3]->Hide(false);
+  controls[2]->SetDisabled(false);
+  controls[3]->SetDisabled(false);
+  // Toggles
   controls[4]->Hide(true);
   controls[5]->Hide(true);
+  controls[4]->SetActionFunction(nullptr);
+  controls[5]->SetActionFunction(nullptr);
 }
 
-void InitSampleAndHoldUI(Plugin* plug, IGraphics* pGraphics, std::vector<IControl*> controls, const std::vector<int>& params, const std::vector<char*>& paramNames, const bool reset=true)
+/* SAMPLE AND HOLD (VOICE) */
+
+void InitSampleAndHoldUI(Plugin* plug, IGraphics* pGraphics, std::vector<IControl*> controls, const std::vector<int>& params, const std::vector<char*>& paramNames, const bool reset = true)
 {
 
   std::vector<IControl*> allKnobs;
@@ -188,6 +193,40 @@ void InitSampleAndHoldUI(Plugin* plug, IGraphics* pGraphics, std::vector<IContro
   for (auto* knob : allKnobs)
     knob->SetDisabled(false);
 }
+
+/* WAVESHAPER (VOICE) */
+
+void InitWaveshaperUI(Plugin* plug, IGraphics* pGraphics, std::vector<IControl*> controls, const std::vector<int>& params, const std::vector<char*>& paramNames, const bool reset=true)
+{
+  std::vector<IControl*> allKnobs;
+  allKnobs.insert(allKnobs.begin(), controls.begin(), controls.begin() + 4);
+  for (auto* knob : allKnobs)
+    knob->SetDisabled(false);
+  plug->GetParam(params[0])->InitEnum(paramNames[0], reset ? EWaveshaperMode::kWaveshapeSine : plug->GetParam(params[0])->Value(), { WAVESHAPE_TYPES });
+  plug->GetParam(params[1])->InitPercentage(paramNames[1], reset ? 0. : plug->GetParam(params[1])->Value());
+  plug->GetParam(params[3])->InitPercentage(paramNames[3], reset ? 0. : plug->GetParam(params[3])->Value());
+  pGraphics->HideControl(params[4], true);
+  pGraphics->HideControl(params[5], true);
+
+  for (int i{ 0 }; i < TABLITSA_EFFECT_PARAMS; ++i)
+    controls[i]->SetValue(plug->GetParam(params[i])->Value());
+
+  // Knob 3 is not used
+  controls[2]->SetDisabled(true);
+  // Labels
+  dynamic_cast<IVKnobControl*>(controls[0])->SetLabelStr("Type");
+  dynamic_cast<IVKnobControl*>(controls[1])->SetLabelStr("Gain");
+  dynamic_cast<IVKnobControl*>(controls[2])->SetLabelStr("");
+  // Modulation off for knob 1
+  dynamic_cast<TablitsaIVModKnobControl*>(controls[0])->EnableModulation(false);
+  // Toggle action functions
+  controls[4]->SetActionFunction(nullptr);
+  controls[5]->SetActionFunction(nullptr);
+  controls[4]->Hide(true);
+  controls[5]->Hide(true);
+}
+
+/* DEFAULT (BOTH) */
 
 void InitDefaultUI(Plugin* plug, IGraphics* pGraphics, std::vector<IControl*> controls, const std::vector<int>& params, const std::vector<char*>& paramNames)
 {
@@ -232,6 +271,12 @@ void SwapMasterEffectsUI(int effectSlot, IControl * pEffectsList, IGraphics * pG
   {
     std::vector<char*> paramNames{ "Delay L", "Delay R" , "Delay Feedback", "Delay Wet Mix" };
     InitDelayUI(pPlugin, pGraphics, controls, params, paramNames, reset);
+    break;
+  }
+  case kEQEffect:
+  {
+    std::vector<char*> paramNames{ "EQ Low Gain", "EQ Mid Gain" , "EQ Mid Position", "EQ High Gain" };
+    InitEqualizerUI(pPlugin, pGraphics, controls, params, paramNames, reset);
     break;
   }
   default:

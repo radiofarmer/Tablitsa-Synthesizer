@@ -423,3 +423,11 @@ protected:
   std::function<T(T, T, T)> mShaperFunc{ &Waveshaper::SineShaper };
   std::mutex mFuncMutex;
 };
+
+/* 3-Band EQ */
+template<typename T>
+class EQ3Effect : public Effect<T>
+{
+public:
+  EQ3Effect(T sampleRate) : Effect<T>(sampleRate) {}
+};
