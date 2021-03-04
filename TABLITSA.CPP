@@ -565,26 +565,26 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
   GetParam(kParamVoiceEffect3Param6)->InitBool("VoiceEffect 1 Parameter 6", false);
 
   // Master Effects
-  GetParam(kParamMasterEffect1Param1)->InitDouble("MasterEffect 1 Parameter 1", 0., 0., 100., 0.1);
-  GetParam(kParamMasterEffect1Param2)->InitDouble("MasterEffect 1 Parameter 2", 0., 0., 100., 0.1);
-  GetParam(kParamMasterEffect1Param3)->InitDouble("MasterEffect 1 Parameter 3", 0., 0., 100., 0.1);
-  GetParam(kParamMasterEffect1Param4)->InitDouble("MasterEffect 1 Parameter 4", 0., 0., 100., 0.1);
-  GetParam(kParamMasterEffect1Param5)->InitBool("MasterEffect 1 Parameter 5", false);
-  GetParam(kParamMasterEffect1Param6)->InitBool("MasterEffect 1 Parameter 6", false);
+  GetParam(kParamMasterEffect1Param1)->InitDouble("Master Effect 1 Parameter 1", 0., 0., 100., 0.1);
+  GetParam(kParamMasterEffect1Param2)->InitDouble("Master Effect 1 Parameter 2", 0., 0., 100., 0.1);
+  GetParam(kParamMasterEffect1Param3)->InitPercentage("Master Effect 1 Parameter 3", 0.);
+  GetParam(kParamMasterEffect1Param4)->InitPercentage("Master Effect 1 Parameter 4", 0.);
+  GetParam(kParamMasterEffect1Param5)->InitBool("Master Effect 1 Parameter 5", false);
+  GetParam(kParamMasterEffect1Param6)->InitBool("Master Effect 1 Parameter 6", false);
 
-  GetParam(kParamMasterEffect2Param1)->InitDouble("MasterEffect 2 Parameter 1", 0., 0., 100., 0.1);
-  GetParam(kParamMasterEffect2Param2)->InitDouble("MasterEffect 2 Parameter 2", 0., 0., 100., 0.1);
-  GetParam(kParamMasterEffect2Param3)->InitDouble("MasterEffect 2 Parameter 3", 0., 0., 100., 0.1);
-  GetParam(kParamMasterEffect2Param4)->InitDouble("MasterEffect 2 Parameter 4", 0., 0., 100., 0.1);
-  GetParam(kParamMasterEffect2Param5)->InitBool("MasterEffect 2 Parameter 5", false);
-  GetParam(kParamMasterEffect2Param6)->InitBool("MasterEffect 2 Parameter 6", false);
+  GetParam(kParamMasterEffect2Param1)->InitDouble("Master Effect 2 Parameter 1", 0., 0., 100., 0.1);
+  GetParam(kParamMasterEffect2Param2)->InitDouble("Master Effect 2 Parameter 2", 0., 0., 100., 0.1);
+  GetParam(kParamMasterEffect2Param3)->InitPercentage("Master Effect 2 Parameter 3", 0.);
+  GetParam(kParamMasterEffect2Param4)->InitPercentage("Master Effect 2 Parameter 4", 0.);
+  GetParam(kParamMasterEffect2Param5)->InitBool("Master Effect 2 Parameter 5", false);
+  GetParam(kParamMasterEffect2Param6)->InitBool("Master Effect 2 Parameter 6", false);
 
-  GetParam(kParamMasterEffect3Param1)->InitDouble("MasterEffect 3 Parameter 1", 0., 0., 100., 0.1);
-  GetParam(kParamMasterEffect3Param2)->InitDouble("MasterEffect 3 Parameter 2", 0., 0., 100., 0.1);
-  GetParam(kParamMasterEffect3Param3)->InitDouble("MasterEffect 3 Parameter 3", 0., 0., 100., 0.1);
-  GetParam(kParamMasterEffect3Param4)->InitDouble("MasterEffect 3 Parameter 4", 0., 0., 100., 0.1);
-  GetParam(kParamMasterEffect3Param5)->InitBool("MasterEffect 3 Parameter 5", false);
-  GetParam(kParamMasterEffect3Param6)->InitBool("MasterEffect 3 Parameter 6", false);
+  GetParam(kParamMasterEffect3Param1)->InitDouble("Master Effect 3 Parameter 1", 0., 0., 100., 0.1);
+  GetParam(kParamMasterEffect3Param2)->InitDouble("Master Effect 3 Parameter 2", 0., 0., 100., 0.1);
+  GetParam(kParamMasterEffect3Param3)->InitPercentage("Master Effect 3 Parameter 3", 0.);
+  GetParam(kParamMasterEffect3Param4)->InitPercentage("Master Effect 3 Parameter 4", 0.);
+  GetParam(kParamMasterEffect3Param5)->InitBool("Master Effect 3 Parameter 5", false);
+  GetParam(kParamMasterEffect3Param6)->InitBool("Master Effect 3 Parameter 6", false);
 
 #if VST3_API
 #define KEYBOARD_HEIGHT 0.f
@@ -1185,8 +1185,9 @@ bool Tablitsa::SerializeState(IByteChunk& chunk) const
   for (int i{ 0 }; i < TABLITSA_MAX_MASTER_EFFECTS; ++i)
   {
     chunk.Put(&mMasterEffectSlots[i]);
+    chunk.Put(&mDelayTempoSync[i]);
   }
-  
+
   return SerializeParams(chunk); // must remember to call SerializeParams at the end
 }
 
@@ -1215,10 +1216,49 @@ int Tablitsa::UnserializeState(const IByteChunk& chunk, int startPos)
   for (int i{ 0 }; i < TABLITSA_MAX_VOICE_EFFECTS; ++i)
   {
     startPos = chunk.Get(&mVoiceEffectSlots[i], startPos);
+    // Send message to change effect BEFORE parameters are loaded, so that the effect receives the proper parameter values
+    SendArbitraryMsgFromUI(kMsgVoiceEffect1Changed + i, kNoTag, sizeof(mVoiceEffectSlots[i]), reinterpret_cast<void*>(&mVoiceEffectSlots[i]));
   }
   for (int i{ 0 }; i < TABLITSA_MAX_MASTER_EFFECTS; ++i)
   {
+    // Get the effect ID for each slot
     startPos = chunk.Get(&mMasterEffectSlots[i], startPos);
+    startPos = chunk.Get(&mDelayTempoSync[i], startPos);
+    // Give the params the proper ranges
+    switch (mMasterEffectSlots[i])
+    {
+    case kDelayEffect:
+    {
+      if (mDelayTempoSync[i])
+      {
+        GetParam(kParamMasterEffect1Param1 + kNumMasterEffectParams * i)->InitEnum("Delay L (beats)", DelayEffect<sample>::k8th, { DELAY_TEMPODIV_VALIST });
+        GetParam(kParamMasterEffect1Param2 + kNumMasterEffectParams * i)->InitEnum("Delay R (beats)", DelayEffect<sample>::k8th, { DELAY_TEMPODIV_VALIST });
+      }
+      else
+      {
+        GetParam(kParamMasterEffect1Param1 + kNumMasterEffectParams * i)->InitDouble("Delay L (ms)", 100., 1., TABLITSA_MAX_DELAY_MS, 1., "ms", IParam::kFlagsNone, "Effect", IParam::ShapePowCurve(3.));
+        GetParam(kParamMasterEffect1Param2 + kNumMasterEffectParams * i)->InitDouble("Delay R (ms)", 100., 1., TABLITSA_MAX_DELAY_MS, 1., "ms", IParam::kFlagsNone, "Effect", IParam::ShapePowCurve(3.));
+      }
+      break;
+    }
+    case kEQEffect:
+    {
+      break;
+    }
+    default:
+    {
+      GetParam(kParamMasterEffect1Param1 + kNumMasterEffectParams * i)->InitDouble("Master Effect 1 Parameter 1", 0., 0., 100., 0.1);
+      GetParam(kParamMasterEffect1Param2 + kNumMasterEffectParams * i)->InitDouble("Master Effect 1 Parameter 2", 0., 0., 100., 0.1);
+      break;
+    }
+    }
+    SendArbitraryMsgFromUI(kMsgMasterEffect1Changed + i, kNoTag, sizeof(mMasterEffectSlots[i]), reinterpret_cast<void*>(&mMasterEffectSlots[i]));
+
+    // Tempo Sync needs to be set before time values are sent to the DSP thread, but after the effect is loaded
+    ENTER_PARAMS_MUTEX;
+    GetParam(kParamMasterEffect1Param5 + kNumMasterEffectParams * i)->Set(1.);
+    OnParamChange(kParamMasterEffect1Param5 + kNumMasterEffectParams * i);
+    LEAVE_PARAMS_MUTEX;
   }
 
   assert(mDSP.mLoadedWavetables[0] == static_cast<int>(mDSP.mLoadedWavetables[0]));
@@ -1267,17 +1307,32 @@ void Tablitsa::UpdateUIControls()
 
   // Set initial tab
   dynamic_cast<TablitsaEffectBankControl*>(GetUI()->GetControlWithTag(kCtrlTagEffectBank))->TabChanged(mCurrentEffectsTab);
+
+  // Set up master effect controls
+  DropdownListControl* effectList = dynamic_cast<DropdownListControl*>(GetUI()->GetControlWithTag(kCtrlTagMasterEffectsList));
   // Set up effect slots (without reseting the parameters!)
   for (int i{ TABLITSA_MAX_MASTER_EFFECTS - 1}; i >= 0; --i)
   {
     int effectIdx = mMasterEffectSlots[i];
-    DropdownListControl* effectList = dynamic_cast<DropdownListControl*>(GetUI()->GetControlWithTag(kCtrlTagMasterEffectsList));
     effectList->SetCurrentIdx(effectIdx);
-    int msg = kMsgMasterEffect1Changed + i;
-    SendArbitraryMsgFromUI(msg, kNoTag, sizeof(effectIdx), reinterpret_cast<void*>(&effectIdx));
   }
-  // Current status: Controls load correctly and display the proper values, but the loaded parameter values only seem
-  // to take effect once the slot switch's action function has been called
+  effectList->SetCurrentIdx(static_cast<int>(GetUI()->GetControlWithTag(kCtrlTagMasterEffectsSwitch)->GetValue() * (TABLITSA_MAX_MASTER_EFFECTS - 1)));
+  IControl* slotSwitch = GetUI()->GetControlWithTag(kCtrlTagMasterEffectsSwitch);
+  slotSwitch->SetValueToDefault();
+  slotSwitch->SetDirty(true);
+
+  // Set up voice effect controls
+  effectList = dynamic_cast<DropdownListControl*>(GetUI()->GetControlWithTag(kCtrlTagVoiceEffectsList));
+  // Set up effect slots (without reseting the parameters!)
+  for (int i{ TABLITSA_MAX_VOICE_EFFECTS - 1 }; i >= 0; --i)
+  {
+    int effectIdx = mVoiceEffectSlots[i];
+    effectList->SetCurrentIdx(effectIdx);
+  }
+  effectList->SetCurrentIdx(static_cast<int>(GetUI()->GetControlWithTag(kCtrlTagVoiceEffectsSwitch)->GetValue() * (TABLITSA_MAX_VOICE_EFFECTS - 1)));
+  slotSwitch = GetUI()->GetControlWithTag(kCtrlTagVoiceEffectsSwitch);
+  slotSwitch->SetValueToDefault();
+  slotSwitch->SetDirty(true);
 }
 
 #if IPLUG_DSP

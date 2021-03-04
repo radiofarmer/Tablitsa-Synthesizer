@@ -547,6 +547,9 @@ enum EParams
   kNumParams
 };
 
+constexpr int kNumVoiceEffectParams = kParamVoiceEffect2Param1 - kParamVoiceEffect1Param1;
+constexpr int kNumMasterEffectParams = kParamMasterEffect2Param1 - kParamMasterEffect1Param1;
+
 #if IPLUG_DSP
 // will use EParams in Tablitsa_DSP.h
 #include "Tablitsa_DSP.h"
@@ -707,8 +710,12 @@ public:
   IByteChunk LoadPreset(const char* filename="UserPreset", bool isBackup=false);
   void SavePreset(IByteChunk& byteData, const char* filename = "UserPreset", bool isBackup=false);
 
-  void SetMasterFXSlot(int slotIdx, EMasterEffectTypes effectIdx) { mMasterEffectSlots[slotIdx] = effectIdx; }
-  void SetVoiceFXSlot(int slotIdx, EVoiceEffectTypes effectIdx) { mVoiceEffectSlots[slotIdx] = effectIdx; }
+  void SetMasterFXSlot(int slotIdx, EMasterEffectTypes effectIdx) { mCurrentMasterFXSlot = slotIdx; mMasterEffectSlots[slotIdx] = effectIdx; }
+  void SetVoiceFXSlot(int slotIdx, EVoiceEffectTypes effectIdx) { mCurrentVoiceFXSlot = slotIdx; mVoiceEffectSlots[slotIdx] = effectIdx; }
+
+  // Store the status of the tempo sync control, required for setting the correct parameter range during preset loading
+  void SetDelayTempoSync(int slotIdx, bool tempoSync) { mDelayTempoSync[slotIdx] = tempoSync; }
+  void SetDelayTempoSync(bool tempoSync) { SetDelayTempoSync(mCurrentMasterFXSlot, tempoSync); }
 
   int GetActiveModIdx() const;
   void SetActiveModIdx(int idx);
@@ -720,13 +727,14 @@ private:
   IPeakSender<2> mMeterSender;
   IControl* mActiveControl{};
 
-
   // UI Status variables not stored as parameters
   EVoiceEffectTypes mVoiceEffectSlots[TABLITSA_MAX_VOICE_EFFECTS]{}; // Holds the ID number of the effect in each slot for the voice effects
   EMasterEffectTypes mMasterEffectSlots[TABLITSA_MAX_MASTER_EFFECTS]{}; // Holds the ID number of the effect in each slot for the master effects
   int mCurrentVoiceFXSlot{ 0 }; // The effect slot current open for editing. Controled by the Slide-Switch controls
   int mCurrentMasterFXSlot{ 0 };
   int mCurrentEffectsTab{ 1 };
+  bool mDelayTempoSync[TABLITSA_MAX_MASTER_EFFECTS]{};
+  bool mMonoDelay[TABLITSA_MAX_MASTER_EFFECTS]{};
   double mSequencerIsQuantized{ 0. };
 
   int mActiveModIdx{ -1 };

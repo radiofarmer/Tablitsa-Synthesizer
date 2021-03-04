@@ -33,11 +33,12 @@ void SetAllEffectControlsDirty(IGraphics* pGraphics, int idx)
 
 void DelayTempoSyncToggle(Plugin* plug, IGraphics* pGraphics, const std::vector<int>& params, bool isTempoSync, const bool reset = false)
 {
+  dynamic_cast<Tablitsa*>(plug)->SetDelayTempoSync(isTempoSync);
   if (isTempoSync)
   {
     const IParam* oldParams[]{ plug->GetParam(params[0]), plug->GetParam(params[1]) };
-    plug->GetParam(params[0])->InitEnum(plug->GetParam(params[0])->GetName(), reset ? LFO<>::k8th : oldParams[0]->Value(), { DELAY_TEMPODIV_VALIST });
-    plug->GetParam(params[1])->InitEnum(plug->GetParam(params[1])->GetName(), reset ? LFO<>::k8th : oldParams[1]->Value(), { DELAY_TEMPODIV_VALIST });
+    plug->GetParam(params[0])->InitEnum(plug->GetParam(params[0])->GetName(), reset ? DelayEffect<sample>::k8th : oldParams[0]->Value(), { DELAY_TEMPODIV_VALIST });
+    plug->GetParam(params[1])->InitEnum(plug->GetParam(params[1])->GetName(), reset ? DelayEffect<sample>::k8th : oldParams[1]->Value(), { DELAY_TEMPODIV_VALIST });
   }
   else
   {
@@ -79,12 +80,21 @@ void DelayStereoToggle(IGraphics* pGraphics, const std::vector<IControl*>& contr
 void InitDelayUI(Plugin* plug, IGraphics* pGraphics, std::vector<IControl*> controls, const std::vector<int>& params, const std::vector<char*>& paramNames, const bool reset=true)
 {
   // Adjust param ranges
-  plug->GetParam(params[0])->InitDouble(paramNames[0], reset ? 100. : plug->GetParam(params[0])->Value(), 1., TABLITSA_MAX_DELAY_MS, 1., "ms", IParam::kFlagsNone, "Effect", IParam::ShapePowCurve(3.));
-  plug->GetParam(params[1])->InitDouble(paramNames[1], reset ? 100. : plug->GetParam(params[1])->Value(), 1., TABLITSA_MAX_DELAY_MS, 1., "ms", IParam::kFlagsNone, "Effect", IParam::ShapePowCurve(3.));
-  plug->GetParam(params[2])->InitPercentage(paramNames[2], reset ? 0. : plug->GetParam(params[2])->Value());
-  plug->GetParam(params[3])->InitPercentage(paramNames[3], reset ? 0. : plug->GetParam(params[3])->Value());
   plug->GetParam(params[4])->InitBool(paramNames[2], reset ? false : plug->GetParam(params[4])->Value() > 0.5);
   plug->GetParam(params[5])->InitBool(paramNames[3], reset ? false : plug->GetParam(params[5])->Value() > 0.5);
+  bool tempoSync = plug->GetParam(params[4 ])->Value();
+  if (tempoSync)
+  {
+    plug->GetParam(params[0])->InitEnum(plug->GetParam(params[0])->GetName(), reset ? DelayEffect<sample>::k8th : plug->GetParam(params[0])->Value(), { DELAY_TEMPODIV_VALIST });
+    plug->GetParam(params[1])->InitEnum(plug->GetParam(params[1])->GetName(), reset ? DelayEffect<sample>::k8th : plug->GetParam(params[1])->Value(), { DELAY_TEMPODIV_VALIST });
+  }
+  else
+  {
+    plug->GetParam(params[0])->InitDouble(paramNames[0], reset ? 100. : plug->GetParam(params[0])->Value(), 1., TABLITSA_MAX_DELAY_MS, 1., "ms", IParam::kFlagsNone, "Effect", IParam::ShapePowCurve(3.));
+    plug->GetParam(params[1])->InitDouble(paramNames[1], reset ? 100. : plug->GetParam(params[1])->Value(), 1., TABLITSA_MAX_DELAY_MS, 1., "ms", IParam::kFlagsNone, "Effect", IParam::ShapePowCurve(3.));
+  }
+  plug->GetParam(params[2])->InitPercentage(paramNames[2], reset ? 0. : plug->GetParam(params[2])->Value());
+  plug->GetParam(params[3])->InitPercentage(paramNames[3], reset ? 0. : plug->GetParam(params[3])->Value());
 
   for (int i{ 0 }; i < TABLITSA_EFFECT_PARAMS; ++i)
     controls[i]->SetValue(plug->GetParam(params[i])->GetNormalized());
@@ -111,8 +121,6 @@ void InitDelayUI(Plugin* plug, IGraphics* pGraphics, std::vector<IControl*> cont
   controls[5]->Hide(false);
   controls[4]->SetDisabled(false);
   controls[5]->SetDisabled(false);
-  controls[4]->SetDirty(true);
-  controls[5]->SetDirty(true);
   // Enable all knobs
   std::vector<IControl*> allKnobs;
   allKnobs.insert(allKnobs.begin(), controls.begin(), controls.begin() + 4);
@@ -228,7 +236,8 @@ void SwapMasterEffectsUI(int effectSlot, IControl * pEffectsList, IGraphics * pG
     break;
   }
   }
-  pPlugin->SendArbitraryMsgFromUI(msg, kNoTag, sizeof(effectIdx), reinterpret_cast<void*>(&effectIdx)); // Effects must be swapped before OnParamChange is called
+  if (reset)
+    pPlugin->SendArbitraryMsgFromUI(msg, kNoTag, sizeof(effectIdx), reinterpret_cast<void*>(&effectIdx)); // Effects must be swapped before OnParamChange is called
   for (auto* knob : allKnobs)
     knob->SetDirty(true);
 }
