@@ -169,7 +169,7 @@ void InitSampleAndHoldUI(Plugin* plug, IGraphics* pGraphics, std::vector<IContro
 
   std::vector<IControl*> allKnobs;
   allKnobs.insert(allKnobs.begin(), controls.begin(), controls.begin() + 4);
-  plug->GetParam(params[0])->InitDouble(paramNames[0], reset ? 10. : plug->GetParam(params[0])->Value(), 0.5, 20., 0.1, "ms", IParam::kFlagsNone, "Effect", IParam::ShapePowCurve(3.));
+  plug->GetParam(params[0])->InitDouble(paramNames[0], reset ? 10. : plug->GetParam(params[0])->Value(), 0.05, 10., 0.01, "ms", IParam::kFlagsNone, "Effect", IParam::ShapePowCurve(3.));
   plug->GetParam(params[1])->InitPercentage(paramNames[1], reset ? 0. : plug->GetParam(params[1])->Value());
   plug->GetParam(params[2])->InitPercentage(paramNames[2], reset ? 0. : plug->GetParam(params[2])->Value());
   plug->GetParam(params[3])->InitPercentage(paramNames[3], reset ? 0. : plug->GetParam(params[3])->Value());
