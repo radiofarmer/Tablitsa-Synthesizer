@@ -138,7 +138,7 @@ void InitEqualizerUI(Plugin* pPlugin, IGraphics* pGraphics, std::vector<IControl
 {
   pPlugin->GetParam(params[0])->InitDouble(paramNames[0], reset ? 1. : pPlugin->GetParam(params[0])->Value(), 0., 2., 0.01);
   pPlugin->GetParam(params[1])->InitDouble(paramNames[1], reset ? 1. : pPlugin->GetParam(params[0])->Value(), 0., 2., 0.01);
-  pPlugin->GetParam(params[2])->InitDouble(paramNames[2], reset ? 0.5 : pPlugin->GetParam(params[0])->Value(), 0., 1., 0.01);
+  pPlugin->GetParam(params[2])->InitPercentage(paramNames[2], reset ? 50. : pPlugin->GetParam(params[0])->Value());
   pPlugin->GetParam(params[3])->InitDouble(paramNames[3], reset ? 1. : pPlugin->GetParam(params[0])->Value(), 0., 2., 0.01);
 
   for (int i{ 0 }; i < TABLITSA_EFFECT_PARAMS; ++i)
@@ -151,6 +151,8 @@ void InitEqualizerUI(Plugin* pPlugin, IGraphics* pGraphics, std::vector<IControl
 
   controls[2]->Hide(false);
   controls[3]->Hide(false);
+  controls[0]->SetDisabled(false);
+  controls[1]->SetDisabled(false);
   controls[2]->SetDisabled(false);
   controls[3]->SetDisabled(false);
   // Toggles

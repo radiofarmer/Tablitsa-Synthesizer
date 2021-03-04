@@ -428,6 +428,109 @@ protected:
 template<typename T>
 class EQ3Effect : public Effect<T>
 {
+  static constexpr T pi{ 3.14159265359 };
+  static constexpr T twoPi{ 6.28318530718 };
+  static constexpr T denorm_fix = (T)(1.0 / 4294967295.0);
+
+  struct EQState
+  {
+    // Low-shelf frequency and poles
+    T lf;
+    T lfp0;
+    T lfp1;
+    T lfp2;
+    T lfp3;
+
+    // High-shelf frequency and poles
+    T hf;
+    T hfp0;
+    T hfp1;
+    T hfp2;
+    T hfp3;
+
+    // Gain
+    T lg;
+    T mg;
+    T hg;
+  };
+
 public:
-  EQ3Effect(T sampleRate) : Effect<T>(sampleRate) {}
+  EQ3Effect(T sampleRate) : Effect<T>(sampleRate)
+  {
+    memset(&mStateL, static_cast<int>((T)0), sizeof(mStateL));
+    memset(&mStateR, static_cast<int>((T)0), sizeof(mStateR));
+    SetMidFreq(0.25);
+  }
+
+  void SetSampleRate(T sampleRate) override
+  {
+    SetMidFreq(std::min(mMidFreq * mSampleRate / sampleRate, 0.99));
+    Effect<T>::SetSampleRate(sampleRate);
+  }
+
+  void SetParam1(T value) override { SetLowGain(value); }
+  void SetParam2(T value) override { SetMidGain(value); }
+  void SetParam3(T value) override { SetMidFreq(value * (T)0.00249); } // Accepts values between 0 and 100
+  void SetParam4(T value) override { SetHighGain(value); }
+
+  inline void SetLowGain(T lg) { mStateL.lg = lg; mStateR.lg = lg; }
+  inline void SetMidGain(T mg) { mStateL.mg = mg; mStateR.mg = mg; }
+  inline void SetHighGain(T hg) { mStateL.hg = hg; mStateR.hg = hg; }
+
+  inline void SetMidFreq(T freqNorm)
+  {
+    T lowFreq = std::max(freqNorm - mHalfMidBand, 0.01);
+    T highFreq = std::min(freqNorm + mHalfMidBand, 0.99);
+    mStateL.lf = (T)2 * std::sin(pi * lowFreq);
+    mStateL.hf = (T)2 * std::sin(pi * highFreq);
+    mStateR.lf = (T)2 * std::sin(pi * lowFreq);
+    mStateR.hf = (T)2 * std::sin(pi * highFreq);
+    mMidFreq = freqNorm;
+  }
+
+  inline T DoProcess(EQState& state, DelayLine<T, 4>& z, T s)
+  {
+    T l, m, h;
+    // Lowpass Filter
+    state.lfp0 += state.lf * (s - state.lfp0) + denorm_fix;
+    state.lfp1 += state.lf * (state.lfp0 - state.lfp1);
+    state.lfp2 += state.lf * (state.lfp1 - state.lfp2);
+    state.lfp3 += state.lf * (state.lfp2 - state.lfp3);
+    l = state.lfp3;
+
+    // Highpass Filter
+    state.hfp0 += state.hf * (s - state.hfp0) + denorm_fix;
+    state.hfp1 += state.hf * (state.hfp0 - state.hfp1);
+    state.hfp2 += state.hf * (state.hfp1 - state.hfp2);
+    state.hfp3 += state.hf * (state.hfp2 - state.hfp3);
+    h = z[0] - state.hfp3;
+
+    // Bandpass Filter
+    m = z[0] - (l + h);
+
+    // Apply gain
+    l *= state.lg;
+    m *= state.mg;
+    h *= state.hg;
+
+    // Update delay line
+    z.push(s);
+
+    return l + m + h;
+  }
+
+  void ProcessStereo(T* s) override
+  {
+    s[0] = DoProcess(mStateL, mZ0, s[0]);
+    s[1] = DoProcess(mStateR, mZ1, s[1]);
+  }
+
+protected:
+  EQState mStateL;
+  EQState mStateR;
+  T mMidFreq{ 1. };
+  T mHalfMidBand{ 0.05 }; // Half the proportion of the normalized frequency range occupied by the mid band
+
+  DelayLine<T, 4> mZ0;
+  DelayLine<T, 4> mZ1;
 };
