@@ -1,5 +1,9 @@
 #pragma once
 
+#if !_DEBUG
+#define VECTOR
+#endif
+
 #include "IPlug_include_in_plug_hdr.h"
 #include "IControls.h"
 
