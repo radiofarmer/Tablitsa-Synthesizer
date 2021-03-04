@@ -670,14 +670,16 @@ enum EVoiceEffectTypes
 {
   kNoVoiceEffect=0,
   kWaveshaperEffect,
-  kSampleAndHoldEffect
+  kSampleAndHoldEffect,
+  kNumVoiceEffectTypes
 };
 
 enum EMasterEffectTypes
 {
   kNoMasterEffect=0,
   kDelayEffect,
-  kEQEffect
+  kEQEffect,
+  kNumMasterEffectTypes
 };
 
 constexpr EControlTags kStartupTriggerControls[]{
