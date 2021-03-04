@@ -197,13 +197,6 @@ public:
     return (this->*mProcessFunctions[mMode])(s);
   }
 
-
-
-  inline V __vectorcall ProcessLowpass_Vector(Vec4d& s)
-  {
-    
-  }
-
 private:
   T mA{ 0. };
   T mB{ 0. };
