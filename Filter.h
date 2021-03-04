@@ -567,11 +567,21 @@ public:
     addends3.store(mAddendPtrs + 8);
   }
 
-  inline Vec4d __vectorcall ProcessAndDownsample_Recursive(Vec4d x)
+  inline Vec4d __vectorcall ProcessAndDownsample_Recursive(Vec4d& x)
   {
     for (int i{ 0 }; i < 6; ++i)
       x = mSOS[i].ProcessRecursive(x);
     Vec4d out = permute4<1, 3, V_DC, V_DC>(x);
+    return out;
+  }
+
+  inline Vec4d __vectorcall ProcessAndDownsample_Recursive(Vec4d& x1, Vec4d& x2)
+  {
+    for (int i{ 0 }; i < 6; ++i)
+      x1 = mSOS[i].ProcessRecursive(x1);
+    for (int i{ 0 }; i < 6; ++i)
+      x2 = mSOS[i].ProcessRecursive(x2);
+    Vec4d out = blend4<1, 3, 5, 7>(x1, x2);
     return out;
   }
 

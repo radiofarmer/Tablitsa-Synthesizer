@@ -214,20 +214,24 @@ public:
       SetMipmapLevel_ByIndex(mWtIdx);
     }
   }
-
+#ifdef VECTOR
+  inline Vec4d __vectorcall ProcessMultiple(double freqCPS)
+  {
+    AdjustWavetable(freqCPS);
+    Vec4d output1 = ProcessOversamplingVec4();
+    Vec4d output2 = ProcessOversamplingVec4();
+    Vec4d output = mAAFilter.ProcessAndDownsample_Recursive(output1, output2);
+    return output;
+  }
+#else
   inline std::array<T, OUTPUT_SIZE> ProcessMultiple(double freqCPS)
   {
     AdjustWavetable(freqCPS);
-
     std::array<T, OUTPUT_SIZE> output{ 0. };
-#if VECTOR_SIZE == 4
-    Vec4d osc_out = ProcessOversamplingVec4();
-    osc_out.store_partial(2, &output[0]);
-#else
     ProcessOversampling(output, mProcessOS);
-#endif
     return output;
   }
+#endif
 
   inline T Process(double freqHz)
   {
@@ -428,7 +432,7 @@ public:
     }
 #else
     // Using recursive function
-    return mAAFilter.ProcessAndDownsample_Recursive(mixed);
+    return mixed;
 #endif
 
   }
