@@ -1,6 +1,9 @@
 #pragma once
 
+#include "VectorFunctions.h"
+
 #include <cmath>
+#include <assert.h>
 
 template<typename T>
 T SoftClip(T s, T gain = (T)1);
@@ -8,6 +11,8 @@ T SoftClip(T s, T gain = (T)1);
 template<typename T, int MaxLength>
 class DelayLine
 {
+  static constexpr int MaxLengthM1 = MaxLength - 1;
+
 public:
   DelayLine() {}
 
@@ -44,6 +49,23 @@ public:
       readPoint += mLength;
     return mBuffer[readPoint];
   }
+
+  template<class Vd>
+  inline void push(const Vd& s)
+  {
+    typedef typename deduce_vector_from<Vd>::int_vec Vi;
+    mRead = mWrite;
+    scatter((Vi(0, 1, 2, 3) + mWrite) & MaxLengthM1, MaxLength, s, mBuffer);
+    mWrite += deduce_vector_from<Vd>::v_size;
+  }
+
+  inline typename deduce_vector_from<T>::double_vec4 __vectorcall v_at(const int offset)
+  {
+    static_assert((MaxLength & (MaxLength - 1)) == 0); // Delay Line length must be a power of 2 in order to use vector functions
+    typedef typename deduce_vector_from<typename deduce_vector_from<T>::double_vec4>::int_vec Vi;
+    return lookup<MaxLength>((Vi(0, 1, 2, 3) + offset) & MaxLengthM1, mBuffer );
+  }
+
   /* The the value in the delay line `offset` samples ago. (same as `at`) */
   inline T operator[](const int idx)
   {
