@@ -1,6 +1,7 @@
 #pragma once
 
 #include "VectorFunctions.h"
+#include "OversamplingFilter.h"
 #include "Wavetable.h"
 
 #include "Oscillator.h"

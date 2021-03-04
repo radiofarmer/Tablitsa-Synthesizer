@@ -329,6 +329,7 @@
     <ClInclude Include="..\TablitsaOscillators.h" />
     <ClInclude Include="..\TablitsaEffects.h" />
     <ClInclude Include="..\TablitsaUIFunctions.h" />
+    <ClInclude Include="..\OversamplingFilter.h" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="resources">
