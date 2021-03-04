@@ -518,9 +518,6 @@ public:
       const double phaseModFreqFact = pow(2., mVModulations.GetList()[kVPhaseModFreq][0] / 12.);
       const double ringModFreqFact = pow(2., mVModulations.GetList()[kVRingModFreq][0] / 12.);
 
-      const int osc1Filter = mFilterRouting[0];
-      const int osc2Filter = mFilterRouting[1];
-
       // make sound output for each output channel
       for(auto i = startIdx; i < startIdx + nFrames; i += FRAME_INTERVAL)
       {
@@ -592,11 +589,11 @@ public:
          osc2Output[j] *= osc2Amp;
 #endif
          // Filters
-         double osc1FilterOutput = mFilters.at(osc1Filter)->Process(osc1Output[j]);
-         double osc2FilterOutput = mFilters.at(osc2Filter)->Process(osc2Output[j]);
-         double output_summed = osc1FilterOutput + osc2FilterOutput;
-         double output_scaled = output_summed * ampEnvVal;
-         double output_stereo[]{ output_scaled * lPan, output_scaled * rPan };
+         T filter1Output = mFilters[0]->Process(osc1Output[j] * mFilterSends[0][0] + osc2Output[j] * mFilterSends[0][1]);
+         T filter2Output = mFilters[1]->Process(osc1Output[j] * mFilterSends[1][0] + osc2Output[j] * mFilterSends[1][1]);
+         T output_summed = filter1Output + filter2Output;
+         T output_scaled = output_summed * ampEnvVal;
+         T output_stereo[]{ output_scaled * lPan, output_scaled * rPan };
 
          // Voice effects
          for (auto* fx : mEffects)
@@ -681,12 +678,6 @@ public:
       }
     }
 
-    /* Route the given oscillator through the given filter */
-    void UpdateFilterSource(int filterIdx, int oscIdx)
-    {
-      mFilterRouting[oscIdx] = filterIdx;
-    }
-
     void SetEffect(const int effectSlot, const int effectId)
     {
       constexpr int numEffectModParams = kVEffect2Param1 - kVEffect1Param1;
@@ -768,7 +759,7 @@ public:
 
     // Filters
     std::vector<Filter<T>*> mFilters{ new NullFilter<T>(), new NullFilter<T>() };
-    int mFilterRouting[2]{ 0, 1 };
+    T mFilterSends[2][2]{ {1., 0.}, {0., 1.} };
 
     // Voice Effects
     std::vector<Effect<T>*> mEffects{ new Effect<T>(DEFAULT_SAMPLE_RATE), new Effect<T>(DEFAULT_SAMPLE_RATE), new Effect<T>(DEFAULT_SAMPLE_RATE) };
@@ -1770,6 +1761,12 @@ public:
           dynamic_cast<TablitsaDSP::Voice&>(voice).mFilters.at(0)->SetMode(static_cast<int>(value));
           });
         break;
+      case kParamFilter1Osc1Send:
+      case kParamFilter1Osc2Send:
+        ForEachVoice([paramIdx, value](Voice& voice) {
+          voice.mFilterSends[0][paramIdx - kParamFilter1Osc1Send] = value / (T)100;
+          });
+        break;
       case kParamFilter1Cutoff:
         mParamsToSmooth[kModFilter1CutoffSmoother] = value / mSampleRate;
         break;
@@ -1854,6 +1851,12 @@ public:
       case kParamFilter2ModeMoog:
         mSynth.ForEachVoice([value](SynthVoice& voice) {
           dynamic_cast<TablitsaDSP::Voice&>(voice).mFilters.at(1)->SetMode(static_cast<int>(value));
+          });
+        break;
+      case kParamFilter2Osc1Send:
+      case kParamFilter2Osc2Send:
+        ForEachVoice([paramIdx, value](Voice& voice) {
+          voice.mFilterSends[1][paramIdx - kParamFilter2Osc1Send] = value / (T)100;
           });
         break;
       case kParamFilter2Cutoff:

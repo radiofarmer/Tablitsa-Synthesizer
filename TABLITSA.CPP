@@ -392,6 +392,9 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
   GetParam(kParamFilter1FF)->InitPercentage("Filter 1 FF");
   GetParam(kParamFilter1FB)->InitPercentage("Filter 1 FB");
   GetParam(kParamFilter1Delay)->InitDouble("Filter 1 Delay", 0.1, 0.1, 10., 0.01, "ms");
+  // Oscillator sends
+  GetParam(kParamFilter1Osc1Send)->InitPercentage("Filter 1 Osc 1 Send", 100.);
+  GetParam(kParamFilter1Osc2Send)->InitPercentage("Filter 1 Osc 2 Send", 0.);
 
   // Filter 2
   GetParam(kParamFilter2Type)->InitEnum("Filter 2 Type", kNoFilter, { FILTER_TYPE_LIST });
@@ -432,6 +435,9 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
   GetParam(kParamFilter2FF)->InitPercentage("Filter 2 FF");
   GetParam(kParamFilter2FB)->InitPercentage("Filter 2 FB");
   GetParam(kParamFilter2Delay)->InitDouble("Filter 2 Delay", 0.1, 0.1, 10., 0.01, "ms");
+  // Oscillator sends
+  GetParam(kParamFilter2Osc1Send)->InitPercentage("Filter 2 Osc 1 Send", 0.);
+  GetParam(kParamFilter2Osc2Send)->InitPercentage("Filter 2 Osc 2 Send", 100.);
 
   // Effect Parameters
   // Voice Effects
@@ -854,21 +860,8 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
     pGraphics->AttachControl(new TablitsaVGroupControl(oscModPanel.GetPadded(modulePad[0], modulePad[1], modulePad[2], modulePad[3]), "Oscillator Modulation"));
     
     /* Filter Panel */
-    auto setFilterOscillator = IActionFunction([this](IControl* pControl) {
-      if (pControl->GetTag() == kCtrlTagFilter1Osc)
-      {
-        GetUI()->GetControlWithTag(kCtrlTagFilter2Osc)->SetValue(1. - pControl->GetValue());
-        GetUI()->GetControlWithTag(kCtrlTagFilter2Osc)->SetDirty(false);
-      }
-      else
-      {
-        GetUI()->GetControlWithTag(kCtrlTagFilter1Osc)->SetValue(1. - pControl->GetValue());
-        GetUI()->GetControlWithTag(kCtrlTagFilter1Osc)->SetDirty(false);
-      }
-      SendArbitraryMsgFromUI(kMsgFilterOscChanged, pControl->GetTag());
-    });
     /* Filter 1 */
-    const IRECT filter1Panel = lowerPanel.GetGridCell(1, 0, 3, 3);
+    const IRECT filter1Panel = lowerPanel.GetGridCell(1, 0, 3, 3).GetReducedFromRight(10.f);
     pGraphics->AttachControl(new ICaptionControl(filter1Panel.GetGridCell(0, 0, 3, 4).GetVShifted(20.f), kParamFilter1Type, dropdownText), kCtrlTagFilter1Type, "Flt1")->SetActionFunction(
       [pGraphics, this](IControl* pControl) {
         IControl* filterModeControl{ pGraphics->GetControlWithTag(kCtrlTagFilter1Mode) }; // Control containing list of filter modes for a given type
@@ -908,16 +901,17 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
     pGraphics->AttachControl(new ICaptionControl(filter1Panel.GetGridCell(1, 0, 3, 4).GetFromTop(20.f).GetVShifted(20.f), kParamFilter1ModeVSF, dropdownText), kCtrlTagFilter1Mode, "Flt1")->
       SetDisabled(static_cast<int>(pGraphics->GetControlWithTag(kCtrlTagFilter1Type)->GetValue()) == kNoFilter);
     // Cutoff/Resonance/Drive
-    pGraphics->AttachControl(new TablitsaIVModKnobControl(filter1Panel.GetGridCell(0, 1, 1, 5).GetHShifted(16.f).GetCentredInside(dialSize), kParamFilter1Cutoff, "Cutoff"), kCtrlTagFilter1Cutoff, "Flt1");
-    pGraphics->AttachControl(new TablitsaIVModKnobControl(filter1Panel.GetGridCell(0, 2, 1, 5).GetHShifted(16.f).GetCentredInside(dialSize), kParamFilter1Resonance, "Res."), kCtrlTagFilter1Resonance, "Flt1");
-    pGraphics->AttachControl(new TablitsaIVModKnobControl(filter1Panel.GetGridCell(0, 3, 1, 5).GetHShifted(16.f).GetCentredInside(dialSize), kParamFilter1Drive, "Drive"), kCtrlTagFilter1Drive, "Flt1");
-    pGraphics->AttachControl(new IVTabSwitchControl(filter1Panel.GetGridCell(0, 4, 1, 5).GetPadded(-10.f).GetVPadded(-20.f).GetHShifted(-6.f), setFilterOscillator, { "Osc 1", "Osc 2" }, "", toggleStyle, EVShape::Rectangle, EDirection::Vertical), kCtrlTagFilter1Osc, "Flt1");
+    pGraphics->AttachControl(new TablitsaIVModKnobControl(filter1Panel.GetGridCell(0, 1, 1, 5).GetCentredInside(dialSize), kParamFilter1Cutoff, "Cutoff"), kCtrlTagFilter1Cutoff, "Flt1");
+    pGraphics->AttachControl(new TablitsaIVModKnobControl(filter1Panel.GetGridCell(0, 2, 1, 5).GetCentredInside(dialSize), kParamFilter1Resonance, "Res."), kCtrlTagFilter1Resonance, "Flt1");
+    pGraphics->AttachControl(new TablitsaIVModKnobControl(filter1Panel.GetGridCell(0, 3, 1, 5).GetCentredInside(dialSize), kParamFilter1Drive, "Drive"), kCtrlTagFilter1Drive, "Flt1");
+    pGraphics->AttachControl(new TablitsaSliderControl(filter1Panel.GetGridCell(0, 8, 1, 10).GetVPadded(-20.f), kParamFilter1Osc1Send, "O1", modKnobStyle.WithShowValue(false)), kCtrlTagFilter1Osc1, "Flt1");
+    pGraphics->AttachControl(new TablitsaSliderControl(filter1Panel.GetGridCell(0, 9, 1, 10).GetVPadded(-20.f), kParamFilter1Osc2Send, "O2", modKnobStyle.WithShowValue(false)), kCtrlTagFilter1Osc2, "Flt1");
     // FF/FB/Delay Time (comb filter)
-    pGraphics->AttachControl(new TablitsaIVModKnobControl(filter1Panel.GetGridCell(0, 1, 1, 5).GetHShifted(16.f).GetCentredInside(dialSize), kParamFilter1FF, "F/F"), kCtrlTagFilter1FF, "Flt1")->Hide(true);
-    pGraphics->AttachControl(new TablitsaIVModKnobControl(filter1Panel.GetGridCell(0, 2, 1, 5).GetHShifted(16.f).GetCentredInside(dialSize), kParamFilter1FB, "F/B"), kCtrlTagFilter1FB, "Flt1")->Hide(true);
-    pGraphics->AttachControl(new TablitsaIVModKnobControl(filter1Panel.GetGridCell(0, 3, 1, 5).GetHShifted(16.f).GetCentredInside(dialSize), kParamFilter1Delay, "Delay"), kCtrlTagFilter1Delay, "Flt1")->Hide(true);
+    pGraphics->AttachControl(new TablitsaIVModKnobControl(filter1Panel.GetGridCell(0, 1, 1, 5).GetCentredInside(dialSize), kParamFilter1FF, "F/F"), kCtrlTagFilter1FF, "Flt1")->Hide(true);
+    pGraphics->AttachControl(new TablitsaIVModKnobControl(filter1Panel.GetGridCell(0, 2, 1, 5).GetCentredInside(dialSize), kParamFilter1FB, "F/B"), kCtrlTagFilter1FB, "Flt1")->Hide(true);
+    pGraphics->AttachControl(new TablitsaIVModKnobControl(filter1Panel.GetGridCell(0, 3, 1, 5).GetCentredInside(dialSize), kParamFilter1Delay, "Delay"), kCtrlTagFilter1Delay, "Flt1")->Hide(true);
 
-    pGraphics->AttachControl(new TablitsaVGroupControl(filter1Panel.GetPadded(modulePad[0], modulePad[1], modulePad[2], modulePad[3]), "Filter 1"));
+    pGraphics->AttachControl(new TablitsaVGroupControl(filter1Panel.GetPadded(modulePad[0], modulePad[1], modulePad[2] + 10.f, modulePad[3]), "Filter 1"));
 
     // Set comb filter controls' modulation parameters to the normal cutoff/res/drive controls' ones
     dynamic_cast<TablitsaIVModKnobControl*>(pGraphics->GetControlWithTag(kCtrlTagFilter1FF))->GetModulationFrom(kParamFilter1Cutoff);
@@ -925,7 +919,7 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
     dynamic_cast<TablitsaIVModKnobControl*>(pGraphics->GetControlWithTag(kCtrlTagFilter1Delay))->GetModulationFrom(kParamFilter1Drive);
 
     /* Filter 2 */
-    const IRECT filter2Panel = lowerPanel.GetGridCell(2, 0, 3, 3);
+    const IRECT filter2Panel = lowerPanel.GetGridCell(2, 0, 3, 3).GetReducedFromRight(10.f);
     pGraphics->AttachControl(new ICaptionControl(filter2Panel.GetGridCell(0, 0, 3, 4).GetVShifted(20.f), kParamFilter2Type, dropdownText), kCtrlTagFilter2Type, "Flt2")->SetActionFunction(
       [pGraphics, this](IControl* pControl) {
         IControl* filterModeControl{ pGraphics->GetControlWithTag(kCtrlTagFilter2Mode) };
@@ -960,16 +954,17 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
     );
     pGraphics->AttachControl(new ICaptionControl(filter2Panel.GetGridCell(1, 0, 3, 4).GetFromTop(20.f).GetVShifted(20.f), kParamFilter2ModeVSF, dropdownText), kCtrlTagFilter2Mode, "Flt2")->
       SetDisabled(static_cast<int>(pGraphics->GetControlWithTag(kCtrlTagFilter2Type)->GetValue()) == kNoFilter);
-    pGraphics->AttachControl(new TablitsaIVModKnobControl(filter2Panel.GetGridCell(0, 1, 1, 5).GetHShifted(16.f).GetCentredInside(dialSize), kParamFilter2Cutoff, "Cutoff"), kNoTag, "Flt2");
-    pGraphics->AttachControl(new TablitsaIVModKnobControl(filter2Panel.GetGridCell(0, 2, 1, 5).GetHShifted(16.f).GetCentredInside(dialSize), kParamFilter2Resonance, "Res."), kNoTag, "Flt2");
-    pGraphics->AttachControl(new TablitsaIVModKnobControl(filter2Panel.GetGridCell(0, 3, 1, 5).GetHShifted(16.f).GetCentredInside(dialSize), kParamFilter2Drive, "Drive"), kNoTag, "Flt2");
-    pGraphics->AttachControl(new IVTabSwitchControl(filter2Panel.GetGridCell(0, 4, 1, 5).GetPadded(-10.f).GetVPadded(-20.f).GetHShifted(-6.f), setFilterOscillator, { "Osc 1", "Osc 2" }, "", toggleStyle, EVShape::Rectangle, EDirection::Vertical), kCtrlTagFilter2Osc, "Flt2")->SetValue(1.);
+    pGraphics->AttachControl(new TablitsaIVModKnobControl(filter2Panel.GetGridCell(0, 1, 1, 5).GetCentredInside(dialSize), kParamFilter2Cutoff, "Cutoff"), kNoTag, "Flt2");
+    pGraphics->AttachControl(new TablitsaIVModKnobControl(filter2Panel.GetGridCell(0, 2, 1, 5).GetCentredInside(dialSize), kParamFilter2Resonance, "Res."), kNoTag, "Flt2");
+    pGraphics->AttachControl(new TablitsaIVModKnobControl(filter2Panel.GetGridCell(0, 3, 1, 5).GetCentredInside(dialSize), kParamFilter2Drive, "Drive"), kNoTag, "Flt2");
+    pGraphics->AttachControl(new TablitsaSliderControl(filter2Panel.GetGridCell(0, 8, 1, 10).GetVPadded(-20.f), kParamFilter2Osc1Send, "O1", modKnobStyle.WithShowValue(false)), kCtrlTagFilter2Osc1, "Flt2");
+    pGraphics->AttachControl(new TablitsaSliderControl(filter2Panel.GetGridCell(0, 9, 1, 10).GetVPadded(-20.f), kParamFilter2Osc2Send, "O2", modKnobStyle.WithShowValue(false)), kCtrlTagFilter2Osc2, "Flt2");
     // FF/FB/Delay Time (comb filter)
-    pGraphics->AttachControl(new TablitsaIVModKnobControl(filter2Panel.GetGridCell(0, 1, 1, 5).GetHShifted(16.f).GetCentredInside(dialSize), kParamFilter2FF, "F/F"), kCtrlTagFilter2FF, "Flt1")->Hide(true);
-    pGraphics->AttachControl(new TablitsaIVModKnobControl(filter2Panel.GetGridCell(0, 2, 1, 5).GetHShifted(16.f).GetCentredInside(dialSize), kParamFilter2FB, "F/B"), kCtrlTagFilter2FB, "Flt1")->Hide(true);
-    pGraphics->AttachControl(new TablitsaIVModKnobControl(filter2Panel.GetGridCell(0, 3, 1, 5).GetHShifted(16.f).GetCentredInside(dialSize), kParamFilter2Delay, "Delay"), kCtrlTagFilter2Delay, "Flt1")->Hide(true);
+    pGraphics->AttachControl(new TablitsaIVModKnobControl(filter2Panel.GetGridCell(0, 1, 1, 5).GetCentredInside(dialSize), kParamFilter2FF, "F/F"), kCtrlTagFilter2FF, "Flt1")->Hide(true);
+    pGraphics->AttachControl(new TablitsaIVModKnobControl(filter2Panel.GetGridCell(0, 2, 1, 5).GetCentredInside(dialSize), kParamFilter2FB, "F/B"), kCtrlTagFilter2FB, "Flt1")->Hide(true);
+    pGraphics->AttachControl(new TablitsaIVModKnobControl(filter2Panel.GetGridCell(0, 3, 1, 5).GetCentredInside(dialSize), kParamFilter2Delay, "Delay"), kCtrlTagFilter2Delay, "Flt1")->Hide(true);
 
-    pGraphics->AttachControl(new TablitsaVGroupControl(filter2Panel.GetPadded(modulePad[0], modulePad[1], modulePad[2], modulePad[3]), "Filter 2"));
+    pGraphics->AttachControl(new TablitsaVGroupControl(filter2Panel.GetPadded(modulePad[0], modulePad[1], modulePad[2] + 10.f, modulePad[3]), "Filter 2"));
 
     // Set comb filter controls' modulation parameters to the normal cutoff/res/drive controls' ones
     dynamic_cast<TablitsaIVModKnobControl*>(pGraphics->GetControlWithTag(kCtrlTagFilter2FF))->GetModulationFrom(kParamFilter2Cutoff);
@@ -1566,21 +1561,6 @@ bool Tablitsa::OnMessage(int msgTag, int ctrlTag, int dataSize, const void* pDat
         pSequencer->SetValue(mDSP.mSeqSteps[i], i);
       }
       pSequencer->SetDirty(true);
-      break;
-    }
-    case kMsgFilterOscChanged:
-    {
-      IControl* pControl = GetUI()->GetControlWithTag(ctrlTag);
-      if (ctrlTag == kCtrlTagFilter1Osc)
-      {
-        mDSP.UpdateFilterSource(0, static_cast<int>(pControl->GetValue()));
-        mDSP.UpdateFilterSource(1, 1 - static_cast<int>(pControl->GetValue()));
-      }
-      else
-      {
-        mDSP.UpdateFilterSource(1, static_cast<int>(pControl->GetValue()));
-        mDSP.UpdateFilterSource(0, 1 - static_cast<int>(pControl->GetValue()));
-      }
       break;
     }
     case kMsgVoiceEffect1Changed:
