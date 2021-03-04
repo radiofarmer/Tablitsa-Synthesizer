@@ -14,7 +14,7 @@
 #include "LFO.h"
 
 #ifdef VECTOR
- #define FRAME_INTERVAL OUTPUT_SIZE
+ #define FRAME_INTERVAL OUTPUT_SIZE * 2
 #else
   #define FRAME_INTERVAL 1
 #endif
@@ -573,14 +573,27 @@ public:
         }
         
         // Signal Processing
+#ifdef VECTOR
+        Vec4d osc1_v = mOsc1.ProcessMultiple(osc1Freq) * osc1Amp;
+        Vec4d osc2_v = mOsc2.ProcessMultiple(osc2Freq) * osc2Amp;
+        T osc1Output[4];
+        T osc2Output[4];
+        osc1_v.store(osc1Output);
+        osc2_v.store(osc2Output);
+#else
         std::array<T, OUTPUT_SIZE> osc1Output{ mOsc1.ProcessMultiple(osc1Freq) };
         std::array<T, OUTPUT_SIZE> osc2Output{ mOsc2.ProcessMultiple(osc2Freq) };
+#endif
         
        for (auto j = 0; j < FRAME_INTERVAL; ++j)
        {
+#ifndef VECTOR
+         osc1Output[j] *= osc1Amp;
+         osc2Output[j] *= osc2Amp;
+#endif
          // Filters
-         double osc1FilterOutput = mFilters.at(osc1Filter)->Process(osc1Output[j] * osc1Amp);
-         double osc2FilterOutput = mFilters.at(osc2Filter)->Process(osc2Output[j] * osc2Amp);
+         double osc1FilterOutput = mFilters.at(osc1Filter)->Process(osc1Output[j]);
+         double osc2FilterOutput = mFilters.at(osc2Filter)->Process(osc2Output[j]);
          double output_summed = osc1FilterOutput + osc2FilterOutput;
          double output_scaled = output_summed * ampEnvVal;
          double output_stereo[]{ output_scaled * lPan, output_scaled * rPan };
