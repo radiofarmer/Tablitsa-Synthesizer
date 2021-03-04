@@ -114,6 +114,18 @@ public:
       return std::max(std::min(initVal * std::exp(modulation), mMax), mMin);
   }
 
+  inline Vec4d __vectorcall AddModulation_Vector(Vec4d initVals, Vec4d* modVals)
+  {
+    Vec4d modulation = Vec4d(0.);
+    for (auto i{ 0 }; i < DynMods; ++i)
+      modulation += modVals[i] * mModDepths[i];
+    modulation += mStaticModulation;
+    if (!mIsExponential)
+      return max(min(initVals + modulation, mMaxV), mMinV);
+    else
+      return max(min(initVals * exp(modulation), mMaxV), mMinV);
+  }
+
   inline void SetStaticModulation(double* staticMods)
   {
     mStaticModulation = 0.;
@@ -172,19 +184,22 @@ public:
   @param outputs Pointers to the output buffers, of dimensions (NParams, nFrames)
   @params nFrames Length of the buffer, in samples
   */
-  void ProcessBlock(T** param_inputs, T** mod_inputs, T** outputs, int nFrames, const int offset = 0)
+  inline void ProcessBlock(T** param_inputs, T** mod_inputs, T** outputs, int nFrames, const int offset = 0)
   {
-    for (auto p{ offset }; p < NParams; ++p)
+    for (auto p{ 0 }; p < NParams; ++p)
     {
-      for (auto i{ 0 }; i < nFrames; ++i)
+      for (auto i{ offset }; i < nFrames; ++i)
       {
         // Get the values of the modulators for the current frame
-        T modDepths[DynamicMods + StaticMods]{ 0. };
+#ifndef VECTOR
+        T modDepths[DynamicMods]{ 0. };
         for (auto m{ 0 }; m < DynamicMods; ++m)
           modDepths[m] = mod_inputs[m][i];
-#if _DEBUG
         outputs[p][i] = mParams[p]->AddModulation(param_inputs[p][i], modDepths);
 #else
+        T modDepths[DynamicMods]{ 0. };
+        for (auto m{ 0 }; m < DynamicMods; ++m)
+          modDepths[m] = mod_inputs[m][i];
         outputs[p][i] = mParams[p]->AddModulation_Vector(param_inputs[p][i], modDepths);
 #endif
       }
@@ -194,31 +209,25 @@ public:
   /* Vector processing of each block of parameter values.
   NB: The Clang compiler completely optimizes out the above `ProcessBlock` function, so implementing this function to provide further speed is probably unnecessary.
   */
-  void ProcessBlockVec4d(T** param_inputs, T** mod_inputs, T** outputs, int nFrames)
+  inline void ProcessBlockVec4d(T** param_inputs, T** mod_inputs, T** outputs, int nFrames)
   {
     constexpr int vectorsize = 4;
 
-    /*
-    TRANSPOSE `mod_inputs`
-    */
-
-    for (auto i{ 0 }; i < nFrames; i += 4)
+    for (auto p{ 0 }; p < NParams; ++p)
     {
-      // `mod_inputs` is now `nFrames` x N_mods
-      // Add four modulator values at a time
-      auto m{ 0 };
-      for (; m < (-DynamicMods & vectorsize); m+=4)
+      for (auto i{ 0 }; i < (nFrames & (-vectorsize)); i += vectorsize)
       {
-        Vec4d modValues = Vec4d().load(mod_inputs[i] + m);
-      }
-      for (auto p{ 0 }; p < NParams; ++p)
-      {
-        // TODO
-        outputs[p][i] = param_inputs[p][i];
+        Vec4d modValues[DynamicMods];
+        for (auto m{ 0 }; m < DynamicMods; ++m)
+        {
+          modValues[m] = Vec4d().load(&mod_inputs[m][i]);
+        }
+        Vec4d output = mParams[p]->AddModulation_Vector(Vec4d().load(&param_inputs[p][i]), modValues);
+        output.store(&outputs[p][i]);
       }
     }
-    // Process the last few parameters, which don't fit exactly into the vector length
-    ProcessBlock(param_inputs, mod_inputs, outputs, nFrames, NParams - (NParams % 4));
+    // Process frames which don't fit into the vector size
+    ProcessBlock(param_inputs, mod_inputs, outputs, nFrames, nFrames - (nFrames % 4));
   }
 
   ParameterModulator<DynamicMods, StaticMods>& operator[](int idx)
