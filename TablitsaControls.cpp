@@ -406,7 +406,8 @@ void DropdownListControl::SetCurrentIdx(const int newIdx, const bool triggerActi
 
 void DropdownListControl::Draw(IGraphics& g)
 {
-  mStr.Set(mOptions[mCurrentIdx].c_str());
+  if (mCurrentIdx >= 0)
+    mStr.Set(mOptions[mCurrentIdx].c_str());
 
   ITextControl::Draw(g);
 

@@ -303,7 +303,8 @@ void SwapVoiceEffectsUI(int effectSlot, IControl * pEffectsList, IGraphics * pGr
     break;
   }
   }
-  pPlugin->SendArbitraryMsgFromUI(msg, kNoTag, sizeof(effectIdx), reinterpret_cast<void*>(&effectIdx)); // Effects must be swapped before OnParamChange is called
+  if (reset)
+    pPlugin->SendArbitraryMsgFromUI(msg, kNoTag, sizeof(effectIdx), reinterpret_cast<void*>(&effectIdx)); // Effects must be swapped before OnParamChange is called
   for (auto* knob : allKnobs)
     knob->SetDirty(true);
 }

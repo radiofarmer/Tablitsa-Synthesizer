@@ -435,7 +435,7 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
 
   // Effect Parameters
   // Voice Effects
-  GetParam(kParamVoiceEffect1Param1)->InitDouble("VoiceEffect 1 Parameter 1", 0., 0., 1., 0.01);
+  GetParam(kParamVoiceEffect1Param1)->InitDouble("Voice Effect 1 Parameter 1", 0., 0., 1., 0.01);
   GetParam(kParamVoiceEffect1Param1Env1)->InitDouble("Voice Effect 1 Param 1 Env1 Depth", 0., -1., 1., 0.01);
   GetParam(kParamVoiceEffect1Param1Env2)->InitDouble("Voice Effect 1 Param 1 Env2 Depth", 0., -1., 1., 0.01);
   GetParam(kParamVoiceEffect1Param1AmpEnv)->InitDouble("Voice Effect 1 Param 1 AmpEnv Depth", 0., -1., 1., 0.01);
@@ -445,6 +445,7 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
   GetParam(kParamVoiceEffect1Param1Vel)->InitDouble("Voice Effect 1 Param 1 Velocity Depth", 0., -1., 1., 0.01);
   GetParam(kParamVoiceEffect1Param1KTk)->InitDouble("Voice Effect 1 Param 1 Keytrack Depth", 0., -1., 1., 0.01);
   GetParam(kParamVoiceEffect1Param1Rnd)->InitDouble("Voice Effect 1 Param 1 Random Depth", 0., -1., 1., 0.01);
+  // P2
   GetParam(kParamVoiceEffect1Param2)->InitDouble("VoiceEffect 1 Parameter 2", 0., 0., 1., 0.01);
   GetParam(kParamVoiceEffect1Param2Env1)->InitDouble("Voice Effect 1 Param 2 Env1 Depth", 0., -1., 1., 0.01);
   GetParam(kParamVoiceEffect1Param2Env2)->InitDouble("Voice Effect 1 Param 2 Env2 Depth", 0., -1., 1., 0.01);
@@ -455,7 +456,8 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
   GetParam(kParamVoiceEffect1Param2Vel)->InitDouble("Voice Effect 1 Param 2 Velocity Depth", 0., -1., 1., 0.01);
   GetParam(kParamVoiceEffect1Param2KTk)->InitDouble("Voice Effect 1 Param 2 Keytrack Depth", 0., -1., 1., 0.01);
   GetParam(kParamVoiceEffect1Param2Rnd)->InitDouble("Voice Effect 1 Param 2 Random Depth", 0., -1., 1., 0.01);
-  GetParam(kParamVoiceEffect1Param3)->InitDouble("VoiceEffect 1 Parameter 3", 0., 0., 1., 0.01);
+  // P3
+  GetParam(kParamVoiceEffect1Param3)->InitPercentage("VoiceEffect 1 Parameter 3", 0.);
   GetParam(kParamVoiceEffect1Param3Env1)->InitDouble("Voice Effect 1 Param 3 Env1 Depth", 0., -1., 1., 0.01);
   GetParam(kParamVoiceEffect1Param3Env2)->InitDouble("Voice Effect 1 Param 3 Env2 Depth", 0., -1., 1., 0.01);
   GetParam(kParamVoiceEffect1Param3AmpEnv)->InitDouble("Voice Effect 1 Param 3 AmpEnv Depth", 0., -1., 1., 0.01);
@@ -465,7 +467,8 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
   GetParam(kParamVoiceEffect1Param3Vel)->InitDouble("Voice Effect 1 Param 3 Velocity Depth", 0., -1., 1., 0.01);
   GetParam(kParamVoiceEffect1Param3KTk)->InitDouble("Voice Effect 1 Param 3 Keytrack Depth", 0., -1., 1., 0.01);
   GetParam(kParamVoiceEffect1Param3Rnd)->InitDouble("Voice Effect 1 Param 3 Random Depth", 0., -1., 1., 0.01);
-  GetParam(kParamVoiceEffect1Param4)->InitDouble("VoiceEffect 1 Parameter 4", 0., 0., 1., 0.01);
+  // P4
+  GetParam(kParamVoiceEffect1Param4)->InitPercentage("VoiceEffect 1 Parameter 4", 0.);
   GetParam(kParamVoiceEffect1Param4Env1)->InitDouble("Voice Effect 1 Param 4 Env1 Depth", 0., -1., 1., 0.01);
   GetParam(kParamVoiceEffect1Param4Env2)->InitDouble("Voice Effect 1 Param 4 Env2 Depth", 0., -1., 1., 0.01);
   GetParam(kParamVoiceEffect1Param4AmpEnv)->InitDouble("Voice Effect 1 Param 4 AmpEnv Depth", 0., -1., 1., 0.01);
@@ -478,91 +481,99 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
   GetParam(kParamVoiceEffect1Param5)->InitBool("VoiceEffect 1 Parameter 5", false);
   GetParam(kParamVoiceEffect1Param6)->InitBool("VoiceEffect 1 Parameter 6", false);
 
-  GetParam(kParamVoiceEffect2Param1)->InitDouble("VoiceEffect 1 Parameter 1", 0., 0., 1., 0.01);
-  GetParam(kParamVoiceEffect2Param1Env1)->InitDouble("Voice Effect 1 Param 1 Env1 Depth", 0., -1., 1., 0.01);
-  GetParam(kParamVoiceEffect2Param1Env2)->InitDouble("Voice Effect 1 Param 1 Env2 Depth", 0., -1., 1., 0.01);
-  GetParam(kParamVoiceEffect2Param1AmpEnv)->InitDouble("Voice Effect 1 Param 1 AmpEnv Depth", 0., -1., 1., 0.01);
-  GetParam(kParamVoiceEffect2Param1LFO1)->InitDouble("Voice Effect 1 Param 1 LFO1 Depth", 0., -1., 1., 0.01);
-  GetParam(kParamVoiceEffect2Param1LFO2)->InitDouble("Voice Effect 1 Param 1 LFO2 Depth", 0., -1., 1., 0.01);
-  GetParam(kParamVoiceEffect2Param1Seq)->InitDouble("Voice Effect 1 Param 1 Seq Depth", 0., -1., 1., 0.01);
-  GetParam(kParamVoiceEffect2Param1Vel)->InitDouble("Voice Effect 1 Param 1 Velocity Depth", 0., -1., 1., 0.01);
-  GetParam(kParamVoiceEffect2Param1KTk)->InitDouble("Voice Effect 1 Param 1 Keytrack Depth", 0., -1., 1., 0.01);
-  GetParam(kParamVoiceEffect2Param1Rnd)->InitDouble("Voice Effect 1 Param 1 Random Depth", 0., -1., 1., 0.01);
-  GetParam(kParamVoiceEffect2Param2)->InitDouble("VoiceEffect 1 Parameter 2", 0., 0., 1., 0.01);
-  GetParam(kParamVoiceEffect2Param2Env1)->InitDouble("Voice Effect 1 Param 2 Env1 Depth", 0., -1., 1., 0.01);
-  GetParam(kParamVoiceEffect2Param2Env2)->InitDouble("Voice Effect 1 Param 2 Env2 Depth", 0., -1., 1., 0.01);
-  GetParam(kParamVoiceEffect2Param2AmpEnv)->InitDouble("Voice Effect 1 Param 2 AmpEnv Depth", 0., -1., 1., 0.01);
-  GetParam(kParamVoiceEffect2Param2LFO1)->InitDouble("Voice Effect 1 Param 2 LFO1 Depth", 0., -1., 1., 0.01);
-  GetParam(kParamVoiceEffect2Param2LFO2)->InitDouble("Voice Effect 1 Param 2 LFO2 Depth", 0., -1., 1., 0.01);
-  GetParam(kParamVoiceEffect2Param2Seq)->InitDouble("Voice Effect 1 Param 2 Seq Depth", 0., -1., 1., 0.01);
-  GetParam(kParamVoiceEffect2Param2Vel)->InitDouble("Voice Effect 1 Param 2 Velocity Depth", 0., -1., 1., 0.01);
-  GetParam(kParamVoiceEffect2Param2KTk)->InitDouble("Voice Effect 1 Param 2 Keytrack Depth", 0., -1., 1., 0.01);
-  GetParam(kParamVoiceEffect2Param2Rnd)->InitDouble("Voice Effect 1 Param 2 Random Depth", 0., -1., 1., 0.01);
-  GetParam(kParamVoiceEffect2Param3)->InitDouble("VoiceEffect 1 Parameter 3", 0., 0., 1., 0.01);
-  GetParam(kParamVoiceEffect2Param3Env1)->InitDouble("Voice Effect 1 Param 3 Env1 Depth", 0., -1., 1., 0.01);
-  GetParam(kParamVoiceEffect2Param3Env2)->InitDouble("Voice Effect 1 Param 3 Env2 Depth", 0., -1., 1., 0.01);
-  GetParam(kParamVoiceEffect2Param3AmpEnv)->InitDouble("Voice Effect 1 Param 3 AmpEnv Depth", 0., -1., 1., 0.01);
-  GetParam(kParamVoiceEffect2Param3LFO1)->InitDouble("Voice Effect 1 Param 3 LFO1 Depth", 0., -1., 1., 0.01);
-  GetParam(kParamVoiceEffect2Param3LFO2)->InitDouble("Voice Effect 1 Param 3 LFO2 Depth", 0., -1., 1., 0.01);
-  GetParam(kParamVoiceEffect2Param3Seq)->InitDouble("Voice Effect 1 Param 3 Seq Depth", 0., -1., 1., 0.01);
-  GetParam(kParamVoiceEffect2Param3Vel)->InitDouble("Voice Effect 1 Param 3 Velocity Depth", 0., -1., 1., 0.01);
-  GetParam(kParamVoiceEffect2Param3KTk)->InitDouble("Voice Effect 1 Param 3 Keytrack Depth", 0., -1., 1., 0.01);
-  GetParam(kParamVoiceEffect2Param3Rnd)->InitDouble("Voice Effect 1 Param 3 Random Depth", 0., -1., 1., 0.01);
-  GetParam(kParamVoiceEffect2Param4)->InitDouble("VoiceEffect 1 Parameter 4", 0., 0., 1., 0.01);
-  GetParam(kParamVoiceEffect2Param4Env1)->InitDouble("Voice Effect 1 Param 4 Env1 Depth", 0., -1., 1., 0.01);
-  GetParam(kParamVoiceEffect2Param4Env2)->InitDouble("Voice Effect 1 Param 4 Env2 Depth", 0., -1., 1., 0.01);
-  GetParam(kParamVoiceEffect2Param4AmpEnv)->InitDouble("Voice Effect 1 Param 4 AmpEnv Depth", 0., -1., 1., 0.01);
-  GetParam(kParamVoiceEffect2Param4LFO1)->InitDouble("Voice Effect 1 Param 4 LFO1 Depth", 0., -1., 1., 0.01);
-  GetParam(kParamVoiceEffect2Param4LFO2)->InitDouble("Voice Effect 1 Param 4 LFO2 Depth", 0., -1., 1., 0.01);
-  GetParam(kParamVoiceEffect2Param4Seq)->InitDouble("Voice Effect 1 Param 4 Seq Depth", 0., -1., 1., 0.01);
-  GetParam(kParamVoiceEffect2Param4Vel)->InitDouble("Voice Effect 1 Param 4 Velocity Depth", 0., -1., 1., 0.01);
-  GetParam(kParamVoiceEffect2Param4KTk)->InitDouble("Voice Effect 1 Param 4 Keytrack Depth", 0., -1., 1., 0.01);
-  GetParam(kParamVoiceEffect2Param4Rnd)->InitDouble("Voice Effect 1 Param 4 Random Depth", 0., -1., 1., 0.01);
-  GetParam(kParamVoiceEffect2Param5)->InitBool("VoiceEffect 1 Parameter 5", false);
-  GetParam(kParamVoiceEffect2Param6)->InitBool("VoiceEffect 1 Parameter 6", false);
+  // P1
+  GetParam(kParamVoiceEffect2Param1)->InitDouble("Voice Effect 2 Parameter 1", 0., 0., 1., 0.01);
+  GetParam(kParamVoiceEffect2Param1Env1)->InitDouble("Voice Effect 2 Param 1 Env1 Depth", 0., -1., 1., 0.01);
+  GetParam(kParamVoiceEffect2Param1Env2)->InitDouble("Voice Effect 2 Param 1 Env2 Depth", 0., -1., 1., 0.01);
+  GetParam(kParamVoiceEffect2Param1AmpEnv)->InitDouble("Voice Effect 2 Param 1 AmpEnv Depth", 0., -1., 1., 0.01);
+  GetParam(kParamVoiceEffect2Param1LFO1)->InitDouble("Voice Effect 2 Param 1 LFO1 Depth", 0., -1., 1., 0.01);
+  GetParam(kParamVoiceEffect2Param1LFO2)->InitDouble("Voice Effect 2 Param 1 LFO2 Depth", 0., -1., 1., 0.01);
+  GetParam(kParamVoiceEffect2Param1Seq)->InitDouble("Voice Effect 2 Param 1 Seq Depth", 0., -1., 1., 0.01);
+  GetParam(kParamVoiceEffect2Param1Vel)->InitDouble("Voice Effect 2 Param 1 Velocity Depth", 0., -1., 1., 0.01);
+  GetParam(kParamVoiceEffect2Param1KTk)->InitDouble("Voice Effect 2 Param 1 Keytrack Depth", 0., -1., 1., 0.01);
+  GetParam(kParamVoiceEffect2Param1Rnd)->InitDouble("Voice Effect 2 Param 1 Random Depth", 0., -1., 1., 0.01);
+  // P2
+  GetParam(kParamVoiceEffect2Param2)->InitDouble("Voice Effect 2 Parameter 2", 0., 0., 1., 0.01);
+  GetParam(kParamVoiceEffect2Param2Env1)->InitDouble("Voice Effect 2 Param 2 Env1 Depth", 0., -1., 1., 0.01);
+  GetParam(kParamVoiceEffect2Param2Env2)->InitDouble("Voice Effect 2 Param 2 Env2 Depth", 0., -1., 1., 0.01);
+  GetParam(kParamVoiceEffect2Param2AmpEnv)->InitDouble("Voice Effect 2 Param 2 AmpEnv Depth", 0., -1., 1., 0.01);
+  GetParam(kParamVoiceEffect2Param2LFO1)->InitDouble("Voice Effect 2 Param 2 LFO1 Depth", 0., -1., 1., 0.01);
+  GetParam(kParamVoiceEffect2Param2LFO2)->InitDouble("Voice Effect 2 Param 2 LFO2 Depth", 0., -1., 1., 0.01);
+  GetParam(kParamVoiceEffect2Param2Seq)->InitDouble("Voice Effect 2 Param 2 Seq Depth", 0., -1., 1., 0.01);
+  GetParam(kParamVoiceEffect2Param2Vel)->InitDouble("Voice Effect 2 Param 2 Velocity Depth", 0., -1., 1., 0.01);
+  GetParam(kParamVoiceEffect2Param2KTk)->InitDouble("Voice Effect 2 Param 2 Keytrack Depth", 0., -1., 1., 0.01);
+  GetParam(kParamVoiceEffect2Param2Rnd)->InitDouble("Voice Effect 2 Param 2 Random Depth", 0., -1., 1., 0.01);
+  // P3
+  GetParam(kParamVoiceEffect2Param3)->InitPercentage("VoiceEffect 2 Parameter 3", 0.);
+  GetParam(kParamVoiceEffect2Param3Env1)->InitDouble("Voice Effect 2 Param 3 Env1 Depth", 0., -1., 1., 0.01);
+  GetParam(kParamVoiceEffect2Param3Env2)->InitDouble("Voice Effect 2 Param 3 Env2 Depth", 0., -1., 1., 0.01);
+  GetParam(kParamVoiceEffect2Param3AmpEnv)->InitDouble("Voice Effect 2 Param 3 AmpEnv Depth", 0., -1., 1., 0.01);
+  GetParam(kParamVoiceEffect2Param3LFO1)->InitDouble("Voice Effect 2 Param 3 LFO1 Depth", 0., -1., 1., 0.01);
+  GetParam(kParamVoiceEffect2Param3LFO2)->InitDouble("Voice Effect 2 Param 3 LFO2 Depth", 0., -1., 1., 0.01);
+  GetParam(kParamVoiceEffect2Param3Seq)->InitDouble("Voice Effect 2 Param 3 Seq Depth", 0., -1., 1., 0.01);
+  GetParam(kParamVoiceEffect2Param3Vel)->InitDouble("Voice Effect 2 Param 3 Velocity Depth", 0., -1., 1., 0.01);
+  GetParam(kParamVoiceEffect2Param3KTk)->InitDouble("Voice Effect 2 Param 3 Keytrack Depth", 0., -1., 1., 0.01);
+  GetParam(kParamVoiceEffect2Param3Rnd)->InitDouble("Voice Effect 2 Param 3 Random Depth", 0., -1., 1., 0.01);
+  // P4
+  GetParam(kParamVoiceEffect2Param4)->InitPercentage("Voice Effect 2 Parameter 3", 0.);
+  GetParam(kParamVoiceEffect2Param4Env1)->InitDouble("Voice Effect 2 Param 4 Env1 Depth", 0., -1., 1., 0.01);
+  GetParam(kParamVoiceEffect2Param4Env2)->InitDouble("Voice Effect 2 Param 4 Env2 Depth", 0., -1., 1., 0.01);
+  GetParam(kParamVoiceEffect2Param4AmpEnv)->InitDouble("Voice Effect 2 Param 4 AmpEnv Depth", 0., -1., 1., 0.01);
+  GetParam(kParamVoiceEffect2Param4LFO1)->InitDouble("Voice Effect 2 Param 4 LFO1 Depth", 0., -1., 1., 0.01);
+  GetParam(kParamVoiceEffect2Param4LFO2)->InitDouble("Voice Effect 2 Param 4 LFO2 Depth", 0., -1., 1., 0.01);
+  GetParam(kParamVoiceEffect2Param4Seq)->InitDouble("Voice Effect 2 Param 4 Seq Depth", 0., -1., 1., 0.01);
+  GetParam(kParamVoiceEffect2Param4Vel)->InitDouble("Voice Effect 2 Param 4 Velocity Depth", 0., -1., 1., 0.01);
+  GetParam(kParamVoiceEffect2Param4KTk)->InitDouble("Voice Effect 2 Param 4 Keytrack Depth", 0., -1., 1., 0.01);
+  GetParam(kParamVoiceEffect2Param4Rnd)->InitDouble("Voice Effect 2 Param 4 Random Depth", 0., -1., 1., 0.01);
+  // P5&6
+  GetParam(kParamVoiceEffect2Param5)->InitBool("Voice Effect 2 Parameter 5", false);
+  GetParam(kParamVoiceEffect2Param6)->InitBool("Voice Effect 2 Parameter 6", false);
 
-  GetParam(kParamVoiceEffect3Param1)->InitDouble("VoiceEffect 1 Parameter 1", 0., 0., 1., 0.01);
-  GetParam(kParamVoiceEffect3Param1Env1)->InitDouble("Voice Effect 1 Param 1 Env1 Depth", 0., -1., 1., 0.01);
-  GetParam(kParamVoiceEffect3Param1Env2)->InitDouble("Voice Effect 1 Param 1 Env2 Depth", 0., -1., 1., 0.01);
-  GetParam(kParamVoiceEffect3Param1AmpEnv)->InitDouble("Voice Effect 1 Param 1 AmpEnv Depth", 0., -1., 1., 0.01);
-  GetParam(kParamVoiceEffect3Param1LFO1)->InitDouble("Voice Effect 1 Param 1 LFO1 Depth", 0., -1., 1., 0.01);
-  GetParam(kParamVoiceEffect3Param1LFO2)->InitDouble("Voice Effect 1 Param 1 LFO2 Depth", 0., -1., 1., 0.01);
-  GetParam(kParamVoiceEffect3Param1Seq)->InitDouble("Voice Effect 1 Param 1 Seq Depth", 0., -1., 1., 0.01);
-  GetParam(kParamVoiceEffect3Param1Vel)->InitDouble("Voice Effect 1 Param 1 Velocity Depth", 0., -1., 1., 0.01);
-  GetParam(kParamVoiceEffect3Param1KTk)->InitDouble("Voice Effect 1 Param 1 Keytrack Depth", 0., -1., 1., 0.01);
-  GetParam(kParamVoiceEffect3Param1Rnd)->InitDouble("Voice Effect 1 Param 1 Random Depth", 0., -1., 1., 0.01);
-  GetParam(kParamVoiceEffect3Param2)->InitDouble("VoiceEffect 1 Parameter 2", 0., 0., 1., 0.01);
-  GetParam(kParamVoiceEffect3Param2Env1)->InitDouble("Voice Effect 1 Param 2 Env1 Depth", 0., -1., 1., 0.01);
-  GetParam(kParamVoiceEffect3Param2Env2)->InitDouble("Voice Effect 1 Param 2 Env2 Depth", 0., -1., 1., 0.01);
-  GetParam(kParamVoiceEffect3Param2AmpEnv)->InitDouble("Voice Effect 1 Param 2 AmpEnv Depth", 0., -1., 1., 0.01);
-  GetParam(kParamVoiceEffect3Param2LFO1)->InitDouble("Voice Effect 1 Param 2 LFO1 Depth", 0., -1., 1., 0.01);
-  GetParam(kParamVoiceEffect3Param2LFO2)->InitDouble("Voice Effect 1 Param 2 LFO2 Depth", 0., -1., 1., 0.01);
-  GetParam(kParamVoiceEffect3Param2Seq)->InitDouble("Voice Effect 1 Param 2 Seq Depth", 0., -1., 1., 0.01);
-  GetParam(kParamVoiceEffect3Param2Vel)->InitDouble("Voice Effect 1 Param 2 Velocity Depth", 0., -1., 1., 0.01);
-  GetParam(kParamVoiceEffect3Param2KTk)->InitDouble("Voice Effect 1 Param 2 Keytrack Depth", 0., -1., 1., 0.01);
-  GetParam(kParamVoiceEffect3Param2Rnd)->InitDouble("Voice Effect 1 Param 2 Random Depth", 0., -1., 1., 0.01);
-  GetParam(kParamVoiceEffect3Param3)->InitDouble("VoiceEffect 1 Parameter 3", 0., 0., 1., 0.01);
-  GetParam(kParamVoiceEffect3Param3Env1)->InitDouble("Voice Effect 1 Param 3 Env1 Depth", 0., -1., 1., 0.01);
-  GetParam(kParamVoiceEffect3Param3Env2)->InitDouble("Voice Effect 1 Param 3 Env2 Depth", 0., -1., 1., 0.01);
-  GetParam(kParamVoiceEffect3Param3AmpEnv)->InitDouble("Voice Effect 1 Param 3 AmpEnv Depth", 0., -1., 1., 0.01);
-  GetParam(kParamVoiceEffect3Param3LFO1)->InitDouble("Voice Effect 1 Param 3 LFO1 Depth", 0., -1., 1., 0.01);
-  GetParam(kParamVoiceEffect3Param3LFO2)->InitDouble("Voice Effect 1 Param 3 LFO2 Depth", 0., -1., 1., 0.01);
-  GetParam(kParamVoiceEffect3Param3Seq)->InitDouble("Voice Effect 1 Param 3 Seq Depth", 0., -1., 1., 0.01);
-  GetParam(kParamVoiceEffect3Param3Vel)->InitDouble("Voice Effect 1 Param 3 Velocity Depth", 0., -1., 1., 0.01);
-  GetParam(kParamVoiceEffect3Param3KTk)->InitDouble("Voice Effect 1 Param 3 Keytrack Depth", 0., -1., 1., 0.01);
-  GetParam(kParamVoiceEffect3Param3Rnd)->InitDouble("Voice Effect 1 Param 3 Random Depth", 0., -1., 1., 0.01);
-  GetParam(kParamVoiceEffect3Param4)->InitDouble("VoiceEffect 1 Parameter 4", 0., 0., 1., 0.01);
-  GetParam(kParamVoiceEffect3Param4Env1)->InitDouble("Voice Effect 1 Param 4 Env1 Depth", 0., -1., 1., 0.01);
-  GetParam(kParamVoiceEffect3Param4Env2)->InitDouble("Voice Effect 1 Param 4 Env2 Depth", 0., -1., 1., 0.01);
-  GetParam(kParamVoiceEffect3Param4AmpEnv)->InitDouble("Voice Effect 1 Param 4 AmpEnv Depth", 0., -1., 1., 0.01);
-  GetParam(kParamVoiceEffect3Param4LFO1)->InitDouble("Voice Effect 1 Param 4 LFO1 Depth", 0., -1., 1., 0.01);
-  GetParam(kParamVoiceEffect3Param4LFO2)->InitDouble("Voice Effect 1 Param 4 LFO2 Depth", 0., -1., 1., 0.01);
-  GetParam(kParamVoiceEffect3Param4Seq)->InitDouble("Voice Effect 1 Param 4 Seq Depth", 0., -1., 1., 0.01);
-  GetParam(kParamVoiceEffect3Param4Vel)->InitDouble("Voice Effect 1 Param 4 Velocity Depth", 0., -1., 1., 0.01);
-  GetParam(kParamVoiceEffect3Param4KTk)->InitDouble("Voice Effect 1 Param 4 Keytrack Depth", 0., -1., 1., 0.01);
-  GetParam(kParamVoiceEffect3Param4Rnd)->InitDouble("Voice Effect 1 Param 4 Random Depth", 0., -1., 1., 0.01);
-  GetParam(kParamVoiceEffect3Param5)->InitBool("VoiceEffect 1 Parameter 5", false);
-  GetParam(kParamVoiceEffect3Param6)->InitBool("VoiceEffect 1 Parameter 6", false);
+  GetParam(kParamVoiceEffect3Param1)->InitDouble("Voice Effect 3 Parameter 1", 0., 0., 1., 0.01);
+  GetParam(kParamVoiceEffect3Param1Env1)->InitDouble("Voice Effect 3 Param 1 Env1 Depth", 0., -1., 1., 0.01);
+  GetParam(kParamVoiceEffect3Param1Env2)->InitDouble("Voice Effect 3 Param 1 Env2 Depth", 0., -1., 1., 0.01);
+  GetParam(kParamVoiceEffect3Param1AmpEnv)->InitDouble("Voice Effect 3 Param 1 AmpEnv Depth", 0., -1., 1., 0.01);
+  GetParam(kParamVoiceEffect3Param1LFO1)->InitDouble("Voice Effect 3 Param 1 LFO1 Depth", 0., -1., 1., 0.01);
+  GetParam(kParamVoiceEffect3Param1LFO2)->InitDouble("Voice Effect 3 Param 1 LFO2 Depth", 0., -1., 1., 0.01);
+  GetParam(kParamVoiceEffect3Param1Seq)->InitDouble("Voice Effect 3 Param 1 Seq Depth", 0., -1., 1., 0.01);
+  GetParam(kParamVoiceEffect3Param1Vel)->InitDouble("Voice Effect 3 Param 1 Velocity Depth", 0., -1., 1., 0.01);
+  GetParam(kParamVoiceEffect3Param1KTk)->InitDouble("Voice Effect 3 Param 1 Keytrack Depth", 0., -1., 1., 0.01);
+  GetParam(kParamVoiceEffect3Param1Rnd)->InitDouble("Voice Effect 3 Param 1 Random Depth", 0., -1., 1., 0.01);
+  // P2
+  GetParam(kParamVoiceEffect3Param2)->InitDouble("VoiceEffect 3 Parameter 2", 0., 0., 1., 0.01);
+  GetParam(kParamVoiceEffect3Param2Env1)->InitDouble("Voice Effect 3 Param 2 Env1 Depth", 0., -1., 1., 0.01);
+  GetParam(kParamVoiceEffect3Param2Env2)->InitDouble("Voice Effect 3 Param 2 Env2 Depth", 0., -1., 1., 0.01);
+  GetParam(kParamVoiceEffect3Param2AmpEnv)->InitDouble("Voice Effect 3 Param 2 AmpEnv Depth", 0., -1., 1., 0.01);
+  GetParam(kParamVoiceEffect3Param2LFO1)->InitDouble("Voice Effect 3 Param 2 LFO1 Depth", 0., -1., 1., 0.01);
+  GetParam(kParamVoiceEffect3Param2LFO2)->InitDouble("Voice Effect 3 Param 2 LFO2 Depth", 0., -1., 1., 0.01);
+  GetParam(kParamVoiceEffect3Param2Seq)->InitDouble("Voice Effect 3 Param 2 Seq Depth", 0., -1., 1., 0.01);
+  GetParam(kParamVoiceEffect3Param2Vel)->InitDouble("Voice Effect 3 Param 2 Velocity Depth", 0., -1., 1., 0.01);
+  GetParam(kParamVoiceEffect3Param2KTk)->InitDouble("Voice Effect 3 Param 2 Keytrack Depth", 0., -1., 1., 0.01);
+  GetParam(kParamVoiceEffect3Param2Rnd)->InitDouble("Voice Effect 3 Param 2 Random Depth", 0., -1., 1., 0.01);
+  // P3
+  GetParam(kParamVoiceEffect3Param3)->InitPercentage("Voice Effect 3 Parameter 3", 0.);
+  GetParam(kParamVoiceEffect3Param3Env1)->InitDouble("Voice Effect 3 Param 3 Env1 Depth", 0., -1., 1., 0.01);
+  GetParam(kParamVoiceEffect3Param3Env2)->InitDouble("Voice Effect 3 Param 3 Env2 Depth", 0., -1., 1., 0.01);
+  GetParam(kParamVoiceEffect3Param3AmpEnv)->InitDouble("Voice Effect 3 Param 3 AmpEnv Depth", 0., -1., 1., 0.01);
+  GetParam(kParamVoiceEffect3Param3LFO1)->InitDouble("Voice Effect 3 Param 3 LFO1 Depth", 0., -1., 1., 0.01);
+  GetParam(kParamVoiceEffect3Param3LFO2)->InitDouble("Voice Effect 3 Param 3 LFO2 Depth", 0., -1., 1., 0.01);
+  GetParam(kParamVoiceEffect3Param3Seq)->InitDouble("Voice Effect 3 Param 3 Seq Depth", 0., -1., 1., 0.01);
+  GetParam(kParamVoiceEffect3Param3Vel)->InitDouble("Voice Effect 3 Param 3 Velocity Depth", 0., -1., 1., 0.01);
+  GetParam(kParamVoiceEffect3Param3KTk)->InitDouble("Voice Effect 3 Param 3 Keytrack Depth", 0., -1., 1., 0.01);
+  GetParam(kParamVoiceEffect3Param3Rnd)->InitDouble("Voice Effect 3 Param 3 Random Depth", 0., -1., 1., 0.01);
+  // P4
+  GetParam(kParamVoiceEffect3Param4)->InitPercentage("Voice Effect 3 Parameter 4", 0.);
+  GetParam(kParamVoiceEffect3Param4Env1)->InitDouble("Voice Effect 3 Param 4 Env1 Depth", 0., -1., 1., 0.01);
+  GetParam(kParamVoiceEffect3Param4Env2)->InitDouble("Voice Effect 3 Param 4 Env2 Depth", 0., -1., 1., 0.01);
+  GetParam(kParamVoiceEffect3Param4AmpEnv)->InitDouble("Voice Effect 3 Param 4 AmpEnv Depth", 0., -1., 1., 0.01);
+  GetParam(kParamVoiceEffect3Param4LFO1)->InitDouble("Voice Effect 3 Param 4 LFO1 Depth", 0., -1., 1., 0.01);
+  GetParam(kParamVoiceEffect3Param4LFO2)->InitDouble("Voice Effect 3 Param 4 LFO2 Depth", 0., -1., 1., 0.01);
+  GetParam(kParamVoiceEffect3Param4Seq)->InitDouble("Voice Effect 3 Param 4 Seq Depth", 0., -1., 1., 0.01);
+  GetParam(kParamVoiceEffect3Param4Vel)->InitDouble("Voice Effect 3 Param 4 Velocity Depth", 0., -1., 1., 0.01);
+  GetParam(kParamVoiceEffect3Param4KTk)->InitDouble("Voice Effect 3 Param 4 Keytrack Depth", 0., -1., 1., 0.01);
+  GetParam(kParamVoiceEffect3Param4Rnd)->InitDouble("Voice Effect 3 Param 4 Random Depth", 0., -1., 1., 0.01);
+  GetParam(kParamVoiceEffect3Param5)->InitBool("VoiceEffect 3 Parameter 5", false);
+  GetParam(kParamVoiceEffect3Param6)->InitBool("VoiceEffect 3 Parameter 6", false);
 
   // Master Effects
   GetParam(kParamMasterEffect1Param1)->InitDouble("Master Effect 1 Parameter 1", 0., 0., 100., 0.1);
@@ -1216,6 +1227,23 @@ int Tablitsa::UnserializeState(const IByteChunk& chunk, int startPos)
   for (int i{ 0 }; i < TABLITSA_MAX_VOICE_EFFECTS; ++i)
   {
     startPos = chunk.Get(&mVoiceEffectSlots[i], startPos);
+
+    switch (mVoiceEffectSlots[i])
+    {
+    case kWaveshaperEffect:
+    {
+      GetParam(kParamVoiceEffect1Param1 + kNumVoiceEffectParams * i)->InitEnum("Waveshaper Type", kWaveshapeSine, { WAVESHAPE_TYPES });
+      GetParam(kParamVoiceEffect1Param2 + kNumVoiceEffectParams * i)->InitPercentage("Waveshaper Gain", 0.);
+      break;
+    }
+    case kSampleAndHoldEffect:
+    {
+      GetParam(kParamVoiceEffect1Param1 + kNumVoiceEffectParams * i)->InitDouble("Sample & Hold Rate", 10., 0.5, 20., 0.1, "ms", IParam::kFlagsNone, "Effect", IParam::ShapePowCurve(3.));
+      GetParam(kParamVoiceEffect1Param2 + kNumVoiceEffectParams * i)->InitPercentage("Sample & Hold Decay", 0.);
+      GetParam(kParamVoiceEffect1Param2 + kNumVoiceEffectParams * i)->InitPercentage("Sample & Hold Noise", 0.);
+      break;
+    }
+    }
     // Send message to change effect BEFORE parameters are loaded, so that the effect receives the proper parameter values
     SendArbitraryMsgFromUI(kMsgVoiceEffect1Changed + i, kNoTag, sizeof(mVoiceEffectSlots[i]), reinterpret_cast<void*>(&mVoiceEffectSlots[i]));
   }

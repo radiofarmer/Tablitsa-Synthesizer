@@ -155,6 +155,7 @@
     <ClCompile Include="..\SignalProcessing.cpp" />
     <ClCompile Include="..\VectorFunctions.cpp" />
     <ClCompile Include="..\TablitsaControls.cpp" />
+    <ClCompile Include="..\TablitsaEffects.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="../config.h" />

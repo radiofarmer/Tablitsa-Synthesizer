@@ -526,28 +526,29 @@ public:
       {
         int bufferIdx = i - startIdx;
 //        float noise = mTimbreBuffer.Get()[i] * Rand();
-        double ampEnvVal{ mModulators.GetList()[2][bufferIdx] }; // Calculated for easy access
+        T ampEnvVal{ mModulators.GetList()[2][bufferIdx] }; // Calculated for easy access
 
         // Panning
-        double panMod = mVModulations.GetList()[kVPan][bufferIdx];
-        double lPan = std::clamp(mPan[0] - panMod, -1., 1.); // TODO: optimize this somehow
-        double rPan = std::clamp(mPan[1] + panMod, -1., 1.);
+        T panMod = mVModulations.GetList()[kVPan][bufferIdx];
+        T lPan = std::clamp(mPan[0] - panMod, -1., 1.); // TODO: optimize this somehow
+        T rPan = std::clamp(mPan[1] + panMod, -1., 1.);
 
         // Oscillator Parameters
-        double osc1Freq = 440. * pow(2., pitch + mVModulations.GetList()[kVWavetable1PitchOffset][bufferIdx] / 12.);
+        // Osc1
+        T osc1Freq = 440. * pow(2., pitch + mVModulations.GetList()[kVWavetable1PitchOffset][bufferIdx] / 12.);
         mOsc1.SetWtPosition(1. - mVModulations.GetList()[kVWavetable1Position][bufferIdx]); // Wavetable 1 Position
         mOsc1.SetWtBend(mVModulations.GetList()[kVWavetable1Bend][bufferIdx]); // Wavetable 1 Bend
         mOsc1.SetFormant(mVModulations.GetList()[kVWavetable1Formant][bufferIdx]);
-        mOsc1.SetPhaseModulation(mVModulations.GetList()[kVPhaseModAmt][bufferIdx], osc1Freq * phaseModFreqFact);
-        mOsc1.SetRingModulation(mVModulations.GetList()[kVRingModAmt][bufferIdx], osc1Freq * ringModFreqFact);
+        T osc1Amp = mVModulations.GetList()[kVWavetable1Amp][bufferIdx];
 
-        double osc2Freq = 440. * pow(2., pitch + mVModulations.GetList()[kVWavetable2PitchOffset][bufferIdx] / 12.);
+        // Osc2
+        T osc2Freq = 440. * pow(2., pitch + mVModulations.GetList()[kVWavetable2PitchOffset][bufferIdx] / 12.);
         mOsc2.SetWtPosition(1. - mVModulations.GetList()[kVWavetable2Position][bufferIdx]); // Wavetable 2 Position
         mOsc2.SetWtBend(mVModulations.GetList()[kVWavetable2Bend][bufferIdx]); // Wavetable 2 Bend
         mOsc2.SetFormant(mVModulations.GetList()[kVWavetable2Formant][bufferIdx]);
-        mOsc2.SetPhaseModulation(mVModulations.GetList()[kVPhaseModAmt][bufferIdx], osc2Freq * phaseModFreqFact);
-        mOsc2.SetRingModulation(mVModulations.GetList()[kVRingModAmt][bufferIdx], osc2Freq * ringModFreqFact);
-        
+        T osc2Amp = mVModulations.GetList()[kVWavetable2Amp][bufferIdx];
+
+        // Filters
         mFilters.at(0)->SetCutoff(mVModulations.GetList()[kVFilter1Cutoff][bufferIdx]); // Filter 1 Cutoff
         mFilters.at(0)->SetQ(mVModulations.GetList()[kVFilter1Resonance][bufferIdx]); // Filter 1 Resonance
         mFilters.at(0)->SetDrive(mVModulations.GetList()[kVFilter1Drive][bufferIdx]); // Filter 1 Drive
@@ -556,13 +557,19 @@ public:
         mFilters.at(1)->SetQ(mVModulations.GetList()[kVFilter2Resonance][bufferIdx]); // Filter 2 Resonance
         mFilters.at(1)->SetDrive(mVModulations.GetList()[kVFilter2Drive][bufferIdx]); // Filter 2 Drive
 
+        // Phase and Ring Modulators (freq. only set once per block)
+        mOsc1.SetPhaseModulation(mVModulations.GetList()[kVPhaseModAmt][bufferIdx], osc1Freq * phaseModFreqFact);
+        mOsc2.SetPhaseModulation(mVModulations.GetList()[kVPhaseModAmt][bufferIdx], osc2Freq * phaseModFreqFact);
+        mOsc1.SetRingModulation(mVModulations.GetList()[kVRingModAmt][bufferIdx], osc1Freq * ringModFreqFact);
+        mOsc2.SetRingModulation(mVModulations.GetList()[kVRingModAmt][bufferIdx], osc2Freq * ringModFreqFact);
+
         constexpr int nEffectParams = kVEffect2Param1 - kVEffect1Param1;
-        for (auto e{ 0 }; e < TABLITSA_MAX_VOICE_EFFECTS; ++e)
+        for (int e{ 0 }, p{ 0 }; e < TABLITSA_MAX_VOICE_EFFECTS, p < TABLITSA_MAX_VOICE_EFFECTS * nEffectParams; e++, p += nEffectParams)
         {
-          mEffects[e]->SetParam1(mVModulations.GetList()[kVEffect1Param1 + e * nEffectParams][bufferIdx]);
-          mEffects[e]->SetParam2(mVModulations.GetList()[kVEffect1Param2 + e * nEffectParams][bufferIdx]);
-          mEffects[e]->SetParam3(mVModulations.GetList()[kVEffect1Param3 + e * nEffectParams][bufferIdx]);
-          mEffects[e]->SetParam4(mVModulations.GetList()[kVEffect1Param4 + e * nEffectParams][bufferIdx]);
+          mEffects[e]->SetParam1(mVModulations.GetList()[kVEffect1Param1 + p][bufferIdx]);
+          mEffects[e]->SetParam2(mVModulations.GetList()[kVEffect1Param2 + p][bufferIdx]);
+          mEffects[e]->SetParam3(mVModulations.GetList()[kVEffect1Param3 + p][bufferIdx]);
+          mEffects[e]->SetParam4(mVModulations.GetList()[kVEffect1Param4 + p][bufferIdx]);
         }
         
         // Signal Processing
@@ -572,9 +579,9 @@ public:
        for (auto j = 0; j < FRAME_INTERVAL; ++j)
        {
          // Filters
-         double osc1FilterOutput = mFilters.at(osc1Filter)->Process(osc1Output[j]);
-         double osc2FilterOutput = mFilters.at(osc2Filter)->Process(osc2Output[j]);
-         double output_summed = osc1FilterOutput * mVModulations.GetList()[kVWavetable1Amp][bufferIdx] + osc2FilterOutput * mVModulations.GetList()[kVWavetable2Amp][bufferIdx];
+         double osc1FilterOutput = mFilters.at(osc1Filter)->Process(osc1Output[j] * osc1Amp);
+         double osc2FilterOutput = mFilters.at(osc2Filter)->Process(osc2Output[j] * osc2Amp);
+         double output_summed = osc1FilterOutput + osc2FilterOutput;
          double output_scaled = output_summed * ampEnvVal;
          double output_stereo[]{ output_scaled * lPan, output_scaled * rPan };
 
@@ -669,17 +676,24 @@ public:
 
     void SetEffect(const int effectSlot, const int effectId)
     {
+      constexpr int numEffectModParams = kVEffect2Param1 - kVEffect1Param1;
       // Note: Remember to set the min and max of the `ParameterModulator` object if any of the effects have different scales from the rest
       std::lock_guard<std::mutex> lg(mMaster->mProcMutex);
       delete mEffects[effectSlot];
       switch (effectId)
       {
       case kWaveshaperEffect:
-        mEffects[effectSlot] = new Waveshaper<T>(mMaster->mSampleRate);
+      {
+        mVoiceModParams[kVEffect1Param1 + effectSlot * numEffectModParams].SetMinMax(0., static_cast<double>(kNumWaveshaperModes - 1) + 0.1);
+        mEffects[effectSlot] = new Waveshaper<T>(mMaster->mSampleRate, 4.);
         break;
+      }
       case kSampleAndHoldEffect:
+      {
+        mVoiceModParams[kVEffect1Param1 + effectSlot * numEffectModParams].SetMinMax(0.5, 20.);
         mEffects[effectSlot] = new SampleAndHold<T>(mMaster->mSampleRate);
         break;
+      }
       default:
         mEffects[effectSlot] = new Effect<T>(mMaster->mSampleRate);
         break;
