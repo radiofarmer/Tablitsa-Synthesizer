@@ -105,7 +105,7 @@ void InitDelayUI(Plugin* plug, IGraphics* pGraphics, std::vector<IControl*> cont
   dynamic_cast<IVKnobControl*>(controls[0])->SetLabelStr("Left");
   dynamic_cast<IVKnobControl*>(controls[1])->SetLabelStr("Right");
   dynamic_cast<IVKnobControl*>(controls[2])->SetLabelStr("Feedback");
-  dynamic_cast<IVKnobControl*>(controls[2])->SetLabelStr("Mix");
+  dynamic_cast<IVKnobControl*>(controls[3])->SetLabelStr("Mix");
 
   // Toggle Control Action Functions
   controls[4]->SetActionFunction(
