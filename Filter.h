@@ -132,15 +132,20 @@ public:
 
   inline void SetQ(double q)
   {
+#if 1
+    mQ = q;
+#else
     if (mMode == kBandpass)
       mQ = mFc / (mMaxBandwidth * (1. - q));
     else
       mQ = 1. / std::max(1. - q, 0.001);
+#endif
   }
 
   void Reset()
   {
     mZ.reset();
+    mZ_v = Vec4d(0.);
   }
 
   inline void CalculateCoefficients()
@@ -153,19 +158,23 @@ public:
 
     if (mMode == kBandpass)
       mC = std::cos(pi * mFc) * std::sqrt(1 - mA + mB);
+    else if (mMode == kAllpass)
+      mC = 1.;
+    else
+      mC = 1 - mA + mB;
   }
 
   inline T ProcessLowpass(T s)
   {
-    T s_out = mA * mZ[0] - mB * mZ[1] + (1 - mA + mB) * s;
+    T s_out = mA * mZ[0] - mB * mZ[1] + mC * s;
     mZ.push(s_out);
     return s_out;
   }
 
   inline T ProcessHighpass(T s)
   {
-    T sum = s * (1 - mB + mA) + mA * mZ[0] - mB * mZ[1];
-    T s_out = sum - 2 * mZ[0] + mZ[1];
+    T sum = s * mC + mA * mZ[0] - mB * mZ[1];
+    T s_out = sum - 2. * mZ[0] + mZ[1];
     mZ.push(sum);
     return s_out;
   }
@@ -194,11 +203,19 @@ public:
     return (this->*mProcessFunctions[mMode])(s);
   }
 
+  const Vec4d& __vectorcall GetFFCoefs(const int filterMode) const
+  {
+    if (filterMode == kAllpass)
+      return Vec4d(mB, -mA, 1., 0.);
+    else
+      return m_b[filterMode];
+  }
+
   Vec4d __vectorcall Process_Vector(Vec4d s) override
   {
-    CalculateCoefficients();
-    IIR_2pole_coefficients_4(1. - mA + mB, mA, -mB, mCoefs[0], mCoefs[1], mCoefs[2], mCoefs[3], mCoefs[4], mCoefs[5]);
-    Vec4d out = IIR_2pole_4(s, mZ_v, mCoefs, Vec4d(1., 0., 0., 0.));
+    const double m[]{ 0., 0., 1. };
+    state_from_svf(Filter<T>::mFc, mQ, &m[0], mCoefs[0], mCoefs[1], mCoefs[2], mCoefs[3]);
+    Vec4d out = eval_IIR_state(s, mZ_v, mCoefs[0], mCoefs[1], mCoefs[2], mCoefs[3]);
     return out;
   }
 
@@ -206,6 +223,12 @@ private:
   T mA{ 0. };
   T mB{ 0. };
   T mC{ 1. };
+
+  const Vec4d m_b[kNumFilters - 1]{
+    Vec4d(1., 0., 0., 0.),
+    Vec4d(1., -2., 1., 0.),
+    Vec4d(1., -1., 0., 0.)
+  };
 
   Vec4d mCoefs[6];
   Vec4d mZ_v = Vec4d(0.);

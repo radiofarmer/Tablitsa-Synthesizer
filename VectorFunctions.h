@@ -1,5 +1,6 @@
 #pragma once
 #include <vectorclass.h>
+#include <vector3d/vector3d.h>
 
 #define UNITBIT32 1572864.
 #define HIOFFSET_V 1
@@ -64,3 +65,7 @@ extern inline void IIR_2pole_coefficients_4(T a0, T a1, T a2, V& c1, V& c2, V& c
 
 template<typename V>
 extern inline V __vectorcall IIR_2pole_4(const V& x, V& z, const V* c, const V& b);
+
+extern inline Vec4d __vectorcall eval_IIR_state(const Vec4d& x, Vec4d& y, Vec4d& A1, Vec4d& A2, Vec4d& B, Vec4d& C);
+
+extern inline void state_from_svf(double fc, double q, const double* m, Vec4d& A1, Vec4d& A2, Vec4d& B, Vec4d& C);

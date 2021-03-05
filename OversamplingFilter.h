@@ -54,7 +54,8 @@ public:
       mCol4 = Vec4d(a_rec3[3], a_rec2[3], a_rec1[3], mA[3]);
 
       // Other terms
-      mA1 = Vec4d(-mCoefs[4], 1., 1., 1.);
+      mA1 = Vec4d(-mCoefs[4], 1., 0., 0.);
+      mA2 = Vec4d(1., 0., 0., 0.);
 #endif
     }
 
@@ -98,11 +99,9 @@ public:
       T w0 = horizontal_add(mA * mDelayVector); // w[n]
       Vec4d y_in = Vec4d(w3, w2, w1, w0); // latest -> earliest
 #elif defined ALG2
-      const Vec4d extra2 = permute4<3, 3, -1, -1>(x); // x[n+2] terms
-      const Vec4d extra1 = permute4<2, -1, -1, -1>(x); // x[n+3] terms
 
       // All delay terms:
-      Vec4d y_in = extra1 + mA1 * extra2 + mCol1 * mDelayVector[0] + mCol2 * mDelayVector[1] + mCol3 * mDelayVector[2] + mCol4 * mDelayVector[3];
+      Vec4d y_in = mA2 * x[3] + mA1 * x[2] + mCol1 * mDelayVector[0] + mCol2 * mDelayVector[1] + mCol3 * mDelayVector[2] + mCol4 * mDelayVector[3];
 #endif
 
       const Vec4d y_out = Vec4d(
@@ -137,6 +136,7 @@ public:
     Vec4d mAr1; // Recursive coefficients, first
 #elif defined ALG2
     Vec4d mA1;
+    Vec4d mA2;
     Vec4d mCol1;
     Vec4d mCol2;
     Vec4d mCol3;

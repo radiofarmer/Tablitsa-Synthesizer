@@ -573,7 +573,6 @@ public:
 #ifdef VECTOR
         Vec4d osc1_v = mOsc1.ProcessMultiple(osc1Freq) * osc1Amp;
         Vec4d osc2_v = mOsc2.ProcessMultiple(osc2Freq) * osc2Amp;
-        osc1_v = mFilters[0]->Process_Vector(osc1_v);
         T osc1Output[4];
         T osc2Output[4];
         osc1_v.store(osc1Output);
@@ -612,8 +611,8 @@ public:
           osc1Output[j] *= osc1Amp;
           osc2Output[j] *= osc2Amp;
           // Filters
-//          T filter1Output = mFilters[0]->Process(osc1Output[j] * mFilterSends[0][0] + osc2Output[j] * mFilterSends[0][1]);
-//          T filter2Output = mFilters[1]->Process(osc1Output[j] * mFilterSends[1][0] + osc2Output[j] * mFilterSends[1][1]);
+          T filter1Output = mFilters[0]->Process(osc1Output[j] * mFilterSends[0][0] + osc2Output[j] * mFilterSends[0][1]);
+          T filter2Output = mFilters[1]->Process(osc1Output[j] * mFilterSends[1][0] + osc2Output[j] * mFilterSends[1][1]);
           T output_summed = osc1Output[j];//filter1Output + filter2Output;
           T output_scaled = output_summed * ampEnvVal;
           output_stereo[0][j] = output_scaled * lPan;
