@@ -2,7 +2,7 @@
 
 #include "SignalProcessing.h"
 
-#include "vectorclass.h"
+#include "VectorFunctions.h"
 
 #include <vector>
 #include <cmath>
@@ -77,6 +77,7 @@ public:
   }
 
   virtual T Process(double s) { return s;  }
+  virtual Vec4d __vectorcall Process_Vector(Vec4d s) { return s; }
 
 protected:
   const double pi{ 3.14159265359 };
@@ -193,10 +194,22 @@ public:
     return (this->*mProcessFunctions[mMode])(s);
   }
 
+  Vec4d __vectorcall Process_Vector(Vec4d s) override
+  {
+    CalculateCoefficients();
+    IIR_2pole_coefficients_4(1. - mA + mB, mA, -mB, mCoefs[0], mCoefs[1], mCoefs[2], mCoefs[3], mCoefs[4], mCoefs[5]);
+    Vec4d out = IIR_2pole_4(s, mZ_v, mCoefs, Vec4d(1., 0., 0., 0.));
+    return out;
+  }
+
 private:
   T mA{ 0. };
   T mB{ 0. };
   T mC{ 1. };
+
+  Vec4d mCoefs[6];
+  Vec4d mZ_v = Vec4d(0.);
+
   const double mMaxBandwidth{ 0.05 };
   DelayLine<T, 2> mZ;
   SVF2ProcessFunc mProcessFunctions[kNumFilters]{ &SVF2::ProcessLowpass, &SVF2::ProcessHighpass, &SVF2::ProcessBandpass, &SVF2::ProcessAllpass };

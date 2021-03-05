@@ -57,3 +57,10 @@ extern inline Vec4q __vectorcall to_int64_in_range(Vec4d v, int scale);
 
 template<typename Vd>
 extern inline Vd __vectorcall sign(const Vd& v);
+
+
+template<typename T, class V>
+extern inline void IIR_2pole_coefficients_4(T a0, T a1, T a2, V& c1, V& c2, V& c3, V& c4, V& c5, V& c6);
+
+template<typename V>
+extern inline V __vectorcall IIR_2pole_4(const V& x, V& z, const V* c, const V& b);

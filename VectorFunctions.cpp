@@ -46,3 +46,58 @@ extern inline Vec4d __vectorcall sign<Vec4d>(const Vec4d& v)
   Vec4d sign_scalar = reinterpret_d(sign_scalar_int);
   return sign_scalar;
 }
+
+
+template<>
+extern inline void IIR_2pole_coefficients_4(double a0, double a1, double a2, Vec4d& c1, Vec4d& c2, Vec4d& c3, Vec4d& c4, Vec4d& c5, Vec4d& c6)
+{
+  double a_rec1[4]{
+    1.,
+    a1,
+    a1 * a1 + a2,
+    a1 * a2
+  };
+  double a_rec2[4]{
+    a1,
+    a1 * a1 + a2,
+    a1 * a1 * a1 + 2 * a1 * a2,
+    a1 * a1 * a2 + a2 * a2
+  };
+  double a_rec3[4]{
+    a1 * a1 + a2,
+    a1 * a1 * a1 + 2 * a1 * a2,
+    a1 * a1 * a1 * a1 + 3 * a1 * a1 * a2 + a2 * a2,
+    a1 * a1 * a1 * a2 + 2 * a1 * a2 * a2
+  };
+  // Column vectors of coefficients (ALG2)
+  c1 = Vec4d(a_rec3[0], a_rec2[0], a_rec1[0], 0.) * a0; // multiplied by x[n + 1]
+  c2 = Vec4d(a_rec3[1], a_rec2[1], a_rec1[1], 1.) * a0; // " " x[n]
+  c3 = Vec4d(a_rec3[2], a_rec2[2], a_rec1[2], a1); // " " w[n - 1]
+  c4 = Vec4d(a_rec3[3], a_rec2[3], a_rec1[3], a2); // " " w[n - 2]
+
+  c5 = Vec4d(a1, 1., 0., 0.) * a0; // multiplied by x[n + 2]
+  c6 = Vec4d(a0, 0., 0., 0.); // " " x[n + 3]
+}
+
+/** Evaluate 4 samples of an a 2-pole IIR filter
+* @param x Four input samples
+* @param z Delay line (only the first two items are used)
+* @param a Feedback coefficients
+* @param b Feedforward coefficients
+*/
+template<>
+extern inline Vec4d __vectorcall IIR_2pole_4(const Vec4d& x, Vec4d& z, const Vec4d* c, const Vec4d& b)
+{
+  // All delay terms:
+  Vec4d y_in = c[5] * x[3] + c[4] * x[2] + c[0] * x[1] + c[1] * x[0] + c[2] * z[0] + c[3] * z[1];
+
+  const Vec4d y_out = Vec4d(
+    horizontal_add(blend4<3, 4, 5, V_DC>(y_in, z) * b), // y[n] = b0 * w[n] + b1 * w[n-1] + b2 * w[n-2]
+    horizontal_add(blend4<2, 3, 4, V_DC>(y_in, z) * b), // y[n+1] = b0 * w[n+1] + b1 * w[n] + b2 * w[n-1]
+    horizontal_add(permute4<1, 2, 3, V_DC>(y_in) * b),  // y[n+2] = b0 * w[n+2] + b1 * w[n + 1] + b2 * w[n]
+    horizontal_add(permute4<0, 1, 2, V_DC>(y_in) * b) // y[n+3] = b0 * w[n+3] + b1 * w[n+2] + b2 * w[n+1]
+  ); // earliest -> latest
+
+  z = permute4<0, 1, V_DC, V_DC>(y_in); // w[n+3] -> w[n-1]; w[n+2] -> w[n-2]; Order is latest -> earliest
+  return y_out;
+}

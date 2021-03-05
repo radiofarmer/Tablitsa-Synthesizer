@@ -573,6 +573,7 @@ public:
 #ifdef VECTOR
         Vec4d osc1_v = mOsc1.ProcessMultiple(osc1Freq) * osc1Amp;
         Vec4d osc2_v = mOsc2.ProcessMultiple(osc2Freq) * osc2Amp;
+        osc1_v = mFilters[0]->Process_Vector(osc1_v);
         T osc1Output[4];
         T osc2Output[4];
         osc1_v.store(osc1Output);
@@ -604,16 +605,16 @@ public:
         }
 #else
         // Vector effects test
-        T output_stereo[2][4];
+        T output_stereo[2][4]{};
 
         for (auto j = 0; j < FRAME_INTERVAL; ++j)
         {
           osc1Output[j] *= osc1Amp;
           osc2Output[j] *= osc2Amp;
           // Filters
-          T filter1Output = mFilters[0]->Process(osc1Output[j] * mFilterSends[0][0] + osc2Output[j] * mFilterSends[0][1]);
-          T filter2Output = mFilters[1]->Process(osc1Output[j] * mFilterSends[1][0] + osc2Output[j] * mFilterSends[1][1]);
-          T output_summed = filter1Output + filter2Output;
+//          T filter1Output = mFilters[0]->Process(osc1Output[j] * mFilterSends[0][0] + osc2Output[j] * mFilterSends[0][1]);
+//          T filter2Output = mFilters[1]->Process(osc1Output[j] * mFilterSends[1][0] + osc2Output[j] * mFilterSends[1][1]);
+          T output_summed = osc1Output[j];//filter1Output + filter2Output;
           T output_scaled = output_summed * ampEnvVal;
           output_stereo[0][j] = output_scaled * lPan;
           output_stereo[1][j] = output_scaled * rPan;
@@ -621,7 +622,7 @@ public:
 
         // NB: might be faster to put this in a separate loop, since loading arrays is slower immediately after setting their values one-by-one
         StereoSample<Vec4d> output_v{ Vec4d().load(&output_stereo[0][0]), Vec4d().load(&output_stereo[1][0]) };
-        mEffects[0]->ProcessStereo_Vector(output_v);
+        //mEffects[0]->ProcessStereo_Vector(output_v);
 
         output_v.l *= mGain;
         output_v.r *= mGain;
