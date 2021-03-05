@@ -52,4 +52,8 @@ void transpose16f(float matrix[4][4]);
 
 void transpose4d(double matrix[2][2]);
 
+/* Get the lower 32 bits of a double-precision floating-point vector with absolute values between 0 and 2^19 as a vector fo 64-bit integers betwee 0 and `scale`. */
 extern inline Vec4q __vectorcall to_int64_in_range(Vec4d v, int scale);
+
+template<typename Vd>
+extern inline Vd __vectorcall sign(const Vd& v);

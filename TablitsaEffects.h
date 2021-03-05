@@ -5,6 +5,7 @@
 #include "Modulators.h"
 
 #include "vectormath_trig.h"
+#include "vectormath_hyp.h"
 
 #include <mutex>
 
@@ -374,45 +375,70 @@ class Waveshaper : public Effect<T, V>
   static constexpr T piOver2{ (T)1.57079632679 };
   static constexpr T pi{ (T)3.14159265359 };
 
-  static inline T SineShaper(T x, T gain, T gainCeil=1.)
+  static inline T SineShaper(T x, const T gain, const T gainCeil=1.)
   {
     x *= gain;
     T x2 = std::copysign(x, piOver2 - x);
     return std::copysign(x2 - x2 * x2 * x2 / (T)6 + x2 * x2 * x2 * x2 * x2 / (T)120, x) * 0.9;
   }
 
-  static inline V __vectorcall VSineShaper(V& x, T gain, T gainCeil = 1.)
+  static inline V __vectorcall VSineShaper(const V& x, const T gain, const T gainCeil = 1.)
   {
-    x *= gain;
-    return sin(x);
+    return sin(x * gain) * gainCeil;
   }
 
-  static inline T TanhShaper(T x, T gain, T gainCeil = 1.)
+  static inline T TanhShaper(T x, const T gain, const T gainCeil = 1.)
   {
-    x *= gain;
-    return std::tanh(x) * gainCeil;
+    return std::tanh(x * gain) * gainCeil;
   }
 
-  static inline T ParabolicShaper(T x, T gain, T gainCeil = 1.)
+  static inline V __vectorcall VTanhShaper(const V& x, const T gain, const T gainCeil = 1.)
+  {
+    return tanh(x * gain) * gainCeil;
+  }
+
+  static inline T ParabolicShaper(T x, const T gain, const T gainCeil = 1.)
   {
     x *= gain;
     return SoftClipShaper(copysign(x * x, x), 1., gainCeil);
   }
 
-  static inline T CubicShaper(T x, T gain, T gainCeil = 1.)
+  static inline V __vectorcall VParabolicShaper(const V& x, const T gain, const T gainCeil = 1.)
+  {
+    const V x2 = pow(x * gain, 2) * gain * sign(x);
+    return x2 * gainCeil;
+  }
+
+  static inline T CubicShaper(T x, const T gain, const T gainCeil = 1.)
   {
     x *= gain;
     return SoftClipShaper(1.5 * x + 0.5 * x * x * x, 1., gainCeil);
   }
 
-  static inline T SoftClipShaper(T x, T gain, T gainCeil = 1.)
+  static inline V __vectorcall VCubicShaper(const V& x, const T gain, const T gainCeil = 1.)
+  {
+    const V x3 = pow(x * gain, 3) * gain;
+    return x3 * gainCeil;
+  }
+
+  static inline T SoftClipShaper(T x, const T gain, const T gainCeil = 1.)
   {
     return SoftClip<T>(x, gain) * gainCeil;
   }
 
-  static inline T HardClipShaper(T x, T gain, T gainCeil = 1.)
+  static inline V VSoftClipShaper(const V& x, const T gain, const T gainCeil = 1.)
+  {
+    return SoftClip<V, T>(x, gain) * gainCeil;
+  }
+
+  static inline T HardClipShaper(T x, const T gain, const T gainCeil = 1.)
   {
     return std::copysign(std::min(std::abs(x) * gain, gainCeil), x);
+  }
+
+  static inline V __vectorcall VHardClipShaper(const V& x, const T gain, const T gainCeil = 1.)
+  {
+    return sign(x) * min(abs(x * gain), V(gainCeil));
   }
 
 public:
@@ -460,17 +486,35 @@ public:
     switch (mode)
     {
     case kWaveshapeParabola:
+    {
       mShaperFunc = &Waveshaper::ParabolicShaper;
+      mShaperFunc_Vector = &Waveshaper::VParabolicShaper;
       break;
+    }
+    case kWaveshapeCubic:
+    {
+      mShaperFunc = &Waveshaper::CubicShaper;
+      mShaperFunc_Vector = &Waveshaper::VCubicShaper;
+      break;
+    }
     case kWaveshapeTanh:
+    {
       mShaperFunc = &Waveshaper::TanhShaper;
+      mShaperFunc_Vector = &Waveshaper::VTanhShaper;
       break;
+    }
     case kWaveshapeSoft:
+    {
       mShaperFunc = &Waveshaper::SoftClipShaper;
+      mShaperFunc_Vector = &Waveshaper::VSoftClipShaper;
       break;
+    }
     case kWaveshapeHard:
+    {
       mShaperFunc = &Waveshaper::HardClipShaper;
+      mShaperFunc_Vector = &Waveshaper::VHardClipShaper;
       break;
+    }
     case kWaveshapeSine:
     default:
     {
@@ -481,7 +525,7 @@ public:
     }
   }
 
-  inline void SetGain(T gain)
+  inline void SetGain(const T gain)
   {
     mGain = (T)1. + gain * mMaxGain;
   }
@@ -496,8 +540,8 @@ protected:
   T mGain{ (T)1 };
   T mThresh{ 0.5 };
   EWaveshaperMode mShaperMode;
-  std::function<T(T, T, T)> mShaperFunc{ &Waveshaper::SineShaper };
-  std::function<V(V&, T, T)> mShaperFunc_Vector{ &Waveshaper::VSineShaper };
+  std::function<T(T, const T, const T)> mShaperFunc{ &Waveshaper::SineShaper };
+  std::function<V(const V&, const T, const T)> mShaperFunc_Vector{ &Waveshaper::VSineShaper };
   std::mutex mFuncMutex;
 };
 

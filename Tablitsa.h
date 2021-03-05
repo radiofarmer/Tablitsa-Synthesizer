@@ -1,6 +1,8 @@
 #pragma once
 
-#if !_DEBUG
+#define DEBUG_VECTOR 1
+
+#if !_DEBUG || DEBUG_VECTOR
 #define VECTOR
 #define VECTOR_VOICE_EFFECTS_TEST
 //#define VECTOR_MASTER_EFFECTS_TEST

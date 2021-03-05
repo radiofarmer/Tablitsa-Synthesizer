@@ -582,6 +582,7 @@ public:
         std::array<T, OUTPUT_SIZE> osc2Output{ mOsc2.ProcessMultiple(osc2Freq) };
 #endif
 
+#ifndef VECTOR_VOICE_EFFECTS_TEST
         for (auto j = 0; j < FRAME_INTERVAL; ++j)
         {
 #ifndef VECTOR
@@ -593,7 +594,6 @@ public:
           T filter2Output = mFilters[1]->Process(osc1Output[j] * mFilterSends[1][0] + osc2Output[j] * mFilterSends[1][1]);
           T output_summed = filter1Output + filter2Output;
           T output_scaled = output_summed * ampEnvVal;
-#ifndef VECTOR_VOICE_EFFECTS_TEST
           T output_stereo[]{ output_scaled * lPan, output_scaled * rPan };
           // Voice effects
           for (auto* fx : mEffects)
@@ -603,15 +603,36 @@ public:
           outputs[1][i + j] += output_stereo[1] * mGain;
         }
 #else
-          T output_stereo[]{ output_scaled * lPan, output_scaled * rPan };
-          outputs[0][i + j] += output_stereo[0];
-          outputs[1][i + j] += output_stereo[1];
+        // Vector effects test
+        T output_stereo[2][4];
+
+        for (auto j = 0; j < FRAME_INTERVAL; ++j)
+        {
+          osc1Output[j] *= osc1Amp;
+          osc2Output[j] *= osc2Amp;
+          // Filters
+          T filter1Output = mFilters[0]->Process(osc1Output[j] * mFilterSends[0][0] + osc2Output[j] * mFilterSends[0][1]);
+          T filter2Output = mFilters[1]->Process(osc1Output[j] * mFilterSends[1][0] + osc2Output[j] * mFilterSends[1][1]);
+          T output_summed = filter1Output + filter2Output;
+          T output_scaled = output_summed * ampEnvVal;
+          output_stereo[0][j] = output_scaled * lPan;
+          output_stereo[1][j] = output_scaled * rPan;
         }
+
         // NB: might be faster to put this in a separate loop, since loading arrays is slower immediately after setting their values one-by-one
-        StereoSample<Vec4d> fx_input{ Vec4d().load(&outputs[0][i]), Vec4d().load(&outputs[1][i]) };
-        mEffects[0]->ProcessStereo_Vector(fx_input);
-        fx_input.l.store(&outputs[0][i]);
-        fx_input.r.store(&outputs[1][i]);
+        StereoSample<Vec4d> output_v{ Vec4d().load(&output_stereo[0][0]), Vec4d().load(&output_stereo[1][0]) };
+        mEffects[0]->ProcessStereo_Vector(output_v);
+
+        output_v.l *= mGain;
+        output_v.r *= mGain;
+        output_v.l.store(&output_stereo[0][0]);
+        output_v.r.store(&output_stereo[1][0]);
+
+        for (int j{ 0 }; j < 4; ++j)
+        {
+          outputs[0][i + j] += output_stereo[0][j];
+          outputs[1][i + j] += output_stereo[1][j];
+        }
 #endif
       }
     }
