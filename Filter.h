@@ -131,34 +131,33 @@ public:
 
   inline void SetQ(double q)
   {
-    mQ = 1. / std::max(1 - q, 0.001);
+    if (mMode == kBandpass)
+      mQ = mFc / (mMaxBandwidth * (1. - q));
+    else
+      mQ = 1. / std::max(1. - q, 0.001);
   }
 
   void Reset()
   {
-    mZ[0] = 0;
-    mZ[1] = 0;
+    mZ.reset();
   }
 
   inline void CalculateCoefficients()
   {
-    if (mMode == kBandpass)
-      mQAdj = mFc / (mQ * mBandwidth);
-    else
-      mQAdj = mQ;
-
     const double twoPiFc{ twoPi * mFc };
-    const double minusPiFcOverQ{ -twoPiFc / (2. * mQAdj) };
+    const double minusPiFcOverQ{ -twoPiFc / (2. * mQ) };
 
     mA = 2. * std::cos(twoPiFc) * std::exp(minusPiFcOverQ);
     mB = std::exp(2 * minusPiFcOverQ);
+
+    if (mMode == kBandpass)
+      mC = std::cos(pi * mFc) * std::sqrt(1 - mA + mB);
   }
 
   inline T ProcessLowpass(T s)
   {
     T s_out = mA * mZ[0] - mB * mZ[1] + (1 - mA + mB) * s;
-    mZ[1] = mZ[0];
-    mZ[0] = s_out;
+    mZ.push(s_out);
     return s_out;
   }
 
@@ -166,17 +165,15 @@ public:
   {
     T sum = s * (1 - mB + mA) + mA * mZ[0] - mB * mZ[1];
     T s_out = sum - 2 * mZ[0] + mZ[1];
-    mZ[1] = mZ[0];
-    mZ[0] = sum;
+    mZ.push(sum);
     return s_out;
   }
 
   inline T ProcessBandpass(T s)
   {
-    T sum = s * std::cos(pi * mFc) * std::sqrt(1 - mA + mB) + mA * mZ[0] - mB * mZ[1];
-    T s_out = sum - 2 * mZ[0] + mZ[1];
-    mZ[1] = mZ[0];
-    mZ[0] = sum;
+    T sum = s * mC + mA * mZ[0] - mB * mZ[1];
+    T s_out = sum - mZ[0];
+    mZ.push(sum);
     return s_out;
   }
 
@@ -184,8 +181,7 @@ public:
   {
     T sum = mB * (mA * mZ[0] - mB * mZ[1] + s);
     T s_out = sum - mA * mZ[0] + mZ[1];
-    mZ[1] = mZ[0];
-    mZ[0] = sum;
+    mZ.push(sum);
     return s_out;
   }
 
@@ -200,9 +196,9 @@ public:
 private:
   T mA{ 0. };
   T mB{ 0. };
-  T mBandwidth{ 0.25 };
-  T mQAdj{ 0. };
-  T mZ[2]{};
+  T mC{ 1. };
+  const double mMaxBandwidth{ 0.05 };
+  DelayLine<T, 2> mZ;
   SVF2ProcessFunc mProcessFunctions[kNumFilters]{ &SVF2::ProcessLowpass, &SVF2::ProcessHighpass, &SVF2::ProcessBandpass, &SVF2::ProcessAllpass };
 };
 
