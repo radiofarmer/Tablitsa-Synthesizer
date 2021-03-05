@@ -132,7 +132,7 @@ public:
 
   inline void SetQ(double q)
   {
-#if 1
+#ifdef STATE_SPACE_FILTER
     mQ = q;
 #else
     if (mMode == kBandpass)
