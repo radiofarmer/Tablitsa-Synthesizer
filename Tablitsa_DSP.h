@@ -519,10 +519,10 @@ public:
       const double ringModFreqFact = pow(2., mVModulations.GetList()[kVRingModFreq][0] / 12.);
 
       // make sound output for each output channel
-      for(auto i = startIdx; i < startIdx + nFrames; i += FRAME_INTERVAL)
+      for (auto i = startIdx; i < startIdx + nFrames; i += FRAME_INTERVAL)
       {
         int bufferIdx = i - startIdx;
-//        float noise = mTimbreBuffer.Get()[i] * Rand();
+        //        float noise = mTimbreBuffer.Get()[i] * Rand();
         T ampEnvVal{ mModulators.GetList()[2][bufferIdx] }; // Calculated for easy access
 
         // Panning
@@ -568,7 +568,7 @@ public:
           mEffects[e]->SetParam3(mVModulations.GetList()[kVEffect1Param3 + p][bufferIdx]);
           mEffects[e]->SetParam4(mVModulations.GetList()[kVEffect1Param4 + p][bufferIdx]);
         }
-        
+
         // Signal Processing
 #ifdef VECTOR
         Vec4d osc1_v = mOsc1.ProcessMultiple(osc1Freq) * osc1Amp;
@@ -581,27 +581,59 @@ public:
         std::array<T, OUTPUT_SIZE> osc1Output{ mOsc1.ProcessMultiple(osc1Freq) };
         std::array<T, OUTPUT_SIZE> osc2Output{ mOsc2.ProcessMultiple(osc2Freq) };
 #endif
-        
-       for (auto j = 0; j < FRAME_INTERVAL; ++j)
-       {
+
+#ifndef VECTOR_VOICE_EFFECTS_TEST
+        for (auto j = 0; j < FRAME_INTERVAL; ++j)
+        {
 #ifndef VECTOR
-         osc1Output[j] *= osc1Amp;
-         osc2Output[j] *= osc2Amp;
+          osc1Output[j] *= osc1Amp;
+          osc2Output[j] *= osc2Amp;
 #endif
-         // Filters
-         T filter1Output = mFilters[0]->Process(osc1Output[j] * mFilterSends[0][0] + osc2Output[j] * mFilterSends[0][1]);
-         T filter2Output = mFilters[1]->Process(osc1Output[j] * mFilterSends[1][0] + osc2Output[j] * mFilterSends[1][1]);
-         T output_summed = filter1Output + filter2Output;
-         T output_scaled = output_summed * ampEnvVal;
-         T output_stereo[]{ output_scaled * lPan, output_scaled * rPan };
+          // Filters
+          T filter1Output = mFilters[0]->Process(osc1Output[j] * mFilterSends[0][0] + osc2Output[j] * mFilterSends[0][1]);
+          T filter2Output = mFilters[1]->Process(osc1Output[j] * mFilterSends[1][0] + osc2Output[j] * mFilterSends[1][1]);
+          T output_summed = filter1Output + filter2Output;
+          T output_scaled = output_summed * ampEnvVal;
+          T output_stereo[]{ output_scaled * lPan, output_scaled * rPan };
+          // Voice effects
+          for (auto* fx : mEffects)
+            fx->ProcessStereo(output_stereo);
 
-         // Voice effects
-         for (auto* fx : mEffects)
-           fx->ProcessStereo(output_stereo);
+          outputs[0][i + j] += output_stereo[0] * mGain;
+          outputs[1][i + j] += output_stereo[1] * mGain;
+        }
+#else
+        // Vector effects test
+        T output_stereo[2][4]{};
 
-         outputs[0][i + j] += output_stereo[0] * mGain;
-         outputs[1][i + j] += output_stereo[1] * mGain;
-       }
+        for (auto j = 0; j < FRAME_INTERVAL; ++j)
+        {
+          osc1Output[j] *= osc1Amp;
+          osc2Output[j] *= osc2Amp;
+          // Filters
+          T filter1Output = mFilters[0]->Process(osc1Output[j] * mFilterSends[0][0] + osc2Output[j] * mFilterSends[0][1]);
+          T filter2Output = mFilters[1]->Process(osc1Output[j] * mFilterSends[1][0] + osc2Output[j] * mFilterSends[1][1]);
+          T output_summed = osc1Output[j];//filter1Output + filter2Output;
+          T output_scaled = output_summed * ampEnvVal;
+          output_stereo[0][j] = output_scaled * lPan;
+          output_stereo[1][j] = output_scaled * rPan;
+        }
+
+        // NB: might be faster to put this in a separate loop, since loading arrays is slower immediately after setting their values one-by-one
+        StereoSample<Vec4d> output_v{ Vec4d().load(&output_stereo[0][0]), Vec4d().load(&output_stereo[1][0]) };
+        //mEffects[0]->ProcessStereo_Vector(output_v);
+
+        output_v.l *= mGain;
+        output_v.r *= mGain;
+        output_v.l.store(&output_stereo[0][0]);
+        output_v.r.store(&output_stereo[1][0]);
+
+        for (int j{ 0 }; j < 4; ++j)
+        {
+          outputs[0][i + j] += output_stereo[0][j];
+          outputs[1][i + j] += output_stereo[1][j];
+        }
+#endif
       }
     }
 
@@ -882,6 +914,21 @@ public:
     SetTempoAndBeat(qnPos, transportIsRunning, tempo, mTSNum, mTSDenom);
     mSynth.ProcessBlock(mModulations.GetList(), outputs, 0, nOutputs, nFrames);
 
+#ifdef VECTOR_MASTER_EFFECTS_TEST
+    for (int s{ 0 }; s < nFrames; s += 4)
+    {
+      const T smoothedGain = mModulations.GetList()[kModGainSmoother][s];
+
+      StereoSample<Vec4d> stereo_in{ Vec4d().load(&outputs[0][s]), Vec4d().load(&outputs[1][s]) };
+      mEffects[0]->ProcessStereo_Vector(stereo_in);
+
+      stereo_in.l *= smoothedGain;
+      stereo_in.r *= smoothedGain;
+
+      stereo_in.l.store(&outputs[0][s]);
+      stereo_in.r.store(&outputs[1][s]);
+    }
+#else
     for(int s=0; s < nFrames;s++)
     {
       const T smoothedGain = mModulations.GetList()[kModGainSmoother][s];
@@ -898,6 +945,7 @@ public:
       outputs[0][s] *= smoothedGain;
       outputs[1][s] *= smoothedGain;
     }
+#endif
   }
 
   void Reset(double sampleRate, int blockSize)

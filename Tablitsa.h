@@ -1,7 +1,11 @@
 #pragma once
 
-#if !_DEBUG
+#define DEBUG_VECTOR 0
+
+#if !_DEBUG || DEBUG_VECTOR
 #define VECTOR
+//#define VECTOR_VOICE_EFFECTS_TEST
+//#define VECTOR_MASTER_EFFECTS_TEST
 #endif
 
 #include "IPlug_include_in_plug_hdr.h"

@@ -104,7 +104,6 @@
     <ClCompile Include="..\VectorFunctions.cpp" />
     <ClCompile Include="..\SignalProcessing.cpp" />
     <ClCompile Include="..\TablitsaControls.cpp" />
-    <ClCompile Include="..\TablitsaEffects.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\Tablitsa.h" />
