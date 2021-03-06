@@ -638,3 +638,52 @@ protected:
   DelayLine<4> mZ0;
   DelayLine<4> mZ1;
 };
+
+template<typename T, class V=Vec4d>
+class ReverbEffect : public Effect<T, V>
+{
+  static constexpr T MaxDelayMS = 100.;
+  static constexpr T MinDelayMS = 5.;
+  static constexpr T MinFeedback = 0.65;
+  static constexpr T FeedbackRange = 0.99 - MinFeedback;
+
+public:
+  ReverbEffect(T sampleRate, T maxDelayMS = 50., T minDelayMS = 10., T maxFeedback = 0.75, T minFeedback = 0.65, T gain = 0.5) :
+    Effect<T, V>(sampleRate),
+    mReverb(sampleRate, maxDelayMS, minDelayMS, maxFeedback, minFeedback, gain)
+  {}
+
+  void SetSampleRate(T sampleRate) override
+  {
+    Effect<T>::SetSampleRate(sampleRate);
+    mReverb.SetSampleRate(mSampleRate);
+  }
+
+  void SetParam1(T value) override
+  {
+    mReverb.SetDelay(value * (MaxDelayMS - MinDelayMS), MinDelayMS, true);
+  }
+  void SetParam2(T value) override
+  {
+    mReverb.SetFeedback(MinFeedback + value * FeedbackRange, MinFeedback, true);
+  }
+  void SetParam4(T value) override
+  {
+    mReverb.SetGain(value / (T)100.);
+  }
+
+  T Process(T s) override
+  {
+    return mReverb.Process(s);
+  }
+
+  void ProcessStereo(T* s) override
+  {
+    StereoSample<T> s2{ s[0], s[1] };
+    mReverb.ProcessStereo(s2);
+    s[0] = s2.l; s[1] = s2.r;
+  }
+
+protected:
+  ReverbCascade<6, 2> mReverb;
+};

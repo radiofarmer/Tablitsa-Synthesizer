@@ -3,6 +3,8 @@
 #include "radiofarmer_config.h"
 #include "allpass.h"
 
+#include <assert.h>
+
 BEGIN_DSP_NAMESPACE
 
 template<int NM=3, int NS=2>
@@ -35,6 +37,29 @@ public:
     }
   }
 
+  void SetDelay(sample_t maxDelay, sample_t minDelay = 10., const bool adjust=true)
+  {
+    assert(minDelay > 1. && maxDelay > minDelay && "Delay value out of range!");
+    mMaxDelay = maxDelay;
+    mMinDelay = minDelay;
+    if (adjust)
+      AdjustAllFilters();
+  }
+
+  void SetFeedback(sample_t maxFeedback, sample_t minFeedback = 0.6, const bool adjust=true)
+  {
+    assert(maxFeedback >= minFeedback && maxFeedback < 1. && minFeedback >= 0. && "Feedback value out of range!");
+    mMaxFeedback = maxFeedback;
+    mMinFeedback = minFeedback;
+    if (adjust)
+      AdjustAllFilters();
+  }
+
+  void SetGain(sample_t gain)
+  {
+    mGain = gain;
+  }
+
   void AdjustAllFilters()
   {
     const int n = NM + NS;
@@ -44,10 +69,13 @@ public:
     const sample_t delayRange = mMaxDelay - mMinDelay;
     const sample_t fbRange = mMaxFeedback - mMinFeedback;
 
-    for (int i{ 0 }; i < n; ++i)
+    delays[0] = mMaxDelay;
+    fb[0] = mMaxFeedback;
+
+    for (int i{ 1 }; i < n; ++i)
     {
-      delays[i] = mMaxDelay - delayRange * static_cast<sample_t>(i / n);
-      fb[i] = mMaxFeedback -  fbRange * static_cast<sample_t>(i / n);
+      delays[i] = delays[i-1] * 0.78;
+      fb[i] = mMaxFeedback - static_cast<sample_t>(std::rand() % 100) / 1000.;
     }
 
     // Mono filters
@@ -75,8 +103,6 @@ public:
 
   inline void ProcessStereo(StereoSample<>& s)
   {
-    sample_t l_in = s.l;
-    sample_t r_in = s.r;
     sample_t sum1 = mGain * (s.l + s.r);
 
     // Process mono filters
@@ -86,10 +112,12 @@ public:
       monoLine = mMonoFilters[i].Process(monoLine);
     }
     // Process StereoFilters
+    sample_t l_in, r_in;
+    l_in = r_in = monoLine;
     for (int i{ 0 }; i < NS; ++i)
     {
-      s.l = mStereoFilters[i][0].Process(s.l);
-      s.r = mStereoFilters[i][1].Process(s.r);
+      l_in = mStereoFilters[i][0].Process(l_in);
+      r_in = mStereoFilters[i][1].Process(r_in);
     }
 
     s.l += l_in;
