@@ -169,7 +169,7 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>$(APP_DEFS);$(DEBUG_DEFS);$(EXTRA_DEBUG_DEFS);WDL_FFT_REALSIZE=8;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>C:\Users\bramc\VST-Development\iPlug2\WDL;C:\Program Files\boost_1_75_0;$(APP_INC_PATHS);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)\..\..\..\WDL;$(SolutionDir)\..\dependencies\vectorclass;$(SolutionDir)\..\dependencies\effects;$(APP_INC_PATHS);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <EnableEnhancedInstructionSet>AdvancedVectorExtensions</EnableEnhancedInstructionSet>
@@ -212,7 +212,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>$(APP_DEFS);$(RELEASE_DEFS);$(EXTRA_RELEASE_DEFS);WDL_FFT_REALSIZE=8;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>C:\Users\bramc\VST-Development\iPlug2\WDL;$(APP_INC_PATHS);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)\..\dependencies\vectorclass;$(ProjectDir)\..\dependencies\effects;$(SolutionDir)\..\..\..\WDL\;$(APP_INC_PATHS);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
       <EnableEnhancedInstructionSet>AdvancedVectorExtensions2</EnableEnhancedInstructionSet>
