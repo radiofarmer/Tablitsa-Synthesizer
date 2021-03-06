@@ -1,6 +1,7 @@
 #pragma once
 
 #include "SignalProcessing.h"
+#include "radiofarmerDSP.h"
 #include "Filter.h"
 #include "Modulators.h"
 
@@ -356,16 +357,14 @@ protected:
   StereoSample<V> mHold_v{ V(0.), V(0.) };
 };
 
-#define WAVESHAPE_TYPES "Sine", "Parabolic", "Cubic", "Hyp. Tan.", "Soft Clip", "Hard Clip"
+#define WAVESHAPE_TYPES "Sine", "Parabolic", "Hyp. Tan.", "Soft Clip"
 
 enum EWaveshaperMode
 {
   kWaveshapeSine,
   kWaveshapeParabola,
-  kWaveshapeCubic,
   kWaveshapeTanh,
   kWaveshapeSoft,
-  kWaveshapeHard,
   kNumWaveshaperModes
 };
 
@@ -395,12 +394,6 @@ class Waveshaper : public Effect<T, V>
     return std::tanh(x * gain) * gainCeil;
   }
 
-  static inline T CubicShaper(T x, const T gain, const T gainCeil = 1.)
-  {
-    x *= gain;
-    return SoftClipShaper(1.5 * x + 0.5 * x * x * x, 1., gainCeil);
-  }
-
   static inline T SoftClipShaper(T x, const T gain, const T gainCeil = 1.)
   {
     return SoftClip<T>(x, gain) * gainCeil;
@@ -420,14 +413,8 @@ class Waveshaper : public Effect<T, V>
 
   static inline V __vectorcall VParabolicShaper(const V& x, const T gain, const T gainCeil = 1.)
   {
-    const V x2 = pow(x * gain, 2) * gain * sign(x);
-    return x2 * gainCeil;
-  }
-
-  static inline V __vectorcall VCubicShaper(const V& x, const T gain, const T gainCeil = 1.)
-  {
-    const V x3 = pow(x * gain, 3) * gain;
-    return x3 * gainCeil;
+    V x_clip = VSoftClipShaper(x, gain, gainCeil);
+    return pow(x_clip, 2);
   }
 
   static inline V __vectorcall VTanhShaper(const V& x, const T gain, const T gainCeil = 1.)
@@ -435,7 +422,7 @@ class Waveshaper : public Effect<T, V>
     return tanh(x * gain) * gainCeil;
   }
 
-  static inline V VSoftClipShaper(const V& x, const T gain, const T gainCeil = 1.)
+  static inline V __vectorcall VSoftClipShaper(const V& x, const T gain, const T gainCeil = 1.)
   {
     return SoftClip<V, T>(x, gain) * gainCeil;
   }
@@ -447,7 +434,9 @@ class Waveshaper : public Effect<T, V>
 
 public:
   Waveshaper(T sampleRate, T maxGain=2., EWaveshaperMode mode = kWaveshapeSine) :
-    Effect<T>(sampleRate), mMaxGain(maxGain), mShaperMode(mode) {}
+    Effect<T>(sampleRate),
+    mMaxGain(maxGain), mMaxGainCeil(1. / mMaxGain),
+    mShaperMode(mode) {}
 
   virtual void SetParam1(T value) override
   {
@@ -455,8 +444,9 @@ public:
   }
   virtual void SetParam2(T value) override
   {
-    SetGain(value / (T)100);
-    SetThreshold((T)-value / 100.);
+    T norm = (T)value / 100.;
+    SetGain(norm);
+    SetThreshold(1. - (mMaxGain - 1.) * (norm * mMaxGainCeil));
   }
 
   T Process(T s) override
@@ -499,12 +489,6 @@ public:
       mShaperFunc_Vector = &Waveshaper::VParabolicShaper;
       break;
     }
-    case kWaveshapeCubic:
-    {
-      mShaperFunc = &Waveshaper::CubicShaper;
-      mShaperFunc_Vector = &Waveshaper::VCubicShaper;
-      break;
-    }
     case kWaveshapeTanh:
     {
       mShaperFunc = &Waveshaper::TanhShaper;
@@ -515,12 +499,6 @@ public:
     {
       mShaperFunc = &Waveshaper::SoftClipShaper;
       mShaperFunc_Vector = &Waveshaper::VSoftClipShaper;
-      break;
-    }
-    case kWaveshapeHard:
-    {
-      mShaperFunc = &Waveshaper::HardClipShaper;
-      mShaperFunc_Vector = &Waveshaper::VHardClipShaper;
       break;
     }
     case kWaveshapeSine:
@@ -545,6 +523,7 @@ public:
 
 protected:
   const T mMaxGain; // Can be used to normalize inputs, since a waveshaper's behavior is amplitude-dependent
+  const T mMaxGainCeil;
   T mGain{ (T)1 };
   T mThresh{ 0.5 };
   EWaveshaperMode mShaperMode;

@@ -6,7 +6,7 @@ extern inline double SoftClip<double>(double s, double gain)
 {
   double s_abs = std::abs(s * gain);
   double nonlin = 2. - 3. * s_abs * s_abs;
-  return std::copysign((4. - nonlin * nonlin) / 5., s);
+  return std::copysign((4. - nonlin * nonlin) * 0.2, s);
 }
 
 template<>

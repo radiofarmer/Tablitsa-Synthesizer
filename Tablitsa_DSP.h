@@ -1,10 +1,11 @@
 #pragma once
 
+#include "radiofarmerDSP.h"
+
 #include "PeriodicTable.h"
 #include "TablitsaEffects.h"
 #include "TablitsaOscillators.h"
 #include "Modulation.h"
-
 
 #include "IPlugConstants.h"
 #include "Oscillator.h"
@@ -496,6 +497,8 @@ public:
       // or write the entire control ramp to a buffer, like this, to get sample-accurate ramps:
       mInputs[kVoiceControlTimbre].Write(mTimbreBuffer.Get(), startIdx, nFrames); */
 
+      radiofarmer::AllpassCascade mod(20);
+
       double pitch = mInputs[kVoiceControlPitch].endValue + mDetune; // pitch = (MidiKey - 69) / 12
 //      double pitchBend = mInputs[kVoiceControlPitchBend].endValue;
 
@@ -573,6 +576,7 @@ public:
 #ifdef VECTOR
         Vec4d osc1_v = mOsc1.ProcessMultiple(osc1Freq) * osc1Amp;
         Vec4d osc2_v = mOsc2.ProcessMultiple(osc2Freq) * osc2Amp;
+        //osc1_v = dynamic_cast<SVF2<T>*>(mFilters[0])->Process_Vector(osc1_v);
         T osc1Output[4];
         T osc2Output[4];
         osc1_v.store(osc1Output);

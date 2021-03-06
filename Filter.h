@@ -173,7 +173,7 @@ public:
 
   inline T ProcessHighpass(T s)
   {
-    T sum = s * mC + mA * mZ[0] - mB * mZ[1];
+    T sum = mA * mZ[0] - mB * mZ[1] + s; // Do not multiply s by C!
     T s_out = sum - 2. * mZ[0] + mZ[1];
     mZ.push(sum);
     return s_out;
@@ -213,10 +213,13 @@ public:
 
   Vec4d __vectorcall Process_Vector(Vec4d s) override
   {
-    const double m[]{ 0., 0., 1. };
+    /*const double m[]{ 0., 0., 1. };
     state_from_svf(Filter<T>::mFc, mQ, &m[0], mCoefs[0], mCoefs[1], mCoefs[2], mCoefs[3]);
     Vec4d out = eval_IIR_state(s, mZ_v, mCoefs[0], mCoefs[1], mCoefs[2], mCoefs[3]);
-    return out;
+    return out;*/
+    CalculateCoefficients();
+    IIR_2pole_coefficients_4(mC, mA, -mB, mCoefs[0], mCoefs[1], mCoefs[2], mCoefs[3], mCoefs[4], mCoefs[5]);
+    return IIR_2pole_4(s, mZ_v, mCoefs, m_b[mMode]);
   }
 
 private:
