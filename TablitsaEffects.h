@@ -375,26 +375,13 @@ class Waveshaper : public Effect<T, V>
   static constexpr T piOver2{ (T)1.57079632679 };
   static constexpr T pi{ (T)3.14159265359 };
 
+  /* Singleton Versions */
+
   static inline T SineShaper(T x, const T gain, const T gainCeil=1.)
   {
     x *= gain;
     T x2 = std::copysign(x, piOver2 - x);
     return std::copysign(x2 - x2 * x2 * x2 / (T)6 + x2 * x2 * x2 * x2 * x2 / (T)120, x) * 0.9;
-  }
-
-  static inline V __vectorcall VSineShaper(const V& x, const T gain, const T gainCeil = 1.)
-  {
-    return sin(x * gain) * gainCeil;
-  }
-
-  static inline T TanhShaper(T x, const T gain, const T gainCeil = 1.)
-  {
-    return std::tanh(x * gain) * gainCeil;
-  }
-
-  static inline V __vectorcall VTanhShaper(const V& x, const T gain, const T gainCeil = 1.)
-  {
-    return tanh(x * gain) * gainCeil;
   }
 
   static inline T ParabolicShaper(T x, const T gain, const T gainCeil = 1.)
@@ -403,10 +390,9 @@ class Waveshaper : public Effect<T, V>
     return SoftClipShaper(copysign(x * x, x), 1., gainCeil);
   }
 
-  static inline V __vectorcall VParabolicShaper(const V& x, const T gain, const T gainCeil = 1.)
+  static inline T TanhShaper(T x, const T gain, const T gainCeil = 1.)
   {
-    const V x2 = pow(x * gain, 2) * gain * sign(x);
-    return x2 * gainCeil;
+    return std::tanh(x * gain) * gainCeil;
   }
 
   static inline T CubicShaper(T x, const T gain, const T gainCeil = 1.)
@@ -415,25 +401,43 @@ class Waveshaper : public Effect<T, V>
     return SoftClipShaper(1.5 * x + 0.5 * x * x * x, 1., gainCeil);
   }
 
+  static inline T SoftClipShaper(T x, const T gain, const T gainCeil = 1.)
+  {
+    return SoftClip<T>(x, gain) * gainCeil;
+  }
+
+  static inline T HardClipShaper(T x, const T gain, const T gainCeil = 1.)
+  {
+    return std::copysign(std::min(std::abs(x) * gain, gainCeil), x);
+  }
+
+  /* Vector versions */
+
+  static inline V __vectorcall VSineShaper(const V& x, const T gain, const T gainCeil = 1.)
+  {
+    return sin(x * gain) * gainCeil;
+  }
+
+  static inline V __vectorcall VParabolicShaper(const V& x, const T gain, const T gainCeil = 1.)
+  {
+    const V x2 = pow(x * gain, 2) * gain * sign(x);
+    return x2 * gainCeil;
+  }
+
   static inline V __vectorcall VCubicShaper(const V& x, const T gain, const T gainCeil = 1.)
   {
     const V x3 = pow(x * gain, 3) * gain;
     return x3 * gainCeil;
   }
 
-  static inline T SoftClipShaper(T x, const T gain, const T gainCeil = 1.)
+  static inline V __vectorcall VTanhShaper(const V& x, const T gain, const T gainCeil = 1.)
   {
-    return SoftClip<T>(x, gain) * gainCeil;
+    return tanh(x * gain) * gainCeil;
   }
 
   static inline V VSoftClipShaper(const V& x, const T gain, const T gainCeil = 1.)
   {
     return SoftClip<V, T>(x, gain) * gainCeil;
-  }
-
-  static inline T HardClipShaper(T x, const T gain, const T gainCeil = 1.)
-  {
-    return std::copysign(std::min(std::abs(x) * gain, gainCeil), x);
   }
 
   static inline V __vectorcall VHardClipShaper(const V& x, const T gain, const T gainCeil = 1.)
@@ -449,7 +453,11 @@ public:
   {
     SetMode(static_cast<EWaveshaperMode>(value + 0.01));
   }
-  virtual void SetParam2(T value) override { SetGain(value / (T)100); }
+  virtual void SetParam2(T value) override
+  {
+    SetGain(value / (T)100);
+    SetThreshold((T) - value / 100.)
+  }
 
   T Process(T s) override
   {
