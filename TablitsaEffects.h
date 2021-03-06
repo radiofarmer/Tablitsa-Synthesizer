@@ -456,7 +456,7 @@ public:
   virtual void SetParam2(T value) override
   {
     SetGain(value / (T)100);
-    SetThreshold((T) - value / 100.)
+    SetThreshold((T)-value / 100.);
   }
 
   T Process(T s) override
