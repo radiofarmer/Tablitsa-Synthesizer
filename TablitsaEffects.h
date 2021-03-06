@@ -23,6 +23,7 @@ public:
 
   virtual T Process(T s) { return s; }
   virtual void ProcessStereo(T* s) {}
+  virtual void ProcessStereo(StereoSample<T>& s) {}
 
   virtual V __vectorcall Process(V& s) { return s; }
   virtual void ProcessStereo_Vector(StereoSample<V>& s) {}
@@ -196,7 +197,7 @@ public:
   }
 
   // Returns the mixed signal
-  void ProcessStereo(T* s)
+  void ProcessStereo(T* s) override
   {
     const T left_out = mDelayL[mDelayLTime];
     const T right_out = mDelayR[mDelayRTime];
@@ -204,6 +205,16 @@ public:
     mDelayR.push(s[1] + right_out * mFeedback);
     s[0] += left_out * mDelayLGain;
     s[1] += right_out * mDelayRGain;
+  }
+
+  void ProcessStereo(StereoSample<T>& s) override
+  {
+    const T left_out = mDelayL[mDelayLTime];
+    const T right_out = mDelayR[mDelayRTime];
+    mDelayL.push(s.l + left_out * mFeedback);
+    mDelayR.push(s.r + right_out * mFeedback);
+    s.l += left_out * mDelayLGain;
+    s.r += right_out * mDelayRGain;
   }
 
   void ProcessStereo_Vector(StereoSample<V>& s) override
@@ -294,6 +305,19 @@ public:
     s[1] += mMix * (out - s[1]);
   }
 
+  void ProcessStereo(StereoSample<T>& s) override
+  {
+    StereoSample<T> out = mStereoHold;
+    mStereoHold += (s - mStereoHold) * mDecay;
+    if (mSampleCounter++ >= mRateAdj)
+    {
+      out = mStereoHold = s;
+      mSampleCounter = 0;
+      mRateAdj = mRate + (XOR_Shift(mRandGen) >> mJitter);
+    }
+    s += (out - s) * mMix;
+  }
+
   void ProcessStereo_Vector(StereoSample<V>& s) override
   {
     StereoSample<V> out{ mHold_v.l, mHold_v.r };
@@ -343,6 +367,7 @@ public:
 protected:
   T mHold{ 0. };
   T mDecay{ 0. };
+  StereoSample<T> mStereoHold{ 0., 0. };
   unsigned int mRate{ 1 }; // samples
   unsigned int mSampleCounter{ 0 };
   unsigned int mJitter{ 0 };
@@ -465,6 +490,13 @@ public:
     std::lock_guard<std::mutex> lg(mFuncMutex);
     s[0] += DoProcess(s[0]);
     s[1] += DoProcess(s[1]);
+  }
+
+  void ProcessStereo(StereoSample<T>& s) override
+  {
+    std::lock_guard<std::mutex> lg(mFuncMutex);
+    s.l += DoProcess(s.l);
+    s.r += DoProcess(s.r);
   }
 
   void ProcessStereo_Vector(StereoSample<V>& s)
@@ -629,6 +661,12 @@ public:
     s[1] = DoProcess(mStateR, mZ1, s[1]);
   }
 
+  void ProcessStereo(StereoSample<T>& s) override
+  {
+    s.l = DoProcess(mStateL, mZ0, s.l);
+    s.r = DoProcess(mStateR, mZ1, s.r);
+  }
+
 protected:
   EQState mStateL;
   EQState mStateR;
@@ -682,6 +720,11 @@ public:
     StereoSample<T> s2{ s[0], s[1] };
     mReverb.ProcessStereo(s2);
     s[0] = s2.l; s[1] = s2.r;
+  }
+
+  void ProcessStereo(StereoSample<T>& s) override
+  {
+    mReverb.ProcessStereo(s);
   }
 
 protected:

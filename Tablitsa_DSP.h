@@ -599,13 +599,13 @@ public:
           T filter2Output = mFilters[1]->Process(osc1Output[j] * mFilterSends[1][0] + osc2Output[j] * mFilterSends[1][1]);
           T output_summed = filter1Output + filter2Output;
           T output_scaled = output_summed * ampEnvVal;
-          T output_stereo[]{ output_scaled * lPan, output_scaled * rPan };
+          StereoSample<T> output_stereo{ output_scaled * lPan, output_scaled * rPan };
           // Voice effects
           for (auto* fx : mEffects)
             fx->ProcessStereo(output_stereo);
 
-          outputs[0][i + j] += output_stereo[0] * mGain;
-          outputs[1][i + j] += output_stereo[1] * mGain;
+          outputs[0][i + j] += output_stereo.l * mGain;
+          outputs[1][i + j] += output_stereo.r * mGain;
         }
 #else
         // Vector effects test

@@ -24,6 +24,39 @@ struct StereoSample
 {
   T l;
   T r;
+
+  StereoSample(T l, T r) : l(l), r(r) {}
+
+  StereoSample operator+(StereoSample& s)
+  {
+    return StereoSample(l + s.l, r + s.r);
+  }
+
+  StereoSample operator-(StereoSample& s)
+  {
+    return StereoSample(l - s.l, r - s.r);
+  }
+
+  StereoSample& operator+=(StereoSample& s)
+  {
+    l += s.l;
+    r += s.r;
+    return *this;
+  }
+
+  StereoSample& operator-=(StereoSample& s)
+  {
+    l -= s.l;
+    r -= s.r;
+    return *this;
+  }
+
+  StereoSample& operator*(T s)
+  {
+    l *= s;
+    r *= s;
+    return *this;
+  }
 };
 
 END_DSP_NAMESPACE
