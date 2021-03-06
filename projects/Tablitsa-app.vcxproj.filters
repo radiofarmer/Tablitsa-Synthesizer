@@ -104,6 +104,9 @@
     <ClCompile Include="..\VectorFunctions.cpp" />
     <ClCompile Include="..\SignalProcessing.cpp" />
     <ClCompile Include="..\TablitsaControls.cpp" />
+    <ClCompile Include="..\dependencies\radiofarmer\cm.cpp">
+      <Filter>dsp</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\Tablitsa.h" />
@@ -329,6 +332,15 @@
     <ClInclude Include="..\TablitsaEffects.h" />
     <ClInclude Include="..\TablitsaUIFunctions.h" />
     <ClInclude Include="..\OversamplingFilter.h" />
+    <ClInclude Include="..\dependencies\radiofarmer\cm.h">
+      <Filter>dsp</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dependencies\radiofarmer\radiofarmer_config.h">
+      <Filter>dsp</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dependencies\radiofarmer\radiofarmerDSP.h">
+      <Filter>dsp</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="resources">
@@ -372,6 +384,9 @@
     </Filter>
     <Filter Include="IPlug\Extras\Synth">
       <UniqueIdentifier>{fc763cd3-cc76-4d31-9ba4-a4e7361e4adf}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="dsp">
+      <UniqueIdentifier>{94d5e761-9f8d-41b7-a565-d04e0fa0aa11}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
