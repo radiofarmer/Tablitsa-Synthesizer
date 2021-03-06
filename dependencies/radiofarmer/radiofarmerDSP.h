@@ -2,7 +2,11 @@
 #include "vectorclass.h"
 
 #include "radiofarmer_config.h"
+
+#include "delayline.h"
+#include "allpass.h"
 #include "cm.h"
+#include "reverb.h"
 
 /*
 class VectorOscillator

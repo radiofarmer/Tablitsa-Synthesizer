@@ -1,13 +1,15 @@
 #pragma once
 
-#include "SignalProcessing.h"
+#include "radiofarmerDSP.h"
 
+#include "SignalProcessing.h"
 #include "VectorFunctions.h"
 
 #include <vector>
 #include <cmath>
 #include <functional>
 
+using namespace radiofarmer;
 
 #define FILTER_TYPE_LIST "None", "VSF", "Moog Ladder", "Comb"
 #define FILTER_MODE_LIST_VSF  "Lowpass", "Highpass", "Bandpass", "Allpass"
@@ -28,7 +30,7 @@ enum EFilters
 
 /* General function for processing a biquad filter in direct form II*/
 template<typename T>
-inline T ProcessBiquadII(T s, T* a, T* b, DelayLine<T, 2>& z)
+inline T ProcessBiquadII(T s, T* a, T* b, DelayLine<2>& z)
 {
   T sum = s - a[0] * z[0] - a[1] * z[1];
   T out = sum * b[0] + z[0] * b[1] + z[1] * b[2];
@@ -237,7 +239,7 @@ private:
   Vec4d mZ_v = Vec4d(0.);
 
   const double mMaxBandwidth{ 0.05 };
-  DelayLine<T, 2> mZ;
+  DelayLine<2> mZ;
   SVF2ProcessFunc mProcessFunctions[kNumFilters]{ &SVF2::ProcessLowpass, &SVF2::ProcessHighpass, &SVF2::ProcessBandpass, &SVF2::ProcessAllpass };
 };
 
@@ -427,8 +429,8 @@ private:
   int mDelayLength;
   T& mFF{ mFc }; // Feedforward used as alias for cutoff
   T& mFB{ mQ }; // Feedback used as alias for resonance
-  DelayLine<T, COMB_MAX_DELAY> mDelayIn;
-  DelayLine<T, COMB_MAX_DELAY> mDelayOut;
+  DelayLine<COMB_MAX_DELAY> mDelayIn;
+  DelayLine<COMB_MAX_DELAY> mDelayOut;
 };
 
 template<typename T, class V=void, bool LowShelf=true>

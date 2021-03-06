@@ -1,7 +1,8 @@
 #pragma once
 
-#include "SignalProcessing.h"
 #include "radiofarmerDSP.h"
+
+#include "SignalProcessing.h"
 #include "Filter.h"
 #include "Modulators.h"
 
@@ -10,12 +11,7 @@
 
 #include <mutex>
 
-template<class T>
-struct StereoSample
-{
-  T l;
-  T r;
-};
+using namespace radiofarmer;
 
 template<typename T, class V=Vec4d>
 class Effect
@@ -214,8 +210,8 @@ public:
   {
     V l_out = mDelayL.v_at(mDelayLTime);
     V r_out = mDelayR.v_at(mDelayRTime);
-    mDelayL.push<V>(s.l);
-    mDelayR.push<V>(s.r);
+    mDelayL.push(s.l);
+    mDelayR.push(s.r);
     s.l += l_out;
     s.r += r_out;
   }
@@ -248,8 +244,8 @@ private:
   // Delay time mode
   bool mTempoSync{ false };
 
-  DelayLine<T, TABLITSA_MAX_DELAY_SAMP>  mDelayL;
-  DelayLine<T, TABLITSA_MAX_DELAY_SAMP> mDelayR;
+  DelayLine<TABLITSA_MAX_DELAY_SAMP>  mDelayL;
+  DelayLine<TABLITSA_MAX_DELAY_SAMP> mDelayR;
   ModMetronome* mMetronome; // For tempo sync
 };
 
@@ -596,7 +592,7 @@ public:
     mMidFreq = freqNorm;
   }
 
-  inline T DoProcess(EQState& state, DelayLine<T, 4>& z, T s)
+  inline T DoProcess(EQState& state, DelayLine<4>& z, T s)
   {
     T l, m, h;
     // Lowpass Filter
@@ -639,6 +635,6 @@ protected:
   T mMidFreq{ 1. };
   T mHalfMidBand{ 0.05 }; // Half the proportion of the normalized frequency range occupied by the mid band
 
-  DelayLine<T, 4> mZ0;
-  DelayLine<T, 4> mZ1;
+  DelayLine<4> mZ0;
+  DelayLine<4> mZ1;
 };

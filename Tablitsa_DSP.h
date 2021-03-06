@@ -23,6 +23,7 @@
 constexpr double kMaxEnvTimeScalar = 0.5;
 
 using namespace iplug;
+using namespace radiofarmer;
 
 /*
 Global Modulations (smoothers): These values are computed once per sample and sent to all voices 
@@ -900,61 +901,45 @@ public:
   }
 
   void ProcessBlock(T** inputs, T** outputs, int nOutputs, int nFrames, double qnPos = 0., bool transportIsRunning = false, double tempo = 120.)
-  {
-    std::lock_guard<std::mutex> lg(mProcMutex);
+	{
+	  std::lock_guard<std::mutex> lg(mProcMutex);
 
-    // clear outputs
-    for(auto i = 0; i < nOutputs; i++)
-    {
-      memset(outputs[i], 0, nFrames * sizeof(T));
-    }
-    // Process global modulators
-    mGlobalLFO1.FillBuffer(nFrames);
-    mGlobalLFO2.FillBuffer(nFrames);
-    mGlobalSequencer.FillBuffer(nFrames);
+		// clear outputs
+		for(auto i = 0; i < nOutputs; i++)
+		{
+			memset(outputs[i], 0, nFrames * sizeof(T));
+		}
+		// Process global modulators
+		mGlobalLFO1.FillBuffer(nFrames);
+		mGlobalLFO2.FillBuffer(nFrames);
+		mGlobalSequencer.FillBuffer(nFrames);
 
-    // Process voices
-    mParamSmoother.ProcessBlock(mParamsToSmooth, mModulations.GetList(), nFrames); // Populate modulations list (to be sent to mSynth as inputs)
-    SetTempoAndBeat(qnPos, transportIsRunning, tempo, mTSNum, mTSDenom);
-    mSynth.ProcessBlock(mModulations.GetList(), outputs, 0, nOutputs, nFrames);
+		// Process voices
+		mParamSmoother.ProcessBlock(mParamsToSmooth, mModulations.GetList(), nFrames); // Populate modulations list (to be sent to mSynth as inputs)
+		SetTempoAndBeat(qnPos, transportIsRunning, tempo, mTSNum, mTSDenom);
+		mSynth.ProcessBlock(mModulations.GetList(), outputs, 0, nOutputs, nFrames);
 
-#ifdef VECTOR_MASTER_EFFECTS_TEST
-    for (int s{ 0 }; s < nFrames; s += 4)
-    {
-      const T smoothedGain = mModulations.GetList()[kModGainSmoother][s];
+		for (int s{ 0 }; s < nFrames; ++s)
+		{
+			const T smoothedGain = mModulations.GetList()[kModGainSmoother][s];
 
-      StereoSample<Vec4d> stereo_in{ Vec4d().load(&outputs[0][s]), Vec4d().load(&outputs[1][s]) };
-      mEffects[0]->ProcessStereo_Vector(stereo_in);
+			// Master effects processing
+			T stereo_in[2]{ outputs[0][s], outputs[1][s] };
+			mEffects[0]->ProcessStereo(stereo_in);
+			mEffects[1]->ProcessStereo(stereo_in);
+			mEffects[2]->ProcessStereo(stereo_in);
+			
+			outputs[0][s] = stereo_in[0];
+			outputs[1][s] = stereo_in[1];
 
-      stereo_in.l *= smoothedGain;
-      stereo_in.r *= smoothedGain;
-
-      stereo_in.l.store(&outputs[0][s]);
-      stereo_in.r.store(&outputs[1][s]);
-    }
-#else
-    for(int s=0; s < nFrames;s++)
-    {
-      const T smoothedGain = mModulations.GetList()[kModGainSmoother][s];
-
-      // Master effects processing
-      T stereo_in[2]{ outputs[0][s], outputs[1][s] };
-      mEffects[0]->ProcessStereo(stereo_in);
-      mEffects[1]->ProcessStereo(stereo_in);
-      mEffects[2]->ProcessStereo(stereo_in);
-
-      outputs[0][s] = stereo_in[0];
-      outputs[1][s] = stereo_in[1];
-
-      outputs[0][s] *= smoothedGain;
-      outputs[1][s] *= smoothedGain;
-    }
-#endif
-  }
+			outputs[0][s] *= smoothedGain;
+			outputs[1][s] *= smoothedGain;
+		}
+	}
 
   void Reset(double sampleRate, int blockSize)
   {
-    mSampleRate = sampleRate;
+	  mSampleRate = sampleRate;
     mSynth.SetSampleRateAndBlockSize(sampleRate, blockSize);
     ResetAllVoices();
     mSynth.ForEachVoice([sampleRate](SynthVoice& voice) {

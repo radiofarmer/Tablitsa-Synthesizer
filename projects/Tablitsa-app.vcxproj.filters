@@ -107,6 +107,9 @@
     <ClCompile Include="..\dependencies\radiofarmer\cm.cpp">
       <Filter>dsp</Filter>
     </ClCompile>
+    <ClCompile Include="..\dependencies\radiofarmer\allpass.cpp">
+      <Filter>dsp</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\Tablitsa.h" />
@@ -339,6 +342,15 @@
       <Filter>dsp</Filter>
     </ClInclude>
     <ClInclude Include="..\dependencies\radiofarmer\radiofarmerDSP.h">
+      <Filter>dsp</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dependencies\radiofarmer\reverb.h">
+      <Filter>dsp</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dependencies\radiofarmer\allpass.h">
+      <Filter>dsp</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dependencies\radiofarmer\delayline.h">
       <Filter>dsp</Filter>
     </ClInclude>
   </ItemGroup>
