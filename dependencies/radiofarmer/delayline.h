@@ -20,7 +20,7 @@ public:
 
   void DelayLine::SetDelay(const int d)
   {
-    mLength = std::min(d, MaxDelay);
+    mLength = std::min(d, MaxLength);
   }
 
   /* Get a pointer to the start of the delay line */
@@ -33,7 +33,7 @@ public:
   {
     mRead = mWrite;
     mBuffer[mWrite++] = s;
-    if (mWrite == mLength)
+    if (mWrite >= mLength)
       mWrite = 0;
   }
 
