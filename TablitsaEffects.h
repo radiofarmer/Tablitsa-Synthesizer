@@ -38,7 +38,7 @@ public:
   virtual void SetParam1(T value) {}
   virtual void SetParam2(T value) {}
   virtual void SetParam3(T value) {}
-  virtual void SetParam4(T value) { SetMix(value / (T)100.); }
+  virtual void SetParam4(T value) { SetMix(value); }
   virtual void SetParam5(T value) {}
   virtual void SetParam6(T value) {}
 
@@ -274,8 +274,8 @@ public:
   SampleAndHold(T sampleRate) : Effect<T>(sampleRate) {}
 
   void SetParam1(T value) override { SetRateMS(value); }
-  void SetParam2(T value) override { SetDecay(value / (T)100.); }
-  void SetParam3(T value) override { SetJitter(value / (T)100.); }
+  void SetParam2(T value) override { SetDecay(value); }
+  void SetParam3(T value) override { SetJitter(value); }
 
   T Process(T s) override
   {
@@ -465,9 +465,8 @@ public:
   }
   virtual void SetParam2(T value) override
   {
-    T norm = (T)value / 100.;
-    SetGain(norm);
-    SetThreshold(1. - (mMaxGain - 1.) * (norm * mMaxGainCeil));
+    SetGain(value);
+    SetThreshold(1. - (mMaxGain - 1.) * (value * mMaxGainCeil));
   }
 
   T Process(T s) override
@@ -606,7 +605,7 @@ public:
 
   void SetParam1(T value) override { SetLowGain(value); }
   void SetParam2(T value) override { SetMidGain(value); }
-  void SetParam3(T value) override { SetMidFreq(value * (T)0.00249); } // Accepts values between 0 and 100
+  void SetParam3(T value) override { SetMidFreq(value * (T)0.249); }
   void SetParam4(T value) override { SetHighGain(value); }
 
   inline void SetLowGain(T lg) { mStateL.lg = lg; mStateR.lg = lg; }
@@ -739,7 +738,7 @@ public:
   {
   }
 
-  void SetParam1(T value) override { mReverb.SetDecayTime(value); mReverb.SetDiffusion(0.6 * (1 - value)); mReverb.SetEarlyReflectionsLevel(0.25 + 0.25 * value); }
+  void SetParam1(T value) override { mReverb.SetDiffusion(0.6 * value); }
   void SetParam2(T value) override { mReverb.SetDamping(value);  }
   void SetParam3(T value) override { mReverb.SetColor(value / (T)21000); }
   void SetParam4(T value) override { mReverb.SetMixLevel(value / (T)100); }
@@ -750,5 +749,5 @@ public:
   }
 
 protected:
-  UDFNReverb mReverb;
+  UFDNReverb mReverb;
 };

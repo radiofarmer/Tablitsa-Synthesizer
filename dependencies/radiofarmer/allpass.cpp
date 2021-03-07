@@ -47,8 +47,9 @@ void AbsorbantAllpass::SetLPGain(sample_t gain)
 
 sample_t AbsorbantAllpass::Process(const sample_t s)
 {
-  sample_t sum = s * mFB + mLpf.Process(mZ[mDelay]) * mLpGain;
-  sample_t out = mZ[mDelay] - mFB * sum;
-  mZ.push(-mFB * sum + s);
+  sample_t lpOut = mLpf.Process(mZ[mDelay]) * mLpGain;
+  sample_t sum = s * mFB + lpOut;
+  sample_t out = lpOut + mFB * s;
+  mZ.push(s - mFB * sum);
   return out;
 }

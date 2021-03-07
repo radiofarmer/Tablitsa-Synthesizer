@@ -4,7 +4,7 @@
 
 using namespace radiofarmer;
 
-UDFNReverb::UDFNReverb(sample_t sampleRate, sample_t lpFreq) : mSampleRate(sampleRate)
+UFDNReverb::UFDNReverb(sample_t sampleRate, sample_t lpFreq) : mSampleRate(sampleRate), mLPCutoff(lpFreq)
 {
   // Filters
   SetHFDecay(lpFreq);
@@ -12,7 +12,7 @@ UDFNReverb::UDFNReverb(sample_t sampleRate, sample_t lpFreq) : mSampleRate(sampl
   SetSampleRate(mSampleRate);
 }
 
-void UDFNReverb::SetAAPFilters()
+void UFDNReverb::SetAAPFilters()
 {
   // Early Allpass
   for (int i{ 0 }; i < 2; ++i)
@@ -32,7 +32,7 @@ void UDFNReverb::SetAAPFilters()
   }
 }
 
-void UDFNReverb::SetSampleRate(sample_t sampleRate)
+void UFDNReverb::SetSampleRate(sample_t sampleRate)
 {
   mSampleRate = sampleRate;
 
@@ -51,7 +51,7 @@ void UDFNReverb::SetSampleRate(sample_t sampleRate)
   SetDelays();
 }
 
-void UDFNReverb::SetDelays()
+void UFDNReverb::SetDelays()
 {
   // Early Delays
   for (int i{ 0 }; i < 2; ++i)
@@ -89,7 +89,7 @@ void UDFNReverb::SetDelays()
 /* Reverberation Parameters */
 
 // Diffusion
-void UDFNReverb::SetDiffusion(const sample_t diff)
+void UFDNReverb::SetDiffusion(const sample_t diff)
 {
   m_g = diff;
   CalcNorm();
@@ -97,14 +97,14 @@ void UDFNReverb::SetDiffusion(const sample_t diff)
 }
 
 // Damping (HF attenuation)
-void UDFNReverb::SetDamping(const sample_t damp)
+void UFDNReverb::SetDamping(const sample_t damp)
 {
-  m_a = 1. - std::max(damp * 0.99, 0.01);
+  m_a = 1. - std::max(damp * 0.999, 0.001);
   CalcNorm();
   SetAAPFilters();
 }
 
-void UDFNReverb::SetColor(const sample_t freqNorm)
+void UFDNReverb::SetColor(const sample_t freqNorm)
 {
   SetHFDecay(freqNorm);
   for (int i{ 0 }; i < NLateAPFilters + 1; ++i)
@@ -113,35 +113,38 @@ void UDFNReverb::SetColor(const sample_t freqNorm)
   }
 }
 
-void UDFNReverb::SetHFDecay(const sample_t freqNorm)
+void UFDNReverb::SetHFDecay(const sample_t freqNorm)
 {
   mLPCutoff = freqNorm;
-  sample_t slope = 2.;
+  sample_t slope = 1.5;
   for (int i{ 0 }; i < 2; ++i)
   {
-    sample_t fc = std::clamp(freqNorm, 0.001, 0.95) * 0.5;
+    sample_t fc = std::clamp(freqNorm * 0.5, 0.001, 0.49);
     mEarlyLPF[i].CalculateCoefficients(0., fc, slope);
     for (int j{ 0 }; j < NLateAPFilters; ++j)
     {
       mLateAP[i][j].SetLPF(0., fc, slope);
-      fc *= 0.95;
+      fc *= 0.99;
       if (j == LateDelayPos)
       {
         mLateLPF[i].CalculateCoefficients(0., fc, slope);
-        fc *= 0.95;
+        fc *= 0.99;
       }
     }
   }
 }
 
-void UDFNReverb::SetDecayTime(const sample_t tNorm)
+void UFDNReverb::SetReflectionsDelay(const sample_t tNorm)
 {
   sample_t scale = 1. + tNorm;
   for (int i{ 0 }; i < NEarlyDelays + 1; ++i)
   {
     mEarlyDelayTimes[i] = DefaultEarlyDelayTimes[i] * scale * Primes[i] / 10.;
   }
-
+}
+void UFDNReverb::SetLateReverbDelay(const sample_t tNorm)
+{
+  sample_t scale = 1. + tNorm;
   for (int i{ 0 }; i < NLateAPFilters + 1; ++i)
   {
     mLateDelayTimes[i] = DefaultLateDelayTimes[i] * scale * Primes[i] / 5.;
@@ -149,7 +152,7 @@ void UDFNReverb::SetDecayTime(const sample_t tNorm)
   SetDelays();
 }
 
-void UDFNReverb::CalcNorm()
+void UFDNReverb::CalcNorm()
 {
   // This would need to be an array if the different AAPF's have different lowpass gains
   sample_t c_i = m_g * m_g + (1 - m_g * m_g) * ((m_a * m_a) / (1 - m_a * m_a * m_g * m_g));
@@ -170,7 +173,7 @@ void UDFNReverb::CalcNorm()
 
 /* Processing */
 
-void UDFNReverb::ProcessStereo(StereoSample<sample_t>& s)
+void UFDNReverb::ProcessStereo(StereoSample<sample_t>& s)
 {
   /* Early Reflections */
   sample_t s_in[]{
@@ -190,7 +193,7 @@ void UDFNReverb::ProcessStereo(StereoSample<sample_t>& s)
 
   // Late Reverb
   // First four allpass filters
-  sample_t late_in[]{ delays[0], delays[1] };
+  sample_t late_in[]{ delays[0] + mZ.l, delays[1] + mZ.r };
   sample_t late_out[2]{};
   for (int i{ 0 }; i < 2; ++i)
   {
@@ -215,9 +218,11 @@ void UDFNReverb::ProcessStereo(StereoSample<sample_t>& s)
     late_out[i] += late_in[i] * m_t[NLateAPFilters];
     late_out[i] *= mNorm;
   }
+  mZ.l = late_in[0];
+  mZ.r = late_in[1];
 
   StereoSample<sample_t> out{ late_out[0] + mEarlyAP[0].Process(delays[0]) * mERMix,
     late_out[1] + mEarlyAP[1].Process(delays[1]) * mERMix };
 
-    s = s + (out - s) * mMix;
+  s = s + (out - s) * mMix;
 }

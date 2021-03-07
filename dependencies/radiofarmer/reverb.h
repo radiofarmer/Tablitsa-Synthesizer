@@ -137,7 +137,7 @@ protected:
   Allpass1 mStereoFilters[NS][2];
 };
 
-class UDFNReverb
+class UFDNReverb
 {
   static constexpr int MaxDelaySamples{ 16384 };
   static constexpr int NEarlyDelays{ 5 };
@@ -166,7 +166,7 @@ class UDFNReverb
   }
 
 public:
-  UDFNReverb(sample_t sampleRate, sample_t lpFreq = 0.2);
+  UFDNReverb(sample_t sampleRate, sample_t lpFreq = 0.2);
 
   // Processing Parameters
   void SetSampleRate(sample_t sampleRate);
@@ -176,7 +176,8 @@ public:
 
   // Reverb Quality Parameters
   void SetDiffusion(const sample_t diff);
-  void SetDecayTime(const sample_t tNorm);
+  void SetReflectionsDelay(const sample_t tNorm);
+  void SetLateReverbDelay(const sample_t tNorm);
   void SetDamping(const sample_t damp);
   void SetHFDecay(const sample_t freqNorm);
   void SetColor(const sample_t freqNorm);
@@ -197,9 +198,10 @@ protected:
   AbsorbantAllpass mLateAP[2][5];
   DelayLine<MaxDelaySamples> mLateDelays[2];
   Biquad mLateLPF[2];
+  StereoSample<sample_t> mZ{ 0., 0. }; // Late reverb last output
 
   // Coefficients
-  sample_t mLPCutoff{ 0.1 };
+  sample_t mLPCutoff;
   sample_t mG[2]{ 0.5, 0.5 };
   sample_t m_t[NLateAPFilters + 1]{ 1. };
   sample_t m_a{ 0.9 };
