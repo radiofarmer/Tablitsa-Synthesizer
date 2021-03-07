@@ -192,6 +192,34 @@ void InitReverbUI(Plugin* pPlugin, IGraphics* pGraphics, std::vector<IControl*> 
   controls[5]->SetActionFunction(nullptr);
 }
 
+void InitReverb2UI(Plugin* pPlugin, IGraphics* pGraphics, std::vector<IControl*> controls, const std::vector<int>& params, const std::vector<char*>& paramNames, const bool reset = true)
+{
+  pPlugin->GetParam(params[0])->InitDouble(paramNames[0], reset ? 0.5 : pPlugin->GetParam(params[0])->Value(), 0., 1., 0.01);
+  pPlugin->GetParam(params[1])->InitDouble(paramNames[1], reset ? 0.5 : pPlugin->GetParam(params[1])->Value(), 0., 1., 0.01);
+  pPlugin->GetParam(params[2])->InitFrequency(paramNames[2], reset ? 15000. : pPlugin->GetParam(params[2])->Value(), 100., 20000.);
+  pPlugin->GetParam(params[3])->InitPercentage(paramNames[3], reset ? 0. : pPlugin->GetParam(params[3])->Value());
+
+  for (int i{ 0 }; i < TABLITSA_EFFECT_PARAMS; ++i)
+    controls[i]->SetValue(pPlugin->GetParam(params[i])->GetNormalized());
+
+  dynamic_cast<IVKnobControl*>(controls[0])->SetLabelStr("Size");
+  dynamic_cast<IVKnobControl*>(controls[1])->SetLabelStr("Damping");
+  dynamic_cast<IVKnobControl*>(controls[2])->SetLabelStr("Center Freq");
+  dynamic_cast<IVKnobControl*>(controls[3])->SetLabelStr("Mix");
+
+  controls[2]->Hide(false);
+  controls[3]->Hide(false);
+  controls[0]->SetDisabled(false);
+  controls[1]->SetDisabled(false);
+  controls[2]->SetDisabled(false);
+  controls[3]->SetDisabled(false);
+  // Toggles
+  controls[4]->Hide(true);
+  controls[5]->Hide(true);
+  controls[4]->SetActionFunction(nullptr);
+  controls[5]->SetActionFunction(nullptr);
+}
+
 /* SAMPLE AND HOLD (VOICE) */
 
 void InitSampleAndHoldUI(Plugin* plug, IGraphics* pGraphics, std::vector<IControl*> controls, const std::vector<int>& params, const std::vector<char*>& paramNames, const bool reset = true)
@@ -315,6 +343,12 @@ void SwapMasterEffectsUI(int effectSlot, IControl * pEffectsList, IGraphics * pG
   {
     std::vector<char*> paramNames{ "Reverb Size", "Reverb Gain" , "Master Effect Parameter 3", "Reverb Mix" };
     InitReverbUI(pPlugin, pGraphics, controls, params, paramNames, reset);
+    break;
+  }
+  case kReverb2Effect:
+  {
+    std::vector<char*> paramNames{ "Size", "Damping" , "Color", "Level" };
+    InitReverb2UI(pPlugin, pGraphics, controls, params, paramNames, reset);
     break;
   }
   default:

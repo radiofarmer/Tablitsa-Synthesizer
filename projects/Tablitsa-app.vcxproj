@@ -343,6 +343,7 @@
     <ClInclude Include="..\..\..\IPlug\IPlug_include_in_plug_hdr.h" />
     <ClInclude Include="..\..\..\IPlug\IPlug_include_in_plug_src.h" />
     <ClInclude Include="..\dependencies\radiofarmer\allpass.h" />
+    <ClInclude Include="..\dependencies\radiofarmer\biquad.h" />
     <ClInclude Include="..\dependencies\radiofarmer\cm.h" />
     <ClInclude Include="..\dependencies\radiofarmer\delayline.h" />
     <ClInclude Include="..\dependencies\radiofarmer\radiofarmerDSP.h" />
@@ -449,7 +450,9 @@
     <ClCompile Include="..\..\..\IPlug\IPlugTimer.cpp" />
     <ClCompile Include="..\..\..\WDL\fft.c" />
     <ClCompile Include="..\dependencies\radiofarmer\allpass.cpp" />
+    <ClCompile Include="..\dependencies\radiofarmer\biquad.cpp" />
     <ClCompile Include="..\dependencies\radiofarmer\cm.cpp" />
+    <ClCompile Include="..\dependencies\radiofarmer\reverb.cpp" />
     <ClCompile Include="..\SignalProcessing.cpp" />
     <ClCompile Include="..\Tablitsa.cpp" />
     <ClCompile Include="..\TablitsaControls.cpp" />

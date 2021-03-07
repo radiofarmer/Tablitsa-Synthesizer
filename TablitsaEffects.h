@@ -728,5 +728,27 @@ public:
   }
 
 protected:
-  ReverbCascade<6, 2> mReverb;
+  CascadeReverb<6, 2> mReverb;
+};
+
+template<typename T, class V=Vec4d>
+class Reverb2Effect : public Effect<T, V>
+{
+public:
+  Reverb2Effect(T sampleRate) : Effect<T, V>(sampleRate), mReverb(sampleRate)
+  {
+  }
+
+  void SetParam1(T value) override { mReverb.SetDecayTime(value); mReverb.SetDiffusion(0.6 * (1 - value)); mReverb.SetEarlyReflectionsLevel(0.25 + 0.25 * value); }
+  void SetParam2(T value) override { mReverb.SetDamping(value);  }
+  void SetParam3(T value) override { mReverb.SetColor(value / (T)21000); }
+  void SetParam4(T value) override { mReverb.SetMixLevel(value / (T)100); }
+
+  void ProcessStereo(StereoSample<T>& s)
+  {
+    mReverb.ProcessStereo(s);
+  }
+
+protected:
+  UDFNReverb mReverb;
 };

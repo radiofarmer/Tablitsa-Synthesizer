@@ -4,14 +4,15 @@
 #include "allpass.h"
 
 #include <assert.h>
+#include <cmath>
 
 BEGIN_DSP_NAMESPACE
 
 template<int NM=3, int NS=2>
-class ReverbCascade
+class CascadeReverb
 {
 public:
-  ReverbCascade(sample_t sampleRate=DEFAULT_SRATE, sample_t maxDelayMS=50., sample_t minDelayMS = 10., sample_t maxFeedback=0.75, sample_t minFeedback=0.6, sample_t gain=0.5) :
+  CascadeReverb(sample_t sampleRate=DEFAULT_SRATE, sample_t maxDelayMS=50., sample_t minDelayMS = 10., sample_t maxFeedback=0.75, sample_t minFeedback=0.6, sample_t gain=0.5) :
     mSampleRate(sampleRate),
     mMaxDelay(maxDelayMS),
     mMinDelay(minDelayMS),
@@ -134,6 +135,85 @@ protected:
 
   Allpass1 mMonoFilters[NM];
   Allpass1 mStereoFilters[NS][2];
+};
+
+class UDFNReverb
+{
+  static constexpr int MaxDelaySamples{ 16384 };
+  static constexpr int NEarlyDelays{ 5 };
+  static constexpr int NLateDelays{ 1 };
+  static constexpr int NLateAPFilters{ 5 };
+  static constexpr int LateDelayPos{ 4 }; // The late delay comes between the fourth and fifth AP filters
+
+  static constexpr sample_t DefaultEarlyDelayTimes[6]{
+    23., 27., 29., 33., 35., 37.
+  };
+  static constexpr sample_t DefaultLateDelayTimes[7]{
+    51., 55., 59., 61., 63., 67., 71.
+  };
+
+  static constexpr sample_t Primes[]{ 1., 2., 3., 5., 7., 11., 13., 17. };
+  static constexpr int NPrimes{ sizeof(Primes) / 8 };
+
+  static constexpr sample_t MinEarlyDelay{ 15. };
+  static constexpr sample_t MaxEarlyDelay{ 100. };
+  static constexpr sample_t MinLateDelay{ 45. };
+  static constexpr sample_t MaxLateDelay{ 6000. };
+
+  static inline sample_t PseudoPrimeScalar(const sample_t scale, const int idx)
+  {
+    return Primes[idx] + scale * (Primes[idx + 1] - Primes[idx]);
+  }
+
+public:
+  UDFNReverb(sample_t sampleRate, sample_t lpFreq = 0.2);
+
+  // Processing Parameters
+  void SetSampleRate(sample_t sampleRate);
+  void SetDelays();
+  void SetAAPFilters();
+  void ProcessStereo(StereoSample<sample_t>& s);
+
+  // Reverb Quality Parameters
+  void SetDiffusion(const sample_t diff);
+  void SetDecayTime(const sample_t tNorm);
+  void SetDamping(const sample_t damp);
+  void SetHFDecay(const sample_t freqNorm);
+  void SetColor(const sample_t freqNorm);
+  void SetEarlyReflectionsLevel(const sample_t erLevel) { mERMix = erLevel; }
+  void SetMixLevel(const sample_t mix) { mMix = mix; }
+
+  void CalcNorm();
+
+protected:
+  sample_t mSampleRate;
+
+  // Early reflections delay lines
+  Biquad mEarlyLPF[2];
+  DelayLine<MaxDelaySamples> mEarlyDelays[2][5];
+  AbsorbantAllpass mEarlyAP[2];
+
+  // Late reverb delay lines and filters (one per channel)
+  AbsorbantAllpass mLateAP[2][5];
+  DelayLine<MaxDelaySamples> mLateDelays[2];
+  Biquad mLateLPF[2];
+
+  // Coefficients
+  sample_t mLPCutoff{ 0.1 };
+  sample_t mG[2]{ 0.5, 0.5 };
+  sample_t m_t[NLateAPFilters + 1]{ 1. };
+  sample_t m_a{ 0.9 };
+  sample_t m_g{ 0.6 };
+  sample_t mNorm{ m_g * m_g + (1 - m_g * m_g) * ((m_a * m_a) / (1 - m_a * m_a * m_g * m_g)) };
+  sample_t mERMix = 1.;
+  sample_t mMix = 1.;
+
+  sample_t mEarlyDelayTimes[6]{
+    23., 27., 29., 33., 35., 37.
+  };
+  sample_t mLateDelayTimes[7]{
+    51., 55., 59., 61., 63., 67., 71.
+  };
 };
 
 END_DSP_NAMESPACE

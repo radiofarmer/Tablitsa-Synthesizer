@@ -924,13 +924,13 @@ public:
 			const T smoothedGain = mModulations.GetList()[kModGainSmoother][s];
 
 			// Master effects processing
-			T stereo_in[2]{ outputs[0][s], outputs[1][s] };
+			StereoSample<T> stereo_in{ outputs[0][s], outputs[1][s] };
 			mEffects[0]->ProcessStereo(stereo_in);
 			mEffects[1]->ProcessStereo(stereo_in);
 			mEffects[2]->ProcessStereo(stereo_in);
 			
-			outputs[0][s] = stereo_in[0];
-			outputs[1][s] = stereo_in[1];
+			outputs[0][s] = stereo_in.l;
+			outputs[1][s] = stereo_in.r;
 
 			outputs[0][s] *= smoothedGain;
 			outputs[1][s] *= smoothedGain;

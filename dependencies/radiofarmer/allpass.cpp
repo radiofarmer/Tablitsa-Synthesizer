@@ -33,3 +33,22 @@ sample_t Allpass1::Process(const sample_t s)
   mZ.push(sum);
   return out;
 }
+
+/* Absorbant 'Allpass' Filter */
+AbsorbantAllpass::AbsorbantAllpass(sample_t sampleRate, sample_t lpFreq, sample_t lpGain, sample_t delayMS, sample_t fb) :
+  Allpass1(sampleRate, delayMS, fb), mLpFreq(lpFreq), mLpGain(lpGain), mLpf(LPF, lpGain, lpFreq, 2.)
+{
+}
+
+void AbsorbantAllpass::SetLPGain(sample_t gain)
+{
+  mLpGain = gain;
+}
+
+sample_t AbsorbantAllpass::Process(const sample_t s)
+{
+  sample_t sum = s * mFB + mLpf.Process(mZ[mDelay]) * mLpGain;
+  sample_t out = mZ[mDelay] - mFB * sum;
+  mZ.push(-mFB * sum + s);
+  return out;
+}
