@@ -17,7 +17,6 @@ void UFDNReverb::SetAAPFilters()
   // Early Allpass
   for (int i{ 0 }; i < 2; ++i)
   {
-    mEarlyAP[i].SetLPGain(m_a);
     mEarlyAP[i].SetFeedbackGain(m_g);
   }
 
@@ -65,7 +64,6 @@ void UFDNReverb::SetDelays()
   for (int i{ 0 }; i < 2; ++i)
   {
     mEarlyAP[i].SetDelayMS(mEarlyDelayTimes[NEarlyDelays]);
-    mEarlyAP[i].SetLPF(0., mLPCutoff, 2.);
   }
 
   // Late Allpass
@@ -109,7 +107,7 @@ void UFDNReverb::SetColor(const sample_t freqNorm)
   SetHFDecay(freqNorm);
   for (int i{ 0 }; i < NLateAPFilters + 1; ++i)
   {
-    m_t[i] = 1. + std::pow(static_cast<sample_t>(i) / static_cast<sample_t>(NLateAPFilters + 2) - freqNorm, 2.);
+    m_t[i] = 1. + std::pow((1. - static_cast<sample_t>(i) / static_cast<sample_t>(NLateAPFilters + 2)) * freqNorm, 2.);
   }
 }
 
@@ -124,11 +122,11 @@ void UFDNReverb::SetHFDecay(const sample_t freqNorm)
     for (int j{ 0 }; j < NLateAPFilters; ++j)
     {
       mLateAP[i][j].SetLPF(0., fc, slope);
-      fc *= 0.99;
+      //fc *= 0.99;
       if (j == LateDelayPos)
       {
         mLateLPF[i].CalculateCoefficients(0., fc, slope);
-        fc *= 0.99;
+        //fc *= 0.99;
       }
     }
   }

@@ -204,19 +204,20 @@ void InitReverb2UI(Plugin* pPlugin, IGraphics* pGraphics, std::vector<IControl*>
 {
   pPlugin->GetParam(params[0])->InitDouble(paramNames[0], reset ? 0.5 : pPlugin->GetParam(params[0])->Value(), 0., 1., 0.01);
   pPlugin->GetParam(params[1])->InitDouble(paramNames[1], reset ? 0.5 : pPlugin->GetParam(params[1])->Value(), 0., 1., 0.01);
-  pPlugin->GetParam(params[2])->InitFrequency(paramNames[2], reset ? 15000. : pPlugin->GetParam(params[2])->Value(), 100., 20000.);
+  pPlugin->GetParam(params[2])->InitDouble(paramNames[2], reset ? 1. : pPlugin->GetParam(params[1])->Value(), 0., 1., 0.01);
   pPlugin->GetParam(params[3])->InitDouble(paramNames[3], reset ? 0. : pPlugin->GetParam(params[3])->Value(), 0., 1., 0.01);
 
   // Display funcs
   pPlugin->GetParam(params[0])->SetDisplayFunc(PercentDisplayFunc);
+  pPlugin->GetParam(params[2])->SetDisplayFunc(PercentDisplayFunc);
   pPlugin->GetParam(params[3])->SetDisplayFunc(PercentDisplayFunc);
 
   for (int i{ 0 }; i < TABLITSA_EFFECT_PARAMS; ++i)
     controls[i]->SetValue(pPlugin->GetParam(params[i])->GetNormalized());
 
-  dynamic_cast<IVKnobControl*>(controls[0])->SetLabelStr("Diffusion");
+  dynamic_cast<IVKnobControl*>(controls[0])->SetLabelStr("Echo");
   dynamic_cast<IVKnobControl*>(controls[1])->SetLabelStr("Damping");
-  dynamic_cast<IVKnobControl*>(controls[2])->SetLabelStr("Center Freq");
+  dynamic_cast<IVKnobControl*>(controls[2])->SetLabelStr("High-End");
   dynamic_cast<IVKnobControl*>(controls[3])->SetLabelStr("Mix");
 
   controls[2]->Hide(false);

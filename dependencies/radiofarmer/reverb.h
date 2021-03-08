@@ -192,7 +192,7 @@ protected:
   // Early reflections delay lines
   Biquad mEarlyLPF[2];
   DelayLine<MaxDelaySamples> mEarlyDelays[2][5];
-  AbsorbantAllpass mEarlyAP[2];
+  Allpass1 mEarlyAP[2];
 
   // Late reverb delay lines and filters (one per channel)
   AbsorbantAllpass mLateAP[2][5];

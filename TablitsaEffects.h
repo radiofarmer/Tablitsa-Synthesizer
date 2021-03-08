@@ -706,7 +706,7 @@ public:
   }
   void SetParam4(T value) override
   {
-    mReverb.SetGain(value / (T)100.);
+    mReverb.SetGain(value);
   }
 
   T Process(T s) override
@@ -738,10 +738,10 @@ public:
   {
   }
 
-  void SetParam1(T value) override { mReverb.SetDiffusion(0.6 * value); }
+  void SetParam1(T value) override { mReverb.SetDiffusion(value * 0.75); }
   void SetParam2(T value) override { mReverb.SetDamping(value);  }
-  void SetParam3(T value) override { mReverb.SetColor(value / (T)21000); }
-  void SetParam4(T value) override { mReverb.SetMixLevel(value / (T)100); }
+  void SetParam3(T value) override { mReverb.SetColor(value * 0.7); }
+  void SetParam4(T value) override { mReverb.SetMixLevel(value); }
 
   void ProcessStereo(StereoSample<T>& s)
   {
