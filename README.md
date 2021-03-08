@@ -4,7 +4,7 @@ A polyphonic wavetable synthesizer inspired by chemistry, built with the the IPl
 
 ## Features
 The final version will include
-  * Two wavetable oscillators with adjustable table position/timbre, phase distortion, and formant shift. The wavetables are band-limited by 8x oversampled, octave-spaced mipmaps by passing the 2x oversampled oscillator output through a 12th-order IIR filter.
+  * Two wavetable oscillators with adjustable table position/timbre, phase distortion, and formant shift. The wavetables are band-limited by 8x oversampled, octave-spaced mipmaps and by passing the 2x oversampled oscillator output through a 12th-order IIR filter.
   * 118 wavetables with properties inspired by chemical elements: Each group (column) on the table has a characteristic spectral shape that changes slightly with period (row), while different sets of harmonic and inharmonic frequencies are added to positions in the wavetable representing the most common oxidation states for a given element. (e.g. Carbon's wavetable has 9 different timbres, corresponding to oxidation states -4 to +4.) 
   * Two filters with adjustable routing from the oscillators, using Hal Chamberlin's State-Variable Filter (lowpass, highpass, bandpass, allpass) and a model of the Moog Ladder Filter (lowpass, highpass, bandpass, with -12dB/Oct. and -24dB/Oct. slopes), as well as a comb filter with adjustable feedback and feedforward coefficients and adjustable delay line length
   * Three envelopes, two LFOs, a 16-step sequencer, and keytrack, velocity, and trigger-random modulation for all continuously-variable parameters
