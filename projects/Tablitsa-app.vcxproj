@@ -349,6 +349,7 @@
     <ClInclude Include="..\dependencies\radiofarmer\radiofarmerDSP.h" />
     <ClInclude Include="..\dependencies\radiofarmer\radiofarmer_config.h" />
     <ClInclude Include="..\dependencies\radiofarmer\reverb.h" />
+    <ClInclude Include="..\dependencies\radiofarmer\waveshaper.h" />
     <ClInclude Include="..\OversamplingFilter.h" />
     <ClInclude Include="..\TablitsaControls.h" />
     <ClInclude Include="..\TablitsaEffects.h" />
@@ -356,7 +357,6 @@
     <ClInclude Include="..\Modulation.h" />
     <ClInclude Include="..\Modulators.h" />
     <ClInclude Include="..\PeriodicTable.h" />
-    <ClInclude Include="..\SignalProcessing.h" />
     <ClInclude Include="..\Tablitsa.h" />
     <ClInclude Include="..\TablitsaOscillators.h" />
     <ClInclude Include="..\TablitsaUIFunctions.h" />
@@ -453,7 +453,7 @@
     <ClCompile Include="..\dependencies\radiofarmer\biquad.cpp" />
     <ClCompile Include="..\dependencies\radiofarmer\cm.cpp" />
     <ClCompile Include="..\dependencies\radiofarmer\reverb.cpp" />
-    <ClCompile Include="..\SignalProcessing.cpp" />
+    <ClCompile Include="..\dependencies\radiofarmer\waveshaper.cpp" />
     <ClCompile Include="..\Tablitsa.cpp" />
     <ClCompile Include="..\TablitsaControls.cpp" />
     <ClCompile Include="..\VectorFunctions.cpp" />

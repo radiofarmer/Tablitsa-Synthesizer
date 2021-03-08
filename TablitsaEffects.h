@@ -2,7 +2,6 @@
 
 #include "radiofarmerDSP.h"
 
-#include "SignalProcessing.h"
 #include "Filter.h"
 #include "Modulators.h"
 
@@ -397,60 +396,60 @@ class Waveshaper : public Effect<T, V>
 
   /* Singleton Versions */
 
-  static inline T SineShaper(T x, const T gain, const T gainCeil=1.)
+  static inline T SineShaper(T x, const T gain)
   {
     x *= gain;
     T x2 = std::copysign(x, piOver2 - x);
     return std::copysign(x2 - x2 * x2 * x2 / (T)6 + x2 * x2 * x2 * x2 * x2 / (T)120, x) * 0.9;
   }
 
-  static inline T ParabolicShaper(T x, const T gain, const T gainCeil = 1.)
+  static inline T ParabolicShaper(T x, const T gain)
   {
     x *= gain;
-    return SoftClipShaper(copysign(x * x, x), 1., gainCeil);
+    return SoftClipShaper(copysign(x * x, x), 1.);
   }
 
-  static inline T TanhShaper(T x, const T gain, const T gainCeil = 1.)
+  static inline T TanhShaper(T x, const T gain)
   {
-    return std::tanh(x * gain) * gainCeil;
+    return std::tanh(x * gain);
   }
 
-  static inline T SoftClipShaper(T x, const T gain, const T gainCeil = 1.)
+  static inline T SoftClipShaper(T x, const T gain)
   {
-    return SoftClip<T>(x, gain) * gainCeil;
+    return SoftClip<T, 5>(x * gain);
   }
 
-  static inline T HardClipShaper(T x, const T gain, const T gainCeil = 1.)
+  static inline T HardClipShaper(T x, const T gain)
   {
-    return std::copysign(std::min(std::abs(x) * gain, gainCeil), x);
+    return std::copysign(std::min(std::abs(x) * gain), x);
   }
 
   /* Vector versions */
 
-  static inline V __vectorcall VSineShaper(const V& x, const T gain, const T gainCeil = 1.)
+  static inline V __vectorcall VSineShaper(const V& x, const T gain)
   {
-    return sin(x * gain) * gainCeil;
+    return sin(x * gain);
   }
 
-  static inline V __vectorcall VParabolicShaper(const V& x, const T gain, const T gainCeil = 1.)
+  static inline V __vectorcall VParabolicShaper(const V& x, const T gain)
   {
-    V x_clip = VSoftClipShaper(x, gain, gainCeil);
+    V x_clip = VSoftClipShaper(x, gain);
     return pow(x_clip, 2);
   }
 
-  static inline V __vectorcall VTanhShaper(const V& x, const T gain, const T gainCeil = 1.)
+  static inline V __vectorcall VTanhShaper(const V& x, const T gain)
   {
-    return tanh(x * gain) * gainCeil;
+    return tanh(x * gain);
   }
 
-  static inline V __vectorcall VSoftClipShaper(const V& x, const T gain, const T gainCeil = 1.)
+  static inline V __vectorcall VSoftClipShaper(const V& x, const T gain)
   {
-    return SoftClip<V, T>(x, gain) * gainCeil;
+    return SoftClip<V, 5>(x * gain);
   }
 
-  static inline V __vectorcall VHardClipShaper(const V& x, const T gain, const T gainCeil = 1.)
+  static inline V __vectorcall VHardClipShaper(const V& x, const T gain)
   {
-    return sign(x) * min(abs(x * gain), V(gainCeil));
+    return sign(x) * min(abs(x * gain));
   }
 
 public:
@@ -471,38 +470,38 @@ public:
 
   T Process(T s) override
   {
-    return mShaperFunc(s, mGain, mThresh);
+    return mShaperFunc(s, mGain);
   }
 
   inline T DoProcess(T s)
   {
-    return mMix * (mShaperFunc(s, mGain, mThresh) - s);
+    return (mShaperFunc(s, mGain) - s);
   }
 
   inline V __vectorcall DoProcess_Vector(V& s)
   {
-    return mMix * (mShaperFunc_Vector(s, mGain, mThresh) - s);
+    return (mShaperFunc_Vector(s, mGain) - s);
   }
 
   void ProcessStereo(T* s) override
   {
     std::lock_guard<std::mutex> lg(mFuncMutex);
-    s[0] += DoProcess(s[0]);
-    s[1] += DoProcess(s[1]);
+    s[0] += mMix * mThresh * (DoProcess(s[0]) - s[0]);
+    s[1] += mMix * mThresh * (DoProcess(s[1]) - s[1]);
   }
 
   void ProcessStereo(StereoSample<T>& s) override
   {
     std::lock_guard<std::mutex> lg(mFuncMutex);
-    s.l += DoProcess(s.l);
-    s.r += DoProcess(s.r);
+    s.l += mMix * mThresh * (DoProcess(s.l) - s.l);
+    s.r += mMix * mThresh * (DoProcess(s.r) - s.r);
   }
 
   void ProcessStereo_Vector(StereoSample<V>& s)
   {
     std::lock_guard<std::mutex> lg(mFuncMutex);
-    s.l += DoProcess_Vector(s.l);
-    s.r += DoProcess_Vector(s.r);
+    s.l += mMix * mThresh * (DoProcess_Vector(s.l) - s.l);
+    s.r += mMix * mThresh * (DoProcess_Vector(s.r) - s.r);
   }
 
   inline void SetMode(EWaveshaperMode mode)
@@ -554,8 +553,8 @@ protected:
   T mGain{ (T)1 };
   T mThresh{ 0.5 };
   EWaveshaperMode mShaperMode;
-  std::function<T(T, const T, const T)> mShaperFunc{ &Waveshaper::SineShaper };
-  std::function<V(const V&, const T, const T)> mShaperFunc_Vector{ &Waveshaper::VSineShaper };
+  std::function<T(T, const T)> mShaperFunc{ &Waveshaper::SineShaper };
+  std::function<V(const V&, const T)> mShaperFunc_Vector{ &Waveshaper::VSineShaper };
   std::mutex mFuncMutex;
 };
 

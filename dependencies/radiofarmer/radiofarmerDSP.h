@@ -3,10 +3,11 @@
 
 #include "radiofarmer_config.h"
 
-#include "delayline.h"
 #include "allpass.h"
+#include "delayline.h"
 #include "cm.h"
 #include "reverb.h"
+#include "waveshaper.h"
 
 /*
 class VectorOscillator

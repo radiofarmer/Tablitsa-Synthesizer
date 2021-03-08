@@ -720,7 +720,8 @@ public:
       constexpr int numEffectModParams = kVEffect2Param1 - kVEffect1Param1;
       // Note: Remember to set the min and max of the `ParameterModulator` object if any of the effects have different scales from the rest
       std::lock_guard<std::mutex> lg(mMaster->mProcMutex);
-      delete mEffects[effectSlot];
+      if (mEffects[effectSlot])
+        delete mEffects[effectSlot];
       switch (effectId)
       {
       case kWaveshaperEffect:

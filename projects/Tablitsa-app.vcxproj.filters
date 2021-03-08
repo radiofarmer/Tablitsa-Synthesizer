@@ -102,7 +102,6 @@
       <Filter>WDL</Filter>
     </ClCompile>
     <ClCompile Include="..\VectorFunctions.cpp" />
-    <ClCompile Include="..\SignalProcessing.cpp" />
     <ClCompile Include="..\TablitsaControls.cpp" />
     <ClCompile Include="..\dependencies\radiofarmer\cm.cpp">
       <Filter>dsp</Filter>
@@ -114,6 +113,9 @@
       <Filter>dsp</Filter>
     </ClCompile>
     <ClCompile Include="..\dependencies\radiofarmer\biquad.cpp">
+      <Filter>dsp</Filter>
+    </ClCompile>
+    <ClCompile Include="..\dependencies\radiofarmer\waveshaper.cpp">
       <Filter>dsp</Filter>
     </ClCompile>
   </ItemGroup>
@@ -331,7 +333,6 @@
     <ClInclude Include="..\Wavetable.h" />
     <ClInclude Include="..\Modulators.h" />
     <ClInclude Include="..\Filter.h" />
-    <ClInclude Include="..\SignalProcessing.h" />
     <ClInclude Include="..\PeriodicTable.h" />
     <ClInclude Include="..\VoiceThread.h" />
     <ClInclude Include="..\VectorFunctions.h" />
@@ -360,6 +361,9 @@
       <Filter>dsp</Filter>
     </ClInclude>
     <ClInclude Include="..\dependencies\radiofarmer\biquad.h">
+      <Filter>dsp</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dependencies\radiofarmer\waveshaper.h">
       <Filter>dsp</Filter>
     </ClInclude>
   </ItemGroup>

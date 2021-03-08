@@ -2,7 +2,6 @@
 
 #include "radiofarmerDSP.h"
 
-#include "SignalProcessing.h"
 #include "VectorFunctions.h"
 
 #include <vector>
@@ -127,12 +126,12 @@ public:
     SetMode(kLowpass);
   }
 
-  inline void SetCutoff(double cutoffNorm)
+  void SetCutoff(double cutoffNorm) override
   {
     mFc = std::max(std::min(cutoffNorm, 0.99), 0.001);
   }
 
-  inline void SetQ(double q)
+  void SetQ(double q) override
   {
 #ifdef STATE_SPACE_FILTER
     mQ = q;
@@ -142,6 +141,11 @@ public:
     else
       mQ = 1. / std::max(1. - q, 0.001);
 #endif
+  }
+
+  void SetDrive(double drive) override
+  {
+    mDrive = drive * 2.;
   }
 
   void Reset()
@@ -200,7 +204,7 @@ public:
   inline T Process(double s)
   {
     CalculateCoefficients();
-    T overdrive = SoftClip<T>(s, 1. + mDrive * 2.);
+    T overdrive = SoftClip<T, 5>(s * (1. + mDrive));
     s += mDrive * (overdrive - s);
     return (this->*mProcessFunctions[mMode])(s);
   }
