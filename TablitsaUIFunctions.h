@@ -3,8 +3,8 @@
 
 void PercentDisplayFunc(double value, WDL_String& str)
 {
-  int precision = 1;
-  double displayValue = value;
+  int precision = (value < 0.1) + (value < 0.01);
+  double displayValue = value * 100.;
   str.SetFormatted(MAX_PARAM_DISPLAY_LEN, "%.*f", precision, displayValue);
   str.Append(" %");
 }
@@ -96,8 +96,11 @@ void InitDelayUI(Plugin* plug, IGraphics* pGraphics, std::vector<IControl*> cont
     plug->GetParam(params[0])->InitDouble(paramNames[0], reset ? 100. : plug->GetParam(params[0])->Value(), 1., TABLITSA_MAX_DELAY_MS, 1., "ms", IParam::kFlagsNone, "Effect", IParam::ShapePowCurve(3.));
     plug->GetParam(params[1])->InitDouble(paramNames[1], reset ? 100. : plug->GetParam(params[1])->Value(), 1., TABLITSA_MAX_DELAY_MS, 1., "ms", IParam::kFlagsNone, "Effect", IParam::ShapePowCurve(3.));
   }
-  plug->GetParam(params[2])->InitPercentage(paramNames[2], reset ? 0. : plug->GetParam(params[2])->Value());
-  plug->GetParam(params[3])->InitPercentage(paramNames[3], reset ? 0. : plug->GetParam(params[3])->Value());
+  plug->GetParam(params[2])->InitDouble(paramNames[2], reset ? 0. : plug->GetParam(params[2])->Value(), 0., 1., 0.01);
+  plug->GetParam(params[3])->InitDouble(paramNames[3], reset ? 0. : plug->GetParam(params[3])->Value(), 0., 1., 0.01);
+
+  plug->GetParam(params[2])->SetDisplayFunc(PercentDisplayFunc);
+  plug->GetParam(params[3])->SetDisplayFunc(PercentDisplayFunc);
 
   for (int i{ 0 }; i < TABLITSA_EFFECT_PARAMS; ++i)
     controls[i]->SetValue(plug->GetParam(params[i])->GetNormalized());
@@ -137,9 +140,11 @@ void InitDelayUI(Plugin* plug, IGraphics* pGraphics, std::vector<IControl*> cont
 void InitEqualizerUI(Plugin* pPlugin, IGraphics* pGraphics, std::vector<IControl*> controls, const std::vector<int>& params, const std::vector<char*>& paramNames, const bool reset = true)
 {
   pPlugin->GetParam(params[0])->InitDouble(paramNames[0], reset ? 1. : pPlugin->GetParam(params[0])->Value(), 0., 2., 0.01);
-  pPlugin->GetParam(params[1])->InitDouble(paramNames[1], reset ? 1. : pPlugin->GetParam(params[0])->Value(), 0., 2., 0.01);
-  pPlugin->GetParam(params[2])->InitPercentage(paramNames[2], reset ? 50. : pPlugin->GetParam(params[0])->Value());
-  pPlugin->GetParam(params[3])->InitDouble(paramNames[3], reset ? 1. : pPlugin->GetParam(params[0])->Value(), 0., 2., 0.01);
+  pPlugin->GetParam(params[1])->InitDouble(paramNames[1], reset ? 1. : pPlugin->GetParam(params[1])->Value(), 0., 2., 0.01);
+  pPlugin->GetParam(params[2])->InitDouble(paramNames[2], reset ? 1. : pPlugin->GetParam(params[2])->Value(), 0., 100., 0.01);
+  pPlugin->GetParam(params[3])->InitDouble(paramNames[3], reset ? 1. : pPlugin->GetParam(params[3])->Value(), 0., 2., 0.01);
+
+  pPlugin->GetParam(params[2])->SetDisplayFunc(PercentDisplayFunc);
 
   for (int i{ 0 }; i < TABLITSA_EFFECT_PARAMS; ++i)
     controls[i]->SetValue(pPlugin->GetParam(params[i])->GetNormalized());
@@ -162,6 +167,72 @@ void InitEqualizerUI(Plugin* pPlugin, IGraphics* pGraphics, std::vector<IControl
   controls[5]->SetActionFunction(nullptr);
 }
 
+/* REVERB */
+
+void InitReverbUI(Plugin* pPlugin, IGraphics* pGraphics, std::vector<IControl*> controls, const std::vector<int>& params, const std::vector<char*>& paramNames, const bool reset = true)
+{
+  pPlugin->GetParam(params[0])->InitDouble(paramNames[0], reset ? 0.5 : pPlugin->GetParam(params[0])->Value(), 0., 1., 0.01);
+  pPlugin->GetParam(params[1])->InitDouble(paramNames[1], reset ? 0.5 : pPlugin->GetParam(params[1])->Value(), 0., 1., 0.01);
+  pPlugin->GetParam(params[3])->InitDouble(paramNames[3], reset ? 0. : pPlugin->GetParam(params[3])->Value(), 0., 1., 0.01);
+
+  pPlugin->GetParam(params[0])->SetDisplayFunc(nullptr);
+  pPlugin->GetParam(params[1])->SetDisplayFunc(PercentDisplayFunc);
+  pPlugin->GetParam(params[0])->SetDisplayFunc(PercentDisplayFunc);
+
+  for (int i{ 0 }; i < TABLITSA_EFFECT_PARAMS; ++i)
+    controls[i]->SetValue(pPlugin->GetParam(params[i])->GetNormalized());
+
+  dynamic_cast<IVKnobControl*>(controls[0])->SetLabelStr("Decay Time");
+  dynamic_cast<IVKnobControl*>(controls[1])->SetLabelStr("Damping");
+  dynamic_cast<IVKnobControl*>(controls[2])->SetLabelStr(" ");
+  dynamic_cast<IVKnobControl*>(controls[3])->SetLabelStr("Mix");
+
+  controls[2]->Hide(false);
+  controls[3]->Hide(false);
+  controls[0]->SetDisabled(false);
+  controls[1]->SetDisabled(false);
+  controls[2]->SetDisabled(true);
+  controls[3]->SetDisabled(false);
+  // Toggles
+  controls[4]->Hide(true);
+  controls[5]->Hide(true);
+  controls[4]->SetActionFunction(nullptr);
+  controls[5]->SetActionFunction(nullptr);
+}
+
+void InitReverb2UI(Plugin* pPlugin, IGraphics* pGraphics, std::vector<IControl*> controls, const std::vector<int>& params, const std::vector<char*>& paramNames, const bool reset = true)
+{
+  pPlugin->GetParam(params[0])->InitDouble(paramNames[0], reset ? 0.5 : pPlugin->GetParam(params[0])->Value(), 0., 1., 0.01);
+  pPlugin->GetParam(params[1])->InitDouble(paramNames[1], reset ? 0.5 : pPlugin->GetParam(params[1])->Value(), 0., 1., 0.01);
+  pPlugin->GetParam(params[2])->InitDouble(paramNames[2], reset ? 1. : pPlugin->GetParam(params[1])->Value(), 0., 1., 0.01);
+  pPlugin->GetParam(params[3])->InitDouble(paramNames[3], reset ? 0. : pPlugin->GetParam(params[3])->Value(), 0., 1., 0.01);
+
+  // Display funcs
+  pPlugin->GetParam(params[0])->SetDisplayFunc(PercentDisplayFunc);
+  pPlugin->GetParam(params[2])->SetDisplayFunc(PercentDisplayFunc);
+  pPlugin->GetParam(params[3])->SetDisplayFunc(PercentDisplayFunc);
+
+  for (int i{ 0 }; i < TABLITSA_EFFECT_PARAMS; ++i)
+    controls[i]->SetValue(pPlugin->GetParam(params[i])->GetNormalized());
+
+  dynamic_cast<IVKnobControl*>(controls[0])->SetLabelStr("Echo");
+  dynamic_cast<IVKnobControl*>(controls[1])->SetLabelStr("Damping");
+  dynamic_cast<IVKnobControl*>(controls[2])->SetLabelStr("High-End");
+  dynamic_cast<IVKnobControl*>(controls[3])->SetLabelStr("Mix");
+
+  controls[2]->Hide(false);
+  controls[3]->Hide(false);
+  controls[0]->SetDisabled(false);
+  controls[1]->SetDisabled(false);
+  controls[2]->SetDisabled(false);
+  controls[3]->SetDisabled(false);
+  // Toggles
+  controls[4]->Hide(true);
+  controls[5]->Hide(true);
+  controls[4]->SetActionFunction(nullptr);
+  controls[5]->SetActionFunction(nullptr);
+}
+
 /* SAMPLE AND HOLD (VOICE) */
 
 void InitSampleAndHoldUI(Plugin* plug, IGraphics* pGraphics, std::vector<IControl*> controls, const std::vector<int>& params, const std::vector<char*>& paramNames, const bool reset = true)
@@ -170,9 +241,14 @@ void InitSampleAndHoldUI(Plugin* plug, IGraphics* pGraphics, std::vector<IContro
   std::vector<IControl*> allKnobs;
   allKnobs.insert(allKnobs.begin(), controls.begin(), controls.begin() + 4);
   plug->GetParam(params[0])->InitDouble(paramNames[0], reset ? 10. : plug->GetParam(params[0])->Value(), 0.05, 10., 0.01, "ms", IParam::kFlagsNone, "Effect", IParam::ShapePowCurve(3.));
-  plug->GetParam(params[1])->InitPercentage(paramNames[1], reset ? 0. : plug->GetParam(params[1])->Value());
-  plug->GetParam(params[2])->InitPercentage(paramNames[2], reset ? 0. : plug->GetParam(params[2])->Value());
-  plug->GetParam(params[3])->InitPercentage(paramNames[3], reset ? 0. : plug->GetParam(params[3])->Value());
+  plug->GetParam(params[1])->InitDouble(paramNames[1], reset ? 0. : plug->GetParam(params[1])->Value(), 0., 1., 0.01);
+  plug->GetParam(params[2])->InitDouble(paramNames[2], reset ? 0. : plug->GetParam(params[2])->Value(), 0., 1., 0.01);
+  plug->GetParam(params[3])->InitDouble(paramNames[3], reset ? 0. : plug->GetParam(params[3])->Value(), 0., 1., 0.01);
+
+  plug->GetParam(params[0])->SetDisplayFunc(nullptr);
+  plug->GetParam(params[1])->SetDisplayFunc(PercentDisplayFunc);
+  plug->GetParam(params[2])->SetDisplayFunc(PercentDisplayFunc);
+  plug->GetParam(params[3])->SetDisplayFunc(PercentDisplayFunc);
 
   // Reset param 1 display texts
   auto* p1 = plug->GetParam(params[0]);
@@ -204,11 +280,18 @@ void InitWaveshaperUI(Plugin* plug, IGraphics* pGraphics, std::vector<IControl*>
   allKnobs.insert(allKnobs.begin(), controls.begin(), controls.begin() + 4);
   for (auto* knob : allKnobs)
     knob->SetDisabled(false);
+
   plug->GetParam(params[0])->InitEnum(paramNames[0], reset ? EWaveshaperMode::kWaveshapeSine : plug->GetParam(params[0])->Value(), { WAVESHAPE_TYPES });
-  plug->GetParam(params[1])->InitPercentage(paramNames[1], reset ? 0. : plug->GetParam(params[1])->Value());
-  plug->GetParam(params[3])->InitPercentage(paramNames[3], reset ? 0. : plug->GetParam(params[3])->Value());
+  plug->GetParam(params[1])->InitDouble(paramNames[1], reset ? 0. : plug->GetParam(params[1])->Value(), 0., 1., 0.01);
+  plug->GetParam(params[3])->InitDouble(paramNames[3], reset ? 0. : plug->GetParam(params[3])->Value(), 0., 1., 0.01);
   pGraphics->HideControl(params[4], true);
   pGraphics->HideControl(params[5], true);
+
+
+  plug->GetParam(params[0])->SetDisplayFunc(nullptr);
+  plug->GetParam(params[1])->SetDisplayFunc(PercentDisplayFunc);
+  plug->GetParam(params[2])->SetDisplayFunc(nullptr);
+  plug->GetParam(params[3])->SetDisplayFunc(PercentDisplayFunc);
 
   for (int i{ 0 }; i < TABLITSA_EFFECT_PARAMS; ++i)
     controls[i]->SetValue(plug->GetParam(params[i])->Value());
@@ -279,6 +362,18 @@ void SwapMasterEffectsUI(int effectSlot, IControl * pEffectsList, IGraphics * pG
   {
     std::vector<char*> paramNames{ "EQ Low Gain", "EQ Mid Gain" , "EQ Mid Position", "EQ High Gain" };
     InitEqualizerUI(pPlugin, pGraphics, controls, params, paramNames, reset);
+    break;
+  }
+  case kReverbEffect:
+  {
+    std::vector<char*> paramNames{ "Reverb Size", "Reverb Gain" , "Master Effect Parameter 3", "Reverb Mix" };
+    InitReverbUI(pPlugin, pGraphics, controls, params, paramNames, reset);
+    break;
+  }
+  case kReverb2Effect:
+  {
+    std::vector<char*> paramNames{ "Size", "Damping" , "Color", "Level" };
+    InitReverb2UI(pPlugin, pGraphics, controls, params, paramNames, reset);
     break;
   }
   default:

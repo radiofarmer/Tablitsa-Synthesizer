@@ -1609,6 +1609,12 @@ bool Tablitsa::OnMessage(int msgTag, int ctrlTag, int dataSize, const void* pDat
       case kEQEffect:
         mDSP.mEffects[msgTag - kMsgMasterEffect1Changed] = new EQ3Effect<iplug::sample>(GetSampleRate());
         break;
+      case kReverbEffect:
+        mDSP.mEffects[msgTag - kMsgMasterEffect1Changed] = new ReverbEffect<iplug::sample>(GetSampleRate());
+        break;
+      case kReverb2Effect:
+        mDSP.mEffects[msgTag - kMsgMasterEffect1Changed] = new Reverb2Effect<iplug::sample>(GetSampleRate());
+        break;
       default:
         mDSP.mEffects[msgTag - kMsgMasterEffect1Changed] = new Effect<iplug::sample>(GetSampleRate());
         break;

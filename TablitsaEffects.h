@@ -1,6 +1,7 @@
 #pragma once
 
-#include "SignalProcessing.h"
+#include "radiofarmerDSP.h"
+
 #include "Filter.h"
 #include "Modulators.h"
 
@@ -9,12 +10,7 @@
 
 #include <mutex>
 
-template<class T>
-struct StereoSample
-{
-  T l;
-  T r;
-};
+using namespace radiofarmer;
 
 template<typename T, class V=Vec4d>
 class Effect
@@ -26,6 +22,7 @@ public:
 
   virtual T Process(T s) { return s; }
   virtual void ProcessStereo(T* s) {}
+  virtual void ProcessStereo(StereoSample<T>& s) {}
 
   virtual V __vectorcall Process(V& s) { return s; }
   virtual void ProcessStereo_Vector(StereoSample<V>& s) {}
@@ -40,7 +37,7 @@ public:
   virtual void SetParam1(T value) {}
   virtual void SetParam2(T value) {}
   virtual void SetParam3(T value) {}
-  virtual void SetParam4(T value) { SetMix(value / (T)100.); }
+  virtual void SetParam4(T value) { SetMix(value); }
   virtual void SetParam5(T value) {}
   virtual void SetParam6(T value) {}
 
@@ -199,7 +196,7 @@ public:
   }
 
   // Returns the mixed signal
-  void ProcessStereo(T* s)
+  void ProcessStereo(T* s) override
   {
     const T left_out = mDelayL[mDelayLTime];
     const T right_out = mDelayR[mDelayRTime];
@@ -209,12 +206,22 @@ public:
     s[1] += right_out * mDelayRGain;
   }
 
+  void ProcessStereo(StereoSample<T>& s) override
+  {
+    const T left_out = mDelayL[mDelayLTime];
+    const T right_out = mDelayR[mDelayRTime];
+    mDelayL.push(s.l + left_out * mFeedback);
+    mDelayR.push(s.r + right_out * mFeedback);
+    s.l += left_out * mDelayLGain;
+    s.r += right_out * mDelayRGain;
+  }
+
   void ProcessStereo_Vector(StereoSample<V>& s) override
   {
     V l_out = mDelayL.v_at(mDelayLTime);
     V r_out = mDelayR.v_at(mDelayRTime);
-    mDelayL.push<V>(s.l);
-    mDelayR.push<V>(s.r);
+    mDelayL.push(s.l);
+    mDelayR.push(s.r);
     s.l += l_out;
     s.r += r_out;
   }
@@ -247,8 +254,8 @@ private:
   // Delay time mode
   bool mTempoSync{ false };
 
-  DelayLine<T, TABLITSA_MAX_DELAY_SAMP>  mDelayL;
-  DelayLine<T, TABLITSA_MAX_DELAY_SAMP> mDelayR;
+  DelayLine<TABLITSA_MAX_DELAY_SAMP>  mDelayL;
+  DelayLine<TABLITSA_MAX_DELAY_SAMP> mDelayR;
   ModMetronome* mMetronome; // For tempo sync
 };
 
@@ -266,8 +273,8 @@ public:
   SampleAndHold(T sampleRate) : Effect<T>(sampleRate) {}
 
   void SetParam1(T value) override { SetRateMS(value); }
-  void SetParam2(T value) override { SetDecay(value / (T)100.); }
-  void SetParam3(T value) override { SetJitter(value / (T)100.); }
+  void SetParam2(T value) override { SetDecay(value); }
+  void SetParam3(T value) override { SetJitter(value); }
 
   T Process(T s) override
   {
@@ -295,6 +302,19 @@ public:
     }
     s[0] += mMix * (out - s[0]);
     s[1] += mMix * (out - s[1]);
+  }
+
+  void ProcessStereo(StereoSample<T>& s) override
+  {
+    StereoSample<T> out = mStereoHold;
+    mStereoHold += (s - mStereoHold) * mDecay;
+    if (mSampleCounter++ >= mRateAdj)
+    {
+      out = mStereoHold = s;
+      mSampleCounter = 0;
+      mRateAdj = mRate + (XOR_Shift(mRandGen) >> mJitter);
+    }
+    s += (out - s) * mMix;
   }
 
   void ProcessStereo_Vector(StereoSample<V>& s) override
@@ -346,6 +366,7 @@ public:
 protected:
   T mHold{ 0. };
   T mDecay{ 0. };
+  StereoSample<T> mStereoHold{ 0., 0. };
   unsigned int mRate{ 1 }; // samples
   unsigned int mSampleCounter{ 0 };
   unsigned int mJitter{ 0 };
@@ -356,16 +377,14 @@ protected:
   StereoSample<V> mHold_v{ V(0.), V(0.) };
 };
 
-#define WAVESHAPE_TYPES "Sine", "Parabolic", "Cubic", "Hyp. Tan.", "Soft Clip", "Hard Clip"
+#define WAVESHAPE_TYPES "Sine", "Parabolic", "Hyp. Tan.", "Soft Clip"
 
 enum EWaveshaperMode
 {
   kWaveshapeSine,
   kWaveshapeParabola,
-  kWaveshapeCubic,
   kWaveshapeTanh,
   kWaveshapeSoft,
-  kWaveshapeHard,
   kNumWaveshaperModes
 };
 
@@ -377,77 +396,67 @@ class Waveshaper : public Effect<T, V>
 
   /* Singleton Versions */
 
-  static inline T SineShaper(T x, const T gain, const T gainCeil=1.)
+  static inline T SineShaper(T x, const T gain)
   {
     x *= gain;
     T x2 = std::copysign(x, piOver2 - x);
     return std::copysign(x2 - x2 * x2 * x2 / (T)6 + x2 * x2 * x2 * x2 * x2 / (T)120, x) * 0.9;
   }
 
-  static inline T ParabolicShaper(T x, const T gain, const T gainCeil = 1.)
+  static inline T ParabolicShaper(T x, const T gain)
   {
     x *= gain;
-    return SoftClipShaper(copysign(x * x, x), 1., gainCeil);
+    return SoftClipShaper(copysign(x * x, x), 1.);
   }
 
-  static inline T TanhShaper(T x, const T gain, const T gainCeil = 1.)
+  static inline T TanhShaper(T x, const T gain)
   {
-    return std::tanh(x * gain) * gainCeil;
+    return std::tanh(x * gain);
   }
 
-  static inline T CubicShaper(T x, const T gain, const T gainCeil = 1.)
+  static inline T SoftClipShaper(T x, const T gain)
   {
-    x *= gain;
-    return SoftClipShaper(1.5 * x + 0.5 * x * x * x, 1., gainCeil);
+    return SoftClip<T, 5>(x * gain);
   }
 
-  static inline T SoftClipShaper(T x, const T gain, const T gainCeil = 1.)
+  static inline T HardClipShaper(T x, const T gain)
   {
-    return SoftClip<T>(x, gain) * gainCeil;
-  }
-
-  static inline T HardClipShaper(T x, const T gain, const T gainCeil = 1.)
-  {
-    return std::copysign(std::min(std::abs(x) * gain, gainCeil), x);
+    return std::copysign(std::min(std::abs(x) * gain), x);
   }
 
   /* Vector versions */
 
-  static inline V __vectorcall VSineShaper(const V& x, const T gain, const T gainCeil = 1.)
+  static inline V __vectorcall VSineShaper(const V& x, const T gain)
   {
-    return sin(x * gain) * gainCeil;
+    return sin(x * gain);
   }
 
-  static inline V __vectorcall VParabolicShaper(const V& x, const T gain, const T gainCeil = 1.)
+  static inline V __vectorcall VParabolicShaper(const V& x, const T gain)
   {
-    const V x2 = pow(x * gain, 2) * gain * sign(x);
-    return x2 * gainCeil;
+    V x_clip = VSoftClipShaper(x, gain);
+    return pow(x_clip, 2);
   }
 
-  static inline V __vectorcall VCubicShaper(const V& x, const T gain, const T gainCeil = 1.)
+  static inline V __vectorcall VTanhShaper(const V& x, const T gain)
   {
-    const V x3 = pow(x * gain, 3) * gain;
-    return x3 * gainCeil;
+    return tanh(x * gain);
   }
 
-  static inline V __vectorcall VTanhShaper(const V& x, const T gain, const T gainCeil = 1.)
+  static inline V __vectorcall VSoftClipShaper(const V& x, const T gain)
   {
-    return tanh(x * gain) * gainCeil;
+    return SoftClip<V, 5>(x * gain);
   }
 
-  static inline V VSoftClipShaper(const V& x, const T gain, const T gainCeil = 1.)
+  static inline V __vectorcall VHardClipShaper(const V& x, const T gain)
   {
-    return SoftClip<V, T>(x, gain) * gainCeil;
-  }
-
-  static inline V __vectorcall VHardClipShaper(const V& x, const T gain, const T gainCeil = 1.)
-  {
-    return sign(x) * min(abs(x * gain), V(gainCeil));
+    return sign(x) * min(abs(x * gain));
   }
 
 public:
   Waveshaper(T sampleRate, T maxGain=2., EWaveshaperMode mode = kWaveshapeSine) :
-    Effect<T>(sampleRate), mMaxGain(maxGain), mShaperMode(mode) {}
+    Effect<T>(sampleRate),
+    mMaxGain(maxGain), mMaxGainCeil(1. / mMaxGain),
+    mShaperMode(mode) {}
 
   virtual void SetParam1(T value) override
   {
@@ -455,37 +464,44 @@ public:
   }
   virtual void SetParam2(T value) override
   {
-    SetGain(value / (T)100);
-    SetThreshold((T)-value / 100.);
+    SetGain(value);
+    SetThreshold(1. - (mMaxGain - 1.) * (value * mMaxGainCeil));
   }
 
   T Process(T s) override
   {
-    return mShaperFunc(s, mGain, mThresh);
+    return mShaperFunc(s, mGain);
   }
 
   inline T DoProcess(T s)
   {
-    return mMix * (mShaperFunc(s, mGain, mThresh) - s);
+    return (mShaperFunc(s, mGain) - s);
   }
 
   inline V __vectorcall DoProcess_Vector(V& s)
   {
-    return mMix * (mShaperFunc_Vector(s, mGain, mThresh) - s);
+    return (mShaperFunc_Vector(s, mGain) - s);
   }
 
   void ProcessStereo(T* s) override
   {
     std::lock_guard<std::mutex> lg(mFuncMutex);
-    s[0] += DoProcess(s[0]);
-    s[1] += DoProcess(s[1]);
+    s[0] += mMix * mThresh * (DoProcess(s[0]) - s[0]);
+    s[1] += mMix * mThresh * (DoProcess(s[1]) - s[1]);
+  }
+
+  void ProcessStereo(StereoSample<T>& s) override
+  {
+    std::lock_guard<std::mutex> lg(mFuncMutex);
+    s.l += mMix * mThresh * (DoProcess(s.l) - s.l);
+    s.r += mMix * mThresh * (DoProcess(s.r) - s.r);
   }
 
   void ProcessStereo_Vector(StereoSample<V>& s)
   {
     std::lock_guard<std::mutex> lg(mFuncMutex);
-    s.l += DoProcess_Vector(s.l);
-    s.r += DoProcess_Vector(s.r);
+    s.l += mMix * mThresh * (DoProcess_Vector(s.l) - s.l);
+    s.r += mMix * mThresh * (DoProcess_Vector(s.r) - s.r);
   }
 
   inline void SetMode(EWaveshaperMode mode)
@@ -499,12 +515,6 @@ public:
       mShaperFunc_Vector = &Waveshaper::VParabolicShaper;
       break;
     }
-    case kWaveshapeCubic:
-    {
-      mShaperFunc = &Waveshaper::CubicShaper;
-      mShaperFunc_Vector = &Waveshaper::VCubicShaper;
-      break;
-    }
     case kWaveshapeTanh:
     {
       mShaperFunc = &Waveshaper::TanhShaper;
@@ -515,12 +525,6 @@ public:
     {
       mShaperFunc = &Waveshaper::SoftClipShaper;
       mShaperFunc_Vector = &Waveshaper::VSoftClipShaper;
-      break;
-    }
-    case kWaveshapeHard:
-    {
-      mShaperFunc = &Waveshaper::HardClipShaper;
-      mShaperFunc_Vector = &Waveshaper::VHardClipShaper;
       break;
     }
     case kWaveshapeSine:
@@ -545,11 +549,12 @@ public:
 
 protected:
   const T mMaxGain; // Can be used to normalize inputs, since a waveshaper's behavior is amplitude-dependent
+  const T mMaxGainCeil;
   T mGain{ (T)1 };
   T mThresh{ 0.5 };
   EWaveshaperMode mShaperMode;
-  std::function<T(T, const T, const T)> mShaperFunc{ &Waveshaper::SineShaper };
-  std::function<V(const V&, const T, const T)> mShaperFunc_Vector{ &Waveshaper::VSineShaper };
+  std::function<T(T, const T)> mShaperFunc{ &Waveshaper::SineShaper };
+  std::function<V(const V&, const T)> mShaperFunc_Vector{ &Waveshaper::VSineShaper };
   std::mutex mFuncMutex;
 };
 
@@ -599,7 +604,7 @@ public:
 
   void SetParam1(T value) override { SetLowGain(value); }
   void SetParam2(T value) override { SetMidGain(value); }
-  void SetParam3(T value) override { SetMidFreq(value * (T)0.00249); } // Accepts values between 0 and 100
+  void SetParam3(T value) override { SetMidFreq(value * (T)0.249); }
   void SetParam4(T value) override { SetHighGain(value); }
 
   inline void SetLowGain(T lg) { mStateL.lg = lg; mStateR.lg = lg; }
@@ -617,7 +622,7 @@ public:
     mMidFreq = freqNorm;
   }
 
-  inline T DoProcess(EQState& state, DelayLine<T, 4>& z, T s)
+  inline T DoProcess(EQState& state, DelayLine<4>& z, T s)
   {
     T l, m, h;
     // Lowpass Filter
@@ -654,12 +659,94 @@ public:
     s[1] = DoProcess(mStateR, mZ1, s[1]);
   }
 
+  void ProcessStereo(StereoSample<T>& s) override
+  {
+    s.l = DoProcess(mStateL, mZ0, s.l);
+    s.r = DoProcess(mStateR, mZ1, s.r);
+  }
+
 protected:
   EQState mStateL;
   EQState mStateR;
   T mMidFreq{ 1. };
   T mHalfMidBand{ 0.05 }; // Half the proportion of the normalized frequency range occupied by the mid band
 
-  DelayLine<T, 4> mZ0;
-  DelayLine<T, 4> mZ1;
+  DelayLine<4> mZ0;
+  DelayLine<4> mZ1;
+};
+
+template<typename T, class V=Vec4d>
+class ReverbEffect : public Effect<T, V>
+{
+  static constexpr T MaxDelayMS = 100.;
+  static constexpr T MinDelayMS = 5.;
+  static constexpr T MinFeedback = 0.65;
+  static constexpr T FeedbackRange = 0.99 - MinFeedback;
+
+public:
+  ReverbEffect(T sampleRate, T maxDelayMS = 50., T minDelayMS = 10., T maxFeedback = 0.75, T minFeedback = 0.65, T gain = 0.5) :
+    Effect<T, V>(sampleRate),
+    mReverb(sampleRate, maxDelayMS, minDelayMS, maxFeedback, minFeedback, gain)
+  {}
+
+  void SetSampleRate(T sampleRate) override
+  {
+    Effect<T>::SetSampleRate(sampleRate);
+    mReverb.SetSampleRate(mSampleRate);
+  }
+
+  void SetParam1(T value) override
+  {
+    mReverb.SetDelay(value * (MaxDelayMS - MinDelayMS), MinDelayMS, true);
+  }
+  void SetParam2(T value) override
+  {
+    mReverb.SetFeedback(MinFeedback + value * FeedbackRange, MinFeedback, true);
+  }
+  void SetParam4(T value) override
+  {
+    mReverb.SetGain(value);
+  }
+
+  T Process(T s) override
+  {
+    return mReverb.Process(s);
+  }
+
+  void ProcessStereo(T* s) override
+  {
+    StereoSample<T> s2{ s[0], s[1] };
+    mReverb.ProcessStereo(s2);
+    s[0] = s2.l; s[1] = s2.r;
+  }
+
+  void ProcessStereo(StereoSample<T>& s) override
+  {
+    mReverb.ProcessStereo(s);
+  }
+
+protected:
+  CascadeReverb<6, 2> mReverb;
+};
+
+template<typename T, class V=Vec4d>
+class Reverb2Effect : public Effect<T, V>
+{
+public:
+  Reverb2Effect(T sampleRate) : Effect<T, V>(sampleRate), mReverb(sampleRate)
+  {
+  }
+
+  void SetParam1(T value) override { mReverb.SetDiffusion(value * 0.75); }
+  void SetParam2(T value) override { mReverb.SetDamping(value);  }
+  void SetParam3(T value) override { mReverb.SetColor(value * 0.7); }
+  void SetParam4(T value) override { mReverb.SetMixLevel(value); }
+
+  void ProcessStereo(StereoSample<T>& s)
+  {
+    mReverb.ProcessStereo(s);
+  }
+
+protected:
+  UFDNReverb mReverb;
 };

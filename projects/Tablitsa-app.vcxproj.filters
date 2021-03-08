@@ -102,8 +102,22 @@
       <Filter>WDL</Filter>
     </ClCompile>
     <ClCompile Include="..\VectorFunctions.cpp" />
-    <ClCompile Include="..\SignalProcessing.cpp" />
     <ClCompile Include="..\TablitsaControls.cpp" />
+    <ClCompile Include="..\dependencies\radiofarmer\cm.cpp">
+      <Filter>dsp</Filter>
+    </ClCompile>
+    <ClCompile Include="..\dependencies\radiofarmer\allpass.cpp">
+      <Filter>dsp</Filter>
+    </ClCompile>
+    <ClCompile Include="..\dependencies\radiofarmer\reverb.cpp">
+      <Filter>dsp</Filter>
+    </ClCompile>
+    <ClCompile Include="..\dependencies\radiofarmer\biquad.cpp">
+      <Filter>dsp</Filter>
+    </ClCompile>
+    <ClCompile Include="..\dependencies\radiofarmer\waveshaper.cpp">
+      <Filter>dsp</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\Tablitsa.h" />
@@ -319,7 +333,6 @@
     <ClInclude Include="..\Wavetable.h" />
     <ClInclude Include="..\Modulators.h" />
     <ClInclude Include="..\Filter.h" />
-    <ClInclude Include="..\SignalProcessing.h" />
     <ClInclude Include="..\PeriodicTable.h" />
     <ClInclude Include="..\VoiceThread.h" />
     <ClInclude Include="..\VectorFunctions.h" />
@@ -329,6 +342,30 @@
     <ClInclude Include="..\TablitsaEffects.h" />
     <ClInclude Include="..\TablitsaUIFunctions.h" />
     <ClInclude Include="..\OversamplingFilter.h" />
+    <ClInclude Include="..\dependencies\radiofarmer\cm.h">
+      <Filter>dsp</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dependencies\radiofarmer\radiofarmer_config.h">
+      <Filter>dsp</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dependencies\radiofarmer\radiofarmerDSP.h">
+      <Filter>dsp</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dependencies\radiofarmer\reverb.h">
+      <Filter>dsp</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dependencies\radiofarmer\allpass.h">
+      <Filter>dsp</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dependencies\radiofarmer\delayline.h">
+      <Filter>dsp</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dependencies\radiofarmer\biquad.h">
+      <Filter>dsp</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dependencies\radiofarmer\waveshaper.h">
+      <Filter>dsp</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="resources">
@@ -372,6 +409,9 @@
     </Filter>
     <Filter Include="IPlug\Extras\Synth">
       <UniqueIdentifier>{fc763cd3-cc76-4d31-9ba4-a4e7361e4adf}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="dsp">
+      <UniqueIdentifier>{94d5e761-9f8d-41b7-a565-d04e0fa0aa11}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>

@@ -127,7 +127,7 @@ public:
 
   protected:
     const std::vector<double> mCoefs;
-    DelayLine<T, 2> mZ;
+    DelayLine<2> mZ;
     Vec4d mB;
     Vec4d mA;
 #if defined ALG1

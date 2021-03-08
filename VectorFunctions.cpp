@@ -89,19 +89,19 @@ template<>
 extern inline Vec4d __vectorcall IIR_2pole_4(const Vec4d& x, Vec4d& z, const Vec4d* c, const Vec4d& b)
 {
   // All delay terms:
-  Vec4d y_in = c[5] * x[3] + c[4] * x[2] + c[0] * x[1] + c[1] * x[0] + c[2] * z[0] + c[3] * z[1];
+  Vec4d y_in = c[5] * x[3] +c[4] * x[2] + c[0] * x[1] + c[1] * x[0] + c[2] * z[0] + c[3] * z[1];
   // y_in = (w[n+3], w[n+2], w[n+1], w[n])
 
-  Vec4d w0 = blend4<3, 4, 5, V_DC>(y_in, z) * b;
-  Vec4d w1 = blend4<2, 3, 4, V_DC>(y_in, z) * b;
-  Vec4d w2 = permute4<1, 2, 3, V_DC>(y_in) * b;
-  Vec4d w3 = permute4<0, 1, 2, V_DC>(y_in) * b;
+  Vec4d y0 = blend4<3, 4, 5, V_DC>(y_in, z) * b;
+  Vec4d y1 = blend4<2, 3, 4, V_DC>(y_in, z) * b;
+  Vec4d y2 = permute4<1, 2, 3, V_DC>(y_in) * b;
+  Vec4d y3 = permute4<0, 1, 2, V_DC>(y_in) * b;
 
   const Vec4d y_out = Vec4d(
-    horizontal_add(w0), // y[n] = b0 * w[n] + b1 * w[n-1] + b2 * w[n-2]
-    horizontal_add(w1), // y[n+1] = b0 * w[n+1] + b1 * w[n] + b2 * w[n-1]
-    horizontal_add(w2),  // y[n+2] = b0 * w[n+2] + b1 * w[n+1] + b2 * w[n]
-    horizontal_add(w3)   // y[n+3] = b0 * w[n+3] + b1 * w[n+2] + b2 * w[n+1]
+    horizontal_add(y0), // y[n] = b0 * w[n] + b1 * w[n-1] + b2 * w[n-2]
+    horizontal_add(y1), // y[n+1] = b0 * w[n+1] + b1 * w[n] + b2 * w[n-1]
+    horizontal_add(y2),  // y[n+2] = b0 * w[n+2] + b1 * w[n+1] + b2 * w[n]
+    horizontal_add(y3)   // y[n+3] = b0 * w[n+3] + b1 * w[n+2] + b2 * w[n+1]
   ); // earliest -> latest
 
   z = permute4<0, 1, V_DC, V_DC>(y_in); // w[n+3] -> w[n-1]; w[n+2] -> w[n-2]; Order is latest -> earliest
