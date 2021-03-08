@@ -152,7 +152,6 @@
     <ClCompile Include="..\..\..\WDL\fft.c">
       <Filter>WDL</Filter>
     </ClCompile>
-    <ClCompile Include="..\SignalProcessing.cpp" />
     <ClCompile Include="..\VectorFunctions.cpp" />
     <ClCompile Include="..\TablitsaControls.cpp" />
     <ClCompile Include="..\TablitsaEffects.cpp" />

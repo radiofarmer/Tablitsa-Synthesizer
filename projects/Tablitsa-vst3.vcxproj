@@ -437,7 +437,6 @@
     <ClCompile Include="..\..\..\IPlug\VST3\IPlugVST3.cpp" />
     <ClCompile Include="..\..\..\IPlug\VST3\IPlugVST3_ProcessorBase.cpp" />
     <ClCompile Include="..\..\..\WDL\fft.c" />
-    <ClCompile Include="..\SignalProcessing.cpp" />
     <ClCompile Include="..\Tablitsa.cpp" />
     <ClCompile Include="..\TablitsaControls.cpp" />
     <ClCompile Include="..\TablitsaEffects.cpp" />

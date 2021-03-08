@@ -405,8 +405,8 @@ class Waveshaper : public Effect<T, V>
 
   static inline T ParabolicShaper(T x, const T gain)
   {
-    x *= gain;
-    return SoftClipShaper(copysign(x * x, x), 1.);
+    x = SoftClipShaper(x, gain);
+    return std::copysign(x * x, x);
   }
 
   static inline T TanhShaper(T x, const T gain)
@@ -434,7 +434,7 @@ class Waveshaper : public Effect<T, V>
   static inline V __vectorcall VParabolicShaper(const V& x, const T gain)
   {
     V x_clip = VSoftClipShaper(x, gain);
-    return pow(x_clip, 2);
+    return pow(x_clip, 2) * sign(x);
   }
 
   static inline V __vectorcall VTanhShaper(const V& x, const T gain)
@@ -485,28 +485,28 @@ public:
 
   void ProcessStereo(T* s) override
   {
-    std::lock_guard<std::mutex> lg(mFuncMutex);
+    //std::lock_guard<std::mutex> lg(mFuncMutex);
     s[0] += mMix * mThresh * (DoProcess(s[0]) - s[0]);
     s[1] += mMix * mThresh * (DoProcess(s[1]) - s[1]);
   }
 
   void ProcessStereo(StereoSample<T>& s) override
   {
-    std::lock_guard<std::mutex> lg(mFuncMutex);
+    //std::lock_guard<std::mutex> lg(mFuncMutex);
     s.l += mMix * mThresh * (DoProcess(s.l) - s.l);
     s.r += mMix * mThresh * (DoProcess(s.r) - s.r);
   }
 
   void ProcessStereo_Vector(StereoSample<V>& s)
   {
-    std::lock_guard<std::mutex> lg(mFuncMutex);
+    //std::lock_guard<std::mutex> lg(mFuncMutex);
     s.l += mMix * mThresh * (DoProcess_Vector(s.l) - s.l);
     s.r += mMix * mThresh * (DoProcess_Vector(s.r) - s.r);
   }
 
   inline void SetMode(EWaveshaperMode mode)
   {
-    std::lock_guard<std::mutex> lg(mFuncMutex); // To prevent calling an empty `std::function`
+    //std::lock_guard<std::mutex> lg(mFuncMutex); // To prevent calling an empty `std::function`
     switch (mode)
     {
     case kWaveshapeParabola:
