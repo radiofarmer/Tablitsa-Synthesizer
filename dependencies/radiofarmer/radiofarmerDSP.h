@@ -7,6 +7,7 @@
 #include "delayline.h"
 #include "cm.h"
 #include "reverb.h"
+#include "waveguide.h"
 #include "waveshaper.h"
 
 /*

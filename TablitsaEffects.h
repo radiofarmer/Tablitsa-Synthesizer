@@ -85,7 +85,7 @@ public:
   }
 
   DelayEffect(double sampleRate, ModMetronome* metronome=nullptr) :
-    Effect<T>(sampleRate),
+    Effect<T, V>(sampleRate),
     mMaxDelayMS(TABLITSA_MAX_DELAY_MS),
     mMaxDelay(MaxDelay),
     mDelayLTime(mMaxDelay / 2),
@@ -152,7 +152,7 @@ public:
 
   void SetSampleRate(T sampleRate) override
   {
-    Effect<T>::SetSampleRate(sampleRate);
+    Effect<T, V>::SetSampleRate(sampleRate);
     CalculateDelaySamples();
   }
 
@@ -259,304 +259,6 @@ private:
   ModMetronome* mMetronome; // For tempo sync
 };
 
-template<typename T, class V = Vec4d>
-class SampleAndHold : public Effect<T, V>
-{
-  typedef typename deduce_vector_from<V>::int_vec Vi;
-
-  struct xor128
-  {
-    uint32_t w, x, y, z;
-  };
-
-public:
-  SampleAndHold(T sampleRate) : Effect<T>(sampleRate) {}
-
-  void SetParam1(T value) override { SetRateMS(value); }
-  void SetParam2(T value) override { SetDecay(value); }
-  void SetParam3(T value) override { SetJitter(value); }
-
-  T Process(T s) override
-  {
-    T out = mHold;
-    mHold = mHold + mDecay * mRateAdj / mSampleCounter * (out - mHold);
-    if (mSampleCounter++ >= mRateAdj)
-    {
-      out = mHold = s;
-      mSampleCounter = 0;
-      mRateAdj = mRate + (XOR_Shift(mRandGen) >> mJitter);
-    }
-    out = mMix * (out - s);
-    return s + out;
-  }
-
-  void ProcessStereo(T* s) override
-  {
-    T out = mHold;
-    mHold += mDecay * (s[0] - mHold);
-    if (mSampleCounter++ >= mRateAdj)
-    {
-      out = mHold = (s[0] + s[1]) / (T)2;
-      mSampleCounter = 0;
-      mRateAdj = mRate + (XOR_Shift(mRandGen) >> mJitter);
-    }
-    s[0] += mMix * (out - s[0]);
-    s[1] += mMix * (out - s[1]);
-  }
-
-  void ProcessStereo(StereoSample<T>& s) override
-  {
-    StereoSample<T> out = mStereoHold;
-    mStereoHold += (s - mStereoHold) * mDecay;
-    if (mSampleCounter++ >= mRateAdj)
-    {
-      out = mStereoHold = s;
-      mSampleCounter = 0;
-      mRateAdj = mRate + (XOR_Shift(mRandGen) >> mJitter);
-    }
-    s += (out - s) * mMix;
-  }
-
-  void ProcessStereo_Vector(StereoSample<V>& s) override
-  {
-    StereoSample<V> out{ mHold_v.l, mHold_v.r };
-    mHold_v.l += mDecay * (s.l - mHold_v.l);
-    mHold_v.r += mDecay * (s.r - mHold_v.r);
-    if (mSampleCounter >= mRateAdj)
-    {
-      out.l = mHold_v.l = s.l;
-      out.r = mHold_v.r = s.r;
-      mSampleCounter = 0;
-      mRateAdj = mRate + (XOR_Shift(mRandGen) >> mJitter);
-    }
-    else
-      mSampleCounter += deduce_vector_from<V>::v_size;
-    s.l += mMix * (out.l - s.l);
-    s.r += mMix * (out.r - s.r);
-  }
-
-  void SetRateMS(T rate)
-  {
-    mRate = static_cast<int>(rate / 1000. * mSampleRate);
-    mRateAdj = mRate + (XOR_Shift(mRandGen) >> mJitter);
-  }
-
-  void SetDecay(T decay)
-  {
-    mDecay = decay / mRate;
-  }
-
-  void SetJitter(T noise)
-  {
-    mJitter = static_cast<int>((T)31 * ((T)1 - noise * 0.25));
-  }
-
-  static inline uint32_t XOR_Shift(xor128& state)
-  {
-    const uint32_t first = state.w;
-    uint32_t last = state.z;
-    state.z = state.y;
-    state.y = state.x;
-    state.x = first;
-    last ^= first << 11;
-    last ^= first >> 8;
-    return state.w = last ^ first ^ (first >> 19);
-  }
-
-protected:
-  T mHold{ 0. };
-  T mDecay{ 0. };
-  StereoSample<T> mStereoHold{ 0., 0. };
-  unsigned int mRate{ 1 }; // samples
-  unsigned int mSampleCounter{ 0 };
-  unsigned int mJitter{ 0 };
-  unsigned int mRateAdj{ 1 };
-  xor128 mRandGen{ 0xAF31, 0x1234, 0xFF2E, 0xDCBA };
-
-  V mSampleCounter_v = V(0., 1., 2., 3);
-  StereoSample<V> mHold_v{ V(0.), V(0.) };
-};
-
-#define WAVESHAPE_TYPES "Sine", "Parabolic", "Hyp. Tan.", "Soft Clip"
-
-enum EWaveshaperMode
-{
-  kWaveshapeSine,
-  kWaveshapeParabola,
-  kWaveshapeTanh,
-  kWaveshapeSoft,
-  kNumWaveshaperModes
-};
-
-template<typename T, class V = Vec4d>
-class Waveshaper : public Effect<T, V>
-{
-  static constexpr T piOver2{ (T)1.57079632679 };
-  static constexpr T pi{ (T)3.14159265359 };
-
-  /* Singleton Versions */
-
-  static inline T SineShaper(T x, const T gain)
-  {
-    x *= gain;
-    T x2 = std::copysign(x, piOver2 - x);
-    return std::copysign(x2 - x2 * x2 * x2 / (T)6 + x2 * x2 * x2 * x2 * x2 / (T)120, x) * 0.9;
-  }
-
-  static inline T ParabolicShaper(T x, const T gain)
-  {
-    x *= gain;
-    return SoftClipShaper(copysign(x * x, x), 1.);
-  }
-
-  static inline T TanhShaper(T x, const T gain)
-  {
-    return std::tanh(x * gain);
-  }
-
-  static inline T SoftClipShaper(T x, const T gain)
-  {
-    return SoftClip<T, 5>(x * gain);
-  }
-
-  static inline T HardClipShaper(T x, const T gain)
-  {
-    return std::copysign(std::min(std::abs(x) * gain), x);
-  }
-
-  /* Vector versions */
-
-  static inline V __vectorcall VSineShaper(const V& x, const T gain)
-  {
-    return sin(x * gain);
-  }
-
-  static inline V __vectorcall VParabolicShaper(const V& x, const T gain)
-  {
-    V x_clip = VSoftClipShaper(x, gain);
-    return pow(x_clip, 2);
-  }
-
-  static inline V __vectorcall VTanhShaper(const V& x, const T gain)
-  {
-    return tanh(x * gain);
-  }
-
-  static inline V __vectorcall VSoftClipShaper(const V& x, const T gain)
-  {
-    return SoftClip<V, 5>(x * gain);
-  }
-
-  static inline V __vectorcall VHardClipShaper(const V& x, const T gain)
-  {
-    return sign(x) * min(abs(x * gain));
-  }
-
-public:
-  Waveshaper(T sampleRate, T maxGain=2., EWaveshaperMode mode = kWaveshapeSine) :
-    Effect<T>(sampleRate),
-    mMaxGain(maxGain), mMaxGainCeil(1. / mMaxGain),
-    mShaperMode(mode) {}
-
-  virtual void SetParam1(T value) override
-  {
-    SetMode(static_cast<EWaveshaperMode>(value + 0.01));
-  }
-  virtual void SetParam2(T value) override
-  {
-    SetGain(value);
-    SetThreshold(1. - (mMaxGain - 1.) * (value * mMaxGainCeil));
-  }
-
-  T Process(T s) override
-  {
-    return mShaperFunc(s, mGain);
-  }
-
-  inline T DoProcess(T s)
-  {
-    return (mShaperFunc(s, mGain) - s);
-  }
-
-  inline V __vectorcall DoProcess_Vector(V& s)
-  {
-    return (mShaperFunc_Vector(s, mGain) - s);
-  }
-
-  void ProcessStereo(T* s) override
-  {
-    std::lock_guard<std::mutex> lg(mFuncMutex);
-    s[0] += mMix * mThresh * (DoProcess(s[0]) - s[0]);
-    s[1] += mMix * mThresh * (DoProcess(s[1]) - s[1]);
-  }
-
-  void ProcessStereo(StereoSample<T>& s) override
-  {
-    std::lock_guard<std::mutex> lg(mFuncMutex);
-    s.l += mMix * mThresh * (DoProcess(s.l) - s.l);
-    s.r += mMix * mThresh * (DoProcess(s.r) - s.r);
-  }
-
-  void ProcessStereo_Vector(StereoSample<V>& s)
-  {
-    std::lock_guard<std::mutex> lg(mFuncMutex);
-    s.l += mMix * mThresh * (DoProcess_Vector(s.l) - s.l);
-    s.r += mMix * mThresh * (DoProcess_Vector(s.r) - s.r);
-  }
-
-  inline void SetMode(EWaveshaperMode mode)
-  {
-    std::lock_guard<std::mutex> lg(mFuncMutex); // To prevent calling an empty `std::function`
-    switch (mode)
-    {
-    case kWaveshapeParabola:
-    {
-      mShaperFunc = &Waveshaper::ParabolicShaper;
-      mShaperFunc_Vector = &Waveshaper::VParabolicShaper;
-      break;
-    }
-    case kWaveshapeTanh:
-    {
-      mShaperFunc = &Waveshaper::TanhShaper;
-      mShaperFunc_Vector = &Waveshaper::VTanhShaper;
-      break;
-    }
-    case kWaveshapeSoft:
-    {
-      mShaperFunc = &Waveshaper::SoftClipShaper;
-      mShaperFunc_Vector = &Waveshaper::VSoftClipShaper;
-      break;
-    }
-    case kWaveshapeSine:
-    default:
-    {
-      mShaperFunc = &Waveshaper::SineShaper;
-      mShaperFunc_Vector = &Waveshaper::VSineShaper;
-      break;
-    }
-    }
-  }
-
-  inline void SetGain(const T gain)
-  {
-    mGain = (T)1. + gain * mMaxGain;
-  }
-
-  inline void SetThreshold(T thresh)
-  {
-    mThresh = thresh;
-  }
-
-protected:
-  const T mMaxGain; // Can be used to normalize inputs, since a waveshaper's behavior is amplitude-dependent
-  const T mMaxGainCeil;
-  T mGain{ (T)1 };
-  T mThresh{ 0.5 };
-  EWaveshaperMode mShaperMode;
-  std::function<T(T, const T)> mShaperFunc{ &Waveshaper::SineShaper };
-  std::function<V(const V&, const T)> mShaperFunc_Vector{ &Waveshaper::VSineShaper };
-  std::mutex mFuncMutex;
-};
 
 /* 3-Band EQ */
 template<typename T, class V = Vec4d>
@@ -589,7 +291,7 @@ class EQ3Effect : public Effect<T, V>
   };
 
 public:
-  EQ3Effect(T sampleRate) : Effect<T>(sampleRate)
+  EQ3Effect(T sampleRate) : Effect<T, V>(sampleRate)
   {
     memset(&mStateL, static_cast<int>((T)0), sizeof(mStateL));
     memset(&mStateR, static_cast<int>((T)0), sizeof(mStateR));
@@ -599,7 +301,7 @@ public:
   void SetSampleRate(T sampleRate) override
   {
     SetMidFreq(std::min(mMidFreq * mSampleRate / sampleRate, 0.99));
-    Effect<T>::SetSampleRate(sampleRate);
+    Effect<T, V>::SetSampleRate(sampleRate);
   }
 
   void SetParam1(T value) override { SetLowGain(value); }
@@ -675,6 +377,135 @@ protected:
   DelayLine<4> mZ1;
 };
 
+template<typename T, class V = Vec4d>
+class SampleAndHold : public Effect<T, V>
+{
+  typedef typename deduce_vector_from<V>::int_vec Vi;
+
+  struct xor128
+  {
+    uint32_t w, x, y, z;
+  };
+
+  static inline uint32_t XOR_Shift(xor128& state)
+  {
+    const uint32_t first = state.w;
+    uint32_t last = state.z;
+    state.z = state.y;
+    state.y = state.x;
+    state.x = first;
+    last ^= first << 11;
+    last ^= first >> 8;
+    return state.w = last ^ first ^ (first >> 19);
+  }
+
+public:
+  SampleAndHold(T sampleRate) : Effect<T, V>(sampleRate)
+  {
+    // These must be dynamically allocated for proper alignment, to avoid heap corruption
+    mSampleCounter_v = new V(0., 1., 2., 3);
+    mHold_v = new StereoSample<V>(V(0.), V(0.));
+  }
+
+  void SetParam1(T value) override { SetRateMS(value); }
+  void SetParam2(T value) override { SetDecay(value); }
+  void SetParam3(T value) override { SetJitter(value); }
+
+  T Process(T s) override
+  {
+    T out = mHold;
+    mHold = mHold + mDecay * mRateAdj / mSampleCounter * (out - mHold);
+    if (mSampleCounter++ >= mRateAdj)
+    {
+      out = mHold = s;
+      mSampleCounter = 0;
+      mRateAdj = mRate + (XOR_Shift(mRandGen) >> mJitter);
+    }
+    out = mMix * (out - s);
+    return s + out;
+  }
+
+  void ProcessStereo(T* s) override
+  {
+    T out = mHold;
+    mHold += mDecay * (s[0] - mHold);
+    if (mSampleCounter++ >= mRateAdj)
+    {
+      out = mHold = (s[0] + s[1]) / (T)2;
+      mSampleCounter = 0;
+      mRateAdj = mRate + (XOR_Shift(mRandGen) >> mJitter);
+    }
+    s[0] += mMix * (out - s[0]);
+    s[1] += mMix * (out - s[1]);
+  }
+
+  void ProcessStereo(StereoSample<T>& s) override
+  {
+    StereoSample<T> out = mStereoHold;
+    mStereoHold += (s - mStereoHold) * mDecay;
+    if (mSampleCounter++ >= mRateAdj)
+    {
+      out = mStereoHold = s;
+      mSampleCounter = 0;
+      mRateAdj = mRate + (XOR_Shift(mRandGen) >> mJitter);
+    }
+    s += (out - s) * mMix;
+  }
+
+  void ProcessStereo_Vector(StereoSample<V>& s) override
+  {
+    /*StereoSample<V> out{ mHold_v.l, mHold_v.r };
+    mHold_v.l += mDecay * (s.l - mHold_v.l);
+    mHold_v.r += mDecay * (s.r - mHold_v.r);
+    if (mSampleCounter >= mRateAdj)
+    {
+      out.l = mHold_v.l = s.l;
+      out.r = mHold_v.r = s.r;
+      mSampleCounter = 0;
+      mRateAdj = mRate + (XOR_Shift(mRandGen) >> mJitter);
+    }
+    else
+      mSampleCounter += deduce_vector_from<V>::v_size;
+    s.l += mMix * (out.l - s.l);
+    s.r += mMix * (out.r - s.r);*/
+  }
+
+  void SetRateMS(T rate)
+  {
+    mRate = static_cast<int>(rate / 1000. * mSampleRate);
+    mRateAdj = mRate + (XOR_Shift(mRandGen) >> mJitter);
+  }
+
+  void SetDecay(T decay)
+  {
+    mDecay = decay / mRate;
+  }
+
+  void SetJitter(T noise)
+  {
+    mJitter = static_cast<int>((T)31 * ((T)1 - noise * 0.25));
+  }
+
+  ~SampleAndHold()
+  {
+    delete mSampleCounter;
+    delete mHold_v;
+  }
+
+protected:
+  T mHold{ 0. };
+  T mDecay{ 0. };
+  StereoSample<T> mStereoHold{ 0., 0. };
+  unsigned int mRate{ 1 }; // samples
+  unsigned int mSampleCounter{ 0 };
+  unsigned int mJitter{ 0 };
+  unsigned int mRateAdj{ 1 };
+  xor128 mRandGen{ 0xAF31, 0x1234, 0xFF2E, 0xDCBA };
+
+  V* mSampleCounter_v;
+  StereoSample<V>* mHold_v;
+};
+
 template<typename T, class V=Vec4d>
 class ReverbEffect : public Effect<T, V>
 {
@@ -691,7 +522,7 @@ public:
 
   void SetSampleRate(T sampleRate) override
   {
-    Effect<T>::SetSampleRate(sampleRate);
+    Effect<T, V>::SetSampleRate(sampleRate);
     mReverb.SetSampleRate(mSampleRate);
   }
 
@@ -750,3 +581,231 @@ public:
 protected:
   UFDNReverb mReverb;
 };
+
+template<typename T, class V = Vec4d>
+class Texturizer : public Effect<T, V>
+{
+
+public:
+  Texturizer(T sampleRate) : Effect<T, V>(sampleRate) {}
+
+  void SetSampleRate(T sampleRate)
+  {
+    Effect<T, V>::SetSampleRate(sampleRate);
+    for (int i{ 0 }; i < 2; ++i)
+      flt[i].SetSampleRate(sampleRate);
+  }
+
+  void SetParam1(T value) {
+    mFc = value;
+    SetFilterCoefs();
+  }
+  void SetParam2(T value) {
+    mQ = value;
+    SetFilterCoefs();
+  }
+
+  void SetFilterCoefs() {
+    flt[0].SetCoefs(mFc, mG);
+    flt[1].SetCoefs(mFc, mG);
+  }
+
+  T Process(T s) override
+  {
+    return flt[0].Process(s);
+  }
+
+  void ProcessStereo(StereoSample<T>& s)
+  {
+    s.l = flt[0].Process(s.l) + 0.5 * std::sin(s.l * 63. * mQ);
+    s.r = flt[1].Process(s.r) + 0.5 * std::sin(s.r * 63. * mQ);
+  }
+
+protected:
+  DelayLine<4> mZ;
+  T mFc{ 1. };
+  T mQ{ 0. };
+  T mG{ 1. };
+  AllpassLadder<4> flt[2];
+};
+
+#define WAVESHAPE_TYPES "Sine", "Parabolic", "Hyp. Tan.", "Soft Clip"
+
+enum EWaveshaperMode
+{
+  kWaveshapeSine,
+  kWaveshapeParabola,
+  kWaveshapeTanh,
+  kWaveshapeSoft,
+  kNumWaveshaperModes
+};
+
+template<typename T, class V = Vec4d>
+class Waveshaper : public Effect<T, V>
+{
+  static constexpr T piOver2{ (T)1.57079632679 };
+  static constexpr T pi{ (T)3.14159265359 };
+
+  /* Singleton Versions */
+
+  static inline T SineShaper(T x, const T gain)
+  {
+    x *= gain;
+    const T x3 = x * x * x;
+    return x - 0.16666666666 * x3 + 0.008333333333333 * x3 * x * x;
+  }
+
+  static inline T ParabolicShaper(T x, const T gain)
+  {
+    x = SoftClipShaper(x, gain);
+    return std::copysign(x * x, x);
+  }
+
+  static inline T TanhShaper(T x, const T gain)
+  {
+    return std::tanh(x * gain);
+  }
+
+  static inline T SoftClipShaper(T x, const T gain)
+  {
+    return SoftClip<T, 5>(x * gain);
+  }
+
+  static inline T HardClipShaper(T x, const T gain)
+  {
+    return std::copysign(std::min(std::abs(x) * gain), x);
+  }
+
+  /* Vector versions */
+
+  static inline V __vectorcall VSineShaper(const V& x, const T gain)
+  {
+    return sin(x * gain);
+  }
+
+  static inline V __vectorcall VParabolicShaper(const V& x, const T gain)
+  {
+    V x_clip = VSoftClipShaper(x, gain);
+    return pow(x_clip, 2) * sign(x);
+  }
+
+  static inline V __vectorcall VTanhShaper(const V& x, const T gain)
+  {
+    return tanh(x * gain);
+  }
+
+  static inline V __vectorcall VSoftClipShaper(const V& x, const T gain)
+  {
+    return SoftClip<V, 5>(x * gain);
+  }
+
+  static inline V __vectorcall VHardClipShaper(const V& x, const T gain)
+  {
+    return sign(x) * min(abs(x * gain));
+  }
+
+public:
+  Waveshaper(T sampleRate, T maxGain = 2., EWaveshaperMode mode = kWaveshapeSine) :
+    Effect<T, V>(sampleRate),
+    mMaxGain(maxGain), mMaxGainCeil(1. / mMaxGain),
+    mShaperMode(mode) {}
+
+  virtual void SetParam1(T value) override
+  {
+    SetMode(static_cast<EWaveshaperMode>(value + 0.01));
+  }
+  virtual void SetParam2(T value) override
+  {
+    SetGain(value);
+    SetThreshold(1. - (mMaxGain - 1.) * (value * mMaxGainCeil));
+  }
+
+  T Process(T s) override
+  {
+    return mShaperFunc(s, mGain);
+  }
+
+  inline T DoProcess(T s)
+  {
+    return mShaperFunc(s, mGain);
+  }
+
+  inline V __vectorcall DoProcess_Vector(V& s)
+  {
+    return (mShaperFunc_Vector(s, mGain) - s);
+  }
+
+  void ProcessStereo(T* s) override
+  {
+    //std::lock_guard<std::mutex> lg(mFuncMutex);
+    s[0] += mMix * mThresh * (DoProcess(s[0]) - s[0]);
+    s[1] += mMix * mThresh * (DoProcess(s[1]) - s[1]);
+  }
+
+  void ProcessStereo(StereoSample<T>& s) override
+  {
+    //std::lock_guard<std::mutex> lg(mFuncMutex);
+    s.l += mMix * mThresh * (DoProcess(s.l) - s.l);
+    s.r += mMix * mThresh * (DoProcess(s.r) - s.r);
+  }
+
+  void ProcessStereo_Vector(StereoSample<V>& s)
+  {
+    //std::lock_guard<std::mutex> lg(mFuncMutex);
+    s.l += mMix * mThresh * (DoProcess_Vector(s.l) - s.l);
+    s.r += mMix * mThresh * (DoProcess_Vector(s.r) - s.r);
+  }
+
+  inline void SetMode(EWaveshaperMode mode)
+  {
+    //std::lock_guard<std::mutex> lg(mFuncMutex); // To prevent calling an empty `std::function`
+    switch (mode)
+    {
+    case kWaveshapeParabola:
+    {
+      mShaperFunc = &Waveshaper::ParabolicShaper;
+      mShaperFunc_Vector = &Waveshaper::VParabolicShaper;
+      break;
+    }
+    case kWaveshapeTanh:
+    {
+      mShaperFunc = &Waveshaper::TanhShaper;
+      mShaperFunc_Vector = &Waveshaper::VTanhShaper;
+      break;
+    }
+    case kWaveshapeSoft:
+    {
+      mShaperFunc = &Waveshaper::SoftClipShaper;
+      mShaperFunc_Vector = &Waveshaper::VSoftClipShaper;
+      break;
+    }
+    case kWaveshapeSine:
+    default:
+    {
+      mShaperFunc = &Waveshaper::SineShaper;
+      mShaperFunc_Vector = &Waveshaper::VSineShaper;
+      break;
+    }
+    }
+  }
+
+  inline void SetGain(const T gain)
+  {
+    mGain = (T)1. + gain * mMaxGain;
+  }
+
+  inline void SetThreshold(T thresh)
+  {
+    mThresh = thresh;
+  }
+
+protected:
+  const T mMaxGain; // Can be used to normalize inputs, since a waveshaper's behavior is amplitude-dependent
+  const T mMaxGainCeil;
+  T mGain{ (T)1 };
+  T mThresh{ 0.5 };
+  EWaveshaperMode mShaperMode;
+  std::function<T(T, const T)> mShaperFunc{ &Waveshaper::SineShaper };
+  std::function<V(const V&, const T)> mShaperFunc_Vector{ &Waveshaper::VSineShaper };
+  std::mutex mFuncMutex;
+};  

@@ -346,6 +346,15 @@
     <ClInclude Include="..\..\..\IPlug\VST3\IPlugVST3_Parameter.h" />
     <ClInclude Include="..\..\..\IPlug\VST3\IPlugVST3_ProcessorBase.h" />
     <ClInclude Include="..\..\..\IPlug\VST3\IPlugVST3_View.h" />
+    <ClInclude Include="..\dependencies\radiofarmer\allpass.h" />
+    <ClInclude Include="..\dependencies\radiofarmer\biquad.h" />
+    <ClInclude Include="..\dependencies\radiofarmer\cm.h" />
+    <ClInclude Include="..\dependencies\radiofarmer\delayline.h" />
+    <ClInclude Include="..\dependencies\radiofarmer\radiofarmerDSP.h" />
+    <ClInclude Include="..\dependencies\radiofarmer\radiofarmer_config.h" />
+    <ClInclude Include="..\dependencies\radiofarmer\reverb.h" />
+    <ClInclude Include="..\dependencies\radiofarmer\waveguide.h" />
+    <ClInclude Include="..\dependencies\radiofarmer\waveshaper.h" />
     <ClInclude Include="..\Tablitsa.h" />
     <ClInclude Include="..\Tablitsa_DSP.h" />
     <ClInclude Include="..\resources\resource.h" />
@@ -437,10 +446,15 @@
     <ClCompile Include="..\..\..\IPlug\VST3\IPlugVST3.cpp" />
     <ClCompile Include="..\..\..\IPlug\VST3\IPlugVST3_ProcessorBase.cpp" />
     <ClCompile Include="..\..\..\WDL\fft.c" />
-    <ClCompile Include="..\SignalProcessing.cpp" />
+    <ClCompile Include="..\dependencies\radiofarmer\allpass.cpp" />
+    <ClCompile Include="..\dependencies\radiofarmer\biquad.cpp" />
+    <ClCompile Include="..\dependencies\radiofarmer\cm.cpp" />
+    <ClCompile Include="..\dependencies\radiofarmer\modulator.cpp" />
+    <ClCompile Include="..\dependencies\radiofarmer\reverb.cpp" />
+    <ClCompile Include="..\dependencies\radiofarmer\waveguide.cpp" />
+    <ClCompile Include="..\dependencies\radiofarmer\waveshaper.cpp" />
     <ClCompile Include="..\Tablitsa.cpp" />
     <ClCompile Include="..\TablitsaControls.cpp" />
-    <ClCompile Include="..\TablitsaEffects.cpp" />
     <ClCompile Include="..\VectorFunctions.cpp" />
   </ItemGroup>
   <ItemGroup>
