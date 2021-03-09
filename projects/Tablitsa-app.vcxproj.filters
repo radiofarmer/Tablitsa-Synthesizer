@@ -121,6 +121,9 @@
     <ClCompile Include="..\dependencies\radiofarmer\waveguide.cpp">
       <Filter>dsp</Filter>
     </ClCompile>
+    <ClCompile Include="..\dependencies\radiofarmer\filters.cpp">
+      <Filter>dsp</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\Tablitsa.h" />
@@ -370,6 +373,9 @@
       <Filter>dsp</Filter>
     </ClInclude>
     <ClInclude Include="..\dependencies\radiofarmer\waveguide.h">
+      <Filter>dsp</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dependencies\radiofarmer\filters.h">
       <Filter>dsp</Filter>
     </ClInclude>
   </ItemGroup>

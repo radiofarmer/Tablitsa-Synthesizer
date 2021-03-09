@@ -604,6 +604,20 @@ public:
     mQ = value;
     SetFilterCoefs();
   }
+  void SetParam3(T value) {
+    for (int i{ 0 }; i < 2; ++i)
+    {
+      mLP[i].SetCutoff(value);
+      mHP[i].SetCutoff(value);
+      mPk[i].SetCutoff(value);
+    }
+  }
+  void SetParam4(T value) {
+    for (int i{ 0 }; i < 2; ++i)
+    {
+      mPk[i].SetPeakGain(value);
+    }
+  }
 
   void SetFilterCoefs() {
     flt[0].SetCoefs(mFc, mG);
@@ -617,8 +631,8 @@ public:
 
   void ProcessStereo(StereoSample<T>& s)
   {
-    s.l = flt[0].Process(s.l) + 0.5 * std::sin(s.l * 63. * mQ);
-    s.r = flt[1].Process(s.r) + 0.5 * std::sin(s.r * 63. * mQ);
+    s.l = flt[0].Process(s.l) + 0.5 * std::sin(mPk[0].Process(s.l) * 63. * mQ);
+    s.r = flt[1].Process(s.r) + 0.5 * std::sin(mPk[1].Process(s.r) * 63. * mQ);
   }
 
 protected:
@@ -627,6 +641,9 @@ protected:
   T mQ{ 0. };
   T mG{ 1. };
   AllpassLadder<4> flt[2];
+  LowpassOnePole mLP[2];
+  HighpassOnePole mHP[2];
+  PeakOnePole mPk[2];
 };
 
 #define WAVESHAPE_TYPES "Sine", "Parabolic", "Hyp. Tan.", "Soft Clip"
