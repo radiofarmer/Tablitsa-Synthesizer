@@ -41,6 +41,16 @@ public:
   virtual void SetParam5(T value) {}
   virtual void SetParam6(T value) {}
 
+  // TODO make the individual SetParam...() functions non-virtual to improve performance.
+  // Or just move the entire contents of those functions into this one (only for voice effects)
+  virtual void SetContinousParams(const T p1, const T p2, const T p3, const T p4)
+  {
+    SetParam1(p1);
+    SetParam2(p2);
+    SetParam3(p3);
+    SetParam4(p4);
+  }
+
 protected:
   T mSampleRate;
   T mMix{ 0. };
@@ -121,8 +131,8 @@ public:
     else
       SetDelayMS(value, 1);
   }
-  virtual void SetParam3(T value) override { SetFeedback(value / (T)100.); }
-  virtual void SetParam4(T value) override { SetGain(value / (T)100.); }
+  virtual void SetParam3(T value) override { SetFeedback(value); }
+  virtual void SetParam4(T value) override { SetGain(value); }
   virtual void SetParam5(T value) override { SetTempoSync(value > 0.5); }
 
   void SetDelayMS(T timeMS, int channel)
@@ -568,8 +578,8 @@ public:
   {
   }
 
-  void SetParam1(T value) override { mReverb.SetDiffusion(value * 0.75); }
-  void SetParam2(T value) override { mReverb.SetDamping(value);  }
+  void SetParam1(T value) override { mReverb.SetDiffusion(value * 0.75); mReverb.SetEarlyReflectionsLevel(0.5 - value * 0.25); }
+  void SetParam2(T value) override { mReverb.SetDamping(value * 0.2);  }
   void SetParam3(T value) override { mReverb.SetColor(value * 0.7); }
   void SetParam4(T value) override { mReverb.SetMixLevel(value); }
 
@@ -604,6 +614,20 @@ public:
     mQ = value;
     SetFilterCoefs();
   }
+  void SetParam3(T value) {
+    for (int i{ 0 }; i < 2; ++i)
+    {
+      mLP[i].SetCutoff(std::min(value + 0.05, 1.));
+      mHP[i].SetCutoff(std::max(value - 0.05, 0.));
+      mPk[i].SetCutoff(value);
+    }
+  }
+  void SetParam4(T value) {
+    for (int i{ 0 }; i < 2; ++i)
+    {
+      mPk[i].SetPeakGain(value);
+    }
+  }
 
   void SetFilterCoefs() {
     flt[0].SetCoefs(mFc, mG);
@@ -617,8 +641,8 @@ public:
 
   void ProcessStereo(StereoSample<T>& s)
   {
-    s.l = flt[0].Process(s.l) + 0.5 * std::sin(s.l * 63. * mQ);
-    s.r = flt[1].Process(s.r) + 0.5 * std::sin(s.r * 63. * mQ);
+    s.l = flt[0].Process(s.l) + 0.2 * std::sin(mPk[0].Process(s.l) * 63. * mQ);
+    s.r = flt[1].Process(s.r) + 0.2 * std::sin(mPk[1].Process(s.r) * 63. * mQ);
   }
 
 protected:
@@ -627,6 +651,9 @@ protected:
   T mQ{ 0. };
   T mG{ 1. };
   AllpassLadder<4> flt[2];
+  LowpassOnePole mLP[2];
+  HighpassOnePole mHP[2];
+  PeakOnePole mPk[2];
 };
 
 #define WAVESHAPE_TYPES "Sine", "Parabolic", "Hyp. Tan.", "Soft Clip"

@@ -346,6 +346,7 @@
     <ClInclude Include="..\dependencies\radiofarmer\biquad.h" />
     <ClInclude Include="..\dependencies\radiofarmer\cm.h" />
     <ClInclude Include="..\dependencies\radiofarmer\delayline.h" />
+    <ClInclude Include="..\dependencies\radiofarmer\filters.h" />
     <ClInclude Include="..\dependencies\radiofarmer\radiofarmerDSP.h" />
     <ClInclude Include="..\dependencies\radiofarmer\radiofarmer_config.h" />
     <ClInclude Include="..\dependencies\radiofarmer\reverb.h" />
@@ -453,6 +454,7 @@
     <ClCompile Include="..\dependencies\radiofarmer\allpass.cpp" />
     <ClCompile Include="..\dependencies\radiofarmer\biquad.cpp" />
     <ClCompile Include="..\dependencies\radiofarmer\cm.cpp" />
+    <ClCompile Include="..\dependencies\radiofarmer\filters.cpp" />
     <ClCompile Include="..\dependencies\radiofarmer\reverb.cpp" />
     <ClCompile Include="..\dependencies\radiofarmer\waveguide.cpp" />
     <ClCompile Include="..\dependencies\radiofarmer\waveshaper.cpp" />

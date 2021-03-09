@@ -6,6 +6,7 @@
 #include "allpass.h"
 #include "delayline.h"
 #include "cm.h"
+#include "filters.h"
 #include "reverb.h"
 #include "waveguide.h"
 #include "waveshaper.h"
