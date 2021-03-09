@@ -42,7 +42,7 @@ public:
   /* Cutoff prewarping, to be specialized for different filter types */
   const sample_t CutoffAdj() const
   {
-    return mFc * 0.5;
+    return mFc * piOver2;
   }
 
   void CalculateCoefficients()
@@ -101,21 +101,6 @@ public:
 
 private:
   sample_t mPeakGain{ 1. };
-};
-
-
-class BandpassOnePole : public OnePoleTPTFilter
-{
-public:
-  BandpassOnePole(sample_t sampleRate = DEFAULT_SRATE, sample_t fc = 0.25) :
-    OnePoleTPTFilter(sampleRate, fc) {}
-
-  sample_t CutoffAdj();
-
-  sample_t Process(sample_t x);
-
-private:
-  sample_t mBandwidth{ 1. };
 };
 
 END_DSP_NAMESPACE
