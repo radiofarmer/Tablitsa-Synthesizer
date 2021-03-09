@@ -727,13 +727,28 @@ public:
       case kWaveshaperEffect:
       {
         mVoiceModParams[kVEffect1Param1 + effectSlot * numEffectModParams].SetMinMax(0., static_cast<double>(kNumWaveshaperModes - 1) + 0.1);
+        mVoiceModParams[kVEffect1Param2 + effectSlot * numEffectModParams].SetMinMax(0., 1.);
+        mVoiceModParams[kVEffect1Param3 + effectSlot * numEffectModParams].SetMinMax(0., 1.);
+        mVoiceModParams[kVEffect1Param4 + effectSlot * numEffectModParams].SetMinMax(0., 1.);
         mEffects[effectSlot] = new Waveshaper<T>(mMaster->mSampleRate, 4.);
         break;
       }
       case kSampleAndHoldEffect:
       {
-        mVoiceModParams[kVEffect1Param1 + effectSlot * numEffectModParams].SetMinMax(0.5, 20.);
+        mVoiceModParams[kVEffect1Param1 + effectSlot * numEffectModParams].SetMinMax(0.05, 10.);
+        mVoiceModParams[kVEffect1Param2 + effectSlot * numEffectModParams].SetMinMax(0., 1.);
+        mVoiceModParams[kVEffect1Param3 + effectSlot * numEffectModParams].SetMinMax(0., 1.);
+        mVoiceModParams[kVEffect1Param4 + effectSlot * numEffectModParams].SetMinMax(0., 1.);
         mEffects[effectSlot] = new SampleAndHold<T>(mMaster->mSampleRate);
+        break;
+      }
+      case kTexturizerEffect:
+      {
+        mVoiceModParams[kVEffect1Param1 + effectSlot * numEffectModParams].SetMinMax(0., 1.);
+        mVoiceModParams[kVEffect1Param2 + effectSlot * numEffectModParams].SetMinMax(0., 1.);
+        mVoiceModParams[kVEffect1Param3 + effectSlot * numEffectModParams].SetMinMax(0., 1.);
+        mVoiceModParams[kVEffect1Param4 + effectSlot * numEffectModParams].SetMinMax(0., 1.);
+        mEffects[effectSlot] = new Texturizer<T>(mMaster->mSampleRate);
         break;
       }
       default:
@@ -829,18 +844,18 @@ public:
       new ParameterModulator<>(0., 1., "Phase Mod Depth"),
       new ParameterModulator<>(-24., 24., "Ring Mod Freq"),
       new ParameterModulator<>(0., 1., "Ring Mod Depth"),
-      new ParameterModulator<>(0., 100., "Effect 1 Param 1"),
-      new ParameterModulator<>(0., 100., "Effect 1 Param 2"),
-      new ParameterModulator<>(0., 100., "Effect 1 Param 3"),
-      new ParameterModulator<>(0., 100., "Effect 1 Param 4"),
-      new ParameterModulator<>(0., 100., "Effect 2 Param 1"),
-      new ParameterModulator<>(0., 100., "Effect 2 Param 2"),
-      new ParameterModulator<>(0., 100., "Effect 2 Param 3"),
-      new ParameterModulator<>(0., 100., "Effect 2 Param 4"),
-      new ParameterModulator<>(0., 100., "Effect 3 Param 1"),
-      new ParameterModulator<>(0., 100., "Effect 3 Param 2"),
-      new ParameterModulator<>(0., 100., "Effect 3 Param 3"),
-      new ParameterModulator<>(0., 100., "Effect 3 Param 4"), };
+      new ParameterModulator<>(0., 1., "Effect 1 Param 1"),
+      new ParameterModulator<>(0., 1., "Effect 1 Param 2"),
+      new ParameterModulator<>(0., 1., "Effect 1 Param 3"),
+      new ParameterModulator<>(0., 1., "Effect 1 Param 4"),
+      new ParameterModulator<>(0., 1., "Effect 2 Param 1"),
+      new ParameterModulator<>(0., 1., "Effect 2 Param 2"),
+      new ParameterModulator<>(0., 1., "Effect 2 Param 3"),
+      new ParameterModulator<>(0., 1., "Effect 2 Param 4"),
+      new ParameterModulator<>(0., 1., "Effect 3 Param 1"),
+      new ParameterModulator<>(0., 1., "Effect 3 Param 2"),
+      new ParameterModulator<>(0., 1., "Effect 3 Param 3"),
+      new ParameterModulator<>(0., 1., "Effect 3 Param 4"), };
 
     // Modulator parameters that can themselves be modulated
     ModulatedParameterList<T, kNumVoiceMetaModulations> mVoiceMetaModParams{

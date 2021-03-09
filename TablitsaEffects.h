@@ -85,7 +85,7 @@ public:
   }
 
   DelayEffect(double sampleRate, ModMetronome* metronome=nullptr) :
-    Effect<T>(sampleRate),
+    Effect<T, V>(sampleRate),
     mMaxDelayMS(TABLITSA_MAX_DELAY_MS),
     mMaxDelay(MaxDelay),
     mDelayLTime(mMaxDelay / 2),
@@ -152,7 +152,7 @@ public:
 
   void SetSampleRate(T sampleRate) override
   {
-    Effect<T>::SetSampleRate(sampleRate);
+    Effect<T, V>::SetSampleRate(sampleRate);
     CalculateDelaySamples();
   }
 
@@ -259,6 +259,124 @@ private:
   ModMetronome* mMetronome; // For tempo sync
 };
 
+
+/* 3-Band EQ */
+template<typename T, class V = Vec4d>
+class EQ3Effect : public Effect<T, V>
+{
+  static constexpr T pi{ 3.14159265359 };
+  static constexpr T twoPi{ 6.28318530718 };
+  static constexpr T denorm_fix = (T)(1.0 / 4294967295.0);
+
+  struct EQState
+  {
+    // Low-shelf frequency and poles
+    T lf;
+    T lfp0;
+    T lfp1;
+    T lfp2;
+    T lfp3;
+
+    // High-shelf frequency and poles
+    T hf;
+    T hfp0;
+    T hfp1;
+    T hfp2;
+    T hfp3;
+
+    // Gain
+    T lg;
+    T mg;
+    T hg;
+  };
+
+public:
+  EQ3Effect(T sampleRate) : Effect<T, V>(sampleRate)
+  {
+    memset(&mStateL, static_cast<int>((T)0), sizeof(mStateL));
+    memset(&mStateR, static_cast<int>((T)0), sizeof(mStateR));
+    SetMidFreq(0.25);
+  }
+
+  void SetSampleRate(T sampleRate) override
+  {
+    SetMidFreq(std::min(mMidFreq * mSampleRate / sampleRate, 0.99));
+    Effect<T, V>::SetSampleRate(sampleRate);
+  }
+
+  void SetParam1(T value) override { SetLowGain(value); }
+  void SetParam2(T value) override { SetMidGain(value); }
+  void SetParam3(T value) override { SetMidFreq(value * (T)0.249); }
+  void SetParam4(T value) override { SetHighGain(value); }
+
+  inline void SetLowGain(T lg) { mStateL.lg = lg; mStateR.lg = lg; }
+  inline void SetMidGain(T mg) { mStateL.mg = mg; mStateR.mg = mg; }
+  inline void SetHighGain(T hg) { mStateL.hg = hg; mStateR.hg = hg; }
+
+  inline void SetMidFreq(T freqNorm)
+  {
+    T lowFreq = std::max(freqNorm - mHalfMidBand, 0.01);
+    T highFreq = std::min(freqNorm + mHalfMidBand, 0.99);
+    mStateL.lf = (T)2 * std::sin(pi * lowFreq);
+    mStateL.hf = (T)2 * std::sin(pi * highFreq);
+    mStateR.lf = (T)2 * std::sin(pi * lowFreq);
+    mStateR.hf = (T)2 * std::sin(pi * highFreq);
+    mMidFreq = freqNorm;
+  }
+
+  inline T DoProcess(EQState& state, DelayLine<4>& z, T s)
+  {
+    T l, m, h;
+    // Lowpass Filter
+    state.lfp0 += state.lf * (s - state.lfp0) + denorm_fix;
+    state.lfp1 += state.lf * (state.lfp0 - state.lfp1);
+    state.lfp2 += state.lf * (state.lfp1 - state.lfp2);
+    state.lfp3 += state.lf * (state.lfp2 - state.lfp3);
+    l = state.lfp3;
+
+    // Highpass Filter
+    state.hfp0 += state.hf * (s - state.hfp0) + denorm_fix;
+    state.hfp1 += state.hf * (state.hfp0 - state.hfp1);
+    state.hfp2 += state.hf * (state.hfp1 - state.hfp2);
+    state.hfp3 += state.hf * (state.hfp2 - state.hfp3);
+    h = z[0] - state.hfp3;
+
+    // Bandpass Filter
+    m = z[0] - (l + h);
+
+    // Apply gain
+    l *= state.lg;
+    m *= state.mg;
+    h *= state.hg;
+
+    // Update delay line
+    z.push(s);
+
+    return l + m + h;
+  }
+
+  void ProcessStereo(T* s) override
+  {
+    s[0] = DoProcess(mStateL, mZ0, s[0]);
+    s[1] = DoProcess(mStateR, mZ1, s[1]);
+  }
+
+  void ProcessStereo(StereoSample<T>& s) override
+  {
+    s.l = DoProcess(mStateL, mZ0, s.l);
+    s.r = DoProcess(mStateR, mZ1, s.r);
+  }
+
+protected:
+  EQState mStateL;
+  EQState mStateR;
+  T mMidFreq{ 1. };
+  T mHalfMidBand{ 0.05 }; // Half the proportion of the normalized frequency range occupied by the mid band
+
+  DelayLine<4> mZ0;
+  DelayLine<4> mZ1;
+};
+
 template<typename T, class V = Vec4d>
 class SampleAndHold : public Effect<T, V>
 {
@@ -269,8 +387,25 @@ class SampleAndHold : public Effect<T, V>
     uint32_t w, x, y, z;
   };
 
+  static inline uint32_t XOR_Shift(xor128& state)
+  {
+    const uint32_t first = state.w;
+    uint32_t last = state.z;
+    state.z = state.y;
+    state.y = state.x;
+    state.x = first;
+    last ^= first << 11;
+    last ^= first >> 8;
+    return state.w = last ^ first ^ (first >> 19);
+  }
+
 public:
-  SampleAndHold(T sampleRate) : Effect<T>(sampleRate) {}
+  SampleAndHold(T sampleRate) : Effect<T, V>(sampleRate)
+  {
+    // These must be dynamically allocated for proper alignment, to avoid heap corruption
+    mSampleCounter_v = new V(0., 1., 2., 3);
+    mHold_v = new StereoSample<V>(V(0.), V(0.));
+  }
 
   void SetParam1(T value) override { SetRateMS(value); }
   void SetParam2(T value) override { SetDecay(value); }
@@ -319,7 +454,7 @@ public:
 
   void ProcessStereo_Vector(StereoSample<V>& s) override
   {
-    StereoSample<V> out{ mHold_v.l, mHold_v.r };
+    /*StereoSample<V> out{ mHold_v.l, mHold_v.r };
     mHold_v.l += mDecay * (s.l - mHold_v.l);
     mHold_v.r += mDecay * (s.r - mHold_v.r);
     if (mSampleCounter >= mRateAdj)
@@ -332,7 +467,7 @@ public:
     else
       mSampleCounter += deduce_vector_from<V>::v_size;
     s.l += mMix * (out.l - s.l);
-    s.r += mMix * (out.r - s.r);
+    s.r += mMix * (out.r - s.r);*/
   }
 
   void SetRateMS(T rate)
@@ -351,16 +486,10 @@ public:
     mJitter = static_cast<int>((T)31 * ((T)1 - noise * 0.25));
   }
 
-  static inline uint32_t XOR_Shift(xor128& state)
+  ~SampleAndHold()
   {
-    const uint32_t first = state.w;
-    uint32_t last = state.z;
-    state.z = state.y;
-    state.y = state.x;
-    state.x = first;
-    last ^= first << 11;
-    last ^= first >> 8;
-    return state.w = last ^ first ^ (first >> 19);
+    delete mSampleCounter;
+    delete mHold_v;
   }
 
 protected:
@@ -373,8 +502,131 @@ protected:
   unsigned int mRateAdj{ 1 };
   xor128 mRandGen{ 0xAF31, 0x1234, 0xFF2E, 0xDCBA };
 
-  V mSampleCounter_v = V(0., 1., 2., 3);
-  StereoSample<V> mHold_v{ V(0.), V(0.) };
+  V* mSampleCounter_v;
+  StereoSample<V>* mHold_v;
+};
+
+template<typename T, class V=Vec4d>
+class ReverbEffect : public Effect<T, V>
+{
+  static constexpr T MaxDelayMS = 100.;
+  static constexpr T MinDelayMS = 5.;
+  static constexpr T MinFeedback = 0.65;
+  static constexpr T FeedbackRange = 0.99 - MinFeedback;
+
+public:
+  ReverbEffect(T sampleRate, T maxDelayMS = 50., T minDelayMS = 10., T maxFeedback = 0.75, T minFeedback = 0.65, T gain = 0.5) :
+    Effect<T, V>(sampleRate),
+    mReverb(sampleRate, maxDelayMS, minDelayMS, maxFeedback, minFeedback, gain)
+  {}
+
+  void SetSampleRate(T sampleRate) override
+  {
+    Effect<T, V>::SetSampleRate(sampleRate);
+    mReverb.SetSampleRate(mSampleRate);
+  }
+
+  void SetParam1(T value) override
+  {
+    mReverb.SetDelay(value * (MaxDelayMS - MinDelayMS), MinDelayMS, true);
+  }
+  void SetParam2(T value) override
+  {
+    mReverb.SetFeedback(MinFeedback + value * FeedbackRange, MinFeedback, true);
+  }
+  void SetParam4(T value) override
+  {
+    mReverb.SetGain(value);
+  }
+
+  T Process(T s) override
+  {
+    return mReverb.Process(s);
+  }
+
+  void ProcessStereo(T* s) override
+  {
+    StereoSample<T> s2{ s[0], s[1] };
+    mReverb.ProcessStereo(s2);
+    s[0] = s2.l; s[1] = s2.r;
+  }
+
+  void ProcessStereo(StereoSample<T>& s) override
+  {
+    mReverb.ProcessStereo(s);
+  }
+
+protected:
+  CascadeReverb<6, 2> mReverb;
+};
+
+template<typename T, class V=Vec4d>
+class Reverb2Effect : public Effect<T, V>
+{
+public:
+  Reverb2Effect(T sampleRate) : Effect<T, V>(sampleRate), mReverb(sampleRate)
+  {
+  }
+
+  void SetParam1(T value) override { mReverb.SetDiffusion(value * 0.75); }
+  void SetParam2(T value) override { mReverb.SetDamping(value);  }
+  void SetParam3(T value) override { mReverb.SetColor(value * 0.7); }
+  void SetParam4(T value) override { mReverb.SetMixLevel(value); }
+
+  void ProcessStereo(StereoSample<T>& s)
+  {
+    mReverb.ProcessStereo(s);
+  }
+
+protected:
+  UFDNReverb mReverb;
+};
+
+template<typename T, class V = Vec4d>
+class Texturizer : public Effect<T, V>
+{
+
+public:
+  Texturizer(T sampleRate) : Effect<T, V>(sampleRate) {}
+
+  void SetSampleRate(T sampleRate)
+  {
+    Effect<T, V>::SetSampleRate(sampleRate);
+    for (int i{ 0 }; i < 2; ++i)
+      flt[i].SetSampleRate(sampleRate);
+  }
+
+  void SetParam1(T value) {
+    mFc = value;
+    SetFilterCoefs();
+  }
+  void SetParam2(T value) {
+    mQ = value;
+    SetFilterCoefs();
+  }
+
+  void SetFilterCoefs() {
+    flt[0].SetCoefs(mFc, mG);
+    flt[1].SetCoefs(mFc, mG);
+  }
+
+  T Process(T s) override
+  {
+    return flt[0].Process(s);
+  }
+
+  void ProcessStereo(StereoSample<T>& s)
+  {
+    s.l = flt[0].Process(s.l) + 0.5 * std::sin(s.l * 63. * mQ);
+    s.r = flt[1].Process(s.r) + 0.5 * std::sin(s.r * 63. * mQ);
+  }
+
+protected:
+  DelayLine<4> mZ;
+  T mFc{ 1. };
+  T mQ{ 0. };
+  T mG{ 1. };
+  AllpassLadder<4> flt[2];
 };
 
 #define WAVESHAPE_TYPES "Sine", "Parabolic", "Hyp. Tan.", "Soft Clip"
@@ -399,8 +651,8 @@ class Waveshaper : public Effect<T, V>
   static inline T SineShaper(T x, const T gain)
   {
     x *= gain;
-    T x2 = std::copysign(x, piOver2 - x);
-    return std::copysign(x2 - x2 * x2 * x2 / (T)6 + x2 * x2 * x2 * x2 * x2 / (T)120, x) * 0.9;
+    const T x3 = x * x * x;
+    return x - 0.16666666666 * x3 + 0.008333333333333 * x3 * x * x;
   }
 
   static inline T ParabolicShaper(T x, const T gain)
@@ -453,8 +705,8 @@ class Waveshaper : public Effect<T, V>
   }
 
 public:
-  Waveshaper(T sampleRate, T maxGain=2., EWaveshaperMode mode = kWaveshapeSine) :
-    Effect<T>(sampleRate),
+  Waveshaper(T sampleRate, T maxGain = 2., EWaveshaperMode mode = kWaveshapeSine) :
+    Effect<T, V>(sampleRate),
     mMaxGain(maxGain), mMaxGainCeil(1. / mMaxGain),
     mShaperMode(mode) {}
 
@@ -475,7 +727,7 @@ public:
 
   inline T DoProcess(T s)
   {
-    return (mShaperFunc(s, mGain) - s);
+    return mShaperFunc(s, mGain);
   }
 
   inline V __vectorcall DoProcess_Vector(V& s)
@@ -556,197 +808,4 @@ protected:
   std::function<T(T, const T)> mShaperFunc{ &Waveshaper::SineShaper };
   std::function<V(const V&, const T)> mShaperFunc_Vector{ &Waveshaper::VSineShaper };
   std::mutex mFuncMutex;
-};
-
-/* 3-Band EQ */
-template<typename T, class V = Vec4d>
-class EQ3Effect : public Effect<T, V>
-{
-  static constexpr T pi{ 3.14159265359 };
-  static constexpr T twoPi{ 6.28318530718 };
-  static constexpr T denorm_fix = (T)(1.0 / 4294967295.0);
-
-  struct EQState
-  {
-    // Low-shelf frequency and poles
-    T lf;
-    T lfp0;
-    T lfp1;
-    T lfp2;
-    T lfp3;
-
-    // High-shelf frequency and poles
-    T hf;
-    T hfp0;
-    T hfp1;
-    T hfp2;
-    T hfp3;
-
-    // Gain
-    T lg;
-    T mg;
-    T hg;
-  };
-
-public:
-  EQ3Effect(T sampleRate) : Effect<T>(sampleRate)
-  {
-    memset(&mStateL, static_cast<int>((T)0), sizeof(mStateL));
-    memset(&mStateR, static_cast<int>((T)0), sizeof(mStateR));
-    SetMidFreq(0.25);
-  }
-
-  void SetSampleRate(T sampleRate) override
-  {
-    SetMidFreq(std::min(mMidFreq * mSampleRate / sampleRate, 0.99));
-    Effect<T>::SetSampleRate(sampleRate);
-  }
-
-  void SetParam1(T value) override { SetLowGain(value); }
-  void SetParam2(T value) override { SetMidGain(value); }
-  void SetParam3(T value) override { SetMidFreq(value * (T)0.249); }
-  void SetParam4(T value) override { SetHighGain(value); }
-
-  inline void SetLowGain(T lg) { mStateL.lg = lg; mStateR.lg = lg; }
-  inline void SetMidGain(T mg) { mStateL.mg = mg; mStateR.mg = mg; }
-  inline void SetHighGain(T hg) { mStateL.hg = hg; mStateR.hg = hg; }
-
-  inline void SetMidFreq(T freqNorm)
-  {
-    T lowFreq = std::max(freqNorm - mHalfMidBand, 0.01);
-    T highFreq = std::min(freqNorm + mHalfMidBand, 0.99);
-    mStateL.lf = (T)2 * std::sin(pi * lowFreq);
-    mStateL.hf = (T)2 * std::sin(pi * highFreq);
-    mStateR.lf = (T)2 * std::sin(pi * lowFreq);
-    mStateR.hf = (T)2 * std::sin(pi * highFreq);
-    mMidFreq = freqNorm;
-  }
-
-  inline T DoProcess(EQState& state, DelayLine<4>& z, T s)
-  {
-    T l, m, h;
-    // Lowpass Filter
-    state.lfp0 += state.lf * (s - state.lfp0) + denorm_fix;
-    state.lfp1 += state.lf * (state.lfp0 - state.lfp1);
-    state.lfp2 += state.lf * (state.lfp1 - state.lfp2);
-    state.lfp3 += state.lf * (state.lfp2 - state.lfp3);
-    l = state.lfp3;
-
-    // Highpass Filter
-    state.hfp0 += state.hf * (s - state.hfp0) + denorm_fix;
-    state.hfp1 += state.hf * (state.hfp0 - state.hfp1);
-    state.hfp2 += state.hf * (state.hfp1 - state.hfp2);
-    state.hfp3 += state.hf * (state.hfp2 - state.hfp3);
-    h = z[0] - state.hfp3;
-
-    // Bandpass Filter
-    m = z[0] - (l + h);
-
-    // Apply gain
-    l *= state.lg;
-    m *= state.mg;
-    h *= state.hg;
-
-    // Update delay line
-    z.push(s);
-
-    return l + m + h;
-  }
-
-  void ProcessStereo(T* s) override
-  {
-    s[0] = DoProcess(mStateL, mZ0, s[0]);
-    s[1] = DoProcess(mStateR, mZ1, s[1]);
-  }
-
-  void ProcessStereo(StereoSample<T>& s) override
-  {
-    s.l = DoProcess(mStateL, mZ0, s.l);
-    s.r = DoProcess(mStateR, mZ1, s.r);
-  }
-
-protected:
-  EQState mStateL;
-  EQState mStateR;
-  T mMidFreq{ 1. };
-  T mHalfMidBand{ 0.05 }; // Half the proportion of the normalized frequency range occupied by the mid band
-
-  DelayLine<4> mZ0;
-  DelayLine<4> mZ1;
-};
-
-template<typename T, class V=Vec4d>
-class ReverbEffect : public Effect<T, V>
-{
-  static constexpr T MaxDelayMS = 100.;
-  static constexpr T MinDelayMS = 5.;
-  static constexpr T MinFeedback = 0.65;
-  static constexpr T FeedbackRange = 0.99 - MinFeedback;
-
-public:
-  ReverbEffect(T sampleRate, T maxDelayMS = 50., T minDelayMS = 10., T maxFeedback = 0.75, T minFeedback = 0.65, T gain = 0.5) :
-    Effect<T, V>(sampleRate),
-    mReverb(sampleRate, maxDelayMS, minDelayMS, maxFeedback, minFeedback, gain)
-  {}
-
-  void SetSampleRate(T sampleRate) override
-  {
-    Effect<T>::SetSampleRate(sampleRate);
-    mReverb.SetSampleRate(mSampleRate);
-  }
-
-  void SetParam1(T value) override
-  {
-    mReverb.SetDelay(value * (MaxDelayMS - MinDelayMS), MinDelayMS, true);
-  }
-  void SetParam2(T value) override
-  {
-    mReverb.SetFeedback(MinFeedback + value * FeedbackRange, MinFeedback, true);
-  }
-  void SetParam4(T value) override
-  {
-    mReverb.SetGain(value);
-  }
-
-  T Process(T s) override
-  {
-    return mReverb.Process(s);
-  }
-
-  void ProcessStereo(T* s) override
-  {
-    StereoSample<T> s2{ s[0], s[1] };
-    mReverb.ProcessStereo(s2);
-    s[0] = s2.l; s[1] = s2.r;
-  }
-
-  void ProcessStereo(StereoSample<T>& s) override
-  {
-    mReverb.ProcessStereo(s);
-  }
-
-protected:
-  CascadeReverb<6, 2> mReverb;
-};
-
-template<typename T, class V=Vec4d>
-class Reverb2Effect : public Effect<T, V>
-{
-public:
-  Reverb2Effect(T sampleRate) : Effect<T, V>(sampleRate), mReverb(sampleRate)
-  {
-  }
-
-  void SetParam1(T value) override { mReverb.SetDiffusion(value * 0.75); }
-  void SetParam2(T value) override { mReverb.SetDamping(value);  }
-  void SetParam3(T value) override { mReverb.SetColor(value * 0.7); }
-  void SetParam4(T value) override { mReverb.SetMixLevel(value); }
-
-  void ProcessStereo(StereoSample<T>& s)
-  {
-    mReverb.ProcessStereo(s);
-  }
-
-protected:
-  UFDNReverb mReverb;
-};
+};  
