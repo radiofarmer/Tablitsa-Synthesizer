@@ -121,8 +121,8 @@ public:
     else
       SetDelayMS(value, 1);
   }
-  virtual void SetParam3(T value) override { SetFeedback(value / (T)100.); }
-  virtual void SetParam4(T value) override { SetGain(value / (T)100.); }
+  virtual void SetParam3(T value) override { SetFeedback(value); }
+  virtual void SetParam4(T value) override { SetGain(value); }
   virtual void SetParam5(T value) override { SetTempoSync(value > 0.5); }
 
   void SetDelayMS(T timeMS, int channel)

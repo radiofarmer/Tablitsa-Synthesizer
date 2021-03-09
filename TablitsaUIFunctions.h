@@ -262,6 +262,7 @@ void InitSampleAndHoldUI(Plugin* pPlugin, IGraphics* pGraphics, std::vector<ICon
   dynamic_cast<IVKnobControl*>(controls[0])->SetLabelStr("Rate");
   dynamic_cast<IVKnobControl*>(controls[1])->SetLabelStr("Decay");
   dynamic_cast<IVKnobControl*>(controls[2])->SetLabelStr("Noise");
+  dynamic_cast<IVKnobControl*>(controls[3])->SetLabelStr("Mix");
   // Modulation ON for knob 1
   dynamic_cast<TablitsaIVModKnobControl*>(controls[0])->EnableModulation(true);
   // Toggle action functions
@@ -307,7 +308,7 @@ void InitTexturizerUI(Plugin* pPlugin, IGraphics* pGraphics, std::vector<IContro
   dynamic_cast<IVKnobControl*>(controls[0])->SetLabelStr("Cutoff");
   dynamic_cast<IVKnobControl*>(controls[1])->SetLabelStr("Drive");
   dynamic_cast<IVKnobControl*>(controls[2])->SetLabelStr("Res Freq");
-  dynamic_cast<IVKnobControl*>(controls[2])->SetLabelStr("Res Amt");
+  dynamic_cast<IVKnobControl*>(controls[3])->SetLabelStr("Res Amt");
   // Modulation on for knob 1
   dynamic_cast<TablitsaIVModKnobControl*>(controls[0])->EnableModulation(true);
   // Toggle action functions
@@ -347,6 +348,7 @@ void InitWaveshaperUI(Plugin* pPlugin, IGraphics* pGraphics, std::vector<IContro
   dynamic_cast<IVKnobControl*>(controls[0])->SetLabelStr("Type");
   dynamic_cast<IVKnobControl*>(controls[1])->SetLabelStr("Gain");
   dynamic_cast<IVKnobControl*>(controls[2])->SetLabelStr("");
+  dynamic_cast<IVKnobControl*>(controls[3])->SetLabelStr("Mix");
   // Modulation off for knob 1
   dynamic_cast<TablitsaIVModKnobControl*>(controls[0])->EnableModulation(false);
   // Toggle action functions
