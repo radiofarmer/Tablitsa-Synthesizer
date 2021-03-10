@@ -14,6 +14,8 @@
 #include "Smoothers.h"
 #include "LFO.h"
 
+#include "Oversampler.h"
+
 #ifdef VECTOR
  #define FRAME_INTERVAL OUTPUT_SIZE * 2
 #else
@@ -498,10 +500,8 @@ public:
       // or write the entire control ramp to a buffer, like this, to get sample-accurate ramps:
       mInputs[kVoiceControlTimbre].Write(mTimbreBuffer.Get(), startIdx, nFrames); */
 
-      radiofarmer::AllpassCascade mod(20);
-
-      double pitch = mInputs[kVoiceControlPitch].endValue + mDetune; // pitch = (MidiKey - 69) / 12
-//      double pitchBend = mInputs[kVoiceControlPitchBend].endValue;
+      double pitchBend = mInputs[kVoiceControlPitchBend].endValue;
+      double pitch = mInputs[kVoiceControlPitch].endValue + pitchBend + mDetune; // pitch = (MidiKey - 69) / 12
 
       // Set the static (note-constant) modulator values
       T keytrack = (pitch * 12. + 69.) / 128.;
@@ -528,11 +528,6 @@ public:
         int bufferIdx = i - startIdx;
         //        float noise = mTimbreBuffer.Get()[i] * Rand();
         T ampEnvVal{ mModulators.GetList()[2][bufferIdx] }; // Calculated for easy access
-
-        // Panning
-        T panMod = mVModulations.GetList()[kVPan][bufferIdx];
-        T lPan = std::clamp(mPan[0] - panMod, -1., 1.); // TODO: optimize this somehow
-        T rPan = std::clamp(mPan[1] + panMod, -1., 1.);
 
         // Oscillator Parameters
         // Osc1
@@ -564,20 +559,10 @@ public:
         mOsc1.SetRingModulation(mVModulations.GetList()[kVRingModAmt][bufferIdx], osc1Freq * ringModFreqFact);
         mOsc2.SetRingModulation(mVModulations.GetList()[kVRingModAmt][bufferIdx], osc2Freq * ringModFreqFact);
 
-        constexpr int nEffectParams = kVEffect2Param1 - kVEffect1Param1;
-        for (int e{ 0 }, p{ 0 }; e < TABLITSA_MAX_VOICE_EFFECTS, p < TABLITSA_MAX_VOICE_EFFECTS * nEffectParams; e++, p += nEffectParams)
-        {
-          mEffects[e]->SetParam1(mVModulations.GetList()[kVEffect1Param1 + p][bufferIdx]);
-          mEffects[e]->SetParam2(mVModulations.GetList()[kVEffect1Param2 + p][bufferIdx]);
-          mEffects[e]->SetParam3(mVModulations.GetList()[kVEffect1Param3 + p][bufferIdx]);
-          mEffects[e]->SetParam4(mVModulations.GetList()[kVEffect1Param4 + p][bufferIdx]);
-        }
-
         // Signal Processing
 #ifdef VECTOR
         Vec4d osc1_v = mOsc1.ProcessMultiple(osc1Freq) * osc1Amp;
         Vec4d osc2_v = mOsc2.ProcessMultiple(osc2Freq) * osc2Amp;
-        //osc1_v = dynamic_cast<SVF2<T>*>(mFilters[0])->Process_Vector(osc1_v);
         T osc1Output[4];
         T osc2Output[4];
         osc1_v.store(osc1Output);
@@ -586,8 +571,6 @@ public:
         std::array<T, OUTPUT_SIZE> osc1Output{ mOsc1.ProcessMultiple(osc1Freq) };
         std::array<T, OUTPUT_SIZE> osc2Output{ mOsc2.ProcessMultiple(osc2Freq) };
 #endif
-
-#ifndef VECTOR_VOICE_EFFECTS_TEST
         for (auto j = 0; j < FRAME_INTERVAL; ++j)
         {
 #ifndef VECTOR
@@ -599,46 +582,41 @@ public:
           T filter2Output = mFilters[1]->Process(osc1Output[j] * mFilterSends[1][0] + osc2Output[j] * mFilterSends[1][1]);
           T output_summed = filter1Output + filter2Output;
           T output_scaled = output_summed * ampEnvVal;
-          StereoSample<T> output_stereo{ output_scaled * lPan, output_scaled * rPan };
-          // Voice effects
-          for (auto* fx : mEffects)
-            fx->ProcessStereo(output_stereo);
 
-          outputs[0][i + j] += output_stereo.l * mGain;
-          outputs[1][i + j] += output_stereo.r * mGain;
+          // Panning
+          T panMod = mVModulations.GetList()[kVPan][bufferIdx + j];
+          mPanBuf.Get()[bufferIdx + j] = std::clamp(mPan[0] - panMod, -1., 1.); // TODO: optimize this somehow
+          mPanBuf.Get()[bufferIdx + j + nFrames] = std::clamp(mPan[1] + panMod, -1., 1.);
+          mMonoOutputs.Get()[bufferIdx + j] = output_scaled;
         }
-#else
-        // Vector effects test
-        T output_stereo[2][4]{};
+      }
 
-        for (auto j = 0; j < FRAME_INTERVAL; ++j)
+      // Set all stereo outputs, running linearly through the buffers
+      for (int i{ 0 }; i < nFrames * 2; ++i)
+      {
+        mOutputs.Get()[i] = mMonoOutputs.Get()[i % nFrames] * mPanBuf.Get()[i];
+      }
+
+      for (auto i = startIdx; i < startIdx + nFrames; ++i)
+      {
+        const int bufferIdx = i - startIdx;
+        constexpr int nEffectParams = kVEffect2Param1 - kVEffect1Param1;
+
+        for (int e{ 0 }, p{ 0 }; e < TABLITSA_MAX_VOICE_EFFECTS; e++, p += nEffectParams)
         {
-          osc1Output[j] *= osc1Amp;
-          osc2Output[j] *= osc2Amp;
-          // Filters
-          T filter1Output = mFilters[0]->Process(osc1Output[j] * mFilterSends[0][0] + osc2Output[j] * mFilterSends[0][1]);
-          T filter2Output = mFilters[1]->Process(osc1Output[j] * mFilterSends[1][0] + osc2Output[j] * mFilterSends[1][1]);
-          T output_summed = osc1Output[j];//filter1Output + filter2Output;
-          T output_scaled = output_summed * ampEnvVal;
-          output_stereo[0][j] = output_scaled * lPan;
-          output_stereo[1][j] = output_scaled * rPan;
+          mEffects[e]->SetParam1(mVModulations.GetList()[kVEffect1Param1 + p][bufferIdx]);
+          mEffects[e]->SetParam2(mVModulations.GetList()[kVEffect1Param2 + p][bufferIdx]);
+          mEffects[e]->SetParam3(mVModulations.GetList()[kVEffect1Param3 + p][bufferIdx]);
+          mEffects[e]->SetParam4(mVModulations.GetList()[kVEffect1Param4 + p][bufferIdx]);
         }
 
-        // NB: might be faster to put this in a separate loop, since loading arrays is slower immediately after setting their values one-by-one
-        StereoSample<Vec4d> output_v{ Vec4d().load(&output_stereo[0][0]), Vec4d().load(&output_stereo[1][0]) };
-        //mEffects[0]->ProcessStereo_Vector(output_v);
-
-        output_v.l *= mGain;
-        output_v.r *= mGain;
-        output_v.l.store(&output_stereo[0][0]);
-        output_v.r.store(&output_stereo[1][0]);
-
-        for (int j{ 0 }; j < 4; ++j)
+        for (auto* fx : mEffects)
         {
-          outputs[0][i + j] += output_stereo[0][j];
-          outputs[1][i + j] += output_stereo[1][j];
+          //mEffectOversampler.ProcessBlock(, outputs)
         }
-#endif
+
+        outputs[0][i] += mOutputs.Get()[i - startIdx] * mGain;
+        outputs[1][i] += mOutputs.Get()[i + nFrames - startIdx] * mGain;
       }
     }
 
@@ -654,11 +632,18 @@ public:
 
       mFilters[0]->SetSampleRate(sampleRate);
       mFilters[1]->SetSampleRate(sampleRate);
-      
+
+      // Modulation buffers
       mVModulationsData.Resize(blockSize * kNumModulations);
       mVModulations.Empty();
 
+      // Modulator value buffer
       mModulators.EmptyAndResize(blockSize, kNumMods);
+
+      // Voice output buffers
+      mPanBuf.Resize(blockSize * 2);
+      mMonoOutputs.Resize(blockSize);
+      mOutputs.Resize(blockSize * 2);
 
       for (auto i = 0; i < kNumVoiceModulations; i++)
       {
@@ -805,6 +790,15 @@ public:
     bool mLegato{ false };
     bool mTriggered{ false }; // Set to true to prevent the note being retriggered immediately after the initial trigger
 
+    // Unison parameters
+    double mDetune{ 0. };
+    double mPan[2]{ 1., 1. };
+
+    // Sample and Beat data
+    double mTempo{ 120. };
+    bool mTransportIsRunning{ false };
+    double mQNPos{ 0. };
+
     // Static Modulators
     double mEnv1VelocityMod{ 0. };
     double mEnv2VelocityMod{ 0. };
@@ -816,6 +810,14 @@ public:
 
     // Voice Effects
     std::vector<Effect<T>*> mEffects{ new Effect<T>(DEFAULT_SAMPLE_RATE), new Effect<T>(DEFAULT_SAMPLE_RATE), new Effect<T>(DEFAULT_SAMPLE_RATE) };
+
+    // Temporary output buffers
+    WDL_TypedBuf<T> mPanBuf;
+    WDL_TypedBuf<T> mMonoOutputs;
+    WDL_TypedBuf<T> mOutputs;
+
+    // Oversamplers
+    OverSampler<T> mEffectOversampler{ k4x, false, 2 };
 
     WDL_PtrList<T> mVModulations; // Pointers to modulator buffers
     WDL_TypedBuf<T> mVModulationsData; // Modulator buffer sample data
@@ -869,18 +871,6 @@ public:
       new ParameterModulator<>(0.01, 40., "Sequencer Rate Hz", true),
       new ParameterModulator<>(0., 1., "Sequencer Amp"),
     };
-
-    // Unison parameters
-    double mDetune{ 0. };
-    double mPan[2]{ 1., 1. };
-
-    // Sample and Beat data
-    double mTempo{ 120. };
-    bool mTransportIsRunning{ false };
-    double mQNPos{ 0. };
-
-    LogParamSmooth<T> mFilter1Smoother{ 10. };
-    LogParamSmooth<T> mFilter2Smoother{ 10. };
 
     int mID;
 

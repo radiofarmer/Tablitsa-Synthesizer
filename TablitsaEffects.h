@@ -21,12 +21,29 @@ public:
   }
 
   virtual T Process(T s) { return s; }
+
+  // Scalar and single StereoSample processing
   virtual void ProcessStereo(T* s) {}
   virtual void ProcessStereo(StereoSample<T>& s) {}
 
+  // Vector Processing
   virtual V __vectorcall Process(V& s) { return s; }
   virtual void ProcessStereo_Vector(StereoSample<V>& s) {}
 
+
+  // Block Processing
+  virtual void ProcessBlock(T** inputs, T** outputs, const int nFrames, const int nChannels)
+  {
+    for (int i{ 0 }; i < nFrames; ++i)
+    {
+      StereoSample<T> s{ inputs[0][i], inputs[1][i] };
+      ProcessStereo(s);
+      outputs[0][i] = s.l;
+      outputs[1][i] = s.r;
+    }
+  }
+
+  // Parameters
   virtual void SetSampleRate(T sampleRate)
   {
     mSampleRate = sampleRate;
@@ -636,7 +653,7 @@ public:
 
   T Process(T s) override
   {
-    return flt[0].Process(s);
+    return flt[0].Process(s) + 0.2 * std::sin(mPk[0].Process(s) * 63. * mQ);
   }
 
   void ProcessStereo(StereoSample<T>& s)

@@ -378,6 +378,9 @@
     <ClInclude Include="..\dependencies\radiofarmer\filters.h">
       <Filter>dsp</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\..\IPlug\Extras\Oversampler.h">
+      <Filter>IPlug\Extras\Oversampling</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="resources">
@@ -424,6 +427,9 @@
     </Filter>
     <Filter Include="dsp">
       <UniqueIdentifier>{94d5e761-9f8d-41b7-a565-d04e0fa0aa11}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="IPlug\Extras\Oversampling">
+      <UniqueIdentifier>{1ccc31ae-13f8-46e5-bdc1-10e76ed1a17b}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>

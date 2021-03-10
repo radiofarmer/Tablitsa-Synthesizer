@@ -1,8 +1,13 @@
 #pragma once
 
+#include "radiofarmerDSP.h"
+
 #include "vectorclass.h"
 
 #include <initializer_list>
+#include <vector>
+
+using namespace radiofarmer;
 
 // Development macros
 #define ALG2
@@ -128,8 +133,14 @@ public:
   protected:
     const std::vector<double> mCoefs;
     DelayLine<2> mZ;
+
+    T* mAddends = nullptr;
+    T* mMatrixDelay = nullptr;
+
     Vec4d mB;
     Vec4d mA;
+    Vec4d mDelayVector = Vec4d(0.);
+
 #if defined ALG1
     Vec4d mAr3; // Recursive coefficients, third iteration
     Vec4d mAr2; // Recursive coefficients, second iteration
@@ -143,11 +154,6 @@ public:
     Vec4d mCol4;
 #endif
 
-    Vec4d mDelayVector = Vec4d(0.);
-
-    T* mAddends = nullptr;
-    T* mMatrixDelay = nullptr;
-
     friend class ChebyshevBL<T>;
   };
 
@@ -156,12 +162,14 @@ public:
   {
     T z1[12]{};
     T z2[12]{};
+    T b[6];
 
     for (int i{ 0 }; i < 6; ++i)
     {
       // Provide each second-order filter with a pointer to the addend terms
       mSOS[i].SetAddendPtr(&mAddendPtrs[2 * i]);
       mSOS[i].SetDelayPtr(mDelayPtrs[i]);
+
       // Store the coefficients in this parent filter object
       z1[2 * i] = mSOS[i].mCoefs[4];
       z1[2 * i + 1] = mSOS[i].mCoefs[1];
@@ -232,6 +240,19 @@ public:
     return Process(s[1]); // Process and return sample
   }
 
+  inline Vec4d __vectorcall ProcessAndDownsample(const Vec4d v1, const Vec4d v2)
+  {
+    T output[8];
+    v1.store(output);
+    v2.store(output + 4);
+    for (int i{ 0 }; i < 4; ++i)
+    {
+      Process(output[i * 2]);
+      output[i] = Process(output[i * 2 + 1]);
+    }
+    return Vec4d().load(output);
+  }
+
   inline T Process(T s)
   {
     T sum = s;
@@ -246,12 +267,14 @@ public:
   }
 
 private:
-  Biquad<T> mSOS[6]{ { 1.0194978892532574e-05, 2.0389957785065147e-05, 1.0194978892532574e-05, 1.0, -1.6759049412919762, 0.7386853939104704 },
+  Biquad<T> mSOS[6]{
+    { 1.0194978892532574e-05, 2.0389957785065147e-05, 1.0194978892532574e-05, 1.0, -1.6759049412919762, 0.7386853939104704 },
     { 1.0, 2.0, 1.0, 1.0, -1.4134265459338102, 0.7727803769380925 },
     { 1.0, 2.0, 1.0, 1.0, -1.0347899844575996, 0.8248787327348859 },
     { 1.0, 2.0, 1.0, 1.0, -0.6862027551047557, 0.8794409054482396 },
     { 1.0, 2.0, 1.0, 1.0, -0.4401516515832734, 0.9299883719435977 },
-    { 1.0, 2.0, 1.0, 1.0, -0.317836352796945, 0.9768802444563486 } };
+    { 1.0, 2.0, 1.0, 1.0, -0.317836352796945, 0.9768802444563486 }
+  };
 
   Vec4d mZ1_Coefs1, mZ1_Coefs2, mZ1_Coefs3;
   Vec4d mZ2_Coefs1, mZ2_Coefs2, mZ2_Coefs3;

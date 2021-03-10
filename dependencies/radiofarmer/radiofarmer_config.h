@@ -26,40 +26,60 @@ struct StereoSample
   T l;
   T r;
 
-  StereoSample(T l, T r) : l(l), r(r) {}
+  StereoSample(T l=0., T r=0.) : l(l), r(r) {}
 
-  StereoSample operator+(StereoSample& s)
+  // Copy contstructors
+  StereoSample& operator=(const StereoSample& s)
+  {
+    l = s.l;
+    r = s.r;
+    return *this;
+  }
+
+  StereoSample& operator=(const T s)
+  {
+    l = r = s;
+    return *this;
+  }
+
+  StereoSample& operator=(const int i)
+  {
+    l = r = (T)i;
+    return *this;
+  }
+
+  StereoSample operator+(const StereoSample& s)
   {
     return StereoSample(l + s.l, r + s.r);
   }
 
-  StereoSample operator-(StereoSample& s)
+  StereoSample operator-(const StereoSample& s)
   {
     return StereoSample(l - s.l, r - s.r);
   }
 
-  StereoSample& operator+=(StereoSample& s)
+  StereoSample& operator+=(const StereoSample& s)
   {
     l += s.l;
     r += s.r;
     return *this;
   }
 
-  StereoSample& operator-=(StereoSample& s)
+  StereoSample& operator-=(const StereoSample& s)
   {
     l -= s.l;
     r -= s.r;
     return *this;
   }
 
-  StereoSample& operator*(T s)
+  StereoSample& operator*(const T s)
   {
     l *= s;
     r *= s;
     return *this;
   }
 
-  StereoSample& operator/(T s)
+  StereoSample& operator/(const T s)
   {
     l /= s;
     r /= s;

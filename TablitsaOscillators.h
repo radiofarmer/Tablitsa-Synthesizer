@@ -216,9 +216,10 @@ public:
   inline Vec4d __vectorcall ProcessMultiple(double freqCPS)
   {
     AdjustWavetable(freqCPS);
-    Vec4d output1 = ProcessOversamplingVec4();
-    Vec4d output2 = ProcessOversamplingVec4();
-    Vec4d output = mAAFilter.ProcessAndDownsample_Recursive(output1, output2);
+    const Vec4d output1 = ProcessOversamplingVec4();
+    const Vec4d output2 = ProcessOversamplingVec4();
+    Vec4d output = mAAFilter.ProcessAndDownsample(output1, output2);
+    //Vec4d output = mAAFilter.ProcessAndDownsample_Recursive(output1, output2);
     return output;
   }
 #else
@@ -294,12 +295,11 @@ public:
 
   }
 
-#define VECTOR_TEST
   inline Vec4d __vectorcall ProcessOversamplingVec4()
   {
     double tableOffset{ mWtPositionAbs * (mWT->mNumTables - 1) };
     tableOffset -= std::max(floor(tableOffset - 0.0001), 0.);
-#ifdef VECTOR_TEST
+
     double phaseNorm = SamplePhaseShift(mPhase / mTableSize); // for phase shift
     double phaseUnshifted = mPhase + (double)UNITBIT32;
     double phase = phaseNorm * mTableSize + (double)UNITBIT32;
@@ -372,67 +372,9 @@ public:
     Vec4d mixed = mul_add(tb1 - tb0, 1 - tableOffset, tb0);
     Vec4d ringMod = RingMod();
     mixed = mul_add(ringMod - 1., mRM * mRingModAmt * mixed, mixed);
-#else
-    const double phaseIncr = mPhaseIncr * mPhaseIncrFactor * mProcessOS;
-    Vec4d phaseMod = PhaseMod(); //Vec4d(PhaseMod(), PhaseMod(), PhaseMod(), PhaseMod());
-    Vec4d phase = phaseMod + SamplePhaseShift(IOscillator<T>::mPhase);
-    Vec4d phaseDouble = mul_add(mIncrVec, phaseIncr, phase) * mTableSize; // Next four phase positions in samples, including fractional position
-    Vec4q phaseInt = truncatei(phaseDouble); // Indices of the (left) samples to read
-    Vec4d phaseFrac = phaseDouble - to_double(phaseInt);
-    phaseInt &= mTableSizeM1;
-    Vec4q phaseInt1 = (phaseInt + 1) & mTableSizeM1;
 
-    // Read from wavetables (lower/larger table)
-    Vec4d tb0s0lo = lookup<16384 * 12>(phaseInt, mLUTLo[0]);
-    Vec4d tb1s0lo = lookup<16384 * 12>(phaseInt, mLUTLo[1]);
-    Vec4d tb0s1lo = lookup<16384 * 12>(phaseInt1, mLUTLo[0]);
-    Vec4d tb1s1lo = lookup<16384 * 12>(phaseInt1, mLUTLo[1]);
-    // Interpolate samples
-    Vec4d tb0lo = mul_add((tb0s1lo - tb0s0lo), phaseFrac, tb0s0lo);
-    Vec4d tb1lo = mul_add((tb1s1lo - tb1s0lo), phaseFrac, tb1s0lo);
-
-    // Calculate indices for the higher-frequency table
-    phaseDouble = mul_add(mIncrVec, phaseIncr, phase) * mNextTableSize;
-    phaseInt = truncatei(phaseDouble); // Poor performance if not AVX512DQ
-    phaseFrac = phaseDouble - to_double(phaseInt); // can also use truncate(phaseDouble) to get a floored double
-    phaseInt &= mNextTableSizeM1;
-    phaseInt1 = (phaseInt + 1) & mNextTableSizeM1;
-
-    // Read from wavetables (higher/smaller table)
-    // `lookup<n>` function requires Vec4q for Vec4d or Vec8q for Vec8d
-    Vec4d tb0s0hi = lookup<16384 * 12>(phaseInt, mLUTHi[0]);
-    Vec4d tb0s1hi = lookup<16384 * 12>(phaseInt1, mLUTHi[0]);
-    Vec4d tb1s0hi = lookup<16384 * 12>(phaseInt, mLUTHi[1]);
-    Vec4d tb1s1hi = lookup<16384 * 12>(phaseInt1, mLUTHi[1]);
-    // Interpolate samples
-    Vec4d tb0hi = mul_add(tb0s1hi - tb0s0hi, phaseFrac, tb0s0hi);
-    Vec4d tb1hi = mul_add(tb1s1hi - tb1s0hi, phaseFrac, tb1s0hi);
-
-    // Interpolate mipmap levels
-    Vec4d tb0 = mul_add(tb0hi - tb0lo, mTableInterp, tb0lo);
-    Vec4d tb1 = mul_add(tb1hi - tb1lo, mTableInterp, tb1lo);
-
-    // Mix wavetables
-    Vec4d ringMod = RingMod();
-    Vec4d mixed = mul_add(tb1 - tb0, 1 - tableOffset, tb0);
-    mixed = mul_add(ringMod - 1., mRM * mRingModAmt * mixed, mixed);
-
-    IOscillator<T>::mPhase += phaseIncr * (double)VECTOR_SIZE;
-    IOscillator<T>::mPhase -= floor(IOscillator<T>::mPhase);
-#endif
-
-#if !RECURSION
-    T oversampled[VECTOR_SIZE];
-    mixed.store(oversampled);
-    for (auto s = 0; s < VECTOR_SIZE / mProcessOS; ++s)
-    {
-      pOutput[s] = mAAFilter.ProcessAndDownsample(oversampled + (s * mProcessOS));
-    }
-#else
     // Using recursive function
     return mixed;
-#endif
-
   }
 
   /* Returns a new phase as a power function of the current phase in the wavetable (i.e. always between 0. and 1., regardless of the number of cycles in the table).
