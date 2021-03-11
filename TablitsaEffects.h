@@ -32,14 +32,11 @@ public:
 
 
   // Block Processing
-  virtual void ProcessBlock(T** inputs, T** outputs, const int nFrames, const int nChannels)
+  virtual void ProcessBlock(T* inputs, T* outputs, const int nFrames, const int nChannels, const int osRatio=1)
   {
     for (int i{ 0 }; i < nFrames; ++i)
     {
-      StereoSample<T> s{ inputs[0][i], inputs[1][i] };
-      ProcessStereo(s);
-      outputs[0][i] = s.l;
-      outputs[1][i] = s.r;
+      outputs[i] = Process(inputs[i]);
     }
   }
 
@@ -60,7 +57,7 @@ public:
 
   // TODO make the individual SetParam...() functions non-virtual to improve performance.
   // Or just move the entire contents of those functions into this one (only for voice effects)
-  virtual void SetContinousParams(const T p1, const T p2, const T p3, const T p4)
+  virtual void SetContinuousParams(const T p1, const T p2, const T p3, const T p4)
   {
     SetParam1(p1);
     SetParam2(p2);
@@ -438,10 +435,19 @@ public:
   void SetParam2(T value) override { SetDecay(value); }
   void SetParam3(T value) override { SetJitter(value); }
 
+  void SetContinousParams(T param1, T param2, T param3, T param4)
+  {
+    SetRateMS(param1);
+    SetDecay(param2);
+    SetJitter(param3);
+
+    mMix = param4;
+  }
+
   T Process(T s) override
   {
     T out = mHold;
-    mHold = mHold + mDecay * mRateAdj / mSampleCounter * (out - mHold);
+    mHold += mDecay * (s - mHold);
     if (mSampleCounter++ >= mRateAdj)
     {
       out = mHold = s;
@@ -481,20 +487,20 @@ public:
 
   void ProcessStereo_Vector(StereoSample<V>& s) override
   {
-    /*StereoSample<V> out{ mHold_v.l, mHold_v.r };
-    mHold_v.l += mDecay * (s.l - mHold_v.l);
-    mHold_v.r += mDecay * (s.r - mHold_v.r);
+    StereoSample<V> out{ mHold_v->l, mHold_v->r };
+    mHold_v->l += mDecay * (s.l - mHold_v->l);
+    mHold_v->r += mDecay * (s.r - mHold_v->r);
     if (mSampleCounter >= mRateAdj)
     {
-      out.l = mHold_v.l = s.l;
-      out.r = mHold_v.r = s.r;
+      out.l = mHold_v->l = s.l;
+      out.r = mHold_v->r = s.r;
       mSampleCounter = 0;
       mRateAdj = mRate + (XOR_Shift(mRandGen) >> mJitter);
     }
     else
       mSampleCounter += deduce_vector_from<V>::v_size;
     s.l += mMix * (out.l - s.l);
-    s.r += mMix * (out.r - s.r);*/
+    s.r += mMix * (out.r - s.r);
   }
 
   void SetRateMS(T rate)
@@ -646,6 +652,25 @@ public:
     }
   }
 
+  void SetContinuousParams(T param1, T param2, T param3, T param4) override
+  {
+    mFc = param1;
+    mQ = param2;
+    for (int i{ 0 }; i < 2; ++i)
+    {
+      mLP[i].SetCutoff(std::min(param3 + 0.05, 1.));
+      mHP[i].SetCutoff(std::max(param3 - 0.05, 0.));
+      mPk[i].SetCutoff(param3);
+    }
+    for (int i{ 0 }; i < 2; ++i)
+    {
+      mPk[i].SetPeakGain(param4);
+    }
+    SetFilterCoefs();
+
+    mMix = param4;
+  }
+
   void SetFilterCoefs() {
     flt[0].SetCoefs(mFc, mG);
     flt[1].SetCoefs(mFc, mG);
@@ -653,7 +678,7 @@ public:
 
   T Process(T s) override
   {
-    return flt[0].Process(s) + 0.2 * std::sin(mPk[0].Process(s) * 63. * mQ);
+    return flt[0].Process(s) + 0.2 * std::sin(mPk[0].Process(mLP[0].Process(s)) * 63. * mQ);
   }
 
   void ProcessStereo(StereoSample<T>& s)
@@ -764,9 +789,19 @@ public:
     SetThreshold(1. - (mMaxGain - 1.) * (value * mMaxGainCeil));
   }
 
+  void SetContinuousParams(T param1, T param2, T param3, T param4) override
+  {
+    SetMode(static_cast<EWaveshaperMode>(param1 + 0.01));
+
+    SetGain(param2);
+    SetThreshold(1. - (mMaxGain - 1.) * (param2 * mMaxGainCeil));
+
+    mMix = param4;
+  }
+
   T Process(T s) override
   {
-    return mShaperFunc(s, mGain);
+    return s + mMix * mThresh * (DoProcess(s) - s);
   }
 
   inline T DoProcess(T s)

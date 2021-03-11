@@ -1,6 +1,8 @@
 #pragma once
 
 #include "radiofarmer_config.h"
+#include "filters.h"
+
 #include <functional>
 #include <cmath>
 
@@ -41,6 +43,7 @@ public:
   void SetSampleRate(sample_t sampleRate)
   {
     mSampleRate = sampleRate;
+    mLP.SetSampleRate(sampleRate);
   }
 
   void SetCoefs(sample_t a, sample_t g)
@@ -54,20 +57,21 @@ public:
 
   sample_t Process(sample_t s_in)
   {
+    sample_t ipt_lp = mLP.Process(s_in);
     NonlinearAllpass* stage = mLadder;
     sample_t output[N];
     for (int i{ 0 }; i < N - 1; ++i)
     {
-      const sample_t s_adj = stage->s_func(s_in);
-      const sample_t c_adj = stage->c_func(s_in);
+      const sample_t s_adj = stage->s_func(ipt_lp);
+      const sample_t c_adj = stage->c_func(ipt_lp);
       output[i] = stage->z * c_adj + s_in * s_adj;
       s_in = s_in * c_adj - stage->z * s_adj;
       stage++;
     }
 
     // Last stage
-    const sample_t s_adj = stage->s_func(s_in);
-    const sample_t c_adj = stage->c_func(s_in);
+    const sample_t s_adj = stage->s_func(ipt_lp);
+    const sample_t c_adj = stage->c_func(ipt_lp);
     output[N-1] = stage->z * c_adj + s_in * s_adj;
     stage->z = s_in * c_adj - stage->z * s_adj;
 
@@ -82,6 +86,7 @@ public:
 protected:
   sample_t mSampleRate;
   NonlinearAllpass mLadder[N];
+  LowpassOnePole mLP{ DEFAULT_SRATE, 0.1 };
 };
 
 END_DSP_NAMESPACE

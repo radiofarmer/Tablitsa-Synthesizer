@@ -154,8 +154,6 @@
     </ClCompile>
     <ClCompile Include="..\VectorFunctions.cpp" />
     <ClCompile Include="..\TablitsaControls.cpp" />
-    <ClCompile Include="..\dependencies\radiofarmer\waveguide.cpp" />
-    <ClCompile Include="..\dependencies\radiofarmer\waveshaper.cpp" />
     <ClCompile Include="..\dependencies\radiofarmer\allpass.cpp">
       <Filter>dsp</Filter>
     </ClCompile>
@@ -169,6 +167,15 @@
       <Filter>dsp</Filter>
     </ClCompile>
     <ClCompile Include="..\dependencies\radiofarmer\reverb.cpp">
+      <Filter>dsp</Filter>
+    </ClCompile>
+    <ClCompile Include="..\dependencies\radiofarmer\waveguide.cpp">
+      <Filter>dsp</Filter>
+    </ClCompile>
+    <ClCompile Include="..\dependencies\radiofarmer\waveshaper.cpp">
+      <Filter>dsp</Filter>
+    </ClCompile>
+    <ClCompile Include="..\dependencies\radiofarmer\filters.cpp">
       <Filter>dsp</Filter>
     </ClCompile>
   </ItemGroup>
@@ -425,8 +432,6 @@
     </ClInclude>
     <ClInclude Include="..\Tablitsa_DSP.h" />
     <ClInclude Include="..\Wavetable.h" />
-    <ClInclude Include="..\dependencies\radiofarmer\waveguide.h" />
-    <ClInclude Include="..\dependencies\radiofarmer\waveshaper.h" />
     <ClInclude Include="..\dependencies\radiofarmer\allpass.h">
       <Filter>dsp</Filter>
     </ClInclude>
@@ -449,6 +454,15 @@
       <Filter>dsp</Filter>
     </ClInclude>
     <ClInclude Include="..\dependencies\radiofarmer\reverb.h">
+      <Filter>dsp</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dependencies\radiofarmer\waveguide.h">
+      <Filter>dsp</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dependencies\radiofarmer\waveshaper.h">
+      <Filter>dsp</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dependencies\radiofarmer\filters.h">
       <Filter>dsp</Filter>
     </ClInclude>
   </ItemGroup>

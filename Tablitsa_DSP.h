@@ -22,6 +22,12 @@
   #define FRAME_INTERVAL 1
 #endif
 
+#if _DEBUG
+#define EFFECT_OS_FACTOR EFactor::kNone
+#else
+#define EFFECT_OS_FACTOR EFactor::k4x
+#endif
+
 constexpr double kMaxEnvTimeScalar = 0.5;
 
 using namespace iplug;
@@ -587,36 +593,28 @@ public:
           T panMod = mVModulations.GetList()[kVPan][bufferIdx + j];
           mPanBuf.Get()[bufferIdx + j] = std::clamp(mPan[0] - panMod, -1., 1.); // TODO: optimize this somehow
           mPanBuf.Get()[bufferIdx + j + nFrames] = std::clamp(mPan[1] + panMod, -1., 1.);
-          mMonoOutputs.Get()[bufferIdx + j] = output_scaled;
+          mEffectInputs.Get()[bufferIdx + j] = output_scaled;
         }
       }
 
-      // Set all stereo outputs, running linearly through the buffers
-      for (int i{ 0 }; i < nFrames * 2; ++i)
+      constexpr int nEffectParams = kVEffect2Param1 - kVEffect1Param1;
+      for (int e{ 0 }, p{ 0 }; e < TABLITSA_MAX_VOICE_EFFECTS; e++, p += nEffectParams)
       {
-        mOutputs.Get()[i] = mMonoOutputs.Get()[i % nFrames] * mPanBuf.Get()[i];
+        mEffects[e]->SetContinuousParams(mVModulations.GetList()[kVEffect1Param1 + p][0],
+          mVModulations.GetList()[kVEffect1Param2 + p][0],
+          mVModulations.GetList()[kVEffect1Param3 + p][0],
+          mVModulations.GetList()[kVEffect1Param4 + p][0]);
       }
 
-      for (auto i = startIdx; i < startIdx + nFrames; ++i)
+      for (auto i{ startIdx }; i < startIdx + nFrames; ++i)
       {
-        const int bufferIdx = i - startIdx;
-        constexpr int nEffectParams = kVEffect2Param1 - kVEffect1Param1;
-
-        for (int e{ 0 }, p{ 0 }; e < TABLITSA_MAX_VOICE_EFFECTS; e++, p += nEffectParams)
-        {
-          mEffects[e]->SetParam1(mVModulations.GetList()[kVEffect1Param1 + p][bufferIdx]);
-          mEffects[e]->SetParam2(mVModulations.GetList()[kVEffect1Param2 + p][bufferIdx]);
-          mEffects[e]->SetParam3(mVModulations.GetList()[kVEffect1Param3 + p][bufferIdx]);
-          mEffects[e]->SetParam4(mVModulations.GetList()[kVEffect1Param4 + p][bufferIdx]);
-        }
-
         for (auto* fx : mEffects)
         {
-          //mEffectOversampler.ProcessBlock(, outputs)
+          mEffectInputs.Get()[i - startIdx] = fx->Process(mEffectInputs.Get()[i - startIdx]);
         }
 
-        outputs[0][i] += mOutputs.Get()[i - startIdx] * mGain;
-        outputs[1][i] += mOutputs.Get()[i + nFrames - startIdx] * mGain;
+        outputs[0][i] += mEffectInputs.Get()[i - startIdx] * mPanBuf.Get()[i - startIdx] * mGain;
+        outputs[1][i] += mEffectInputs.Get()[i - startIdx] * mPanBuf.Get()[i - startIdx + nFrames] * mGain;
       }
     }
 
@@ -642,7 +640,7 @@ public:
 
       // Voice output buffers
       mPanBuf.Resize(blockSize * 2);
-      mMonoOutputs.Resize(blockSize);
+      mEffectInputs.Resize(blockSize);
       mOutputs.Resize(blockSize * 2);
 
       for (auto i = 0; i < kNumVoiceModulations; i++)
@@ -665,8 +663,11 @@ public:
 
     void SetFilterType(int filter, int filterType)
     {
-      std::lock_guard<std::mutex> lg(mMaster->mProcMutex);
-      delete mFilters[filter];
+      if (mFilters[filter])
+      {
+        delete mFilters[filter];
+        mFilters[filter] = nullptr;
+      }
       // Indices of cutoff/res/drive for the given filter
       switch (filterType) {
       case kVSF:
@@ -805,7 +806,7 @@ public:
     double mAmpEnvVelocityMod{ 1. };
 
     // Filters
-    std::vector<Filter<T>*> mFilters{ new NullFilter<T>(), new NullFilter<T>() };
+    std::vector<Filter<T>*> mFilters{ nullptr, nullptr };
     T mFilterSends[2][2]{ {1., 0.}, {0., 1.} };
 
     // Voice Effects
@@ -813,11 +814,11 @@ public:
 
     // Temporary output buffers
     WDL_TypedBuf<T> mPanBuf;
-    WDL_TypedBuf<T> mMonoOutputs;
+    WDL_TypedBuf<T> mEffectInputs;
     WDL_TypedBuf<T> mOutputs;
 
     // Oversamplers
-    OverSampler<T> mEffectOversampler{ k4x, false, 2 };
+    OverSampler<T> mEffectOversampler{ EFFECT_OS_FACTOR, false, 1 };
 
     WDL_PtrList<T> mVModulations; // Pointers to modulator buffers
     WDL_TypedBuf<T> mVModulationsData; // Modulator buffer sample data
@@ -1792,6 +1793,7 @@ public:
       }
       case kParamFilter1Type:
       {
+        std::lock_guard<std::mutex> lg(mProcMutex);
         mFilter1Comb = static_cast<int>(value) == kComb;
         ForEachVoice([value](Voice& voice) {
           voice.SetFilterType(0, static_cast<int>(value));
