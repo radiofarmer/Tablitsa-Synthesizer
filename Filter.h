@@ -151,7 +151,6 @@ public:
   void Reset()
   {
     mZ.reset();
-    mZ_v = Vec4d(0.);
   }
 
   inline void CalculateCoefficients()
@@ -209,38 +208,10 @@ public:
     return (this->*mProcessFunctions[mMode])(s);
   }
 
-  const Vec4d& __vectorcall GetFFCoefs(const int filterMode) const
-  {
-    if (filterMode == kAllpass)
-      return Vec4d(mB, -mA, 1., 0.);
-    else
-      return m_b[filterMode];
-  }
-
-  Vec4d __vectorcall Process_Vector(Vec4d s) override
-  {
-    /*const double m[]{ 0., 0., 1. };
-    state_from_svf(Filter<T>::mFc, mQ, &m[0], mCoefs[0], mCoefs[1], mCoefs[2], mCoefs[3]);
-    Vec4d out = eval_IIR_state(s, mZ_v, mCoefs[0], mCoefs[1], mCoefs[2], mCoefs[3]);
-    return out;*/
-    CalculateCoefficients();
-    IIR_2pole_coefficients_4(mC, mA, -mB, mCoefs[0], mCoefs[1], mCoefs[2], mCoefs[3], mCoefs[4], mCoefs[5]);
-    return IIR_2pole_4(s, mZ_v, mCoefs, m_b[mMode]);
-  }
-
 private:
   T mA{ 0. };
   T mB{ 0. };
   T mC{ 1. };
-
-  const Vec4d m_b[kNumFilters - 1]{
-    Vec4d(1., 0., 0., 0.),
-    Vec4d(1., -2., 1., 0.),
-    Vec4d(1., -1., 0., 0.)
-  };
-
-  Vec4d mCoefs[6];
-  Vec4d mZ_v = Vec4d(0.);
 
   const double mMaxBandwidth{ 0.05 };
   DelayLine<2> mZ;
