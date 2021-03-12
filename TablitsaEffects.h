@@ -1,6 +1,7 @@
 #pragma once
 
 #include "radiofarmerDSP.h"
+#include "FastOversampler.h"
 
 #include "Filter.h"
 #include "Modulators.h"
@@ -21,6 +22,7 @@ public:
   }
 
   virtual T Process(T s) { return s; }
+  virtual V __vectorcall Process(V s) { return s; }
 
   // Scalar and single StereoSample processing
   virtual void ProcessStereo(T* s) {}
@@ -32,7 +34,7 @@ public:
 
 
   // Block Processing
-  virtual void ProcessBlock(T* inputs, T* outputs, const int nFrames, const int nChannels, const int osRatio=1)
+  virtual void ProcessBlock(T* inputs, T* outputs, const int nFrames)
   {
     for (int i{ 0 }; i < nFrames; ++i)
     {
@@ -65,10 +67,17 @@ public:
     SetParam4(p4);
   }
 
+  void ResizeBuffers(const int blockSize)
+  {
+    mOversampler.ResizeBuffers(blockSize);
+  }
+
 protected:
   T mSampleRate;
   T mMix{ 0. };
   const int mVectorSize;
+
+  FastOversampler<T> mOversampler;
 };
 
 #define DELAY_TEMPODIV_VALIST "1/64", "1/32", "1/16T", "1/16", "1/16D", "1/8T", "1/8", "1/8D", "1/4", "1/4D", "1/2", "1/1"
@@ -620,36 +629,17 @@ class Texturizer : public Effect<T, V>
 {
 
 public:
-  Texturizer(T sampleRate) : Effect<T, V>(sampleRate) {}
+  Texturizer(T sampleRate) : Effect<T, V>(sampleRate)
+  {
+    mPk[0].SetPeakGain(4.);
+    mPk[1].SetPeakGain(4.);
+  }
 
   void SetSampleRate(T sampleRate)
   {
     Effect<T, V>::SetSampleRate(sampleRate);
     for (int i{ 0 }; i < 2; ++i)
-      flt[i].SetSampleRate(sampleRate);
-  }
-
-  void SetParam1(T value) {
-    mFc = value;
-    SetFilterCoefs();
-  }
-  void SetParam2(T value) {
-    mQ = value;
-    SetFilterCoefs();
-  }
-  void SetParam3(T value) {
-    for (int i{ 0 }; i < 2; ++i)
-    {
-      mLP[i].SetCutoff(std::min(value + 0.05, 1.));
-      mHP[i].SetCutoff(std::max(value - 0.05, 0.));
-      mPk[i].SetCutoff(value);
-    }
-  }
-  void SetParam4(T value) {
-    for (int i{ 0 }; i < 2; ++i)
-    {
-      mPk[i].SetPeakGain(value);
-    }
+      mAP[i].SetSampleRate(sampleRate);
   }
 
   void SetContinuousParams(T param1, T param2, T param3, T param4) override
@@ -658,8 +648,6 @@ public:
     mQ = param2;
     for (int i{ 0 }; i < 2; ++i)
     {
-      mLP[i].SetCutoff(std::min(param3 + 0.05, 1.));
-      mHP[i].SetCutoff(std::max(param3 - 0.05, 0.));
       mPk[i].SetCutoff(param3);
     }
     for (int i{ 0 }; i < 2; ++i)
@@ -672,19 +660,35 @@ public:
   }
 
   void SetFilterCoefs() {
-    flt[0].SetCoefs(mFc, mG);
-    flt[1].SetCoefs(mFc, mG);
+    mAP[0].SetCoefs(mFc, mG);
+    mAP[1].SetCoefs(mFc, mG);
   }
 
   T Process(T s) override
   {
-    return flt[0].Process(s) + 0.2 * std::sin(mPk[0].Process(mLP[0].Process(s)) * 63. * mQ);
+    return mAP[0].Process(s) + 0.1 * std::sin(mPk[0].Process(s) * 63. * mQ);
+  }
+
+  V __vectorcall Process(V s) override
+  {
+    return mAP[0].Process4(s) + 0.1 * sin(mPk[0].Process4(s) * 6.28 * mQ);
   }
 
   void ProcessStereo(StereoSample<T>& s)
   {
-    s.l = flt[0].Process(s.l) + 0.2 * std::sin(mPk[0].Process(s.l) * 63. * mQ);
-    s.r = flt[1].Process(s.r) + 0.2 * std::sin(mPk[1].Process(s.r) * 63. * mQ);
+    s.l = mAP[0].Process(s.l) + 0.2 * std::sin(mPk[0].Process(s.l) * 63. * mQ);
+    s.r = mAP[1].Process(s.r) + 0.2 * std::sin(mPk[1].Process(s.r) * 63. * mQ);
+  }
+
+  void ProcessBlock(T* inputs, T* outputs, const int nFrames) override
+  {
+    UpsampleBlock<4>(mOversampler, inputs, outputs, nFrames);
+    for (int i{ 0 }; i < nFrames * 4; i += 4)
+    {
+      V s4 = Process(V().load(mOversampler.mOutputSource->Get() + i));
+      s4.store(mOversampler.mOutputSource->Get() + i);
+    }
+    DownsampleBlock<4>(mOversampler, outputs, nFrames);
   }
 
 protected:
@@ -692,9 +696,7 @@ protected:
   T mFc{ 1. };
   T mQ{ 0. };
   T mG{ 1. };
-  AllpassLadder<4> flt[2];
-  LowpassOnePole mLP[2];
-  HighpassOnePole mHP[2];
+  AllpassLadder<4> mAP[2];
   PeakOnePole mPk[2];
 };
 

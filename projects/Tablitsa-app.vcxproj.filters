@@ -124,6 +124,7 @@
     <ClCompile Include="..\dependencies\radiofarmer\filters.cpp">
       <Filter>dsp</Filter>
     </ClCompile>
+    <ClCompile Include="..\FastOversampler.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\Tablitsa.h" />
@@ -381,6 +382,7 @@
     <ClInclude Include="..\..\..\IPlug\Extras\Oversampler.h">
       <Filter>IPlug\Extras\Oversampling</Filter>
     </ClInclude>
+    <ClInclude Include="..\FastOversampler.h" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="resources">
