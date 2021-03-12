@@ -1,7 +1,13 @@
 #pragma once
 
+#define POLYPHASE_FILTER
+
 #include "VectorFunctions.h"
+#ifdef POLYPHASE_FILTER
+#include "FastOversampler.h"
+#else
 #include "OversamplingFilter.h"
+#endif
 #include "Wavetable.h"
 
 #include "Oscillator.h"
@@ -11,7 +17,7 @@
 #ifdef VECTOR || DEBUG_VECTOR
 #define OVERSAMPLING 2
 #define VECTOR_SIZE 4
-#define OUTPUT_SIZE VECTOR_SIZE / OVERSAMPLING
+#define OUTPUT_SIZE VECTOR_SIZE / 2
 #define RECURSION 1
 #else
 #define OVERSAMPLING 1
@@ -216,13 +222,37 @@ public:
   inline Vec4d __vectorcall ProcessMultiple(double freqCPS)
   {
     AdjustWavetable(freqCPS);
+#ifdef POLYPHASE_FILTER
+
+
+#if OVERSAMPLING == 4
+    T temp_in[16];
+    T temp_out[4];
+    const Vec4d output1 = ProcessOversamplingVec4();
+    const Vec4d output2 = ProcessOversamplingVec4();
+    const Vec4d output3 = ProcessOversamplingVec4();
+    const Vec4d output4 = ProcessOversamplingVec4();
+    output1.store(temp_in); output2.store(temp_in + 4);
+    output3.store(temp_in + 8); output4.store(temp_in + 12);
+    mAAFilter.mDownsampler4x.process_block(temp2, temp2, 8);
+    mAAFilter.mDownsampler2x.process_block(temp, temp2, 4);
+#elif OVERSAMPLING == 2
+    T temp_in[8];
+    T temp_out[4];
+    const Vec4d output1 = ProcessOversamplingVec4();
+    const Vec4d output2 = ProcessOversamplingVec4();
+    output1.store(temp_in); output2.store(temp_in + 4);
+    mAAFilter.mDownsampler2x.process_block(temp_out, temp_in, 4);
+#endif
+    Vec4d output{ Vec4d().load(temp_out) };
+#else // Chebyshev Anti-Aliasing Filter:
     const Vec4d output1 = ProcessOversamplingVec4();
     const Vec4d output2 = ProcessOversamplingVec4();
     Vec4d output = mAAFilter.ProcessAndDownsample(output1, output2);
-    //Vec4d output = mAAFilter.ProcessAndDownsample_Recursive(output1, output2);
+#endif // !Chebyshev filter
     return output;
   }
-#else
+#else // Non-vectorized Processing:
   inline std::array<T, OUTPUT_SIZE> ProcessMultiple(double freqCPS)
   {
     AdjustWavetable(freqCPS);
@@ -230,7 +260,7 @@ public:
     ProcessOversampling(output, mProcessOS);
     return output;
   }
-#endif
+#endif // !non-vectorized processing
 
   inline T Process(double freqHz)
   {
@@ -502,7 +532,6 @@ private:
 #else
   static constexpr int mProcessOS{ 1 };
 #endif
-  ChebyshevBL<T> mAAFilter;
 //  double mNyquist{ 20000. };
 
   // TODO: Order elements mindful of cache access:
@@ -570,6 +599,12 @@ public:
   iplug::VectorOscillator<T> mPhaseModulator;
   iplug::VectorOscillator<T> mRingModulator{ 0.5 }; // Offset start phase by half a cycle
 #endif
-  
+
+#ifdef POLYPHASE_FILTER
+  FastOversampler<T> mAAFilter;
+#else
+  ChebyshevBL<T> mAAFilter;
+#endif
+
   static inline std::mutex mWtMutex; // Mutex used when swapping out the current wavetable in each oscillator object
 };
