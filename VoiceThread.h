@@ -4,83 +4,61 @@
 #include <queue>
 #include <mutex>
 #include <condition_variable>
-#include <future>
+
+#include "SynthVoice.h"
 
 class VoiceThreadPool
 {
 public:
-  using ThreadTask = std::function<void()>;
+  using ThreadTask = std::function<void(void)>;
 
-  VoiceThreadPool(std::size_t numThreads)
+  VoiceThreadPool(std::size_t numThreads = std::thread::hardware_concurrency()) : mNumThreads(numThreads)
   {
-    start(numThreads);
+    Start();
   }
 
-  void PushTask(ThreadTask task)
+  void AddTask(ThreadTask newTask);
+
+  void Start()
   {
+    for (int i{ 0 }; i < mNumThreads; ++i)
     {
-      std::unique_lock<std::mutex> lock{ mEventMutex };
-      mTasks.emplace(std::move(task));
+      mThreads.push_back(std::thread(std::bind(&VoiceThreadPool::thread_loop, this)));
     }
-
-    mEvent.notify_one();
   }
 
-  void JoinAll()
+  void FinishBlock();
+
+  void Stop()
   {
-    stop();
+    std::unique_lock<std::mutex> lk(mQueueMutex);
+    mStop = true;
+    mBlockCV.notify_all();
+    for (std::thread& t : mThreads)
+      t.join();
+
+    mThreads.clear();
   }
 
   ~VoiceThreadPool()
   {
-    stop();
+    Stop();
   }
 
 private:
-  void start(std::size_t numThreads)
-  {
-    for (auto i = 0u; i < numThreads; ++i)
-    {
-      mThreads.emplace_back([=]() {
-          while (true) {
-            ThreadTask task;
+  void thread_loop();
 
-            {
-              std::unique_lock<std::mutex> lock{ mEventMutex };
+protected:
+  const int mNumThreads;
 
-              mEvent.wait(lock, [=]() { return mStop || !mTasks.empty(); });
+  // Conditional Variable flags
+  bool mStop{ false };
+  bool mBlockFinished{ false };
+  int mActiveVoices;
 
-              if (mStop && mTasks.empty())
-                break;
+  std::mutex mQueueMutex;
+  std::condition_variable mBlockCV;
 
-              task = std::move(mTasks.front());
-              mTasks.pop();
-            }
-
-            task();
-          }
-        });
-    }
-  }
-
-  void stop() noexcept
-  {
-    {
-      std::unique_lock<std::mutex> lock{ mEventMutex };
-      mStop = true;
-    }
-
-    mEvent.notify_all();
-
-    for (auto& thread : mThreads)
-      thread.join();
-  }
-
+  std::queue<ThreadTask> mTaskQueue;
   std::vector<std::thread> mThreads;
-  std::condition_variable mEvent;
-  std::mutex mEventMutex;
-
-  std::queue<ThreadTask> mTasks;
-
-  bool mStop = false;
 };
