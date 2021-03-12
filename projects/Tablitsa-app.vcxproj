@@ -353,6 +353,7 @@
     <ClInclude Include="..\dependencies\radiofarmer\reverb.h" />
     <ClInclude Include="..\dependencies\radiofarmer\waveguide.h" />
     <ClInclude Include="..\dependencies\radiofarmer\waveshaper.h" />
+    <ClInclude Include="..\FastOversampler.h" />
     <ClInclude Include="..\OversamplingFilter.h" />
     <ClInclude Include="..\TablitsaControls.h" />
     <ClInclude Include="..\TablitsaEffects.h" />
@@ -459,6 +460,7 @@
     <ClCompile Include="..\dependencies\radiofarmer\reverb.cpp" />
     <ClCompile Include="..\dependencies\radiofarmer\waveguide.cpp" />
     <ClCompile Include="..\dependencies\radiofarmer\waveshaper.cpp" />
+    <ClCompile Include="..\FastOversampler.cpp" />
     <ClCompile Include="..\Tablitsa.cpp" />
     <ClCompile Include="..\TablitsaControls.cpp" />
     <ClCompile Include="..\VectorFunctions.cpp" />

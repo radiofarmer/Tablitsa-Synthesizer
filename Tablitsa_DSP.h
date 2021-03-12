@@ -23,9 +23,9 @@
 #endif
 
 #if _DEBUG
-#define EFFECT_OS_FACTOR EFactor::kNone
+#define EFFECT_OS_FACTOR 1
 #else
-#define EFFECT_OS_FACTOR EFactor::k4x
+#define EFFECT_OS_FACTOR 2
 #endif
 
 constexpr double kMaxEnvTimeScalar = 0.5;
@@ -604,14 +604,12 @@ public:
           mVModulations.GetList()[kVEffect1Param2 + p][0],
           mVModulations.GetList()[kVEffect1Param3 + p][0],
           mVModulations.GetList()[kVEffect1Param4 + p][0]);
+        mEffects[e]->ProcessBlock(mEffectInputs.Get(), mEffectInputs.Get(), nFrames);
       }
+
 
       for (auto i{ startIdx }; i < startIdx + nFrames; ++i)
       {
-        for (auto* fx : mEffects)
-        {
-          mEffectInputs.Get()[i - startIdx] = fx->Process(mEffectInputs.Get()[i - startIdx]);
-        }
 
         outputs[0][i] += mEffectInputs.Get()[i - startIdx] * mPanBuf.Get()[i - startIdx] * mGain;
         outputs[1][i] += mEffectInputs.Get()[i - startIdx] * mPanBuf.Get()[i - startIdx + nFrames] * mGain;
@@ -642,6 +640,11 @@ public:
       mPanBuf.Resize(blockSize * 2);
       mEffectInputs.Resize(blockSize);
       mOutputs.Resize(blockSize * 2);
+
+      for (int i{ 0 }; i < TABLITSA_MAX_VOICE_EFFECTS; ++i)
+      {
+        mEffects[i]->ResizeBuffers(blockSize);
+      }
 
       for (auto i = 0; i < kNumVoiceModulations; i++)
       {
@@ -735,6 +738,7 @@ public:
         mVoiceModParams[kVEffect1Param3 + effectSlot * numEffectModParams].SetMinMax(0., 1.);
         mVoiceModParams[kVEffect1Param4 + effectSlot * numEffectModParams].SetMinMax(0., 1.);
         mEffects[effectSlot] = new Texturizer<T>(mMaster->mSampleRate);
+        mEffects[effectSlot]->ResizeBuffers(mMaster->mBlockSize);
         break;
       }
       default:
@@ -816,9 +820,6 @@ public:
     WDL_TypedBuf<T> mPanBuf;
     WDL_TypedBuf<T> mEffectInputs;
     WDL_TypedBuf<T> mOutputs;
-
-    // Oversamplers
-    OverSampler<T> mEffectOversampler{ EFFECT_OS_FACTOR, false, 1 };
 
     WDL_PtrList<T> mVModulations; // Pointers to modulator buffers
     WDL_TypedBuf<T> mVModulationsData; // Modulator buffer sample data
@@ -946,7 +947,9 @@ public:
 
   void Reset(double sampleRate, int blockSize)
   {
+    mBlockSize = blockSize;
 	  mSampleRate = sampleRate;
+
     mSynth.SetSampleRateAndBlockSize(sampleRate, blockSize);
     ResetAllVoices();
     mSynth.ForEachVoice([sampleRate](SynthVoice& voice) {
@@ -2372,6 +2375,7 @@ public:
   double mLastNoteOn{ 0 };
 
   // Audio processing and musical parameters
+  int mBlockSize{ DEFAULT_BLOCK_SIZE };
   double mSampleRate{ DEFAULT_SAMPLE_RATE };
   int mTSNum{ 4 };
   int mTSDenom{ 4 };
