@@ -28,17 +28,7 @@ public:
   }
 
   void FinishBlock();
-
-  void Stop()
-  {
-    std::unique_lock<std::mutex> lk(mQueueMutex);
-    mStop = true;
-    mBlockCV.notify_all();
-    for (std::thread& t : mThreads)
-      t.join();
-
-    mThreads.clear();
-  }
+  void Stop();
 
   ~VoiceThreadPool()
   {
@@ -52,7 +42,7 @@ protected:
   const int mNumThreads;
 
   // Conditional Variable flags
-  bool mStop{ false };
+  std::atomic<bool> mStop{ false };
   bool mBlockFinished{ false };
   int mActiveVoices;
 
