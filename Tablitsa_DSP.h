@@ -604,7 +604,7 @@ public:
           mVModulations.GetList()[kVEffect1Param2 + p][0],
           mVModulations.GetList()[kVEffect1Param3 + p][0],
           mVModulations.GetList()[kVEffect1Param4 + p][0]);
-        mEffects[3]->ProcessBlock(mEffectInputs.Get(), mEffectInputs.Get(), nFrames);
+        mEffects[e]->ProcessBlock(mEffectInputs.Get(), mEffectInputs.Get(), nFrames);
       }
 
 
