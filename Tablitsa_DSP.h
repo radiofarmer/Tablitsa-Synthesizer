@@ -607,12 +607,14 @@ public:
         mEffects[e]->ProcessBlock(mEffectInputs.Get(), mEffectInputs.Get(), nFrames);
       }
 
-
-      for (auto i{ startIdx }; i < startIdx + nFrames; ++i)
       {
+        std::lock_guard<std::mutex> lg(mMaster->mProcMutex);
+        for (auto i{ startIdx }; i < startIdx + nFrames; ++i)
+        {
 
-        outputs[0][i] += mEffectInputs.Get()[i - startIdx] * mPanBuf.Get()[i - startIdx] * mGain;
-        outputs[1][i] += mEffectInputs.Get()[i - startIdx] * mPanBuf.Get()[i - startIdx + nFrames] * mGain;
+          outputs[0][i] += mEffectInputs.Get()[i - startIdx] * mPanBuf.Get()[i - startIdx] * mGain;
+          outputs[1][i] += mEffectInputs.Get()[i - startIdx] * mPanBuf.Get()[i - startIdx + nFrames] * mGain;
+        }
       }
     }
 
@@ -910,7 +912,7 @@ public:
 
   void ProcessBlock(T** inputs, T** outputs, int nOutputs, int nFrames, double qnPos = 0., bool transportIsRunning = false, double tempo = 120.)
 	{
-	  std::lock_guard<std::mutex> lg(mProcMutex);
+//	  std::lock_guard<std::mutex> lg(mProcMutex);
 
 		// clear outputs
 		for(auto i = 0; i < nOutputs; i++)

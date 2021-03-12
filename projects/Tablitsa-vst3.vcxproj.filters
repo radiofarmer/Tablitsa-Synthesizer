@@ -178,6 +178,8 @@
     <ClCompile Include="..\dependencies\radiofarmer\filters.cpp">
       <Filter>dsp</Filter>
     </ClCompile>
+    <ClCompile Include="..\VoiceThread.cpp" />
+    <ClCompile Include="..\FastOversampler.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\Tablitsa.h" />
@@ -465,6 +467,8 @@
     <ClInclude Include="..\dependencies\radiofarmer\filters.h">
       <Filter>dsp</Filter>
     </ClInclude>
+    <ClInclude Include="..\FastOversampler.h" />
+    <ClInclude Include="..\VoiceThread.h" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="resources">
