@@ -182,7 +182,7 @@ void InitEqualizerUI(Plugin* pPlugin, IGraphics* pGraphics, std::vector<IControl
 {
   pPlugin->GetParam(params[0])->InitDouble(paramNames[0], reset ? 1. : pPlugin->GetParam(params[0])->Value(), 0., 2., 0.01);
   pPlugin->GetParam(params[1])->InitDouble(paramNames[1], reset ? 1. : pPlugin->GetParam(params[1])->Value(), 0., 2., 0.01);
-  pPlugin->GetParam(params[2])->InitDouble(paramNames[2], reset ? 1. : pPlugin->GetParam(params[2])->Value(), 0., 100., 0.01);
+  pPlugin->GetParam(params[2])->InitDouble(paramNames[2], reset ? 0.5 : pPlugin->GetParam(params[2])->Value(), 0., 1., 0.01);
   pPlugin->GetParam(params[3])->InitDouble(paramNames[3], reset ? 1. : pPlugin->GetParam(params[3])->Value(), 0., 2., 0.01);
 
   pPlugin->GetParam(params[2])->SetDisplayFunc(PercentDisplayFunc);
@@ -190,10 +190,10 @@ void InitEqualizerUI(Plugin* pPlugin, IGraphics* pGraphics, std::vector<IControl
   for (int i{ 0 }; i < TABLITSA_EFFECT_PARAMS; ++i)
     controls[i]->SetValue(pPlugin->GetParam(params[i])->GetNormalized());
 
-  dynamic_cast<IVKnobControl*>(controls[0])->SetLabelStr("Low Gain");
-  dynamic_cast<IVKnobControl*>(controls[1])->SetLabelStr("Mid Gain");
+  dynamic_cast<IVKnobControl*>(controls[0])->SetLabelStr("Low Level");
+  dynamic_cast<IVKnobControl*>(controls[1])->SetLabelStr("Mid Level");
   dynamic_cast<IVKnobControl*>(controls[2])->SetLabelStr("Mid Pos");
-  dynamic_cast<IVKnobControl*>(controls[3])->SetLabelStr("High Gain");
+  dynamic_cast<IVKnobControl*>(controls[3])->SetLabelStr("High Level");
 
   controls[2]->Hide(false);
   controls[3]->Hide(false);
@@ -247,7 +247,7 @@ void InitReverb2UI(Plugin* pPlugin, IGraphics* pGraphics, std::vector<IControl*>
 {
   pPlugin->GetParam(params[0])->InitDouble(paramNames[0], reset ? 0.5 : pPlugin->GetParam(params[0])->Value(), 0., 1., 0.01);
   pPlugin->GetParam(params[1])->InitDouble(paramNames[1], reset ? 0.5 : pPlugin->GetParam(params[1])->Value(), 0., 1., 0.01);
-  pPlugin->GetParam(params[2])->InitDouble(paramNames[2], reset ? 1. : pPlugin->GetParam(params[1])->Value(), 0., 1., 0.01);
+  pPlugin->GetParam(params[2])->InitDouble(paramNames[2], reset ? 1. : pPlugin->GetParam(params[2])->Value(), 0., 1., 0.01);
   pPlugin->GetParam(params[3])->InitDouble(paramNames[3], reset ? 0. : pPlugin->GetParam(params[3])->Value(), 0., 1., 0.01);
 
   // Display funcs
@@ -283,7 +283,7 @@ void InitSampleAndHoldUI(Plugin* pPlugin, IGraphics* pGraphics, std::vector<ICon
 
   std::vector<IControl*> allKnobs;
   allKnobs.insert(allKnobs.begin(), controls.begin(), controls.begin() + 4);
-  pPlugin->GetParam(params[0])->InitDouble(paramNames[0], reset ? 10. : pPlugin->GetParam(params[0])->Value(), 0.05, 10., 0.01, "ms", IParam::kFlagsNone, "Effect", IParam::ShapePowCurve(3.));
+  pPlugin->GetParam(params[0])->InitDouble(paramNames[0], reset ? 10. : pPlugin->GetParam(params[0])->Value(), TABLITSA_SAH_MIN_MS, TABLITSA_SAH_MAX_MS, 0.01, "ms", IParam::kFlagsNone, "Effect", IParam::ShapePowCurve(3.));
   pPlugin->GetParam(params[1])->InitDouble(paramNames[1], reset ? 0. : pPlugin->GetParam(params[1])->Value(), 0., 1., 0.01);
   pPlugin->GetParam(params[2])->InitDouble(paramNames[2], reset ? 0. : pPlugin->GetParam(params[2])->Value(), 0., 1., 0.01);
   pPlugin->GetParam(params[3])->InitDouble(paramNames[3], reset ? 0. : pPlugin->GetParam(params[3])->Value(), 0., 1., 0.01);

@@ -3,6 +3,9 @@
 #define TABLITSA_MAX_EFFECT_DELAY_MS 5000.
 #define TABLITSA_EFFECT_PARAMS 6
 
+#define TABLITSA_SAH_MIN_MS 0.05
+#define TABLITSA_SAH_MAX_MS 10.
+
 void PercentDisplayFunc(double value, WDL_String& str);
 
 void DelayDisplayFunc(double value, WDL_String& str);
