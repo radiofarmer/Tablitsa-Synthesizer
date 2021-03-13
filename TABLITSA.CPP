@@ -1230,15 +1230,26 @@ int Tablitsa::UnserializeState(const IByteChunk& chunk, int startPos)
     {
     case kDistortionEffect:
     {
-      GetParam(kParamVoiceEffect1Param1 + kNumVoiceEffectParams * i)->InitEnum("Distortion Type", kWaveshapeSine, { WAVESHAPE_TYPES });
+      GetParam(kParamVoiceEffect1Param1 + kNumVoiceEffectParams * i)->InitEnum("Distortion Type", EDistortion::kFuzz, { DISTORTION_TYPES });
       GetParam(kParamVoiceEffect1Param2 + kNumVoiceEffectParams * i)->InitPercentage("Distortion Gain", 0.);
+      GetParam(kParamVoiceEffect1Param2 + kNumVoiceEffectParams * i)->InitPercentage("Distortion Noise", 0.);
+      GetParam(kParamVoiceEffect1Param2 + kNumVoiceEffectParams * i)->InitPercentage("Distortion Mix", 0.);
       break;
     }
     case kSampleAndHoldEffect:
     {
-      GetParam(kParamVoiceEffect1Param1 + kNumVoiceEffectParams * i)->InitDouble("Sample & Hold Rate", 10., 0.5, 20., 0.1, "ms", IParam::kFlagsNone, "Effect", IParam::ShapePowCurve(3.));
+      GetParam(kParamVoiceEffect1Param1 + kNumVoiceEffectParams * i)->InitDouble("Sample & Hold Rate", 10., TABLITSA_SAH_MIN_MS, TABLITSA_SAH_MAX_MS, 0.01, "ms", IParam::kFlagsNone, "Effect", IParam::ShapePowCurve(3.));
       GetParam(kParamVoiceEffect1Param2 + kNumVoiceEffectParams * i)->InitPercentage("Sample & Hold Decay", 0.);
-      GetParam(kParamVoiceEffect1Param2 + kNumVoiceEffectParams * i)->InitPercentage("Sample & Hold Noise", 0.);
+      GetParam(kParamVoiceEffect1Param3 + kNumVoiceEffectParams * i)->InitPercentage("Sample & Hold Noise", 0.);
+      GetParam(kParamVoiceEffect1Param4 + kNumVoiceEffectParams * i)->InitPercentage("Sample & Hold Mix", 0.);
+      break;
+    }
+    case kTexturizerEffect:
+    {
+      GetParam(kParamVoiceEffect1Param1 + kNumVoiceEffectParams * i)->InitPercentage("Texturizer Cutoff", 0.);
+      GetParam(kParamVoiceEffect1Param2 + kNumVoiceEffectParams * i)->InitPercentage("Texturizer Drive", 0.);
+      GetParam(kParamVoiceEffect1Param3 + kNumVoiceEffectParams * i)->InitPercentage("Texturizer Res. Freq.", 0.);
+      GetParam(kParamVoiceEffect1Param4 + kNumVoiceEffectParams * i)->InitPercentage("Texturizer Res. Amt.", 0.);
       break;
     }
     }
@@ -1269,12 +1280,34 @@ int Tablitsa::UnserializeState(const IByteChunk& chunk, int startPos)
     }
     case kEQEffect:
     {
+      GetParam(kParamMasterEffect1Param1 + kNumMasterEffectParams * i)->InitDouble("EQ Low Gain ", 1., 0., 2., 0.1);
+      GetParam(kParamMasterEffect1Param2 + kNumMasterEffectParams * i)->InitDouble("EQ Mid Gain", 1., 0., 2., 0.1);
+      GetParam(kParamMasterEffect1Param3 + kNumMasterEffectParams * i)->InitDouble("EQ Mid Freq", 0.5, 0., 1., 0.1);
+      GetParam(kParamMasterEffect1Param4 + kNumMasterEffectParams * i)->InitDouble("EQ High Gain", 1., 0., 2., 0.1);
+      break;
+    }
+    case kReverbEffect:
+    {
+      GetParam(kParamMasterEffect1Param1 + kNumMasterEffectParams * i)->InitDouble("Master Effect Parameter 1", 0., 0., 1., 0.1);
+      GetParam(kParamMasterEffect1Param2 + kNumMasterEffectParams * i)->InitDouble("Master Effect Parameter 2", 0., 0., 1., 0.1);
+      GetParam(kParamMasterEffect1Param3 + kNumMasterEffectParams * i)->InitDouble("Master Effect Parameter 3", 0., 0., 1., 0.1);
+      GetParam(kParamMasterEffect1Param4 + kNumMasterEffectParams * i)->InitDouble("Master Effect Parameter 4", 0., 0., 1., 0.1);
+      break;
+    }
+    case kReverb2Effect:
+    {
+      GetParam(kParamMasterEffect1Param1 + kNumMasterEffectParams * i)->InitDouble("Master Effect Parameter 1", 0., 0., 1., 0.1);
+      GetParam(kParamMasterEffect1Param2 + kNumMasterEffectParams * i)->InitDouble("Master Effect Parameter 2", 0., 0., 1., 0.1);
+      GetParam(kParamMasterEffect1Param3 + kNumMasterEffectParams * i)->InitDouble("Master Effect Parameter 3", 0., 0., 1., 0.1);
+      GetParam(kParamMasterEffect1Param4 + kNumMasterEffectParams * i)->InitDouble("Master Effect Parameter 4", 0., 0., 1., 0.1);
       break;
     }
     default:
     {
-      GetParam(kParamMasterEffect1Param1 + kNumMasterEffectParams * i)->InitDouble("Master Effect 1 Parameter 1", 0., 0., 100., 0.1);
-      GetParam(kParamMasterEffect1Param2 + kNumMasterEffectParams * i)->InitDouble("Master Effect 1 Parameter 2", 0., 0., 100., 0.1);
+      GetParam(kParamMasterEffect1Param1 + kNumMasterEffectParams * i)->InitDouble("Master Effect Parameter 1", 0., 0., 1., 0.1);
+      GetParam(kParamMasterEffect1Param2 + kNumMasterEffectParams * i)->InitDouble("Master Effect Parameter 2", 0., 0., 1., 0.1);
+      GetParam(kParamMasterEffect1Param3 + kNumMasterEffectParams * i)->InitDouble("Master Effect Parameter 3", 0., 0., 1., 0.1);
+      GetParam(kParamMasterEffect1Param4 + kNumMasterEffectParams * i)->InitDouble("Master Effect Parameter 4", 0., 0., 1., 0.1);
       break;
     }
     }
