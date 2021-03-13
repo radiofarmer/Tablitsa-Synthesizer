@@ -223,7 +223,7 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
   GetParam(kParamWavetable1BendKTk)->InitDouble("WT1 Bend KTk Mod", 0., -1., 1., 0.01);
   GetParam(kParamWavetable1BendRnd)->InitDouble("WT1 Bend Rnd Mod", 0., -1., 1., 0.01);
   // Wavetable 1 Formant
-  GetParam(kParamWavetable1Formant)->InitDouble("WT1 Formant", 0., 0., 1., 0.01, "", IParam::kFlagsNone, "", IParam::ShapePowCurve(3.));
+  GetParam(kParamWavetable1Formant)->InitDouble("WT1 Formant", 0., 0., 1., 0.01, "", IParam::kFlagsNone, "", IParam::ShapeExp());
   GetParam(kParamWavetable1FormantEnv1)->InitDouble("WT1 Formant Env1 Mod", 0., -1., 1., 0.01);
   GetParam(kParamWavetable1FormantEnv2)->InitDouble("WT1 Formant Env2 Mod", 0., -1., 1., 0.01);
   GetParam(kParamWavetable1FormantAmpEnv)->InitDouble("WT1 Formant FormantEnv Mod", 0., -1., 1., 0.01);
@@ -279,7 +279,7 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
   GetParam(kParamWavetable2BendKTk)->InitDouble("WT2 Bend KTk Mod", 0., -1., 1., 0.01);
   GetParam(kParamWavetable2BendRnd)->InitDouble("WT2 Bend Rnd Mod", 0., -1., 1., 0.01);
   // Wavetable 2 Formant
-  GetParam(kParamWavetable2Formant)->InitDouble("WT2 Formant", 0., 0., 1., 0.01, "", IParam::kFlagsNone, "", IParam::ShapePowCurve(3.));
+  GetParam(kParamWavetable2Formant)->InitDouble("WT2 Formant", 0., 0., 1., 0.01, "", IParam::kFlagsNone, "", IParam::ShapeExp());
   GetParam(kParamWavetable2FormantEnv1)->InitDouble("WT2 Formant Env1 Mod", 0., -1., 1., 0.01);
   GetParam(kParamWavetable2FormantEnv2)->InitDouble("WT2 Formant Env2 Mod", 0., -1., 1., 0.01);
   GetParam(kParamWavetable2FormantAmpEnv)->InitDouble("WT2 Formant FormantEnv Mod", 0., -1., 1., 0.01);

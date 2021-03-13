@@ -568,8 +568,8 @@ public:
         // Signal Processing
 #ifdef VECTOR
         // Oscillators
-        Vec4d osc1_v = mOsc1.ProcessMultiple(osc1Freq) * osc1Amp;
-        Vec4d osc2_v = mOsc2.ProcessMultiple(osc2Freq) * osc2Amp;
+        Vec4d osc1_v = mOsc1.ProcessMultiple(osc1Freq) * osc1Amp;// * ampEnvVal;
+        Vec4d osc2_v = mOsc2.ProcessMultiple(osc2Freq) * osc2Amp;// * ampEnvVal;
         osc1_v.store(mOscOutputs.GetList()[0] + bufferIdx);
         osc2_v.store(mOscOutputs.GetList()[1] + bufferIdx);
 
@@ -578,8 +578,6 @@ public:
         min(max(Vec4d(mPan[0] - panMod), -1.), 1.).store(mPanBuf.Get() + bufferIdx);
         min(max(Vec4d(mPan[1] + panMod), -1.), 1.).store(mPanBuf.Get() + nFrames + bufferIdx);
 #else
-        T osc1Output[4];
-        T osc2Output[4];
         std::array<T, OUTPUT_SIZE> osc1Output{ mOsc1.ProcessMultiple(osc1Freq) };
         std::array<T, OUTPUT_SIZE> osc2Output{ mOsc2.ProcessMultiple(osc2Freq) };
         for (auto j = 0; j < FRAME_INTERVAL; ++j)
@@ -633,7 +631,8 @@ public:
         for (auto i{ startIdx }; i < startIdx + nFrames; ++i)
         {
           const int ii{ i - startIdx };
-          const T out{ mEffectOutputs.Get()[ii] + mOscOutputs.GetList()[0][ii] * mEffectBypasses[0] + mOscOutputs.GetList()[1][ii] * mEffectBypasses[1] };
+          // Sum effect outputs with the oscillator bypass sends, and multiply everything by the amplitude envelope
+          const T out{ (mEffectOutputs.Get()[ii] + mOscOutputs.GetList()[0][ii] * mEffectBypasses[0] + mOscOutputs.GetList()[1][ii] * mEffectBypasses[1]) * mModulators.GetList()[2][ii] };
           outputs[0][i] += out * mPanBuf.Get()[ii] * mGain;
           outputs[1][i] += out * mPanBuf.Get()[ii + nFrames] * mGain;
         }
@@ -865,12 +864,12 @@ public:
       new ParameterModulator<>(-24., 24., "Wt1 Pitch Offset"),
       new ParameterModulator<>(0., 1., "Wt1 Position"),
       new ParameterModulator<>(-1., 1., "Wt1 Bend"),
-      new ParameterModulator<>(0., 1., "Wt1 Formant"),
+      new ParameterModulator<>(0., 1., "Wt1 Formant", true),
       new ParameterModulator<>(0., 1., "Wt1 Amp"),
       new ParameterModulator<>(-24., 24., "Wt1 Pitch Offset"),
       new ParameterModulator<>(0., 1., "Wt2 Position"),
       new ParameterModulator<>(-1., 1., "Wt2 Bend"),
-      new ParameterModulator<>(0., 1., "Wt2 Formant"),
+      new ParameterModulator<>(0., 1., "Wt2 Formant", true),
       new ParameterModulator<>(0., 1., "Wt2 Amp"),
       new ParameterModulator<>(0.001, 0.5, "Flt1 Cutoff", true),
       new ParameterModulator<>(0., 1., "Flt1 Resonance"),
