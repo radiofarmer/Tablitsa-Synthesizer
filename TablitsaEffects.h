@@ -329,7 +329,10 @@ class DistortionEffect : public Effect<T, V>
   inline T SoftClipBdJDistortion(T x) const
   {
     x *= mGain;
-    return std::clamp((x / (x * x + 1.)) * 2., -1., 1.);
+    if (std::abs(x) <= 1.)
+      return (x / (x * x + 1.)) * 2.;
+    else
+      return std::copysign(1., x);
   }
 
   inline T HardClipDistortion(T x) const
@@ -343,7 +346,7 @@ public:
   void SetContinuousParams(T p1, T p2, T p3, T p4) override
   {
     mType = static_cast<int>(p1 + 0.01);
-    mGain = std::pow(10., p2 * 2.) * (1. + p3 * (static_cast<double>(std::rand() % 1000) * 0.001 - 0.5));
+    mGain = std::pow(10., p2 * 1.5) * (1. + p3 * (static_cast<double>(std::rand() % 1000) * 0.001 - 0.5));
     mMix = p4;
   }
 
