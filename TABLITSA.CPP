@@ -603,6 +603,11 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
   GetParam(kParamMasterEffect3Param5)->InitBool("Master Effect 3 Parameter 5", false);
   GetParam(kParamMasterEffect3Param6)->InitBool("Master Effect 3 Parameter 6", false);
 
+  GetParam(kParamOsc1FilterBypass)->InitDouble("Osc 1 Filter Bypass", 0., 0., 1., 0.01);
+  GetParam(kParamOsc2FilterBypass)->InitDouble("Osc 2 Filter Bypass", 0., 0., 1., 0.01);
+  GetParam(kParamOsc1EffectBypass)->InitDouble("Osc 1 Effect Bypass", 0., 0., 1., 0.01);
+  GetParam(kParamOsc2EffectBypass)->InitDouble("Osc 2 Effect Bypass", 0., 0., 1., 0.01);
+
 #if VST3_API
 #define KEYBOARD_HEIGHT 0.f
 #else
@@ -684,10 +689,11 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
       UnserializeState(presetData, 0);
       UpdateUIControls();
       });
-    pGraphics->AttachControl(new IVButtonControl(presetPanel.GetGridCell(0, 0, 2, 8).GetPadded(-2.f), SplashClickActionFunc, "Save", pushButtonStyle.WithColor(EVColor::kFG, COLOR_TRANSPARENT).WithColor(EVColor::kFR, COLOR_WHITE)), kNoTag, "Presets")->SetAnimationEndActionFunction(savePresetFunction);
-    pGraphics->AttachControl(new IVButtonControl(presetPanel.GetGridCell(0, 1, 2, 8).GetPadded(-2.f), SplashClickActionFunc, "Load", pushButtonStyle.WithColor(EVColor::kFG, COLOR_TRANSPARENT).WithColor(EVColor::kFR, COLOR_WHITE)), kNoTag, "Presets")->SetAnimationEndActionFunction(loadPresetFunction);
-    pGraphics->AttachControl(new IVButtonControl(presetPanel.GetGridCell(1, 0, 2, 8).GetPadded(-2.f), SplashClickActionFunc, "Reset", pushButtonStyle.WithColor(EVColor::kFG, COLOR_TRANSPARENT).WithColor(EVColor::kFR, COLOR_WHITE)), kNoTag, "Presets")->SetAnimationEndActionFunction(resetToDefaultFunction);
-    pGraphics->AttachControl(new IVButtonControl(presetPanel.GetGridCell(1, 1, 2, 8).GetPadded(-2.f), SplashClickActionFunc, "Backup", pushButtonStyle.WithColor(EVColor::kFG, COLOR_TRANSPARENT).WithColor(EVColor::kFR, COLOR_WHITE)), kNoTag, "Presets")->SetAnimationEndActionFunction(loadBackupFunction);
+    const IVStyle ioButtonStyle = pushButtonStyle.WithColor(EVColor::kFG, COLOR_WHITE.WithOpacity(0.2));
+    pGraphics->AttachControl(new IVButtonControl(presetPanel.GetGridCell(0, 0, 2, 8).GetPadded(-2.f), SplashClickActionFunc, "Save", ioButtonStyle), kNoTag, "Presets")->SetAnimationEndActionFunction(savePresetFunction);
+    pGraphics->AttachControl(new IVButtonControl(presetPanel.GetGridCell(0, 1, 2, 8).GetPadded(-2.f), SplashClickActionFunc, "Load", ioButtonStyle), kNoTag, "Presets")->SetAnimationEndActionFunction(loadPresetFunction);
+    pGraphics->AttachControl(new IVButtonControl(presetPanel.GetGridCell(1, 0, 2, 8).GetPadded(-2.f), SplashClickActionFunc, "Reset", ioButtonStyle), kNoTag, "Presets")->SetAnimationEndActionFunction(resetToDefaultFunction);
+    pGraphics->AttachControl(new IVButtonControl(presetPanel.GetGridCell(1, 1, 2, 8).GetPadded(-2.f), SplashClickActionFunc, "Backup", ioButtonStyle), kNoTag, "Presets")->SetAnimationEndActionFunction(loadBackupFunction);
     // Built-in file selection
 #if !LOAD_WITH_DIALOG
     const IRECT presetMenuBounds = presetPanel.GetGridCell(1, 1, 2, 4).GetVShifted(presetPanel.GetGridCell(1, 1, 2, 5).H()).GetPadded(0.f, 0.f, 100.f, 100.f);
@@ -831,6 +837,13 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
       [pGraphics, this](IControl* pControl) {
         SwapMasterEffectsUI(pControl, pGraphics, this, true);
       });
+
+    /* Routing */
+    const IRECT routingPanel = effectsControlsPanel.GetPadded(0.f, 20.f, 0.f, -5.f);
+    pGraphics->AttachControl(new TablitsaSliderControl(routingPanel.GetGridCell(0, 0, 4, 2).GetHPadded(-20.f), kParamOsc1FilterBypass, "Osc1 Filter BP", TABLITSA_STYLE.WithShowValue(false), false, EDirection::Horizontal), kNoTag, "E3");
+    pGraphics->AttachControl(new TablitsaSliderControl(routingPanel.GetGridCell(1, 0, 4, 2).GetHPadded(-20.f), kParamOsc2FilterBypass, "Osc2 Filter BP", TABLITSA_STYLE.WithShowValue(false), false, EDirection::Horizontal), kNoTag, "E3");
+    pGraphics->AttachControl(new TablitsaSliderControl(routingPanel.GetGridCell(2, 0, 4, 2).GetHPadded(-20.f), kParamOsc1EffectBypass, "Osc1 Effect BP", TABLITSA_STYLE.WithShowValue(false), false, EDirection::Horizontal), kNoTag, "E3");
+    pGraphics->AttachControl(new TablitsaSliderControl(routingPanel.GetGridCell(3, 0, 4, 2).GetHPadded(-20.f), kParamOsc2EffectBypass, "Osc2 Effect BP", TABLITSA_STYLE.WithShowValue(false), false, EDirection::Horizontal), kNoTag, "E3");
 
     /* LOWER-HALF CONTROLS */
     constexpr float modulePad[4]{-10.f, -5.f, -10.f, -15.f};
@@ -1576,11 +1589,15 @@ bool Tablitsa::OnMessage(int msgTag, int ctrlTag, int dataSize, const void* pDat
       break;
     }
     case kMsgUpdateLFO1Plot:
+    {
       dynamic_cast<ModPlotControl*>(GetUI()->GetControlWithTag(kCtrlTagLFO1Plot))->SetPlotTable(static_cast<const double*>(mDSP.mGlobalLFO1.GetCurrentTable()));
       break;
+    }
     case kMsgUpdateLFO2Plot:
+    {
       dynamic_cast<ModPlotControl*>(GetUI()->GetControlWithTag(kCtrlTagLFO2Plot))->SetPlotTable(static_cast<const double*>(mDSP.mGlobalLFO2.GetCurrentTable()));
       break;
+    }
     case kMsgSeqSliderChanged:
     {
       // Read incoming data as a tuple

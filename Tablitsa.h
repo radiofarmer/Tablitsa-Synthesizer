@@ -556,6 +556,10 @@ enum EParams
   kParamMasterEffect3Param4,
   kParamMasterEffect3Param5,
   kParamMasterEffect3Param6,
+  kParamOsc1FilterBypass,
+  kParamOsc2FilterBypass,
+  kParamOsc1EffectBypass,
+  kParamOsc2EffectBypass,
   kNumParams
 };
 

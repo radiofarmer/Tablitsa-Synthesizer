@@ -661,6 +661,7 @@ ModPlotControl::ModPlotControl(const IRECT& bounds, int paramIdx, double* table,
 void ModPlotControl::SetPlotTable(const double* pTable)
 {
   mTable = pTable;
+  SetDirty(false);
 }
 
 void ModPlotControl::OnMouseDrag(float x, float y, float dX, float dY, const IMouseMod& mod)
