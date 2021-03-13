@@ -910,7 +910,7 @@ public:
 
   void ProcessBlock(T** inputs, T** outputs, int nOutputs, int nFrames, double qnPos = 0., bool transportIsRunning = false, double tempo = 120.)
 	{
-//	  std::lock_guard<std::mutex> lg(mProcMutex);
+	  std::lock_guard<std::mutex> lg(mEffectMutex);
 
 		// clear outputs
 		for(auto i = 0; i < nOutputs; i++)
@@ -2417,4 +2417,5 @@ public:
   };
 
   std::mutex mProcMutex;
+  std::mutex mEffectMutex;
 };

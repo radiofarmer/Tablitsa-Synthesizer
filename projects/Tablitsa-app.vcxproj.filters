@@ -126,6 +126,7 @@
     </ClCompile>
     <ClCompile Include="..\FastOversampler.cpp" />
     <ClCompile Include="..\VoiceThread.cpp" />
+    <ClCompile Include="..\TablitsaUIFunctions.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\Tablitsa.h" />

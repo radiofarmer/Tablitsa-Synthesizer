@@ -463,6 +463,7 @@
     <ClCompile Include="..\FastOversampler.cpp" />
     <ClCompile Include="..\Tablitsa.cpp" />
     <ClCompile Include="..\TablitsaControls.cpp" />
+    <ClCompile Include="..\TablitsaUIFunctions.cpp" />
     <ClCompile Include="..\VectorFunctions.cpp" />
     <ClCompile Include="..\VoiceThread.cpp" />
   </ItemGroup>

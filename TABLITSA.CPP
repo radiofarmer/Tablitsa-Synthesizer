@@ -1603,7 +1603,7 @@ bool Tablitsa::OnMessage(int msgTag, int ctrlTag, int dataSize, const void* pDat
     case kMsgMasterEffect2Changed:
     case kMsgMasterEffect3Changed:
     {
-      std::lock_guard<std::mutex> lg(mDSP.mProcMutex);
+      std::lock_guard<std::mutex> lg(mDSP.mEffectMutex);
       int effectIdx = *reinterpret_cast<const int*>(pData);
       delete mDSP.mEffects[msgTag - kMsgMasterEffect1Changed];
       switch (effectIdx)
