@@ -25,7 +25,7 @@
 #if _DEBUG
 #define EFFECT_OS_FACTOR 1
 #else
-#define EFFECT_OS_FACTOR 2
+#define EFFECT_OS_FACTOR 4
 #endif
 
 constexpr double kMaxEnvTimeScalar = 0.5;
@@ -597,6 +597,7 @@ public:
         }
       }
 
+      UpsampleBlock<EFFECT_OS_FACTOR>(mOversampler, mEffectInputs.Get(), nFrames);
       constexpr int nEffectParams = kVEffect2Param1 - kVEffect1Param1;
       for (int e{ 0 }, p{ 0 }; e < TABLITSA_MAX_VOICE_EFFECTS; e++, p += nEffectParams)
       {
@@ -604,8 +605,9 @@ public:
           mVModulations.GetList()[kVEffect1Param2 + p][0],
           mVModulations.GetList()[kVEffect1Param3 + p][0],
           mVModulations.GetList()[kVEffect1Param4 + p][0]);
-        mEffects[e]->ProcessBlock(mEffectInputs.Get(), mEffectInputs.Get(), nFrames);
+        mEffects[e]->ProcessBlock(mOversampler.mOutputSource->Get(), mOversampler.mOutputSource->Get(), nFrames * EFFECT_OS_FACTOR);
       }
+      DownsampleBlock<EFFECT_OS_FACTOR>(mOversampler, mEffectInputs.Get(), nFrames);
 
       {
         std::lock_guard<std::mutex> lg(mMaster->mProcMutex);
@@ -642,11 +644,7 @@ public:
       mPanBuf.Resize(blockSize * 2);
       mEffectInputs.Resize(blockSize);
       mOutputs.Resize(blockSize * 2);
-
-      for (int i{ 0 }; i < TABLITSA_MAX_VOICE_EFFECTS; ++i)
-      {
-        mEffects[i]->ResizeBuffers(blockSize);
-      }
+      mOversampler.ResizeBuffers(blockSize);
 
       for (auto i = 0; i < kNumVoiceModulations; i++)
       {
@@ -740,7 +738,6 @@ public:
         mVoiceModParams[kVEffect1Param3 + effectSlot * numEffectModParams].SetMinMax(0., 1.);
         mVoiceModParams[kVEffect1Param4 + effectSlot * numEffectModParams].SetMinMax(0., 1.);
         mEffects[effectSlot] = new Texturizer<T>(mMaster->mSampleRate);
-        mEffects[effectSlot]->ResizeBuffers(mMaster->mBlockSize);
         break;
       }
       default:
@@ -817,6 +814,7 @@ public:
 
     // Voice Effects
     std::vector<Effect<T>*> mEffects{ new Effect<T>(DEFAULT_SAMPLE_RATE), new Effect<T>(DEFAULT_SAMPLE_RATE), new Effect<T>(DEFAULT_SAMPLE_RATE) };
+    FastOversampler<T> mOversampler;
 
     // Temporary output buffers
     WDL_TypedBuf<T> mPanBuf;

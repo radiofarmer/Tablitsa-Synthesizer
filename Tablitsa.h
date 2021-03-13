@@ -677,6 +677,8 @@ enum EVoiceEffectTypes
   kWaveshaperEffect,
   kSampleAndHoldEffect,
   kTexturizerEffect,
+  kLimiterEffect,
+  kDistortionEffect,
   kNumVoiceEffectTypes
 };
 

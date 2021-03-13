@@ -67,17 +67,10 @@ public:
     SetParam4(p4);
   }
 
-  void ResizeBuffers(const int blockSize)
-  {
-    mOversampler.ResizeBuffers(blockSize);
-  }
-
 protected:
   T mSampleRate;
   T mMix{ 0. };
   const int mVectorSize;
-
-  FastOversampler<T> mOversampler;
 };
 
 #define DELAY_TEMPODIV_VALIST "1/64", "1/32", "1/16T", "1/16", "1/16D", "1/8T", "1/8", "1/8D", "1/4", "1/4D", "1/2", "1/1"
@@ -682,13 +675,11 @@ public:
 
   void ProcessBlock(T* inputs, T* outputs, const int nFrames) override
   {
-    UpsampleBlock<4>(mOversampler, inputs, outputs, nFrames);
-    for (int i{ 0 }; i < nFrames * 4; i += 4)
+    for (int i{ 0 }; i < nFrames; i += 4)
     {
-      V s4 = Process(V().load(mOversampler.mOutputSource->Get() + i));
-      s4.store(mOversampler.mOutputSource->Get() + i);
+      V s4 = Process(V().load(inputs + i));
+      s4.store(outputs + i);
     }
-    DownsampleBlock<4>(mOversampler, outputs, nFrames);
   }
 
 protected:
