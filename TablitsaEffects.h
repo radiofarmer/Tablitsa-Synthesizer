@@ -286,12 +286,13 @@ private:
 };
 
 /* Distortion */
-#define DISTORTION_TYPES "Fuzz", "Asymm.", "Soft Clip", "Hard Clip"
+#define DISTORTION_TYPES "Fuzz", "Asymm.", "Soft Clip 1", "Soft Clip 2", "Hard Clip"
 enum EDistortion
 {
   kFuzz,
   kAsymmetric,
-  kSoftClip,
+  kSoftClip1,
+  kSoftClip2,
   kHardClip,
   kNumDistortionModes
 };
@@ -324,6 +325,13 @@ class DistortionEffect : public Effect<T, V>
     return SoftClip<T, 5>(x * mGain);
   }
 
+  // Bram de Jong soft saturation algorithm (from MusicDSP via https://github.com/johannesmenzel/SRPlugins/wiki/DSP-ALGORITHMS-Saturation)
+  inline T SoftClipBdJDistortion(T x) const
+  {
+    x *= mGain;
+    return (x / (x * x + 1.)) * 2.;
+  }
+
   inline T HardClipDistortion(T x) const
   {
     return std::clamp(x * mGain, -1., 1.);
@@ -339,7 +347,7 @@ public:
     mMix = p4;
   }
 
-  T DoProcess(T s, const int type)
+  inline T DoProcess(T s, const int type)
   {
     switch (type)
     {
@@ -347,8 +355,10 @@ public:
       return FuzzDistortion(s);
     case kAsymmetric:
       return AsymmDistortion(s);
-    case kSoftClip:
+    case kSoftClip1:
       return SoftClipDistortion(s);
+    case kSoftClip2:
+      return SoftClipBdJDistortion(s);
     case kHardClip:
       return HardClipDistortion(s);
     default:
