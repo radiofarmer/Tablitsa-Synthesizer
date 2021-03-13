@@ -603,6 +603,11 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
   GetParam(kParamMasterEffect3Param5)->InitBool("Master Effect 3 Parameter 5", false);
   GetParam(kParamMasterEffect3Param6)->InitBool("Master Effect 3 Parameter 6", false);
 
+  GetParam(kParamOsc1FilterBypass)->InitDouble("Osc 1 Filter Bypass", 0., 0., 1., 0.01);
+  GetParam(kParamOsc2FilterBypass)->InitDouble("Osc 2 Filter Bypass", 0., 0., 1., 0.01);
+  GetParam(kParamOsc1EffectBypass)->InitDouble("Osc 1 Effect Bypass", 0., 0., 1., 0.01);
+  GetParam(kParamOsc2EffectBypass)->InitDouble("Osc 2 Effect Bypass", 0., 0., 1., 0.01);
+
 #if VST3_API
 #define KEYBOARD_HEIGHT 0.f
 #else
@@ -832,6 +837,13 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
       [pGraphics, this](IControl* pControl) {
         SwapMasterEffectsUI(pControl, pGraphics, this, true);
       });
+
+    /* Routing */
+    const IRECT routingPanel = effectsControlsPanel.GetPadded(0.f, 20.f, 0.f, -5.f);
+    pGraphics->AttachControl(new TablitsaSliderControl(routingPanel.GetGridCell(0, 0, 4, 2).GetHPadded(-20.f), kParamOsc1FilterBypass, "Osc1 Filter BP", TABLITSA_STYLE.WithShowValue(false), false, EDirection::Horizontal), kNoTag, "E3");
+    pGraphics->AttachControl(new TablitsaSliderControl(routingPanel.GetGridCell(1, 0, 4, 2).GetHPadded(-20.f), kParamOsc2FilterBypass, "Osc2 Filter BP", TABLITSA_STYLE.WithShowValue(false), false, EDirection::Horizontal), kNoTag, "E3");
+    pGraphics->AttachControl(new TablitsaSliderControl(routingPanel.GetGridCell(2, 0, 4, 2).GetHPadded(-20.f), kParamOsc1EffectBypass, "Osc1 Effect BP", TABLITSA_STYLE.WithShowValue(false), false, EDirection::Horizontal), kNoTag, "E3");
+    pGraphics->AttachControl(new TablitsaSliderControl(routingPanel.GetGridCell(3, 0, 4, 2).GetHPadded(-20.f), kParamOsc2EffectBypass, "Osc2 Effect BP", TABLITSA_STYLE.WithShowValue(false), false, EDirection::Horizontal), kNoTag, "E3");
 
     /* LOWER-HALF CONTROLS */
     constexpr float modulePad[4]{-10.f, -5.f, -10.f, -15.f};

@@ -586,17 +586,17 @@ public:
           // Filters
           T filter1Output = mFilters[0]->Process(osc1Output[j] * mFilterSends[0][0] + osc2Output[j] * mFilterSends[0][1]);
           T filter2Output = mFilters[1]->Process(osc1Output[j] * mFilterSends[1][0] + osc2Output[j] * mFilterSends[1][1]);
-          T output_summed = filter1Output + filter2Output;
-          T output_scaled = output_summed * ampEnvVal;
+          T filterOutputs = filter1Output + filter2Output;
 
           // Panning
           T panMod = mVModulations.GetList()[kVPan][bufferIdx + j];
           mPanBuf.Get()[bufferIdx + j] = std::clamp(mPan[0] - panMod, -1., 1.); // TODO: optimize this somehow
           mPanBuf.Get()[bufferIdx + j + nFrames] = std::clamp(mPan[1] + panMod, -1., 1.);
-          mEffectInputs.Get()[bufferIdx + j] = output_scaled;
+          mEffectInputs.Get()[bufferIdx + j] = filterOutputs + osc1Output[j] * mFilterBypasses[0] + osc2Output[j] * mFilterBypasses[1];
         }
       }
 
+      // Process Effects
       UpsampleBlock<EFFECT_OS_FACTOR>(mOversampler, mEffectInputs.Get(), nFrames);
       constexpr int nEffectParams = kVEffect2Param1 - kVEffect1Param1;
       for (int e{ 0 }, p{ 0 }; e < TABLITSA_MAX_VOICE_EFFECTS; e++, p += nEffectParams)
@@ -607,15 +607,15 @@ public:
           mVModulations.GetList()[kVEffect1Param4 + p][0]);
         mEffects[e]->ProcessBlock(mOversampler.mOutputSource->Get(), mOversampler.mOutputSource->Get(), nFrames * EFFECT_OS_FACTOR);
       }
-      DownsampleBlock<EFFECT_OS_FACTOR>(mOversampler, mEffectInputs.Get(), nFrames);
+      DownsampleBlock<EFFECT_OS_FACTOR>(mOversampler, mEffectOutputs.Get(), nFrames);
 
       {
         std::lock_guard<std::mutex> lg(mMaster->mProcMutex);
         for (auto i{ startIdx }; i < startIdx + nFrames; ++i)
         {
 
-          outputs[0][i] += mEffectInputs.Get()[i - startIdx] * mPanBuf.Get()[i - startIdx] * mGain;
-          outputs[1][i] += mEffectInputs.Get()[i - startIdx] * mPanBuf.Get()[i - startIdx + nFrames] * mGain;
+          outputs[0][i] += mEffectOutputs.Get()[i - startIdx] * mPanBuf.Get()[i - startIdx] * mGain;
+          outputs[1][i] += mEffectOutputs.Get()[i - startIdx] * mPanBuf.Get()[i - startIdx + nFrames] * mGain;
         }
       }
     }
@@ -643,6 +643,7 @@ public:
       // Voice output buffers
       mPanBuf.Resize(blockSize * 2);
       mEffectInputs.Resize(blockSize);
+      mEffectOutputs.Resize(blockSize);
       mOutputs.Resize(blockSize * 2);
       mOversampler.ResizeBuffers(blockSize);
 
@@ -811,16 +812,20 @@ public:
 
     // Filters
     std::vector<Filter<T>*> mFilters{ nullptr, nullptr };
-    T mFilterSends[2][2]{ {1., 0.}, {0., 1.} };
 
     // Voice Effects
     std::vector<Effect<T>*> mEffects{ new Effect<T>(DEFAULT_SAMPLE_RATE), new Effect<T>(DEFAULT_SAMPLE_RATE), new Effect<T>(DEFAULT_SAMPLE_RATE) };
     FastOversampler<T> mOversampler;
 
-    // Temporary output buffers
+    // Temporary output buffers and routing matrices
     WDL_TypedBuf<T> mPanBuf;
+    WDL_PtrList<T> mOscOutputs;
     WDL_TypedBuf<T> mEffectInputs;
+    WDL_TypedBuf<T> mEffectOutputs;
     WDL_TypedBuf<T> mOutputs;
+    T mFilterSends[2][2]{ {1., 0.}, {0., 1.} };
+    T mFilterBypasses[2]{ 0., 0. };
+    T mEffectBypasses[2]{ 0., 0. };
 
     WDL_PtrList<T> mVModulations; // Pointers to modulator buffers
     WDL_TypedBuf<T> mVModulationsData; // Modulator buffer sample data
@@ -2346,6 +2351,22 @@ public:
       case kParamMasterEffect3Param6:
         mEffects[(paramIdx - kParamMasterEffect1Param6) / 6]->SetParam6((T)value);
         break;
+      case kParamOsc1FilterBypass:
+      case kParamOsc2FilterBypass:
+      {
+        ForEachVoice([paramIdx, value](Voice& voice) {
+          voice.mFilterBypasses[paramIdx - kParamOsc1FilterBypass] = value;
+          });
+        break;
+      }
+      case kParamOsc1EffectBypass:
+      case kParamOsc2EffectBypass:
+      {
+        ForEachVoice([paramIdx, value](Voice& voice) {
+          voice.mEffectBypasses[paramIdx - kParamOsc1EffectBypass] = value;
+          });
+        break;
+      }
       default:
         break;
     }
