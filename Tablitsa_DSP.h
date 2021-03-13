@@ -567,22 +567,25 @@ public:
 
         // Signal Processing
 #ifdef VECTOR
+        // Oscillators
         Vec4d osc1_v = mOsc1.ProcessMultiple(osc1Freq) * osc1Amp;
         Vec4d osc2_v = mOsc2.ProcessMultiple(osc2Freq) * osc2Amp;
+        osc1_v.store(mOscOutputs.GetList()[0] + bufferIdx);
+        osc2_v.store(mOscOutputs.GetList()[1] + bufferIdx);
+
+        // Panning
+        T panMod = mVModulations.GetList()[kVPan][bufferIdx];
+        min(max(Vec4d(mPan[0] - panMod), -1.), 1.).store(mPanBuf.Get() + bufferIdx);
+        min(max(Vec4d(mPan[1] + panMod), -1.), 1.).store(mPanBuf.Get() + nFrames + bufferIdx);
+#else
         T osc1Output[4];
         T osc2Output[4];
-        osc1_v.store(osc1Output);
-        osc2_v.store(osc2Output);
-#else
         std::array<T, OUTPUT_SIZE> osc1Output{ mOsc1.ProcessMultiple(osc1Freq) };
         std::array<T, OUTPUT_SIZE> osc2Output{ mOsc2.ProcessMultiple(osc2Freq) };
-#endif
         for (auto j = 0; j < FRAME_INTERVAL; ++j)
         {
-#ifndef VECTOR
           osc1Output[j] *= osc1Amp;
           osc2Output[j] *= osc2Amp;
-#endif
           // Filters
           T filter1Output = mFilters[0]->Process(osc1Output[j] * mFilterSends[0][0] + osc2Output[j] * mFilterSends[0][1]);
           T filter2Output = mFilters[1]->Process(osc1Output[j] * mFilterSends[1][0] + osc2Output[j] * mFilterSends[1][1]);
@@ -594,7 +597,23 @@ public:
           mPanBuf.Get()[bufferIdx + j + nFrames] = std::clamp(mPan[1] + panMod, -1., 1.);
           mEffectInputs.Get()[bufferIdx + j] = filterOutputs + osc1Output[j] * mFilterBypasses[0] + osc2Output[j] * mFilterBypasses[1];
         }
+#endif
       }
+#ifdef VECTOR
+      for (int i{ 0 }; i < nFrames; ++i)
+      {
+        const T osc1Output = mOscOutputs.GetList()[0][i];
+        const T osc2Output = mOscOutputs.GetList()[1][i];
+
+        // Filters
+        T filter1Output = mFilters[0]->Process(osc1Output * mFilterSends[0][0] + osc2Output * mFilterSends[0][1]);
+        T filter2Output = mFilters[1]->Process(osc1Output * mFilterSends[1][0] + osc2Output * mFilterSends[1][1]);
+        T filterOutputs = filter1Output + filter2Output;
+
+        // Effect Sends
+        mEffectInputs.Get()[i] = filterOutputs + osc1Output * mFilterBypasses[0] + osc2Output * mFilterBypasses[1];
+      }
+#endif
 
       // Process Effects
       UpsampleBlock<EFFECT_OS_FACTOR>(mOversampler, mEffectInputs.Get(), nFrames);
@@ -613,9 +632,10 @@ public:
         std::lock_guard<std::mutex> lg(mMaster->mProcMutex);
         for (auto i{ startIdx }; i < startIdx + nFrames; ++i)
         {
-
-          outputs[0][i] += mEffectOutputs.Get()[i - startIdx] * mPanBuf.Get()[i - startIdx] * mGain;
-          outputs[1][i] += mEffectOutputs.Get()[i - startIdx] * mPanBuf.Get()[i - startIdx + nFrames] * mGain;
+          const int ii{ i - startIdx };
+          const T out{ mEffectOutputs.Get()[ii] + mOscOutputs.GetList()[0][ii] * mEffectBypasses[0] + mOscOutputs.GetList()[1][ii] * mEffectBypasses[1] };
+          outputs[0][i] += out * mPanBuf.Get()[ii] * mGain;
+          outputs[1][i] += out * mPanBuf.Get()[ii + nFrames] * mGain;
         }
       }
     }
@@ -642,6 +662,11 @@ public:
 
       // Voice output buffers
       mPanBuf.Resize(blockSize * 2);
+
+      mOscBuffer.Resize(blockSize * 2);
+      mOscOutputs.Add(mOscBuffer.Get());
+      mOscOutputs.Add(mOscBuffer.Get() + blockSize);
+
       mEffectInputs.Resize(blockSize);
       mEffectOutputs.Resize(blockSize);
       mOutputs.Resize(blockSize * 2);
@@ -819,7 +844,10 @@ public:
 
     // Temporary output buffers and routing matrices
     WDL_TypedBuf<T> mPanBuf;
+
+    WDL_TypedBuf<T> mOscBuffer;
     WDL_PtrList<T> mOscOutputs;
+
     WDL_TypedBuf<T> mEffectInputs;
     WDL_TypedBuf<T> mEffectOutputs;
     WDL_TypedBuf<T> mOutputs;
