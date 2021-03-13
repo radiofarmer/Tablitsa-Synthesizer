@@ -180,6 +180,7 @@
     </ClCompile>
     <ClCompile Include="..\VoiceThread.cpp" />
     <ClCompile Include="..\FastOversampler.cpp" />
+    <ClCompile Include="..\TablitsaUIFunctions.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\Tablitsa.h" />
@@ -469,6 +470,7 @@
     </ClInclude>
     <ClInclude Include="..\FastOversampler.h" />
     <ClInclude Include="..\VoiceThread.h" />
+    <ClInclude Include="..\TablitsaUIFunctions.h" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="resources">

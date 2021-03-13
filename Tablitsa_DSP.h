@@ -666,6 +666,7 @@ public:
 
     void SetFilterType(int filter, int filterType)
     {
+      std::lock_guard<std::mutex> lg(mMaster->mEffectMutex);
       if (mFilters[filter])
       {
         delete mFilters[filter];
@@ -707,8 +708,8 @@ public:
     void SetEffect(const int effectSlot, const int effectId)
     {
       constexpr int numEffectModParams = kVEffect2Param1 - kVEffect1Param1;
-      // Note: Remember to set the min and max of the `ParameterModulator` object if any of the effects have different scales from the rest
-      std::lock_guard<std::mutex> lg(mMaster->mProcMutex);
+      std::lock_guard<std::mutex> lg(mMaster->mEffectMutex);
+
       if (mEffects[effectSlot])
         delete mEffects[effectSlot];
       switch (effectId)
@@ -1796,7 +1797,7 @@ public:
       }
       case kParamFilter1Type:
       {
-        std::lock_guard<std::mutex> lg(mProcMutex);
+        std::lock_guard<std::mutex> lg(mEffectMutex);
         mFilter1Comb = static_cast<int>(value) == kComb;
         ForEachVoice([value](Voice& voice) {
           voice.SetFilterType(0, static_cast<int>(value));

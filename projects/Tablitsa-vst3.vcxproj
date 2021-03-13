@@ -358,6 +358,7 @@
     <ClInclude Include="..\dependencies\radiofarmer\waveshaper.h" />
     <ClInclude Include="..\FastOversampler.h" />
     <ClInclude Include="..\Tablitsa.h" />
+    <ClInclude Include="..\TablitsaUIFunctions.h" />
     <ClInclude Include="..\Tablitsa_DSP.h" />
     <ClInclude Include="..\resources\resource.h" />
     <ClInclude Include="..\VoiceThread.h" />
@@ -460,6 +461,7 @@
     <ClCompile Include="..\FastOversampler.cpp" />
     <ClCompile Include="..\Tablitsa.cpp" />
     <ClCompile Include="..\TablitsaControls.cpp" />
+    <ClCompile Include="..\TablitsaUIFunctions.cpp" />
     <ClCompile Include="..\VectorFunctions.cpp" />
     <ClCompile Include="..\VoiceThread.cpp" />
   </ItemGroup>
