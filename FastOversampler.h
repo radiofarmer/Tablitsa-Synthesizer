@@ -77,7 +77,7 @@ struct FastOversampler
 typedef double sample;
 
 template<int Factor>
-void UpsampleBlock(FastOversampler<sample>& oversampler, const sample* inputs, sample* outputs, const int nFrames);
+void UpsampleBlock(FastOversampler<sample>& oversampler, const sample* inputs, const int nFrames);
 
 template<int Factor>
 void DownsampleBlock(FastOversampler<sample>& oversampler, sample* outputs, const int nFrames);

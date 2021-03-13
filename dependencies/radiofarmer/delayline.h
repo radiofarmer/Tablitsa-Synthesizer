@@ -52,6 +52,11 @@ public:
     return at(idx);
   }
 
+  const inline sample_t last()
+  {
+    return at(mLength - 1);
+  }
+
   inline void push(const sample_v& s)
   {
     mRead = mWrite;

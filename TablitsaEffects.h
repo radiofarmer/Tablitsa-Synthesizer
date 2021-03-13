@@ -67,17 +67,10 @@ public:
     SetParam4(p4);
   }
 
-  void ResizeBuffers(const int blockSize)
-  {
-    mOversampler.ResizeBuffers(blockSize);
-  }
-
 protected:
   T mSampleRate;
   T mMix{ 0. };
   const int mVectorSize;
-
-  FastOversampler<T> mOversampler;
 };
 
 #define DELAY_TEMPODIV_VALIST "1/64", "1/32", "1/16T", "1/16", "1/16D", "1/8T", "1/8", "1/8D", "1/4", "1/4D", "1/2", "1/1"
@@ -290,6 +283,104 @@ private:
   DelayLine<TABLITSA_MAX_DELAY_SAMP>  mDelayL;
   DelayLine<TABLITSA_MAX_DELAY_SAMP> mDelayR;
   ModMetronome* mMetronome; // For tempo sync
+};
+
+/* Distortion */
+#define DISTORTION_TYPES "Fuzz", "Asymm.", "Soft Clip", "Hard Clip"
+enum EDistortion
+{
+  kFuzz,
+  kAsymmetric,
+  kSoftClip,
+  kHardClip,
+  kNumDistortionModes
+};
+
+template<typename T, class V = Vec4d>
+class DistortionEffect : public Effect<T, V>
+{
+  static constexpr int BufferLength{ 1024 };
+  static constexpr T BufferScale{ 1. / BufferLength };
+
+  inline T FuzzDistortion(T x) const
+  {
+    return std::copysign(1. - std::exp(-1. * (std::abs(x) * mGain)), x);
+  }
+
+  inline T AsymmDistortion(T x) const
+  {
+    x *= mGain;
+    if (x >= 0.)
+    {
+      T tanhx = std::tanh(x);
+      return tanhx * tanhx;
+    }
+    else
+      return std::atan(x);
+  }
+
+  inline T SoftClipDistortion(T x) const
+  {
+    return SoftClip<T, 5>(x * mGain);
+  }
+
+  inline T HardClipDistortion(T x) const
+  {
+    return std::clamp(x * mGain, -1., 1.);
+  }
+
+public:
+  DistortionEffect(T sampleRate) : Effect<T, V>(sampleRate) {}
+
+  void SetContinuousParams(T p1, T p2, T p3, T p4) override
+  {
+    mType = static_cast<int>(p1 + 0.01);
+    mGain = std::pow(10., p2 * 2.) * (1. + p3 * (static_cast<double>(std::rand() % 1000) * 0.001 - 0.5));
+    mMix = p4;
+  }
+
+  T DoProcess(T s, const int type)
+  {
+    switch (type)
+    {
+    case kFuzz:
+      return FuzzDistortion(s);
+    case kAsymmetric:
+      return AsymmDistortion(s);
+    case kSoftClip:
+      return SoftClipDistortion(s);
+    case kHardClip:
+      return HardClipDistortion(s);
+    default:
+      return s;
+    }
+  }
+
+  void ProcessBlock(T* inputs, T* outputs, const int nFrames) override
+  {
+    for (int i{ 0 }; i < nFrames; ++i)
+    {
+      // Update average input volume
+      mAvgIn += BufferScale * (std::abs(inputs[i]) - mInHist.last());
+      mInHist.push(std::abs(inputs[i]));
+
+      // Calculate output and update average output volume
+      T out = DoProcess(inputs[i], mType);
+      mAvgOut += BufferScale * (std::abs(out) - mOutHist.last());
+      mOutHist.push(std::abs(out));
+
+      outputs[i] = inputs[i] + mMix * (out * (mAvgIn / mAvgOut) - inputs[i]);
+
+    }
+  }
+
+protected:
+  T mGain;
+  T mAvgIn{ 0.25 };
+  T mAvgOut{ 1. };
+  int mType{ EDistortion::kFuzz };
+  DelayLine<BufferLength> mInHist;
+  DelayLine<BufferLength> mOutHist;
 };
 
 
@@ -682,13 +773,11 @@ public:
 
   void ProcessBlock(T* inputs, T* outputs, const int nFrames) override
   {
-    UpsampleBlock<4>(mOversampler, inputs, outputs, nFrames);
-    for (int i{ 0 }; i < nFrames * 4; i += 4)
+    for (int i{ 0 }; i < nFrames; i += 4)
     {
-      V s4 = Process(V().load(mOversampler.mOutputSource->Get() + i));
-      s4.store(mOversampler.mOutputSource->Get() + i);
+      V s4 = Process(V().load(inputs + i));
+      s4.store(outputs + i);
     }
-    DownsampleBlock<4>(mOversampler, outputs, nFrames);
   }
 
 protected:

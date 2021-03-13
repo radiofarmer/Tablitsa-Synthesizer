@@ -13,7 +13,7 @@
 
 #define TABLITSA_MAX_VOICE_EFFECTS 3
 #define TABLITSA_MAX_MASTER_EFFECTS 3
-#define TABLITSA_VOICE_EFFECTS_LIST {"None", "Waveshaper", "Sample & Hold", "Texturizer"}
+#define TABLITSA_VOICE_EFFECTS_LIST {"None", "Sample & Hold", "Texturizer", "Distortion"}
 #define TABLITSA_MASTER_EFFECTS_LIST {"None", "Delay", "EQ", "Reverb 1", "Reverb 2"}
 
 const int kNumPresets = 1;
@@ -674,9 +674,10 @@ enum EModulators
 enum EVoiceEffectTypes
 {
   kNoVoiceEffect=0,
-  kWaveshaperEffect,
   kSampleAndHoldEffect,
   kTexturizerEffect,
+  kDistortionEffect,
+  kLimiterEffect,
   kNumVoiceEffectTypes
 };
 
