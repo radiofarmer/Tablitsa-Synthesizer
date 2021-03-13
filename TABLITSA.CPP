@@ -684,10 +684,11 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
       UnserializeState(presetData, 0);
       UpdateUIControls();
       });
-    pGraphics->AttachControl(new IVButtonControl(presetPanel.GetGridCell(0, 0, 2, 8).GetPadded(-2.f), SplashClickActionFunc, "Save", pushButtonStyle.WithColor(EVColor::kFG, COLOR_TRANSPARENT).WithColor(EVColor::kFR, COLOR_WHITE)), kNoTag, "Presets")->SetAnimationEndActionFunction(savePresetFunction);
-    pGraphics->AttachControl(new IVButtonControl(presetPanel.GetGridCell(0, 1, 2, 8).GetPadded(-2.f), SplashClickActionFunc, "Load", pushButtonStyle.WithColor(EVColor::kFG, COLOR_TRANSPARENT).WithColor(EVColor::kFR, COLOR_WHITE)), kNoTag, "Presets")->SetAnimationEndActionFunction(loadPresetFunction);
-    pGraphics->AttachControl(new IVButtonControl(presetPanel.GetGridCell(1, 0, 2, 8).GetPadded(-2.f), SplashClickActionFunc, "Reset", pushButtonStyle.WithColor(EVColor::kFG, COLOR_TRANSPARENT).WithColor(EVColor::kFR, COLOR_WHITE)), kNoTag, "Presets")->SetAnimationEndActionFunction(resetToDefaultFunction);
-    pGraphics->AttachControl(new IVButtonControl(presetPanel.GetGridCell(1, 1, 2, 8).GetPadded(-2.f), SplashClickActionFunc, "Backup", pushButtonStyle.WithColor(EVColor::kFG, COLOR_TRANSPARENT).WithColor(EVColor::kFR, COLOR_WHITE)), kNoTag, "Presets")->SetAnimationEndActionFunction(loadBackupFunction);
+    const IVStyle ioButtonStyle = pushButtonStyle.WithColor(EVColor::kFG, COLOR_WHITE.WithOpacity(0.2));
+    pGraphics->AttachControl(new IVButtonControl(presetPanel.GetGridCell(0, 0, 2, 8).GetPadded(-2.f), SplashClickActionFunc, "Save", ioButtonStyle), kNoTag, "Presets")->SetAnimationEndActionFunction(savePresetFunction);
+    pGraphics->AttachControl(new IVButtonControl(presetPanel.GetGridCell(0, 1, 2, 8).GetPadded(-2.f), SplashClickActionFunc, "Load", ioButtonStyle), kNoTag, "Presets")->SetAnimationEndActionFunction(loadPresetFunction);
+    pGraphics->AttachControl(new IVButtonControl(presetPanel.GetGridCell(1, 0, 2, 8).GetPadded(-2.f), SplashClickActionFunc, "Reset", ioButtonStyle), kNoTag, "Presets")->SetAnimationEndActionFunction(resetToDefaultFunction);
+    pGraphics->AttachControl(new IVButtonControl(presetPanel.GetGridCell(1, 1, 2, 8).GetPadded(-2.f), SplashClickActionFunc, "Backup", ioButtonStyle), kNoTag, "Presets")->SetAnimationEndActionFunction(loadBackupFunction);
     // Built-in file selection
 #if !LOAD_WITH_DIALOG
     const IRECT presetMenuBounds = presetPanel.GetGridCell(1, 1, 2, 4).GetVShifted(presetPanel.GetGridCell(1, 1, 2, 5).H()).GetPadded(0.f, 0.f, 100.f, 100.f);
