@@ -1577,11 +1577,15 @@ bool Tablitsa::OnMessage(int msgTag, int ctrlTag, int dataSize, const void* pDat
       break;
     }
     case kMsgUpdateLFO1Plot:
+    {
       dynamic_cast<ModPlotControl*>(GetUI()->GetControlWithTag(kCtrlTagLFO1Plot))->SetPlotTable(static_cast<const double*>(mDSP.mGlobalLFO1.GetCurrentTable()));
       break;
+    }
     case kMsgUpdateLFO2Plot:
+    {
       dynamic_cast<ModPlotControl*>(GetUI()->GetControlWithTag(kCtrlTagLFO2Plot))->SetPlotTable(static_cast<const double*>(mDSP.mGlobalLFO2.GetCurrentTable()));
       break;
+    }
     case kMsgSeqSliderChanged:
     {
       // Read incoming data as a tuple
