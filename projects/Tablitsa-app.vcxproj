@@ -118,7 +118,7 @@
     <LinkIncremental />
     <LibraryPath>$(LibraryPath)</LibraryPath>
     <ExecutablePath>$(ExecutablePath)</ExecutablePath>
-    <IncludePath>$(ProjectDir)..\dependencies\vectorclass;$(WDL_PATH);$(IncludePath)</IncludePath>
+    <IncludePath>$(ProjectDir)..\dependencies\radiofarmer;$(ProjectDir)..\dependencies\vectorclass;$(WDL_PATH);$(IncludePath)</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <OutDir>$(SolutionDir)build-win\app\$(Platform)\$(Configuration)\</OutDir>
@@ -169,7 +169,7 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>$(APP_DEFS);$(DEBUG_DEFS);$(EXTRA_DEBUG_DEFS);WDL_FFT_REALSIZE=8;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>C:\Users\bramc\VST-Development\iPlug2\WDL;C:\Program Files\boost_1_75_0;$(APP_INC_PATHS);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)\..\..\..\WDL;$(SolutionDir)\..\dependencies\vectorclass;$(SolutionDir)\..\dependencies\radiofarmer;$(APP_INC_PATHS);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <EnableEnhancedInstructionSet>AdvancedVectorExtensions</EnableEnhancedInstructionSet>
@@ -178,7 +178,7 @@
     <Link>
       <AdditionalDependencies>$(APP_LIBS);%(AdditionalDependencies)</AdditionalDependencies>
       <SubSystem>Windows</SubSystem>
-      <AdditionalLibraryDirectories>C:\Program Files\boost_1_75_0\stage\lib\;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
     <ResourceCompile />
     <ResourceCompile>
@@ -212,7 +212,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>$(APP_DEFS);$(RELEASE_DEFS);$(EXTRA_RELEASE_DEFS);WDL_FFT_REALSIZE=8;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>C:\Users\bramc\VST-Development\iPlug2\WDL;$(APP_INC_PATHS);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)\..\dependencies\vectorclass;$(ProjectDir)\..\dependencies\radiofarmer;$(SolutionDir)\..\..\..\WDL\;$(APP_INC_PATHS);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
       <EnableEnhancedInstructionSet>AdvancedVectorExtensions2</EnableEnhancedInstructionSet>
@@ -323,6 +323,7 @@
     <ClInclude Include="..\..\..\IGraphics\Platforms\IGraphicsWin.h" />
     <ClInclude Include="..\..\..\IPlug\APP\IPlugAPP.h" />
     <ClInclude Include="..\..\..\IPlug\APP\IPlugAPP_host.h" />
+    <ClInclude Include="..\..\..\IPlug\Extras\Oversampler.h" />
     <ClInclude Include="..\..\..\IPlug\Extras\Synth\ControlRamp.h" />
     <ClInclude Include="..\..\..\IPlug\Extras\Synth\MidiSynth.h" />
     <ClInclude Include="..\..\..\IPlug\Extras\Synth\SynthVoice.h" />
@@ -342,6 +343,17 @@
     <ClInclude Include="..\..\..\IPlug\IPlugUtilities.h" />
     <ClInclude Include="..\..\..\IPlug\IPlug_include_in_plug_hdr.h" />
     <ClInclude Include="..\..\..\IPlug\IPlug_include_in_plug_src.h" />
+    <ClInclude Include="..\dependencies\radiofarmer\allpass.h" />
+    <ClInclude Include="..\dependencies\radiofarmer\biquad.h" />
+    <ClInclude Include="..\dependencies\radiofarmer\cm.h" />
+    <ClInclude Include="..\dependencies\radiofarmer\delayline.h" />
+    <ClInclude Include="..\dependencies\radiofarmer\filters.h" />
+    <ClInclude Include="..\dependencies\radiofarmer\radiofarmerDSP.h" />
+    <ClInclude Include="..\dependencies\radiofarmer\radiofarmer_config.h" />
+    <ClInclude Include="..\dependencies\radiofarmer\reverb.h" />
+    <ClInclude Include="..\dependencies\radiofarmer\waveguide.h" />
+    <ClInclude Include="..\dependencies\radiofarmer\waveshaper.h" />
+    <ClInclude Include="..\FastOversampler.h" />
     <ClInclude Include="..\OversamplingFilter.h" />
     <ClInclude Include="..\TablitsaControls.h" />
     <ClInclude Include="..\TablitsaEffects.h" />
@@ -349,7 +361,6 @@
     <ClInclude Include="..\Modulation.h" />
     <ClInclude Include="..\Modulators.h" />
     <ClInclude Include="..\PeriodicTable.h" />
-    <ClInclude Include="..\SignalProcessing.h" />
     <ClInclude Include="..\Tablitsa.h" />
     <ClInclude Include="..\TablitsaOscillators.h" />
     <ClInclude Include="..\TablitsaUIFunctions.h" />
@@ -442,11 +453,19 @@
     <ClCompile Include="..\..\..\IPlug\IPlugProcessor.cpp" />
     <ClCompile Include="..\..\..\IPlug\IPlugTimer.cpp" />
     <ClCompile Include="..\..\..\WDL\fft.c" />
-    <ClCompile Include="..\SignalProcessing.cpp" />
+    <ClCompile Include="..\dependencies\radiofarmer\allpass.cpp" />
+    <ClCompile Include="..\dependencies\radiofarmer\biquad.cpp" />
+    <ClCompile Include="..\dependencies\radiofarmer\cm.cpp" />
+    <ClCompile Include="..\dependencies\radiofarmer\filters.cpp" />
+    <ClCompile Include="..\dependencies\radiofarmer\reverb.cpp" />
+    <ClCompile Include="..\dependencies\radiofarmer\waveguide.cpp" />
+    <ClCompile Include="..\dependencies\radiofarmer\waveshaper.cpp" />
+    <ClCompile Include="..\FastOversampler.cpp" />
     <ClCompile Include="..\Tablitsa.cpp" />
     <ClCompile Include="..\TablitsaControls.cpp" />
-    <ClCompile Include="..\TablitsaEffects.cpp" />
+    <ClCompile Include="..\TablitsaUIFunctions.cpp" />
     <ClCompile Include="..\VectorFunctions.cpp" />
+    <ClCompile Include="..\VoiceThread.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="..\resources\main.rc" />

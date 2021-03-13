@@ -1,10 +1,11 @@
 #pragma once
 
+#include "radiofarmerDSP.h"
+
 #include "PeriodicTable.h"
 #include "TablitsaEffects.h"
 #include "TablitsaOscillators.h"
 #include "Modulation.h"
-
 
 #include "IPlugConstants.h"
 #include "Oscillator.h"
@@ -13,15 +14,24 @@
 #include "Smoothers.h"
 #include "LFO.h"
 
+#include "Oversampler.h"
+
 #ifdef VECTOR
  #define FRAME_INTERVAL OUTPUT_SIZE * 2
 #else
   #define FRAME_INTERVAL 1
 #endif
 
+#if _DEBUG
+#define EFFECT_OS_FACTOR 1
+#else
+#define EFFECT_OS_FACTOR 4
+#endif
+
 constexpr double kMaxEnvTimeScalar = 0.5;
 
 using namespace iplug;
+using namespace radiofarmer;
 
 /*
 Global Modulations (smoothers): These values are computed once per sample and sent to all voices 
@@ -496,8 +506,8 @@ public:
       // or write the entire control ramp to a buffer, like this, to get sample-accurate ramps:
       mInputs[kVoiceControlTimbre].Write(mTimbreBuffer.Get(), startIdx, nFrames); */
 
-      double pitch = mInputs[kVoiceControlPitch].endValue + mDetune; // pitch = (MidiKey - 69) / 12
-//      double pitchBend = mInputs[kVoiceControlPitchBend].endValue;
+      double pitchBend = mInputs[kVoiceControlPitchBend].endValue;
+      double pitch = mInputs[kVoiceControlPitch].endValue + pitchBend + mDetune; // pitch = (MidiKey - 69) / 12
 
       // Set the static (note-constant) modulator values
       T keytrack = (pitch * 12. + 69.) / 128.;
@@ -519,16 +529,11 @@ public:
       const double ringModFreqFact = pow(2., mVModulations.GetList()[kVRingModFreq][0] / 12.);
 
       // make sound output for each output channel
-      for(auto i = startIdx; i < startIdx + nFrames; i += FRAME_INTERVAL)
+      for (auto i = startIdx; i < startIdx + nFrames; i += FRAME_INTERVAL)
       {
         int bufferIdx = i - startIdx;
-//        float noise = mTimbreBuffer.Get()[i] * Rand();
+        //        float noise = mTimbreBuffer.Get()[i] * Rand();
         T ampEnvVal{ mModulators.GetList()[2][bufferIdx] }; // Calculated for easy access
-
-        // Panning
-        T panMod = mVModulations.GetList()[kVPan][bufferIdx];
-        T lPan = std::clamp(mPan[0] - panMod, -1., 1.); // TODO: optimize this somehow
-        T rPan = std::clamp(mPan[1] + panMod, -1., 1.);
 
         // Oscillator Parameters
         // Osc1
@@ -560,15 +565,6 @@ public:
         mOsc1.SetRingModulation(mVModulations.GetList()[kVRingModAmt][bufferIdx], osc1Freq * ringModFreqFact);
         mOsc2.SetRingModulation(mVModulations.GetList()[kVRingModAmt][bufferIdx], osc2Freq * ringModFreqFact);
 
-        constexpr int nEffectParams = kVEffect2Param1 - kVEffect1Param1;
-        for (int e{ 0 }, p{ 0 }; e < TABLITSA_MAX_VOICE_EFFECTS, p < TABLITSA_MAX_VOICE_EFFECTS * nEffectParams; e++, p += nEffectParams)
-        {
-          mEffects[e]->SetParam1(mVModulations.GetList()[kVEffect1Param1 + p][bufferIdx]);
-          mEffects[e]->SetParam2(mVModulations.GetList()[kVEffect1Param2 + p][bufferIdx]);
-          mEffects[e]->SetParam3(mVModulations.GetList()[kVEffect1Param3 + p][bufferIdx]);
-          mEffects[e]->SetParam4(mVModulations.GetList()[kVEffect1Param4 + p][bufferIdx]);
-        }
-        
         // Signal Processing
 #ifdef VECTOR
         Vec4d osc1_v = mOsc1.ProcessMultiple(osc1Freq) * osc1Amp;
@@ -581,27 +577,46 @@ public:
         std::array<T, OUTPUT_SIZE> osc1Output{ mOsc1.ProcessMultiple(osc1Freq) };
         std::array<T, OUTPUT_SIZE> osc2Output{ mOsc2.ProcessMultiple(osc2Freq) };
 #endif
-        
-       for (auto j = 0; j < FRAME_INTERVAL; ++j)
-       {
+        for (auto j = 0; j < FRAME_INTERVAL; ++j)
+        {
 #ifndef VECTOR
-         osc1Output[j] *= osc1Amp;
-         osc2Output[j] *= osc2Amp;
+          osc1Output[j] *= osc1Amp;
+          osc2Output[j] *= osc2Amp;
 #endif
-         // Filters
-         T filter1Output = mFilters[0]->Process(osc1Output[j] * mFilterSends[0][0] + osc2Output[j] * mFilterSends[0][1]);
-         T filter2Output = mFilters[1]->Process(osc1Output[j] * mFilterSends[1][0] + osc2Output[j] * mFilterSends[1][1]);
-         T output_summed = filter1Output + filter2Output;
-         T output_scaled = output_summed * ampEnvVal;
-         T output_stereo[]{ output_scaled * lPan, output_scaled * rPan };
+          // Filters
+          T filter1Output = mFilters[0]->Process(osc1Output[j] * mFilterSends[0][0] + osc2Output[j] * mFilterSends[0][1]);
+          T filter2Output = mFilters[1]->Process(osc1Output[j] * mFilterSends[1][0] + osc2Output[j] * mFilterSends[1][1]);
+          T output_summed = filter1Output + filter2Output;
+          T output_scaled = output_summed * ampEnvVal;
 
-         // Voice effects
-         for (auto* fx : mEffects)
-           fx->ProcessStereo(output_stereo);
+          // Panning
+          T panMod = mVModulations.GetList()[kVPan][bufferIdx + j];
+          mPanBuf.Get()[bufferIdx + j] = std::clamp(mPan[0] - panMod, -1., 1.); // TODO: optimize this somehow
+          mPanBuf.Get()[bufferIdx + j + nFrames] = std::clamp(mPan[1] + panMod, -1., 1.);
+          mEffectInputs.Get()[bufferIdx + j] = output_scaled;
+        }
+      }
 
-         outputs[0][i + j] += output_stereo[0] * mGain;
-         outputs[1][i + j] += output_stereo[1] * mGain;
-       }
+      UpsampleBlock<EFFECT_OS_FACTOR>(mOversampler, mEffectInputs.Get(), nFrames);
+      constexpr int nEffectParams = kVEffect2Param1 - kVEffect1Param1;
+      for (int e{ 0 }, p{ 0 }; e < TABLITSA_MAX_VOICE_EFFECTS; e++, p += nEffectParams)
+      {
+        mEffects[e]->SetContinuousParams(mVModulations.GetList()[kVEffect1Param1 + p][0],
+          mVModulations.GetList()[kVEffect1Param2 + p][0],
+          mVModulations.GetList()[kVEffect1Param3 + p][0],
+          mVModulations.GetList()[kVEffect1Param4 + p][0]);
+        mEffects[e]->ProcessBlock(mOversampler.mOutputSource->Get(), mOversampler.mOutputSource->Get(), nFrames * EFFECT_OS_FACTOR);
+      }
+      DownsampleBlock<EFFECT_OS_FACTOR>(mOversampler, mEffectInputs.Get(), nFrames);
+
+      {
+        std::lock_guard<std::mutex> lg(mMaster->mProcMutex);
+        for (auto i{ startIdx }; i < startIdx + nFrames; ++i)
+        {
+
+          outputs[0][i] += mEffectInputs.Get()[i - startIdx] * mPanBuf.Get()[i - startIdx] * mGain;
+          outputs[1][i] += mEffectInputs.Get()[i - startIdx] * mPanBuf.Get()[i - startIdx + nFrames] * mGain;
+        }
       }
     }
 
@@ -617,11 +632,19 @@ public:
 
       mFilters[0]->SetSampleRate(sampleRate);
       mFilters[1]->SetSampleRate(sampleRate);
-      
+
+      // Modulation buffers
       mVModulationsData.Resize(blockSize * kNumModulations);
       mVModulations.Empty();
 
+      // Modulator value buffer
       mModulators.EmptyAndResize(blockSize, kNumMods);
+
+      // Voice output buffers
+      mPanBuf.Resize(blockSize * 2);
+      mEffectInputs.Resize(blockSize);
+      mOutputs.Resize(blockSize * 2);
+      mOversampler.ResizeBuffers(blockSize);
 
       for (auto i = 0; i < kNumVoiceModulations; i++)
       {
@@ -643,8 +666,12 @@ public:
 
     void SetFilterType(int filter, int filterType)
     {
-      std::lock_guard<std::mutex> lg(mMaster->mProcMutex);
-      delete mFilters[filter];
+      std::lock_guard<std::mutex> lg(mMaster->mEffectMutex);
+      if (mFilters[filter])
+      {
+        delete mFilters[filter];
+        mFilters[filter] = nullptr;
+      }
       // Indices of cutoff/res/drive for the given filter
       switch (filterType) {
       case kVSF:
@@ -681,21 +708,37 @@ public:
     void SetEffect(const int effectSlot, const int effectId)
     {
       constexpr int numEffectModParams = kVEffect2Param1 - kVEffect1Param1;
-      // Note: Remember to set the min and max of the `ParameterModulator` object if any of the effects have different scales from the rest
-      std::lock_guard<std::mutex> lg(mMaster->mProcMutex);
-      delete mEffects[effectSlot];
+      std::lock_guard<std::mutex> lg(mMaster->mEffectMutex);
+
+      if (mEffects[effectSlot])
+        delete mEffects[effectSlot];
       switch (effectId)
       {
-      case kWaveshaperEffect:
+      case kDistortionEffect:
       {
-        mVoiceModParams[kVEffect1Param1 + effectSlot * numEffectModParams].SetMinMax(0., static_cast<double>(kNumWaveshaperModes - 1) + 0.1);
-        mEffects[effectSlot] = new Waveshaper<T>(mMaster->mSampleRate, 4.);
+        mVoiceModParams[kVEffect1Param1 + effectSlot * numEffectModParams].SetMinMax(0., static_cast<double>(kNumDistortionModes - 1) + 0.1);
+        mVoiceModParams[kVEffect1Param2 + effectSlot * numEffectModParams].SetMinMax(0., 1.);
+        mVoiceModParams[kVEffect1Param3 + effectSlot * numEffectModParams].SetMinMax(0., 1.);
+        mVoiceModParams[kVEffect1Param4 + effectSlot * numEffectModParams].SetMinMax(0., 1.);
+        mEffects[effectSlot] = new DistortionEffect<T>(mMaster->mSampleRate);
         break;
       }
       case kSampleAndHoldEffect:
       {
-        mVoiceModParams[kVEffect1Param1 + effectSlot * numEffectModParams].SetMinMax(0.5, 20.);
+        mVoiceModParams[kVEffect1Param1 + effectSlot * numEffectModParams].SetMinMax(0.05, 10.);
+        mVoiceModParams[kVEffect1Param2 + effectSlot * numEffectModParams].SetMinMax(0., 1.);
+        mVoiceModParams[kVEffect1Param3 + effectSlot * numEffectModParams].SetMinMax(0., 1.);
+        mVoiceModParams[kVEffect1Param4 + effectSlot * numEffectModParams].SetMinMax(0., 1.);
         mEffects[effectSlot] = new SampleAndHold<T>(mMaster->mSampleRate);
+        break;
+      }
+      case kTexturizerEffect:
+      {
+        mVoiceModParams[kVEffect1Param1 + effectSlot * numEffectModParams].SetMinMax(0., 1.);
+        mVoiceModParams[kVEffect1Param2 + effectSlot * numEffectModParams].SetMinMax(0., 1.);
+        mVoiceModParams[kVEffect1Param3 + effectSlot * numEffectModParams].SetMinMax(0., 1.);
+        mVoiceModParams[kVEffect1Param4 + effectSlot * numEffectModParams].SetMinMax(0., 1.);
+        mEffects[effectSlot] = new Texturizer<T>(mMaster->mSampleRate);
         break;
       }
       default:
@@ -752,17 +795,32 @@ public:
     bool mLegato{ false };
     bool mTriggered{ false }; // Set to true to prevent the note being retriggered immediately after the initial trigger
 
+    // Unison parameters
+    double mDetune{ 0. };
+    double mPan[2]{ 1., 1. };
+
+    // Sample and Beat data
+    double mTempo{ 120. };
+    bool mTransportIsRunning{ false };
+    double mQNPos{ 0. };
+
     // Static Modulators
     double mEnv1VelocityMod{ 0. };
     double mEnv2VelocityMod{ 0. };
     double mAmpEnvVelocityMod{ 1. };
 
     // Filters
-    std::vector<Filter<T>*> mFilters{ new NullFilter<T>(), new NullFilter<T>() };
+    std::vector<Filter<T>*> mFilters{ nullptr, nullptr };
     T mFilterSends[2][2]{ {1., 0.}, {0., 1.} };
 
     // Voice Effects
     std::vector<Effect<T>*> mEffects{ new Effect<T>(DEFAULT_SAMPLE_RATE), new Effect<T>(DEFAULT_SAMPLE_RATE), new Effect<T>(DEFAULT_SAMPLE_RATE) };
+    FastOversampler<T> mOversampler;
+
+    // Temporary output buffers
+    WDL_TypedBuf<T> mPanBuf;
+    WDL_TypedBuf<T> mEffectInputs;
+    WDL_TypedBuf<T> mOutputs;
 
     WDL_PtrList<T> mVModulations; // Pointers to modulator buffers
     WDL_TypedBuf<T> mVModulationsData; // Modulator buffer sample data
@@ -791,18 +849,18 @@ public:
       new ParameterModulator<>(0., 1., "Phase Mod Depth"),
       new ParameterModulator<>(-24., 24., "Ring Mod Freq"),
       new ParameterModulator<>(0., 1., "Ring Mod Depth"),
-      new ParameterModulator<>(0., 100., "Effect 1 Param 1"),
-      new ParameterModulator<>(0., 100., "Effect 1 Param 2"),
-      new ParameterModulator<>(0., 100., "Effect 1 Param 3"),
-      new ParameterModulator<>(0., 100., "Effect 1 Param 4"),
-      new ParameterModulator<>(0., 100., "Effect 2 Param 1"),
-      new ParameterModulator<>(0., 100., "Effect 2 Param 2"),
-      new ParameterModulator<>(0., 100., "Effect 2 Param 3"),
-      new ParameterModulator<>(0., 100., "Effect 2 Param 4"),
-      new ParameterModulator<>(0., 100., "Effect 3 Param 1"),
-      new ParameterModulator<>(0., 100., "Effect 3 Param 2"),
-      new ParameterModulator<>(0., 100., "Effect 3 Param 3"),
-      new ParameterModulator<>(0., 100., "Effect 3 Param 4"), };
+      new ParameterModulator<>(0., 1., "Effect 1 Param 1"),
+      new ParameterModulator<>(0., 1., "Effect 1 Param 2"),
+      new ParameterModulator<>(0., 1., "Effect 1 Param 3"),
+      new ParameterModulator<>(0., 1., "Effect 1 Param 4"),
+      new ParameterModulator<>(0., 1., "Effect 2 Param 1"),
+      new ParameterModulator<>(0., 1., "Effect 2 Param 2"),
+      new ParameterModulator<>(0., 1., "Effect 2 Param 3"),
+      new ParameterModulator<>(0., 1., "Effect 2 Param 4"),
+      new ParameterModulator<>(0., 1., "Effect 3 Param 1"),
+      new ParameterModulator<>(0., 1., "Effect 3 Param 2"),
+      new ParameterModulator<>(0., 1., "Effect 3 Param 3"),
+      new ParameterModulator<>(0., 1., "Effect 3 Param 4"), };
 
     // Modulator parameters that can themselves be modulated
     ModulatedParameterList<T, kNumVoiceMetaModulations> mVoiceMetaModParams{
@@ -816,18 +874,6 @@ public:
       new ParameterModulator<>(0.01, 40., "Sequencer Rate Hz", true),
       new ParameterModulator<>(0., 1., "Sequencer Amp"),
     };
-
-    // Unison parameters
-    double mDetune{ 0. };
-    double mPan[2]{ 1., 1. };
-
-    // Sample and Beat data
-    double mTempo{ 120. };
-    bool mTransportIsRunning{ false };
-    double mQNPos{ 0. };
-
-    LogParamSmooth<T> mFilter1Smoother{ 10. };
-    LogParamSmooth<T> mFilter2Smoother{ 10. };
 
     int mID;
 
@@ -864,45 +910,47 @@ public:
   }
 
   void ProcessBlock(T** inputs, T** outputs, int nOutputs, int nFrames, double qnPos = 0., bool transportIsRunning = false, double tempo = 120.)
-  {
-    std::lock_guard<std::mutex> lg(mProcMutex);
+	{
+	  std::lock_guard<std::mutex> lg(mEffectMutex);
 
-    // clear outputs
-    for(auto i = 0; i < nOutputs; i++)
-    {
-      memset(outputs[i], 0, nFrames * sizeof(T));
-    }
-    // Process global modulators
-    mGlobalLFO1.FillBuffer(nFrames);
-    mGlobalLFO2.FillBuffer(nFrames);
-    mGlobalSequencer.FillBuffer(nFrames);
+		// clear outputs
+		for(auto i = 0; i < nOutputs; i++)
+		{
+			memset(outputs[i], 0, nFrames * sizeof(T));
+		}
+		// Process global modulators
+		mGlobalLFO1.FillBuffer(nFrames);
+		mGlobalLFO2.FillBuffer(nFrames);
+		mGlobalSequencer.FillBuffer(nFrames);
 
-    // Process voices
-    mParamSmoother.ProcessBlock(mParamsToSmooth, mModulations.GetList(), nFrames); // Populate modulations list (to be sent to mSynth as inputs)
-    SetTempoAndBeat(qnPos, transportIsRunning, tempo, mTSNum, mTSDenom);
-    mSynth.ProcessBlock(mModulations.GetList(), outputs, 0, nOutputs, nFrames);
+		// Process voices
+		mParamSmoother.ProcessBlock(mParamsToSmooth, mModulations.GetList(), nFrames); // Populate modulations list (to be sent to mSynth as inputs)
+		SetTempoAndBeat(qnPos, transportIsRunning, tempo, mTSNum, mTSDenom);
+		mSynth.ProcessBlock(mModulations.GetList(), outputs, 0, nOutputs, nFrames);
 
-    for(int s=0; s < nFrames;s++)
-    {
-      const T smoothedGain = mModulations.GetList()[kModGainSmoother][s];
+		for (int s{ 0 }; s < nFrames; ++s)
+		{
+			const T smoothedGain = mModulations.GetList()[kModGainSmoother][s];
 
-      // Master effects processing
-      T stereo_in[2]{ outputs[0][s], outputs[1][s] };
-      mEffects[0]->ProcessStereo(stereo_in);
-      mEffects[1]->ProcessStereo(stereo_in);
-      mEffects[2]->ProcessStereo(stereo_in);
+			// Master effects processing
+			StereoSample<T> stereo_in{ outputs[0][s], outputs[1][s] };
+			mEffects[0]->ProcessStereo(stereo_in);
+			mEffects[1]->ProcessStereo(stereo_in);
+			mEffects[2]->ProcessStereo(stereo_in);
+			
+			outputs[0][s] = stereo_in.l;
+			outputs[1][s] = stereo_in.r;
 
-      outputs[0][s] = stereo_in[0];
-      outputs[1][s] = stereo_in[1];
-
-      outputs[0][s] *= smoothedGain;
-      outputs[1][s] *= smoothedGain;
-    }
-  }
+			outputs[0][s] *= smoothedGain;
+			outputs[1][s] *= smoothedGain;
+		}
+	}
 
   void Reset(double sampleRate, int blockSize)
   {
-    mSampleRate = sampleRate;
+    mBlockSize = blockSize;
+	  mSampleRate = sampleRate;
+
     mSynth.SetSampleRateAndBlockSize(sampleRate, blockSize);
     ResetAllVoices();
     mSynth.ForEachVoice([sampleRate](SynthVoice& voice) {
@@ -1749,6 +1797,7 @@ public:
       }
       case kParamFilter1Type:
       {
+        std::lock_guard<std::mutex> lg(mEffectMutex);
         mFilter1Comb = static_cast<int>(value) == kComb;
         ForEachVoice([value](Voice& voice) {
           voice.SetFilterType(0, static_cast<int>(value));
@@ -2327,6 +2376,7 @@ public:
   double mLastNoteOn{ 0 };
 
   // Audio processing and musical parameters
+  int mBlockSize{ DEFAULT_BLOCK_SIZE };
   double mSampleRate{ DEFAULT_SAMPLE_RATE };
   int mTSNum{ 4 };
   int mTSDenom{ 4 };
@@ -2368,4 +2418,5 @@ public:
   };
 
   std::mutex mProcMutex;
+  std::mutex mEffectMutex;
 };

@@ -172,7 +172,7 @@
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>$(VST3_DEFS);VST3;$(DEBUG_DEFS);$(EXTRA_DEBUG_DEFS);%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
-      <AdditionalIncludeDirectories>C:\Users\bramc\VST-Development\iPlug2\WDL;C:\Users\bramc\VST-Development\vectorclass;C:\Users\bramc\VST-Development\vectorclass\vector3d;$(VST3_INC_PATHS);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)\..\dependencies\radiofarmer;$(ProjectDir)\..\dependencies\vectorclass;$(ProjectDir)\..\..\..\WDL;$(VST3_INC_PATHS);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -211,7 +211,7 @@
       <PreprocessorDefinitions>$(VST3_DEFS);$(RELEASE_DEFS);$(EXTRA_RELEASE_DEFS);%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
-      <AdditionalIncludeDirectories>C:\Users\bramc\VST-Development\iPlug2\WDL;C:\Users\bramc\VST-Development\vectorclass;C:\Users\bramc\VST-Development\vectorclass\vector3d;$(VST3_INC_PATHS);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)\..\dependencies\radiofarmer;$(ProjectDir)\..\dependencies\vectorclass;$(ProjectDir)\..\..\..\WDL;$(VST3_INC_PATHS);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <EnableEnhancedInstructionSet>AdvancedVectorExtensions2</EnableEnhancedInstructionSet>
     </ClCompile>
     <Link>
@@ -346,9 +346,22 @@
     <ClInclude Include="..\..\..\IPlug\VST3\IPlugVST3_Parameter.h" />
     <ClInclude Include="..\..\..\IPlug\VST3\IPlugVST3_ProcessorBase.h" />
     <ClInclude Include="..\..\..\IPlug\VST3\IPlugVST3_View.h" />
+    <ClInclude Include="..\dependencies\radiofarmer\allpass.h" />
+    <ClInclude Include="..\dependencies\radiofarmer\biquad.h" />
+    <ClInclude Include="..\dependencies\radiofarmer\cm.h" />
+    <ClInclude Include="..\dependencies\radiofarmer\delayline.h" />
+    <ClInclude Include="..\dependencies\radiofarmer\filters.h" />
+    <ClInclude Include="..\dependencies\radiofarmer\radiofarmerDSP.h" />
+    <ClInclude Include="..\dependencies\radiofarmer\radiofarmer_config.h" />
+    <ClInclude Include="..\dependencies\radiofarmer\reverb.h" />
+    <ClInclude Include="..\dependencies\radiofarmer\waveguide.h" />
+    <ClInclude Include="..\dependencies\radiofarmer\waveshaper.h" />
+    <ClInclude Include="..\FastOversampler.h" />
     <ClInclude Include="..\Tablitsa.h" />
+    <ClInclude Include="..\TablitsaUIFunctions.h" />
     <ClInclude Include="..\Tablitsa_DSP.h" />
     <ClInclude Include="..\resources\resource.h" />
+    <ClInclude Include="..\VoiceThread.h" />
     <ClInclude Include="..\Wavetable.h" />
   </ItemGroup>
   <ItemGroup>
@@ -437,11 +450,20 @@
     <ClCompile Include="..\..\..\IPlug\VST3\IPlugVST3.cpp" />
     <ClCompile Include="..\..\..\IPlug\VST3\IPlugVST3_ProcessorBase.cpp" />
     <ClCompile Include="..\..\..\WDL\fft.c" />
-    <ClCompile Include="..\SignalProcessing.cpp" />
+    <ClCompile Include="..\dependencies\radiofarmer\allpass.cpp" />
+    <ClCompile Include="..\dependencies\radiofarmer\biquad.cpp" />
+    <ClCompile Include="..\dependencies\radiofarmer\cm.cpp" />
+    <ClCompile Include="..\dependencies\radiofarmer\filters.cpp" />
+    <ClCompile Include="..\dependencies\radiofarmer\modulator.cpp" />
+    <ClCompile Include="..\dependencies\radiofarmer\reverb.cpp" />
+    <ClCompile Include="..\dependencies\radiofarmer\waveguide.cpp" />
+    <ClCompile Include="..\dependencies\radiofarmer\waveshaper.cpp" />
+    <ClCompile Include="..\FastOversampler.cpp" />
     <ClCompile Include="..\Tablitsa.cpp" />
     <ClCompile Include="..\TablitsaControls.cpp" />
-    <ClCompile Include="..\TablitsaEffects.cpp" />
+    <ClCompile Include="..\TablitsaUIFunctions.cpp" />
     <ClCompile Include="..\VectorFunctions.cpp" />
+    <ClCompile Include="..\VoiceThread.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="..\resources\main.rc" />

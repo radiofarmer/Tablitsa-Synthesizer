@@ -25,6 +25,6 @@ Icon?
 .DS_Stor*
 *.RPP-bak
 installer*
-dependencies/*
+dependencies/vectorclass*
 Tablitsa-Installer*
 Releases*

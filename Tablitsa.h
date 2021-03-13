@@ -1,7 +1,11 @@
 #pragma once
 
-#if !_DEBUG
+#define DEBUG_VECTOR 0
+
+#if !_DEBUG || DEBUG_VECTOR
 #define VECTOR
+//#define VECTOR_VOICE_EFFECTS_TEST
+//#define VECTOR_MASTER_EFFECTS_TEST
 #endif
 
 #include "IPlug_include_in_plug_hdr.h"
@@ -9,8 +13,8 @@
 
 #define TABLITSA_MAX_VOICE_EFFECTS 3
 #define TABLITSA_MAX_MASTER_EFFECTS 3
-#define TABLITSA_VOICE_EFFECTS_LIST {"None", "Waveshaper", "Sample & Hold"}
-#define TABLITSA_MASTER_EFFECTS_LIST {"None", "Delay", "EQ"}
+#define TABLITSA_VOICE_EFFECTS_LIST {"None", "Sample & Hold", "Texturizer", "Distortion"}
+#define TABLITSA_MASTER_EFFECTS_LIST {"None", "Delay", "EQ", "Reverb 1", "Reverb 2"}
 
 const int kNumPresets = 1;
 constexpr int kNumVoices = 16;
@@ -666,19 +670,24 @@ enum EModulators
   kNumMods
 };
 
+// This must be in the same order as the effect labels. (If you change the effect order, this is all you need to modify)
 enum EVoiceEffectTypes
 {
   kNoVoiceEffect=0,
-  kWaveshaperEffect,
   kSampleAndHoldEffect,
+  kTexturizerEffect,
+  kDistortionEffect,
+  kLimiterEffect,
   kNumVoiceEffectTypes
 };
 
 enum EMasterEffectTypes
 {
-  kNoMasterEffect=0,
+  kNoMasterEffect = 0,
   kDelayEffect,
   kEQEffect,
+  kReverbEffect,
+  kReverb2Effect,
   kNumMasterEffectTypes
 };
 

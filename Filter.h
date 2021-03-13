@@ -1,13 +1,14 @@
 #pragma once
 
-#include "SignalProcessing.h"
+#include "radiofarmerDSP.h"
 
-#include "vectorclass.h"
+#include "VectorFunctions.h"
 
 #include <vector>
 #include <cmath>
 #include <functional>
 
+using namespace radiofarmer;
 
 #define FILTER_TYPE_LIST "None", "VSF", "Moog Ladder", "Comb"
 #define FILTER_MODE_LIST_VSF  "Lowpass", "Highpass", "Bandpass", "Allpass"
@@ -28,7 +29,7 @@ enum EFilters
 
 /* General function for processing a biquad filter in direct form II*/
 template<typename T>
-inline T ProcessBiquadII(T s, T* a, T* b, DelayLine<T, 2>& z)
+inline T ProcessBiquadII(T s, T* a, T* b, DelayLine<2>& z)
 {
   T sum = s - a[0] * z[0] - a[1] * z[1];
   T out = sum * b[0] + z[0] * b[1] + z[1] * b[2];
@@ -77,6 +78,7 @@ public:
   }
 
   virtual T Process(double s) { return s;  }
+  virtual Vec4d __vectorcall Process_Vector(Vec4d s) { return s; }
 
 protected:
   const double pi{ 3.14159265359 };
@@ -124,59 +126,69 @@ public:
     SetMode(kLowpass);
   }
 
-  inline void SetCutoff(double cutoffNorm)
+  void SetCutoff(double cutoffNorm) override
   {
     mFc = std::max(std::min(cutoffNorm, 0.99), 0.001);
   }
 
-  inline void SetQ(double q)
+  void SetQ(double q) override
   {
-    mQ = 1. / std::max(1 - q, 0.001);
+#ifdef STATE_SPACE_FILTER
+    mQ = q;
+#else
+    if (mMode == kBandpass)
+      mQ = mFc / (mMaxBandwidth * (1. - q));
+    else
+      mQ = 1. / std::max(1. - q, 0.001);
+#endif
+  }
+
+  void SetDrive(double drive) override
+  {
+    mDrive = drive * 2.;
   }
 
   void Reset()
   {
-    mZ[0] = 0;
-    mZ[1] = 0;
+    mZ.reset();
   }
 
   inline void CalculateCoefficients()
   {
-    if (mMode == kBandpass)
-      mQAdj = mFc / (mQ * mBandwidth);
-    else
-      mQAdj = mQ;
-
     const double twoPiFc{ twoPi * mFc };
-    const double minusPiFcOverQ{ -twoPiFc / (2. * mQAdj) };
+    const double minusPiFcOverQ{ -twoPiFc / (2. * mQ) };
 
     mA = 2. * std::cos(twoPiFc) * std::exp(minusPiFcOverQ);
     mB = std::exp(2 * minusPiFcOverQ);
+
+    if (mMode == kBandpass)
+      mC = std::cos(pi * mFc) * std::sqrt(1 - mA + mB);
+    else if (mMode == kAllpass)
+      mC = 1.;
+    else
+      mC = 1 - mA + mB;
   }
 
   inline T ProcessLowpass(T s)
   {
-    T s_out = mA * mZ[0] - mB * mZ[1] + (1 - mA + mB) * s;
-    mZ[1] = mZ[0];
-    mZ[0] = s_out;
+    T s_out = mA * mZ[0] - mB * mZ[1] + mC * s;
+    mZ.push(s_out);
     return s_out;
   }
 
   inline T ProcessHighpass(T s)
   {
-    T sum = s * (1 - mB + mA) + mA * mZ[0] - mB * mZ[1];
-    T s_out = sum - 2 * mZ[0] + mZ[1];
-    mZ[1] = mZ[0];
-    mZ[0] = sum;
+    T sum = mA * mZ[0] - mB * mZ[1] + s; // Do not multiply s by C!
+    T s_out = sum - 2. * mZ[0] + mZ[1];
+    mZ.push(sum);
     return s_out;
   }
 
   inline T ProcessBandpass(T s)
   {
-    T sum = s * std::cos(pi * mFc) * std::sqrt(1 - mA + mB) + mA * mZ[0] - mB * mZ[1];
-    T s_out = sum - 2 * mZ[0] + mZ[1];
-    mZ[1] = mZ[0];
-    mZ[0] = sum;
+    T sum = s * mC + mA * mZ[0] - mB * mZ[1];
+    T s_out = sum - mZ[0];
+    mZ.push(sum);
     return s_out;
   }
 
@@ -184,15 +196,14 @@ public:
   {
     T sum = mB * (mA * mZ[0] - mB * mZ[1] + s);
     T s_out = sum - mA * mZ[0] + mZ[1];
-    mZ[1] = mZ[0];
-    mZ[0] = sum;
+    mZ.push(sum);
     return s_out;
   }
 
   inline T Process(double s)
   {
     CalculateCoefficients();
-    T overdrive = SoftClip<T>(s, 1. + mDrive * 2.);
+    T overdrive = SoftClip<T, 5>(s * (1. + mDrive));
     s += mDrive * (overdrive - s);
     return (this->*mProcessFunctions[mMode])(s);
   }
@@ -200,9 +211,10 @@ public:
 private:
   T mA{ 0. };
   T mB{ 0. };
-  T mBandwidth{ 0.25 };
-  T mQAdj{ 0. };
-  T mZ[2]{};
+  T mC{ 1. };
+
+  const double mMaxBandwidth{ 0.05 };
+  DelayLine<2> mZ;
   SVF2ProcessFunc mProcessFunctions[kNumFilters]{ &SVF2::ProcessLowpass, &SVF2::ProcessHighpass, &SVF2::ProcessBandpass, &SVF2::ProcessAllpass };
 };
 
@@ -392,8 +404,8 @@ private:
   int mDelayLength;
   T& mFF{ mFc }; // Feedforward used as alias for cutoff
   T& mFB{ mQ }; // Feedback used as alias for resonance
-  DelayLine<T, COMB_MAX_DELAY> mDelayIn;
-  DelayLine<T, COMB_MAX_DELAY> mDelayOut;
+  DelayLine<COMB_MAX_DELAY> mDelayIn;
+  DelayLine<COMB_MAX_DELAY> mDelayOut;
 };
 
 template<typename T, class V=void, bool LowShelf=true>
