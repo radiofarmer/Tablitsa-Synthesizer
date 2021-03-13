@@ -329,7 +329,7 @@ class DistortionEffect : public Effect<T, V>
   inline T SoftClipBdJDistortion(T x) const
   {
     x *= mGain;
-    return (x / (x * x + 1.)) * 2.;
+    return std::clamp((x / (x * x + 1.)) * 2., -1., 1.);
   }
 
   inline T HardClipDistortion(T x) const
