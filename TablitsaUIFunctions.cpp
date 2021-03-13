@@ -135,7 +135,56 @@ void InitDelayUI(Plugin* pPlugin, IGraphics* pGraphics, std::vector<IControl*> c
     knob->SetDisabled(false);
 }
 
-/* EQ */
+/* DISTORTION (VOICE) */
+
+void InitDistortionUI(Plugin* pPlugin, IGraphics* pGraphics, std::vector<IControl*> controls, const std::vector<int>& params, const std::vector<char*>& paramNames, const bool reset)
+{
+  std::vector<IControl*> allKnobs;
+  allKnobs.insert(allKnobs.begin(), controls.begin(), controls.begin() + 4);
+  for (auto* knob : allKnobs)
+    knob->SetDisabled(false);
+
+  const double minResFreq = 100. / pPlugin->GetSampleRate();
+  const double maxResFreq = 10000. / pPlugin->GetSampleRate();
+
+  pPlugin->GetParam(params[0])->InitDouble(paramNames[0], reset ? 0. : pPlugin->GetParam(params[0])->Value(), 0., 1., 0.01);
+  pPlugin->GetParam(params[1])->InitDouble(paramNames[1], reset ? 0. : pPlugin->GetParam(params[1])->Value(), 0., 1., 0.01);
+  pPlugin->GetParam(params[2])->InitDouble(paramNames[2], reset ? 0. : pPlugin->GetParam(params[3])->Value(), minResFreq, maxResFreq, 0.01, "", 0, "", IParam::ShapeExp());
+  pPlugin->GetParam(params[3])->InitDouble(paramNames[3], reset ? 0. : pPlugin->GetParam(params[3])->Value(), 0., 1., 0.01);
+  pGraphics->HideControl(params[4], true);
+  pGraphics->HideControl(params[5], true);
+
+  pPlugin->GetParam(params[0])->SetDisplayFunc(nullptr);
+  pPlugin->GetParam(params[1])->SetDisplayFunc(PercentDisplayFunc);
+  pPlugin->GetParam(params[2])->SetDisplayFunc([pPlugin, minResFreq, maxResFreq](double value, WDL_String& str) {
+    str.SetFormatted(MAX_PARAM_DISPLAY_LEN, "%.0f", pPlugin->GetSampleRate() * value);
+    str.Append(" Hz");
+    });
+  pPlugin->GetParam(params[3])->SetDisplayFunc(PercentDisplayFunc);
+
+  for (int i{ 0 }; i < TABLITSA_EFFECT_PARAMS; ++i)
+    controls[i]->SetValue(pPlugin->GetParam(params[i])->Value());
+
+  // All knobs used
+  controls[0]->SetDisabled(false);
+  controls[1]->SetDisabled(false);
+  controls[2]->SetDisabled(false);
+  controls[3]->SetDisabled(false);
+  // Labels
+  dynamic_cast<IVKnobControl*>(controls[0])->SetLabelStr("Cutoff");
+  dynamic_cast<IVKnobControl*>(controls[1])->SetLabelStr("Drive");
+  dynamic_cast<IVKnobControl*>(controls[2])->SetLabelStr("Res Freq");
+  dynamic_cast<IVKnobControl*>(controls[3])->SetLabelStr("Res Amt");
+  // Modulation on for knob 1
+  dynamic_cast<TablitsaIVModKnobControl*>(controls[0])->EnableModulation(true);
+  // Toggle action functions
+  controls[4]->SetActionFunction(nullptr);
+  controls[5]->SetActionFunction(nullptr);
+  controls[4]->Hide(true);
+  controls[5]->Hide(true);
+}
+
+/* EQ (MASTER) */
 
 void InitEqualizerUI(Plugin* pPlugin, IGraphics* pGraphics, std::vector<IControl*> controls, const std::vector<int>& params, const std::vector<char*>& paramNames, const bool reset)
 {
@@ -167,7 +216,7 @@ void InitEqualizerUI(Plugin* pPlugin, IGraphics* pGraphics, std::vector<IControl
   controls[5]->SetActionFunction(nullptr);
 }
 
-/* REVERB */
+/* REVERB 1 & 2 (MASTER) */
 
 void InitReverbUI(Plugin* pPlugin, IGraphics* pGraphics, std::vector<IControl*> controls, const std::vector<int>& params, const std::vector<char*>& paramNames, const bool reset)
 {
@@ -294,7 +343,7 @@ void InitTexturizerUI(Plugin* pPlugin, IGraphics* pGraphics, std::vector<IContro
   pGraphics->HideControl(params[5], true);
 
 
-  pPlugin->GetParam(params[0])->SetDisplayFunc(nullptr);
+  pPlugin->GetParam(params[0])->SetDisplayFunc(PercentDisplayFunc);
   pPlugin->GetParam(params[1])->SetDisplayFunc(PercentDisplayFunc);
   pPlugin->GetParam(params[2])->SetDisplayFunc([pPlugin, minResFreq, maxResFreq](double value, WDL_String& str) {
     str.SetFormatted(MAX_PARAM_DISPLAY_LEN, "%.0f", pPlugin->GetSampleRate() * value);
@@ -474,6 +523,10 @@ void SwapVoiceEffectsUI(int effectSlot, IControl* pEffectsList, IGraphics* pGrap
   IControl* toggle2 = pGraphics->GetControlWithTag(kCtrlTagVoiceEffectsToggle2);
   std::vector<IControl*> allKnobs{ knob1, knob2, knob3, knob4 };
   std::vector<IControl*> controls{ knob1, knob2, knob3, knob4, toggle1, toggle2 };
+
+  // Reset display strings for param one (which is sometimes an enum)
+  //pPlugin->GetParam(params[0])->SetDisplayText(0., "");
+  //pPlugin->GetParam(params[0])->SetDisplayText(1., "");
 
   // Swap out effect parameters (and rearrange controls if necessary)
   int effectIdx = dynamic_cast<DropdownListControl*>(pEffectsList)->GetCurrentIndex(); // ID number of the effect

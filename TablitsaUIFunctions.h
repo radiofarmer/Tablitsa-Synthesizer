@@ -18,11 +18,15 @@ void DelayStereoToggle(IGraphics* pGraphics, const std::vector<IControl*>& contr
 
 void InitDelayUI(Plugin* pPlugin, IGraphics* pGraphics, std::vector<IControl*> controls, const std::vector<int>& params, const std::vector<char*>& paramNames, const bool reset = true);
 
-/* EQ */
+/* DISTORTION (VOICE) */
+
+void InitDistortionUI(Plugin* pPlugin, IGraphics* pGraphics, std::vector<IControl*> controls, const std::vector<int>& params, const std::vector<char*>& paramNames, const bool reset = false);
+
+/* EQ (MASTER) */
 
 void InitEqualizerUI(Plugin* pPlugin, IGraphics* pGraphics, std::vector<IControl*> controls, const std::vector<int>& params, const std::vector<char*>& paramNames, const bool reset = true);
 
-/* REVERB */
+/* REVERB 1 & 2 (MASTER) */
 
 void InitReverbUI(Plugin* pPlugin, IGraphics* pGraphics, std::vector<IControl*> controls, const std::vector<int>& params, const std::vector<char*>& paramNames, const bool reset = true);
 

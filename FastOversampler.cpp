@@ -4,13 +4,14 @@
 template<>
 void UpsampleBlock<1>(FastOversampler<sample>& oversampler, const sample* inputs, const int nFrames)
 {
-  // Do nothing
+  // Set output source to inputs
+  oversampler.mOutputSource->Set(inputs, nFrames);
 }
 
 template<>
 void DownsampleBlock<1>(FastOversampler<sample>& oversampler, sample* outputs, const int nFrames)
 {
-  // Do nothing
+  memcpy(outputs, oversampler.mOutputSource->Get(), nFrames * sizeof(outputs[0]));
 }
 
 /* 2x Oversampling */
