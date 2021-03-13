@@ -43,6 +43,7 @@ public:
     assert(minDelay > 1. && maxDelay > minDelay && "Delay value out of range!");
     mMaxDelay = maxDelay;
     mMinDelay = minDelay;
+    mDelay.SetDelay(static_cast<int>(maxDelay * mSampleRate / 1000.));
     if (adjust)
       AdjustAllFilters();
   }
@@ -59,6 +60,10 @@ public:
   void SetGain(sample_t gain)
   {
     mGain = gain;
+  }
+  void SetMix(sample_t mix)
+  {
+    mMix = mix;
   }
 
   void AdjustAllFilters()
@@ -104,7 +109,7 @@ public:
 
   inline void ProcessStereo(StereoSample<>& s)
   {
-    sample_t sum1 = mGain * (s.l + s.r);
+    sample_t sum1 = mGain * mDelay[0];
 
     // Process mono filters
     sample_t monoLine{ sum1 };
@@ -121,8 +126,14 @@ public:
       r_in = mStereoFilters[i][1].Process(r_in);
     }
 
-    s.l += l_in;
-    s.r += r_in;
+    mDelay.push(0.5 * (s.l + s.r) + mGain * 0.5 * (l_in + r_in));
+
+    const sample_t g2{ 1 - mGain * mGain };
+    const sample_t l_out{ l_in * g2 - mGain * s.l };
+    const sample_t r_out{ r_in * g2 - mGain * s.r };
+
+    s.l += mMix * (l_out - s.l);
+    s.r += mMix * (r_out - s.r);
   }
 
 protected:
@@ -131,10 +142,12 @@ protected:
   sample_t mMinDelay;
   sample_t mMaxFeedback;
   sample_t mMinFeedback;
-  sample_t mGain;
+  sample_t mGain{ 0.5 };
+  sample_t mMix{ 1. };
 
   Allpass1 mMonoFilters[NM];
   Allpass1 mStereoFilters[NS][2];
+  DelayLine<16384> mDelay;
 };
 
 class UFDNReverb

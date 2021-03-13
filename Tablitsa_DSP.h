@@ -1797,7 +1797,6 @@ public:
       }
       case kParamFilter1Type:
       {
-        std::lock_guard<std::mutex> lg(mEffectMutex);
         mFilter1Comb = static_cast<int>(value) == kComb;
         ForEachVoice([value](Voice& voice) {
           voice.SetFilterType(0, static_cast<int>(value));

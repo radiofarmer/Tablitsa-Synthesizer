@@ -661,15 +661,19 @@ public:
 
   void SetParam1(T value) override
   {
-    mReverb.SetDelay(value * (MaxDelayMS - MinDelayMS), MinDelayMS, true);
+    mReverb.SetDelay(MinDelayMS + 2. + value * (MaxDelayMS - MinDelayMS), MinDelayMS, true);
   }
   void SetParam2(T value) override
   {
     mReverb.SetFeedback(MinFeedback + value * FeedbackRange, MinFeedback, true);
   }
-  void SetParam4(T value) override
+  void SetParam3(T value) override
   {
     mReverb.SetGain(value);
+  }
+  void SetParam4(T value) override
+  {
+    mReverb.SetMix(value);
   }
 
   T Process(T s) override
