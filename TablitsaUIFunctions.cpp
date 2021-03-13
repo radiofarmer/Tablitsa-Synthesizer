@@ -144,39 +144,31 @@ void InitDistortionUI(Plugin* pPlugin, IGraphics* pGraphics, std::vector<IContro
   for (auto* knob : allKnobs)
     knob->SetDisabled(false);
 
-  const double minResFreq = 100. / pPlugin->GetSampleRate();
-  const double maxResFreq = 10000. / pPlugin->GetSampleRate();
-
-  pPlugin->GetParam(params[0])->InitDouble(paramNames[0], reset ? 0. : pPlugin->GetParam(params[0])->Value(), 0., 1., 0.01);
+  pPlugin->GetParam(params[0])->InitEnum(paramNames[0], reset ? EWaveshaperMode::kWaveshapeSine : pPlugin->GetParam(params[0])->Value(), { DISTORTION_TYPES });
   pPlugin->GetParam(params[1])->InitDouble(paramNames[1], reset ? 0. : pPlugin->GetParam(params[1])->Value(), 0., 1., 0.01);
-  pPlugin->GetParam(params[2])->InitDouble(paramNames[2], reset ? 0. : pPlugin->GetParam(params[3])->Value(), minResFreq, maxResFreq, 0.01, "", 0, "", IParam::ShapeExp());
+  pPlugin->GetParam(params[2])->InitDouble(paramNames[2], reset ? 0. : pPlugin->GetParam(params[3])->Value(), 0.01, 1., 0.01);
   pPlugin->GetParam(params[3])->InitDouble(paramNames[3], reset ? 0. : pPlugin->GetParam(params[3])->Value(), 0., 1., 0.01);
   pGraphics->HideControl(params[4], true);
   pGraphics->HideControl(params[5], true);
 
+
   pPlugin->GetParam(params[0])->SetDisplayFunc(nullptr);
   pPlugin->GetParam(params[1])->SetDisplayFunc(PercentDisplayFunc);
-  pPlugin->GetParam(params[2])->SetDisplayFunc([pPlugin, minResFreq, maxResFreq](double value, WDL_String& str) {
-    str.SetFormatted(MAX_PARAM_DISPLAY_LEN, "%.0f", pPlugin->GetSampleRate() * value);
-    str.Append(" Hz");
-    });
+  pPlugin->GetParam(params[2])->SetDisplayFunc(PercentDisplayFunc);
   pPlugin->GetParam(params[3])->SetDisplayFunc(PercentDisplayFunc);
 
   for (int i{ 0 }; i < TABLITSA_EFFECT_PARAMS; ++i)
     controls[i]->SetValue(pPlugin->GetParam(params[i])->Value());
 
-  // All knobs used
-  controls[0]->SetDisabled(false);
   controls[1]->SetDisabled(false);
   controls[2]->SetDisabled(false);
-  controls[3]->SetDisabled(false);
   // Labels
-  dynamic_cast<IVKnobControl*>(controls[0])->SetLabelStr("Cutoff");
-  dynamic_cast<IVKnobControl*>(controls[1])->SetLabelStr("Drive");
-  dynamic_cast<IVKnobControl*>(controls[2])->SetLabelStr("Res Freq");
-  dynamic_cast<IVKnobControl*>(controls[3])->SetLabelStr("Res Amt");
-  // Modulation on for knob 1
-  dynamic_cast<TablitsaIVModKnobControl*>(controls[0])->EnableModulation(true);
+  dynamic_cast<IVKnobControl*>(controls[0])->SetLabelStr("Type");
+  dynamic_cast<IVKnobControl*>(controls[1])->SetLabelStr("Gain");
+  dynamic_cast<IVKnobControl*>(controls[2])->SetLabelStr("Noise");
+  dynamic_cast<IVKnobControl*>(controls[3])->SetLabelStr("Mix");
+  // Modulation off for knob 1
+  dynamic_cast<TablitsaIVModKnobControl*>(controls[0])->EnableModulation(false);
   // Toggle action functions
   controls[4]->SetActionFunction(nullptr);
   controls[5]->SetActionFunction(nullptr);
@@ -524,18 +516,14 @@ void SwapVoiceEffectsUI(int effectSlot, IControl* pEffectsList, IGraphics* pGrap
   std::vector<IControl*> allKnobs{ knob1, knob2, knob3, knob4 };
   std::vector<IControl*> controls{ knob1, knob2, knob3, knob4, toggle1, toggle2 };
 
-  // Reset display strings for param one (which is sometimes an enum)
-  //pPlugin->GetParam(params[0])->SetDisplayText(0., "");
-  //pPlugin->GetParam(params[0])->SetDisplayText(1., "");
-
   // Swap out effect parameters (and rearrange controls if necessary)
   int effectIdx = dynamic_cast<DropdownListControl*>(pEffectsList)->GetCurrentIndex(); // ID number of the effect
   switch (effectIdx)
   {
-  case kWaveshaperEffect:
+  case kDistortionEffect:
   {
-    std::vector<char*> paramNames{ "Waveshaper Mode", "Waveshaper Gain" , "", "Waveshaper Wet Mix" };
-    InitWaveshaperUI(pPlugin, pGraphics, controls, params, paramNames, reset);
+    std::vector<char*> paramNames{ "Distortion Type", "Distortion Gain" , "Distortion Noise", "Distortion Wet Mix" };
+    InitDistortionUI(pPlugin, pGraphics, controls, params, paramNames, reset);
     break;
   }
   case kSampleAndHoldEffect:
@@ -546,7 +534,7 @@ void SwapVoiceEffectsUI(int effectSlot, IControl* pEffectsList, IGraphics* pGrap
   }
   case kTexturizerEffect:
   {
-    std::vector<char*> paramNames{ "Texturizer Cutoff", "Texturizer Resonance" , "????", "Texturizer Mix" };
+    std::vector<char*> paramNames{ "Texturizer Cutoff", "Texturizer Drive" , "Texturizer Res. Freq.", "Texturizer Res. Amt." };
     InitTexturizerUI(pPlugin, pGraphics, controls, params, paramNames, reset);
     break;
   }

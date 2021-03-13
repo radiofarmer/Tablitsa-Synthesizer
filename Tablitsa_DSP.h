@@ -713,13 +713,13 @@ public:
         delete mEffects[effectSlot];
       switch (effectId)
       {
-      case kWaveshaperEffect:
+      case kDistortionEffect:
       {
-        mVoiceModParams[kVEffect1Param1 + effectSlot * numEffectModParams].SetMinMax(0., static_cast<double>(kNumWaveshaperModes - 1) + 0.1);
+        mVoiceModParams[kVEffect1Param1 + effectSlot * numEffectModParams].SetMinMax(0., static_cast<double>(kNumDistortionModes - 1) + 0.1);
         mVoiceModParams[kVEffect1Param2 + effectSlot * numEffectModParams].SetMinMax(0., 1.);
         mVoiceModParams[kVEffect1Param3 + effectSlot * numEffectModParams].SetMinMax(0., 1.);
         mVoiceModParams[kVEffect1Param4 + effectSlot * numEffectModParams].SetMinMax(0., 1.);
-        mEffects[effectSlot] = new Waveshaper<T>(mMaster->mSampleRate, 4.);
+        mEffects[effectSlot] = new DistortionEffect<T>(mMaster->mSampleRate);
         break;
       }
       case kSampleAndHoldEffect:
