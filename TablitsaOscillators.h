@@ -14,7 +14,7 @@
 
 #include <vectorclass.h>
 
-#ifdef VECTOR || DEBUG_VECTOR
+#ifdef VECTOR
 #define OVERSAMPLING 2
 #define VECTOR_SIZE 4
 #define OUTPUT_SIZE VECTOR_SIZE / 2
@@ -36,18 +36,21 @@ class VectorOscillator final : public FastSinOscillator<T>
   } ALIGNED(8);
 
 public:
-  VectorOscillator(T startPhase=0.) : FastSinOscillator<T>(startPhase) {}
+  VectorOscillator(T startPhase=0.) : FastSinOscillator<T>(startPhase)
+  {
+    mIncrVector = new Vec4d(0., 1., 2., 3.);
+  }
   
   inline Vec4d __vectorcall ProcessBlock4_Vector()
   {
     double phase = IOscillator<T>::mPhase + (double)UNITBIT32;
     const double phaseIncr = IOscillator<T>::mPhaseIncr * FastSinOscillator<T>::tableSize;
-    Vec4d vPhase = phase + phaseIncr * mIncrVector;
+    Vec4d vPhase = phase + phaseIncr * *mIncrVector;
 
     // Read 4 doubles as 8 integers (signed ints are used, but the AND operations later make this irrelevant)
     Vec8i viPhase = reinterpret_i(vPhase);
     // Upper 32 bits of 3*2^19 in ______ indices, 0xFFFF in _____: i.e. 0xFFFF, 0x18, 0xFFFF, ...
-    Vec8i normhipart = blend8<HIOFFSET_V, 8, HIOFFSET_V, 8, HIOFFSET_V, 8, HIOFFSET_V, 8>(reinterpret_i(Vec4d((double)UNITBIT32)), Vec8i(0xFFFFFFFF));
+    Vec8i normhipart = blend8<8, HIOFFSET_V, 8, HIOFFSET_V, 8, HIOFFSET_V, 8, HIOFFSET_V>(reinterpret_i(Vec4d((double)UNITBIT32)), Vec8i(0xFFFF));
     // Mask the 8-item vector of 32-bit ints with one less than the table size, pad the upper bits (lower indices) with zeros, and reinterpret as a 4-item vector of 64-bit ints
     Vec8i offsets32 = viPhase & tableSizeM1;
     Vec4q offsets = reinterpret_i(permute8<HIOFFSET_V, -1, HIOFFSET_V + 2, -1, HIOFFSET_V + 4, -1, HIOFFSET_V + 6, -1>(offsets32));
@@ -77,8 +80,13 @@ public:
     return ProcessBlock4_Vector();
   }
 
+  ~VectorOscillator()
+  {
+    delete mIncrVector;
+  }
+
 private:
-  const Vec4d mIncrVector = Vec4d(0., 1., 2., 3.);
+  const Vec4d* mIncrVector;
 } ALIGNED(8);
 
 END_IPLUG_NAMESPACE
@@ -341,7 +349,7 @@ public:
     // Read 4 doubles as 8 integers (signed ints are used, but the AND operations later make this irrelevant)
     Vec8i viPhase = reinterpret_i(vPhase);
     // Upper 32 bits of 3*2^19 in ______ indices, 0xFFFF in _____: i.e. 0xFFFF, 0x18, 0xFFFF, ...
-    Vec8i normhipart = blend8<8, HIOFFSET_V, 8, HIOFFSET_V, 8, HIOFFSET_V, 8, HIOFFSET_V>(reinterpret_i(Vec4d((double)UNITBIT32)), Vec8i(0));//Vec8i(0xFFFFFFFF));
+    Vec8i normhipart = blend8<8, HIOFFSET_V, 8, HIOFFSET_V, 8, HIOFFSET_V, 8, HIOFFSET_V>(reinterpret_i(Vec4d((double)UNITBIT32)), Vec8i(0xFFFF));
     // Mask the 8-item vector of 32-bit ints with one less than the table size, pad the upper bits (lower indices) with zeros, and reinterpret as a 4-item vector of 64-bit ints
     Vec8i offsets32 = viPhase & mTableSizeM1;
     Vec4q offsets = reinterpret_i(permute8<HIOFFSET_V, -1, HIOFFSET_V + 2, -1, HIOFFSET_V + 4, -1, HIOFFSET_V + 6, -1>(offsets32));
