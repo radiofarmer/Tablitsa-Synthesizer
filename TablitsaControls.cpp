@@ -551,8 +551,8 @@ void PeriodicTable::Draw(IGraphics& g)
   };
 
   // Draw current wavetable icons
-  const IRECT activeElem1 = mRECT.GetFromRight(80.f).GetGridCell(0, 0, 2, 1).GetCentredInside(70.f, 80.f);
-  const IRECT activeElem2 = mRECT.GetFromRight(80.f).GetGridCell(1, 0, 2, 1).GetCentredInside(70.f, 80.f);
+  const IRECT activeElem1 = mRECT.GetFromRight(80.f).GetGridCell(0, 0, 2, 1).GetCentredInside(70.f, 90.f);
+  const IRECT activeElem2 = mRECT.GetFromRight(80.f).GetGridCell(1, 0, 2, 1).GetCentredInside(70.f, 90.f);
   DrawElement(g, activeElem1, mSelectedElements[0], 0);
   DrawElement(g, activeElem2, mSelectedElements[1], 1);
 
@@ -565,7 +565,7 @@ void PeriodicTable::DrawElement(IGraphics& g, const IRECT& bounds, int atomicNum
   IColor col{ mTableLoading[idx] ? ElementIconColor[idx].WithOpacity(0.5f) : ElementIconColor[idx] };
 
   g.DrawRect(col, bounds);
-  g.DrawText(LabelText, (atomicNumber) ? "Wavetable 2" : "Wavetable 1", bounds.GetVShifted(-20.f).GetFromTop(20.f));
+  g.DrawText(LabelText, (idx) ? "Wavetable 2" : "Wavetable 1", bounds.GetVShifted(-20.f).GetFromTop(20.f));
   g.DrawText(ElementIconText.WithSize(42).WithFGColor(col), ElementSymbols[atomicNumber - 1], bounds.GetReducedFromTop(25.f).GetReducedFromBottom(30.f));
 
   // Check for multiline name and draw name
