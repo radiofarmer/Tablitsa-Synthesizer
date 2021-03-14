@@ -103,9 +103,6 @@
     </ClCompile>
     <ClCompile Include="..\VectorFunctions.cpp" />
     <ClCompile Include="..\TablitsaControls.cpp" />
-    <ClCompile Include="..\dependencies\radiofarmer\cm.cpp">
-      <Filter>dsp</Filter>
-    </ClCompile>
     <ClCompile Include="..\dependencies\radiofarmer\allpass.cpp">
       <Filter>dsp</Filter>
     </ClCompile>

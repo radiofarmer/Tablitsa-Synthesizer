@@ -160,9 +160,6 @@
     <ClCompile Include="..\dependencies\radiofarmer\biquad.cpp">
       <Filter>dsp</Filter>
     </ClCompile>
-    <ClCompile Include="..\dependencies\radiofarmer\cm.cpp">
-      <Filter>dsp</Filter>
-    </ClCompile>
     <ClCompile Include="..\dependencies\radiofarmer\modulator.cpp">
       <Filter>dsp</Filter>
     </ClCompile>

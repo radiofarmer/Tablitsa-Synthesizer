@@ -12,6 +12,9 @@ void DelayDisplayFunc(double value, WDL_String& str);
 
 void SetAllEffectControlsDirty(IGraphics* pGraphics, int idx);
 
+/* COEFFICIENT MODULATOR (VOICE) */
+
+void InitCoefModUI(Plugin* pPlugin, IGraphics* pGraphics, std::vector<IControl*> controls, const std::vector<int>& params, const std::vector<char*>& paramNames, const bool reset = true);
 
 /* DELAY (MASTER) */
 
@@ -43,7 +46,7 @@ void InitSampleAndHoldUI(Plugin* pPlugin, IGraphics* pGraphics, std::vector<ICon
 
 void InitTexturizerUI(Plugin* pPlugin, IGraphics* pGraphics, std::vector<IControl*> controls, const std::vector<int>& params, const std::vector<char*>& paramNames, const bool reset = true);
 
-/* WAVESHAERP (Voice) */
+/* WAVESHAPER (Voice) */
 
 void InitWaveshaperUI(Plugin* pPlugin, IGraphics* pGraphics, std::vector<IControl*> controls, const std::vector<int>& params, const std::vector<char*>& paramNames, const bool reset = true);
 

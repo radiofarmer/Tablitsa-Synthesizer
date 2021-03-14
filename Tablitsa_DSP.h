@@ -621,7 +621,8 @@ public:
         mEffects[e]->SetContinuousParams(mVModulations.GetList()[kVEffect1Param1 + p][0],
           mVModulations.GetList()[kVEffect1Param2 + p][0],
           mVModulations.GetList()[kVEffect1Param3 + p][0],
-          mVModulations.GetList()[kVEffect1Param4 + p][0]);
+          mVModulations.GetList()[kVEffect1Param4 + p][0],
+          pitch);
         mEffects[e]->ProcessBlock(mOversampler.mOutputSource->Get(), mOversampler.mOutputSource->Get(), nFrames * EFFECT_OS_FACTOR);
       }
       DownsampleBlock<EFFECT_OS_FACTOR>(mOversampler, mEffectOutputs.Get(), nFrames);
@@ -764,6 +765,15 @@ public:
         mVoiceModParams[kVEffect1Param3 + effectSlot * numEffectModParams].SetMinMax(0., 1.);
         mVoiceModParams[kVEffect1Param4 + effectSlot * numEffectModParams].SetMinMax(0., 1.);
         mEffects[effectSlot] = new Texturizer<T>(mMaster->mSampleRate);
+        break;
+      }
+      case kCMEffect:
+      {
+        mVoiceModParams[kVEffect1Param1 + effectSlot * numEffectModParams].SetMinMax(0., 1.);
+        mVoiceModParams[kVEffect1Param2 + effectSlot * numEffectModParams].SetMinMax(-2., 2.);
+        mVoiceModParams[kVEffect1Param3 + effectSlot * numEffectModParams].SetMinMax(0., 1.);
+        mVoiceModParams[kVEffect1Param4 + effectSlot * numEffectModParams].SetMinMax(0., 1.);
+        mEffects[effectSlot] = new CMEffect<T>(mMaster->mSampleRate);
         break;
       }
       default:

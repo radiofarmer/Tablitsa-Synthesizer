@@ -12,15 +12,37 @@ struct ap_stage
   sample_t y1;
 };
 
-class AllpassCascade
+template<int NumStages>
+class ModulatedAllpass
 {
 public:
-  AllpassCascade(int numStages);
+  ModulatedAllpass()
+  {
+    for (int i{ 0 }; i < NumStages; ++i)
+    {
+      mStages[i].x1 = 0.;
+      mStages[i].y1 = 0.;
+    }
+  }
 
-  sample_t Process(sample_t s, sample_t m);
+  inline sample_t Process(sample_t s, sample_t m)
+  {
+    ap_stage* stage = &mStages[0];
+
+    sample_t y{};
+#pragma clang loop unroll(full)
+    for (int i{ 0 }; i < NumStages; ++i)
+    {
+      y = stage->x1 - m * (s - stage->y1);
+      stage->x1 = s;
+      stage->y1 = y;
+      s = stage->y1;
+      stage++;
+    }
+    return y;
+  }
 
 private:
-  const int mNumStages;
   ap_stage mStages[CM_MAX_STAGES]{};
 };
 

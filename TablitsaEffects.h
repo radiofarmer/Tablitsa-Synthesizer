@@ -5,6 +5,7 @@
 
 #include "Filter.h"
 #include "Modulators.h"
+#include "TablitsaOscillators.h"
 
 #include "vectormath_trig.h"
 #include "vectormath_hyp.h"
@@ -59,7 +60,7 @@ public:
 
   // TODO make the individual SetParam...() functions non-virtual to improve performance.
   // Or just move the entire contents of those functions into this one (only for voice effects)
-  virtual void SetContinuousParams(const T p1, const T p2, const T p3, const T p4)
+  virtual void SetContinuousParams(const T p1, const T p2, const T p3, const T p4, const T pitch)
   {
     SetParam1(p1);
     SetParam2(p2);
@@ -71,6 +72,47 @@ protected:
   T mSampleRate;
   T mMix{ 0. };
   const int mVectorSize;
+};
+
+/* Coefficient Modulation ("Super Ring") */
+template<typename T, class V=Vec4d>
+class CMEffect : public Effect<T, V>
+{
+public:
+  CMEffect(T sampleRate) : Effect<T, V>(sampleRate) {}
+
+  void SetContinuousParams(const T p1, const T p2, const T p3, const T p4, const T pitch)
+  {
+    mModDepth = p1;
+    mModRate = 440. * std::pow(2., pitch + p2); // p2 is scaled in octaves
+    mOsc.SetFreqCPS(mModRate);
+    mMix = p4;
+  }
+
+  T Process(T s) override
+  {
+    return mCMFilters.Process(s, mModDepth);
+  }
+
+  void ProcessBlock(T* inputs, T* outputs, const int nFrames)
+  {
+    T oscVals[4];
+    for (int i{ 0 }; i < nFrames; i += 4)
+    {
+      mOsc.Process_Vector().store(oscVals);
+#pragma clang loop unroll(full)
+      for (int ii{ 0 }; ii < 4; ++ii)
+      {
+        outputs[i + ii] = inputs[i + ii] + mMix * (mCMFilters.Process(inputs[i + ii], mModDepth * oscVals[ii]) - inputs[i + ii]);
+      }
+    }
+  }
+
+private:
+  T mModDepth{ 0. };
+  T mModRate;
+  VectorOscillator<T> mOsc;
+  ModulatedAllpass<5> mCMFilters;
 };
 
 #define DELAY_TEMPODIV_VALIST "1/64", "1/32", "1/16T", "1/16", "1/16D", "1/8T", "1/8", "1/8D", "1/4", "1/4D", "1/2", "1/1"
@@ -298,7 +340,7 @@ enum EDistortion
 };
 
 template<typename T, class V = Vec4d>
-class DistortionEffect : public Effect<T, V>
+class DistortionEffect final : public Effect<T, V>
 {
   static constexpr int BufferLength{ 1024 };
   static constexpr T BufferScale{ 1. / BufferLength };
@@ -343,7 +385,7 @@ class DistortionEffect : public Effect<T, V>
 public:
   DistortionEffect(T sampleRate) : Effect<T, V>(sampleRate) {}
 
-  void SetContinuousParams(T p1, T p2, T p3, T p4) override
+  void SetContinuousParams(const T p1, const T p2, const T p3, const T p4, const T pitch) override
   {
     mType = static_cast<int>(p1 + 0.01);
     mGain = std::pow(10., p2 * 1.5) * (1. + p3 * (static_cast<double>(std::rand() % 1000) * 0.001 - 0.5));
@@ -387,7 +429,7 @@ public:
     }
   }
 
-protected:
+private:
   T mGain;
   T mAvgIn{ 0.25 };
   T mAvgOut{ 1. };
@@ -399,7 +441,7 @@ protected:
 
 /* 3-Band EQ */
 template<typename T, class V = Vec4d>
-class EQ3Effect : public Effect<T, V>
+class EQ3Effect final : public Effect<T, V>
 {
   static constexpr T pi{ 3.14159265359 };
   static constexpr T twoPi{ 6.28318530718 };
@@ -504,7 +546,7 @@ public:
     s.r = DoProcess(mStateR, mZ1, s.r);
   }
 
-protected:
+private:
   EQState mStateL;
   EQState mStateR;
   T mMidFreq{ 1. };
@@ -515,7 +557,7 @@ protected:
 };
 
 template<typename T, class V = Vec4d>
-class SampleAndHold : public Effect<T, V>
+class SampleAndHold final : public Effect<T, V>
 {
   typedef typename deduce_vector_from<V>::int_vec Vi;
 
@@ -548,7 +590,7 @@ public:
   void SetParam2(T value) override { SetDecay(value); }
   void SetParam3(T value) override { SetJitter(value); }
 
-  void SetContinousParams(T param1, T param2, T param3, T param4)
+  void SetContinousParams(const T p1, const T p2, const T p3, const T p4, const T pitch)
   {
     SetRateMS(param1);
     SetDecay(param2);
@@ -638,7 +680,7 @@ public:
     delete mHold_v;
   }
 
-protected:
+private:
   T mHold{ 0. };
   T mDecay{ 0. };
   StereoSample<T> mStereoHold{ 0., 0. };
@@ -653,7 +695,7 @@ protected:
 };
 
 template<typename T, class V=Vec4d>
-class ReverbEffect : public Effect<T, V>
+class ReverbEffect final : public Effect<T, V>
 {
   static constexpr T MaxDelayMS = 100.;
   static constexpr T MinDelayMS = 5.;
@@ -706,12 +748,12 @@ public:
     mReverb.ProcessStereo(s);
   }
 
-protected:
+private:
   CascadeReverb<6, 2> mReverb;
 };
 
 template<typename T, class V=Vec4d>
-class Reverb2Effect : public Effect<T, V>
+class Reverb2Effect final : public Effect<T, V>
 {
 public:
   Reverb2Effect(T sampleRate) : Effect<T, V>(sampleRate), mReverb(sampleRate)
@@ -728,12 +770,12 @@ public:
     mReverb.ProcessStereo(s);
   }
 
-protected:
+private:
   UFDNReverb mReverb;
 };
 
 template<typename T, class V = Vec4d>
-class Texturizer : public Effect<T, V>
+class Texturizer final : public Effect<T, V>
 {
 
 public:
@@ -750,21 +792,21 @@ public:
       mAP[i].SetSampleRate(sampleRate);
   }
 
-  void SetContinuousParams(T param1, T param2, T param3, T param4) override
+  void SetContinuousParams(const T p1, const T p2, const T p3, const T p4, const T pitch) override
   {
-    mFc = param1;
-    mQ = param2;
+    mFc = p1;
+    mQ = p2;
     for (int i{ 0 }; i < 2; ++i)
     {
-      mPk[i].SetCutoff(param3);
+      mPk[i].SetCutoff(p3);
     }
     for (int i{ 0 }; i < 2; ++i)
     {
-      mPk[i].SetPeakGain(param4);
+      mPk[i].SetPeakGain(p4);
     }
     SetFilterCoefs();
 
-    mMix = param4;
+    mMix = p4;
   }
 
   void SetFilterCoefs() {
@@ -797,7 +839,7 @@ public:
     }
   }
 
-protected:
+private:
   DelayLine<4> mZ;
   T mFc{ 1. };
   T mQ{ 0. };
@@ -818,7 +860,7 @@ enum EWaveshaperMode
 };
 
 template<typename T, class V = Vec4d>
-class Waveshaper : public Effect<T, V>
+class Waveshaper final : public Effect<T, V>
 {
   static constexpr T piOver2{ (T)1.57079632679 };
   static constexpr T pi{ (T)3.14159265359 };
@@ -897,7 +939,7 @@ public:
     SetThreshold(1. - (mMaxGain - 1.) * (value * mMaxGainCeil));
   }
 
-  void SetContinuousParams(T param1, T param2, T param3, T param4) override
+  void SetContinuousParams(const T p1, const T p2, const T p3, const T p4, const T pitch) override
   {
     SetMode(static_cast<EWaveshaperMode>(param1 + 0.01));
 
@@ -986,7 +1028,7 @@ public:
     mThresh = thresh;
   }
 
-protected:
+private:
   const T mMaxGain; // Can be used to normalize inputs, since a waveshaper's behavior is amplitude-dependent
   const T mMaxGainCeil;
   T mGain{ (T)1 };

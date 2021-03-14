@@ -31,6 +31,45 @@ void SetAllEffectControlsDirty(IGraphics* pGraphics, int idx)
     ctrl->SetDirty(true);
 }
 
+/* COEFICIENT MODULATOR (VOICE) */
+
+void InitCoefModUI(Plugin* pPlugin, IGraphics* pGraphics, std::vector<IControl*> controls, const std::vector<int>& params, const std::vector<char*>& paramNames, const bool reset)
+{
+  std::vector<IControl*> allKnobs;
+  allKnobs.insert(allKnobs.begin(), controls.begin(), controls.begin() + 4);
+  pPlugin->GetParam(params[0])->InitDouble(paramNames[0], reset ? 0. : pPlugin->GetParam(params[0])->Value(), 0., 1., 0.01);
+  pPlugin->GetParam(params[1])->InitDouble(paramNames[1], reset ? 0. : pPlugin->GetParam(params[1])->Value(), -2., 2., 0.01, " 8v.");
+  pPlugin->GetParam(params[3])->InitDouble(paramNames[3], reset ? 0. : pPlugin->GetParam(params[3])->Value(), 0., 1., 0.01);
+
+  pPlugin->GetParam(params[0])->SetDisplayFunc(PercentDisplayFunc);
+  pPlugin->GetParam(params[1])->SetDisplayFunc(nullptr);
+  pPlugin->GetParam(params[3])->SetDisplayFunc(PercentDisplayFunc);
+
+  // Reset param 1 display texts
+  auto* p1 = pPlugin->GetParam(params[0]);
+  p1->SetDisplayPrecision(2);
+
+  for (int i{ 0 }; i < TABLITSA_EFFECT_PARAMS; ++i)
+    controls[i]->SetValue(pPlugin->GetParam(params[i])->Value());
+
+  controls[0]->SetDisabled(false);
+  controls[1]->SetDisabled(false);
+  controls[2]->SetDisabled(true);
+  controls[3]->SetDisabled(false);
+  pGraphics->HideControl(params[4], true);
+  pGraphics->HideControl(params[5], true);
+  dynamic_cast<IVKnobControl*>(controls[0])->SetLabelStr("Mod Depth");
+  dynamic_cast<IVKnobControl*>(controls[1])->SetLabelStr("Pitch");
+  dynamic_cast<IVKnobControl*>(controls[2])->SetLabelStr("");
+  dynamic_cast<IVKnobControl*>(controls[3])->SetLabelStr("Mix");
+  // Modulation ON for knob 1
+  dynamic_cast<TablitsaIVModKnobControl*>(controls[0])->EnableModulation(true);
+  // Toggle action functions
+  controls[4]->SetActionFunction(nullptr);
+  controls[5]->SetActionFunction(nullptr);
+  controls[4]->Hide(true);
+  controls[5]->Hide(true);
+}
 
 /* DELAY (MASTER) */
 
@@ -538,6 +577,12 @@ void SwapVoiceEffectsUI(int effectSlot, IControl* pEffectsList, IGraphics* pGrap
   {
     std::vector<char*> paramNames{ "Texturizer Cutoff", "Texturizer Drive" , "Texturizer Res. Freq.", "Texturizer Res. Amt." };
     InitTexturizerUI(pPlugin, pGraphics, controls, params, paramNames, reset);
+    break;
+  }
+  case kCMEffect:
+  {
+    std::vector<char*> paramNames{ "SuperRing Depth", "Voice Effect Param 2" , "Voice Effect Param 3", "SuperRing Mix" };
+    InitCoefModUI(pPlugin, pGraphics, controls, params, paramNames, reset);
     break;
   }
   default:

@@ -49,7 +49,7 @@ public:
 
     // Read 4 doubles as 8 integers (signed ints are used, but the AND operations later make this irrelevant)
     Vec8i viPhase = reinterpret_i(vPhase);
-    // Upper 32 bits of 3*2^19 in ______ indices, 0xFFFF in _____: i.e. 0xFFFF, 0x18, 0xFFFF, ...
+    // Upper 32 bits of 3*2^19 in odd indices, 0xFFFF in even ones: i.e. 0xFFFF, 0x18, 0xFFFF, ...
     Vec8i normhipart = blend8<8, HIOFFSET_V, 8, HIOFFSET_V, 8, HIOFFSET_V, 8, HIOFFSET_V>(reinterpret_i(Vec4d((double)UNITBIT32)), Vec8i(0xFFFF));
     // Mask the 8-item vector of 32-bit ints with one less than the table size, pad the upper bits (lower indices) with zeros, and reinterpret as a 4-item vector of 64-bit ints
     Vec8i offsets32 = viPhase & tableSizeM1;
@@ -74,9 +74,6 @@ public:
 
   inline Vec4d __vectorcall Process_Vector()
   {
-//    double output[4];
-//    FastSinOscillator<T>::ProcessBlock(output, 4);
-//    return Vec4d().load_a(output);
     return ProcessBlock4_Vector();
   }
 
@@ -232,8 +229,6 @@ public:
   {
     AdjustWavetable(freqCPS);
 #ifdef POLYPHASE_FILTER
-
-
 #if OVERSAMPLING == 4
     T temp_in[16];
     T temp_out[4];
@@ -412,7 +407,6 @@ public:
     Vec4d ringMod = RingMod();
     mixed = mul_add(ringMod - 1., mRM * mRingModAmt * mixed, mixed);
 
-    // Using recursive function
     return mixed;
   }
 

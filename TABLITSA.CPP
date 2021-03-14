@@ -1639,6 +1639,11 @@ bool Tablitsa::OnMessage(int msgTag, int ctrlTag, int dataSize, const void* pDat
           voice.SetEffect(msgTag - kMsgVoiceEffect1Changed, kTexturizerEffect);
           });
         break;
+      case kCMEffect:
+        mDSP.ForEachVoice([msgTag, this](TablitsaDSP<sample>::Voice& voice) {
+          voice.SetEffect(msgTag - kMsgVoiceEffect1Changed, kCMEffect);
+          });
+        break;
       default:
         mDSP.ForEachVoice([msgTag, this](TablitsaDSP<sample>::Voice& voice) {
           voice.SetEffect(msgTag - kMsgVoiceEffect1Changed, kNoVoiceEffect);

@@ -458,7 +458,6 @@
     <ClCompile Include="..\..\..\WDL\fft.c" />
     <ClCompile Include="..\dependencies\radiofarmer\allpass.cpp" />
     <ClCompile Include="..\dependencies\radiofarmer\biquad.cpp" />
-    <ClCompile Include="..\dependencies\radiofarmer\cm.cpp" />
     <ClCompile Include="..\dependencies\radiofarmer\filters.cpp" />
     <ClCompile Include="..\dependencies\radiofarmer\reverb.cpp" />
     <ClCompile Include="..\dependencies\radiofarmer\waveguide.cpp" />
