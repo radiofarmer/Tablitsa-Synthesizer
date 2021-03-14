@@ -208,10 +208,11 @@ public:
     IOscillator<T>::SetFreqCPS(freqCPS);
     mMaxFormant = 0.5 * MaxNote / freqCPS;
 
-    if (mPrevFreq != static_cast<int>(freqCPS))
+    const int freq_adj{ static_cast<int>(freqCPS * mFormant) };
+    if (mPrevFreq != freq_adj)
     {
       SetMipmapLevel();
-      mPrevFreq = static_cast<int>(freqCPS);
+      mPrevFreq = freq_adj;
     }
     else
     {

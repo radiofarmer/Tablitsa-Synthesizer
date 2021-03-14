@@ -1809,7 +1809,7 @@ public:
         break;
       }
       case kParamWavetable2Formant:
-        mParamsToSmooth[kModWavetable2FormantSmoother] = value;
+        mParamsToSmooth[kModWavetable2FormantSmoother] = value / (T)100;
         break;
       case kParamWavetable2FormantEnv1:
       case kParamWavetable2FormantEnv2:
