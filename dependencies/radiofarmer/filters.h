@@ -51,7 +51,46 @@ public:
     mG = g / (g + 1.);
   }
 
-  void CalculateMatrix();
+
+  inline void CalculateMatrix()
+  {
+    CalculateCoefficients();
+    // y[n] = y[n-1] + g * (x[n] - y[n-1])
+    // y[n] = g * x[n] + (1 - g) * y[n-1]
+    /*
+    *         x[n+3]  x[n+2]  x[n+1]  x[n]  y[n+2]  y[n+1]  y[n]  y[n-1]
+    y[n]    | 0       0       0       g     0       0       0     1-g
+    y[n+1]  | 0       0       g       0     0       0       1-g   0
+    y[n+2]  | 0       g       0       0     0       1-g     0     0
+    y[n+3]  | g       0       0       0     1-g     0       0     0
+    */
+    const sample_t oneMinusG = 1. - mG;
+    sample_t coefs[4][5]{
+      {0.,    0.,   0.,   mG,   oneMinusG},
+      {0.,    0.,   mG,   0.,   0.},
+      {0.,    mG,   0.,   0.,   0.},
+      {mG,    0.,   0.,   0.,   0.}
+    };
+    // Store first row (transposed)
+#pragma clang loop unroll(full)
+    for (int ii{ 0 }; ii < 5; ++ii)
+      mCoefMat[ii][0] = coefs[0][ii];
+    // Calculate and fill rows 1-3
+#pragma clang loop unroll(full)
+    for (int i{ 1 }; i < 4; ++i)
+    {
+#pragma clang loop unroll(full)
+      for (int j{ 0 }; j < 5; ++j)
+      {
+        coefs[i][j] += oneMinusG * coefs[i - 1][j];
+      }
+
+      // Store transposed row
+#pragma clang loop unroll(full)
+      for (int ii{ 0 }; ii < 5; ++ii)
+        mCoefMat[ii][i] = coefs[i][ii];
+    }
+  }
 
   sample_v __vectorcall Process4Lowpass(sample_t* x);
   sample_v __vectorcall Process4Lowpass(sample_v x);

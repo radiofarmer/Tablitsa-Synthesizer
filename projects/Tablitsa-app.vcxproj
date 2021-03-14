@@ -347,6 +347,8 @@
     <ClInclude Include="..\dependencies\radiofarmer\biquad.h" />
     <ClInclude Include="..\dependencies\radiofarmer\cm.h" />
     <ClInclude Include="..\dependencies\radiofarmer\delayline.h" />
+    <ClInclude Include="..\dependencies\radiofarmer\fastmath.h" />
+    <ClInclude Include="..\dependencies\radiofarmer\fastmath_tables.h" />
     <ClInclude Include="..\dependencies\radiofarmer\filters.h" />
     <ClInclude Include="..\dependencies\radiofarmer\radiofarmerDSP.h" />
     <ClInclude Include="..\dependencies\radiofarmer\radiofarmer_config.h" />

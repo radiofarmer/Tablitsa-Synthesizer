@@ -1,17 +1,13 @@
 #pragma once
 
 #include "radiofarmer_config.h"
+#include "fastmath.h"
 #include "filters.h"
 
 #include <functional>
 #include <cmath>
 
 BEGIN_DSP_NAMESPACE
-
-static inline sample_t fast_tanh(sample_t x)
-{
-  return x / (1. + std::abs(2 * x));
-}
 
 /* Basic allpass filters */
 struct NonlinearAllpass
@@ -24,12 +20,12 @@ struct NonlinearAllpass
 
   inline sample_t s_func(sample_t x)
   {
-    return std::sin(3.14159 * a * fast_tanh(g * x));
+    return fast_sin_norm(a * fast_tanh(g * x));
   }
 
   inline sample_t c_func(sample_t x)
   {
-    return std::cos(3.14159 * a * fast_tanh(g * x));
+    return fast_cos_norm(a * fast_tanh(g * x));
   }
 };
 
@@ -48,6 +44,7 @@ public:
 
   void SetCoefs(sample_t a, sample_t g)
   {
+#pragma clang loop unroll(full)
     for (int i{ 0 }; i < N; ++i)
     {
       mLadder[i].a = a;
@@ -61,6 +58,7 @@ public:
     NonlinearAllpass* stage = mLadder;
     sample_t output[N];
 
+#pragma clang loop unroll(full)
     for (int i{ 0 }; i < N - 1; ++i)
     {
       const sample_t s_adj = stage->s_func(ipt_lp);
@@ -76,6 +74,7 @@ public:
     output[N-1] = stage->z * c_adj + s_in * s_adj;
     stage->z = s_in * c_adj - stage->z * s_adj;
 
+#pragma clang loop unroll(full)
     for (int i{ N - 1 }; i > 0; --i)
     {
       (--stage)->z = output[i];
@@ -89,12 +88,14 @@ public:
     sample_v ipt_lp = mLP.Process4(x);
     sample_t outputs[4];
 
+#pragma clang loop unroll(full)
     for (int s{ 0 }; s < 4; ++s)
     {
       NonlinearAllpass* stage = mLadder;
       sample_t stage_outputs[N];
       sample_t s_in = x[s];
 
+#pragma clang loop unroll(full)
       for (int i{ 0 }; i < N - 1; ++i)
       {
         const sample_t s_adj = stage->s_func(ipt_lp[s]);
@@ -110,6 +111,7 @@ public:
       stage_outputs[N - 1] = stage->z * c_adj + s_in * s_adj;
       stage->z = s_in * c_adj - stage->z * s_adj;
 
+#pragma clang loop unroll(full)
       for (int i{ N - 1 }; i > 0; --i)
       {
         (--stage)->z = stage_outputs[i];

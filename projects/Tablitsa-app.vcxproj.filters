@@ -385,6 +385,12 @@
     <ClInclude Include="..\..\..\IPlug\Extras\Oversampler.h">
       <Filter>IPlug\Extras</Filter>
     </ClInclude>
+    <ClInclude Include="..\dependencies\radiofarmer\fastmath.h">
+      <Filter>dsp</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dependencies\radiofarmer\fastmath_tables.h">
+      <Filter>dsp</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="resources">

@@ -3,6 +3,8 @@
 
 #include "radiofarmer_config.h"
 
+#include "fastmath.h"
+
 #include "allpass.h"
 #include "delayline.h"
 #include "cm.h"
