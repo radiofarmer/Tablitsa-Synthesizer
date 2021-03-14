@@ -864,12 +864,12 @@ public:
       new ParameterModulator<>(-24., 24., "Wt1 Pitch Offset"),
       new ParameterModulator<>(0., 1., "Wt1 Position"),
       new ParameterModulator<>(-1., 1., "Wt1 Bend"),
-      new ParameterModulator<>(0., 1., "Wt1 Formant", true),
+      new ParameterModulator<>(0., 0.95, "Wt1 Formant"),
       new ParameterModulator<>(0., 1., "Wt1 Amp"),
       new ParameterModulator<>(-24., 24., "Wt1 Pitch Offset"),
       new ParameterModulator<>(0., 1., "Wt2 Position"),
       new ParameterModulator<>(-1., 1., "Wt2 Bend"),
-      new ParameterModulator<>(0., 1., "Wt2 Formant", true),
+      new ParameterModulator<>(0., 0.95, "Wt2 Formant"),
       new ParameterModulator<>(0., 1., "Wt2 Amp"),
       new ParameterModulator<>(0.001, 0.5, "Flt1 Cutoff", true),
       new ParameterModulator<>(0., 1., "Flt1 Resonance"),
@@ -1710,7 +1710,7 @@ public:
         break;
       }
       case kParamWavetable1Formant:
-        mParamsToSmooth[kModWavetable1FormantSmoother] = value;
+        mParamsToSmooth[kModWavetable1FormantSmoother] = value / (T)100;
         break;
       case kParamWavetable1FormantEnv1:
       case kParamWavetable1FormantEnv2:

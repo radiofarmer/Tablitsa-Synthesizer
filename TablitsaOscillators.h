@@ -413,7 +413,7 @@ public:
   {
     double cycle;
     mPhaseInCycle = modf(phase * mWT->mCyclesPerLevel, &cycle);
-    double formantPhase = mFormant * mPhaseInCycle * static_cast<T>(mPhaseInCycle <= mFormantRecip); // TODO: check this - inharmonic frequencies may cause adverse effects here
+    const double formantPhase = mFormant * mPhaseInCycle * static_cast<T>(mPhaseInCycle <= mFormantRecip); // TODO: check this - inharmonic frequencies may cause adverse effects here
     return (cycle + std::pow(formantPhase, 1. + (mWtBend >= 0. ? mWtBend : mWtBend / 2.))) * mCyclesPerLevelRecip;
   }
 
@@ -473,7 +473,7 @@ public:
   // Formant: Accepts a value between zero and one
   inline void SetFormant(double fmtNorm)
   {
-    mFormant = 1. + fmtNorm * mMaxFormant;
+    mFormant = std::min(1. / (1. - fmtNorm), mMaxFormant);
     mFormantRecip = 1. / mFormant;
   }
 

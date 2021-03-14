@@ -391,6 +391,9 @@
     <ClInclude Include="..\dependencies\radiofarmer\fastmath_tables.h">
       <Filter>dsp</Filter>
     </ClInclude>
+    <ClInclude Include="..\dependencies\radiofarmer\VectorizedSineOscillator.h">
+      <Filter>dsp</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="resources">

@@ -5,6 +5,7 @@
 
 BEGIN_DSP_NAMESPACE
 
+#define FAST_MATH_MACROS
 #define UNITBIT32 1572864.  /* 3*2^19; bit 32 has place value 1 */
 #define HIOFFSET 1
 #define LOWOFFSET 0
@@ -60,9 +61,5 @@ inline sample_t fast_tanh(sample_t x)
 {
   return x / (1. + std::abs(2 * x));
 }
-
-#undef UNITBIT32
-#undef HIOFFSET
-#undef LOWOFFSET
 
 END_DSP_NAMESPACE
