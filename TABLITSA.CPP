@@ -648,8 +648,8 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
 
 #endif
     const ISVG tableImg = pGraphics->LoadSVG(PERIODIC_TABLE_FN);
+    const ISVG routingImg = pGraphics->LoadSVG(ROUTING_FN);
     const IBitmap logoImg = pGraphics->LoadBitmap(LOGO_FN);
-    const IBitmap dialImg = pGraphics->LoadBitmap(DIAL_FN, 64);
 
     // Periodic table
     pGraphics->AttachControl(new PeriodicTable(globalControls.GetReducedFromBottom(globalControls.H() * 0.5f).GetFromLeft(720.f).GetPadded(-30.f).GetVShifted(20.f), tableImg, { kParamWavetable1, kParamWavetable2 }),
@@ -839,11 +839,12 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
       });
 
     /* Routing */
-    const IRECT routingPanel = effectsControlsPanel.GetPadded(0.f, 20.f, 0.f, -5.f);
-    pGraphics->AttachControl(new TablitsaSliderControl(routingPanel.GetGridCell(0, 0, 4, 2).GetHPadded(-20.f), kParamOsc1FilterBypass, "Osc1 Filter BP", TABLITSA_STYLE.WithShowValue(false), false, EDirection::Horizontal), kNoTag, "E3");
-    pGraphics->AttachControl(new TablitsaSliderControl(routingPanel.GetGridCell(1, 0, 4, 2).GetHPadded(-20.f), kParamOsc2FilterBypass, "Osc2 Filter BP", TABLITSA_STYLE.WithShowValue(false), false, EDirection::Horizontal), kNoTag, "E3");
-    pGraphics->AttachControl(new TablitsaSliderControl(routingPanel.GetGridCell(2, 0, 4, 2).GetHPadded(-20.f), kParamOsc1EffectBypass, "Osc1 Effect BP", TABLITSA_STYLE.WithShowValue(false), false, EDirection::Horizontal), kNoTag, "E3");
-    pGraphics->AttachControl(new TablitsaSliderControl(routingPanel.GetGridCell(3, 0, 4, 2).GetHPadded(-20.f), kParamOsc2EffectBypass, "Osc2 Effect BP", TABLITSA_STYLE.WithShowValue(false), false, EDirection::Horizontal), kNoTag, "E3");
+    const IRECT routingPanel = effectsControlsPanel.GetPadded(-5.f, 10.f, -5.f, 0.f);
+    pGraphics->AttachControl(new ISVGControl(routingPanel, routingImg), kNoTag, "E3");
+    pGraphics->AttachControl(new TablitsaSliderControl(routingPanel.GetGridCell(0, 1, 5, 4).GetHPadded(-6.f).GetVShifted(-10.f), kParamOsc1FilterBypass, "Osc1 Filter BP", TABLITSA_STYLE.WithShowValue(false).WithShowLabel(false), false, EDirection::Horizontal), kNoTag, "E3");
+    pGraphics->AttachControl(new TablitsaSliderControl(routingPanel.GetGridCell(1, 1, 5, 4).GetHPadded(-6.f).GetVShifted(-5.f), kParamOsc2FilterBypass, "Osc2 Filter BP", TABLITSA_STYLE.WithShowValue(false).WithShowLabel(false), false, EDirection::Horizontal), kNoTag, "E3");
+    pGraphics->AttachControl(new TablitsaSliderControl(routingPanel.GetGridCell(3, 1, 5, 4).GetHShifted(-10.f), kParamOsc1EffectBypass, "Osc1 Effect BP", TABLITSA_STYLE.WithShowValue(false).WithShowLabel(false), false, EDirection::Horizontal), kNoTag, "E3");
+    pGraphics->AttachControl(new TablitsaSliderControl(routingPanel.GetGridCell(4, 1, 5, 4).GetHShifted(-10.f).GetVShifted(2.f), kParamOsc2EffectBypass, "Osc2 Effect BP", TABLITSA_STYLE.WithShowValue(false).WithShowLabel(false), false, EDirection::Horizontal), kNoTag, "E3");
 
     /* LOWER-HALF CONTROLS */
     constexpr float modulePad[4]{-10.f, -5.f, -10.f, -15.f};

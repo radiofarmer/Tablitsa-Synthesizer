@@ -43,7 +43,7 @@ public:
   
   inline Vec4d __vectorcall ProcessBlock4_Vector()
   {
-    double phase = IOscillator<T>::mPhase + (double)UNITBIT32;
+    double phase = (IOscillator<T>::mPhase + mPhaseOffset) + (double)UNITBIT32;
     const double phaseIncr = IOscillator<T>::mPhaseIncr * FastSinOscillator<T>::tableSize;
     Vec4d vPhase = phase + phaseIncr * *mIncrVector;
 
@@ -72,6 +72,11 @@ public:
     return output;
   }
 
+  void SetPhaseOffset(double offset)
+  {
+    mPhaseOffset = offset * tableSize;
+  }
+
   inline Vec4d __vectorcall Process_Vector()
   {
     return ProcessBlock4_Vector();
@@ -83,6 +88,7 @@ public:
   }
 
 private:
+  double mPhaseOffset{ 0. };
   const Vec4d* mIncrVector;
 } ALIGNED(8);
 

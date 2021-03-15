@@ -39,10 +39,12 @@ void InitCoefModUI(Plugin* pPlugin, IGraphics* pGraphics, std::vector<IControl*>
   allKnobs.insert(allKnobs.begin(), controls.begin(), controls.begin() + 4);
   pPlugin->GetParam(params[0])->InitDouble(paramNames[0], reset ? 0. : pPlugin->GetParam(params[0])->Value(), 0., 1., 0.01);
   pPlugin->GetParam(params[1])->InitDouble(paramNames[1], reset ? 0. : pPlugin->GetParam(params[1])->Value(), -2., 2., 0.01, " 8v.");
+  pPlugin->GetParam(params[2])->InitDouble(paramNames[2], reset ? 0. : pPlugin->GetParam(params[2])->Value(), 0., 1., 0.01, " Cycles");
   pPlugin->GetParam(params[3])->InitDouble(paramNames[3], reset ? 0. : pPlugin->GetParam(params[3])->Value(), 0., 1., 0.01);
 
   pPlugin->GetParam(params[0])->SetDisplayFunc(PercentDisplayFunc);
   pPlugin->GetParam(params[1])->SetDisplayFunc(nullptr);
+  pPlugin->GetParam(params[2])->SetDisplayFunc(nullptr);
   pPlugin->GetParam(params[3])->SetDisplayFunc(PercentDisplayFunc);
 
   // Reset param 1 display texts
@@ -54,13 +56,13 @@ void InitCoefModUI(Plugin* pPlugin, IGraphics* pGraphics, std::vector<IControl*>
 
   controls[0]->SetDisabled(false);
   controls[1]->SetDisabled(false);
-  controls[2]->SetDisabled(true);
+  controls[2]->SetDisabled(false);
   controls[3]->SetDisabled(false);
   pGraphics->HideControl(params[4], true);
   pGraphics->HideControl(params[5], true);
   dynamic_cast<IVKnobControl*>(controls[0])->SetLabelStr("Mod Depth");
   dynamic_cast<IVKnobControl*>(controls[1])->SetLabelStr("Pitch");
-  dynamic_cast<IVKnobControl*>(controls[2])->SetLabelStr("");
+  dynamic_cast<IVKnobControl*>(controls[2])->SetLabelStr("Phase");
   dynamic_cast<IVKnobControl*>(controls[3])->SetLabelStr("Mix");
   // Modulation ON for knob 1
   dynamic_cast<TablitsaIVModKnobControl*>(controls[0])->EnableModulation(true);

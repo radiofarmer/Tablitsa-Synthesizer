@@ -54,4 +54,4 @@
 #define BG_FN "tablitsa_background.png"
 #define PERIODIC_TABLE_FN "periodic_table.svg"
 #define LOGO_FN "logo.png"
-#define DIAL_FN "test_dial.png"
+#define ROUTING_FN "routing_diagram.svg"

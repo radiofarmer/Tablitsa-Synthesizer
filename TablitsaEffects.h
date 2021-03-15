@@ -86,6 +86,7 @@ public:
     mModDepth = p1;
     mModRate = 440. * std::pow(2., pitch + p2); // p2 is scaled in octaves
     mOsc.SetFreqCPS(mModRate);
+    mOsc.SetPhaseOffset(p3);
     mMix = p4;
   }
 

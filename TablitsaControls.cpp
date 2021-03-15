@@ -157,7 +157,9 @@ void TablitsaIVModKnobControl::DrawIndicatorTrack(IGraphics& g, float angle, flo
 {
   // Set the origin of the track arch to the center of the range for dials with negative minimum values
   if (GetParam()->GetMin() < 0.)
-    mAnchorAngle = 0.;
+    mAnchorAngle = 0.f;
+  else
+    mAnchorAngle = -135.f;
   if (mTrackSize > 0.f)
   {
     g.DrawArc(mBaseTrack, cx, cy, radius, angle >= mAnchorAngle ? mAnchorAngle : mAnchorAngle - (mAnchorAngle - angle), angle >= mAnchorAngle ? angle : mAnchorAngle, &mBlend, mTrackSize);
