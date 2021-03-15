@@ -1329,7 +1329,7 @@ int Tablitsa::UnserializeState(const IByteChunk& chunk, int startPos)
 
     // Tempo Sync needs to be set before time values are sent to the DSP thread, but after the effect is loaded
     ENTER_PARAMS_MUTEX;
-    GetParam(kParamMasterEffect1Param5 + kNumMasterEffectParams * i)->Set(1.);
+    GetParam(kParamMasterEffect1Param5 + kNumMasterEffectParams * i)->Set(mDelayTempoSync[i] ? 1. : 0.);
     OnParamChange(kParamMasterEffect1Param5 + kNumMasterEffectParams * i);
     LEAVE_PARAMS_MUTEX;
   }
@@ -1348,6 +1348,7 @@ void Tablitsa::OnUIOpen()
 
 void Tablitsa::UpdateUIControls()
 {
+  //SendCurrentParamValuesFromDelegate();
   // Sequencer
   auto* pSequencer = GetUI()->GetControlWithTag(kCtrlTagSequencer);
 
