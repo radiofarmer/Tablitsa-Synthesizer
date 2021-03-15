@@ -120,6 +120,7 @@ public:
     // Process StereoFilters
     sample_t l_in, r_in;
     l_in = r_in = monoLine;
+#pragma clang loop unroll(4)
     for (int i{ 0 }; i < NS; ++i)
     {
       l_in = mStereoFilters[i][0].Process(l_in);
@@ -132,8 +133,8 @@ public:
     const sample_t l_out{ l_in * g2 - mGain * s.l };
     const sample_t r_out{ r_in * g2 - mGain * s.r };
 
-    s.l += mMix * (l_out - s.l);
-    s.r += mMix * (r_out - s.r);
+    s.l += mMix * l_out;
+    s.r += mMix * r_out;
   }
 
 protected:
