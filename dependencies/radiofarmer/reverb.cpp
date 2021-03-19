@@ -109,6 +109,7 @@ void UFDNReverb::SetColor(const sample_t freqNorm)
   {
     m_t[i] = 1. + std::pow((1. - static_cast<sample_t>(i) / static_cast<sample_t>(NLateAPFilters + 2)) * freqNorm, 2.);
   }
+  CalcNorm();
 }
 
 void UFDNReverb::SetHFDecay(const sample_t freqNorm)
@@ -219,8 +220,10 @@ void UFDNReverb::ProcessStereo(StereoSample<sample_t>& s)
   mZ.l = late_in[0];
   mZ.r = late_in[1];
 
-  StereoSample<sample_t> out{ late_out[0] + mEarlyAP[0].Process(delays[0]) * mERMix,
-    late_out[1] + mEarlyAP[1].Process(delays[1]) * mERMix };
+  StereoSample<sample_t> out{
+    late_out[0] + mEarlyAP[0].Process(delays[0]) * mERMix,
+    late_out[1] + mEarlyAP[1].Process(delays[1]) * mERMix
+  };
 
   s = s + (out - s) * mMix;
 }

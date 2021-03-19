@@ -68,7 +68,7 @@ public:
 
   void AdjustAllFilters()
   {
-    const int n = NM + NS;
+    constexpr int n = NM + NS;
     sample_t delays[n];
     sample_t fb[n];
 
@@ -81,7 +81,7 @@ public:
     for (int i{ 1 }; i < n; ++i)
     {
       delays[i] = delays[i-1] * 0.78;
-      fb[i] = mMaxFeedback - static_cast<sample_t>(std::rand() % 100) / 1000.;
+      fb[i] = mMaxFeedback - fbRange * static_cast<sample_t>(i) / n;
     }
 
     // Mono filters
@@ -113,6 +113,7 @@ public:
 
     // Process mono filters
     sample_t monoLine{ sum1 };
+#pragma clang loop unroll(full)
     for (int i{ 0 }; i < NM; ++i)
     {
       monoLine = mMonoFilters[i].Process(monoLine);
@@ -120,7 +121,8 @@ public:
     // Process StereoFilters
     sample_t l_in, r_in;
     l_in = r_in = monoLine;
-#pragma clang loop unroll(4)
+
+#pragma clang loop unroll(full)
     for (int i{ 0 }; i < NS; ++i)
     {
       l_in = mStereoFilters[i][0].Process(l_in);
@@ -129,9 +131,9 @@ public:
 
     mDelay.push(0.5 * (s.l + s.r) + mGain * 0.5 * (l_in + r_in));
 
-    const sample_t g2{ 1 - mGain * mGain };
-    const sample_t l_out{ l_in * g2 - mGain * s.l };
-    const sample_t r_out{ r_in * g2 - mGain * s.r };
+    const sample_t g2{ mGain * mGain };
+    const sample_t l_out{ l_in * g2 };
+    const sample_t r_out{ r_in * g2 };
 
     s.l += mMix * l_out;
     s.r += mMix * r_out;

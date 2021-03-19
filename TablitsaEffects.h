@@ -700,7 +700,7 @@ class ReverbEffect final : public Effect<T, V>
 {
   static constexpr T MaxDelayMS = 100.;
   static constexpr T MinDelayMS = 5.;
-  static constexpr T MinFeedback = 0.65;
+  static constexpr T MinFeedback = 0.25;
   static constexpr T FeedbackRange = 0.99 - MinFeedback;
 
 public:
@@ -717,15 +717,15 @@ public:
 
   void SetParam1(T value) override
   {
-    mReverb.SetDelay(MinDelayMS + 2. + value * (MaxDelayMS - MinDelayMS), MinDelayMS, true);
+    mReverb.SetDelay((MinDelayMS + 20.) + value * (MaxDelayMS - MinDelayMS), MinDelayMS, true);
   }
   void SetParam2(T value) override
   {
-    mReverb.SetFeedback(MinFeedback + value * FeedbackRange, MinFeedback, true);
+    mReverb.SetFeedback(MinFeedback + (1. - value) * FeedbackRange, MinFeedback, true);
   }
   void SetParam3(T value) override
   {
-    mReverb.SetGain(value);
+    mReverb.SetGain((1. - value) * 0.95);
   }
   void SetParam4(T value) override
   {
@@ -761,8 +761,8 @@ public:
   {
   }
 
-  void SetParam1(T value) override { mReverb.SetDiffusion(value * 0.75); mReverb.SetEarlyReflectionsLevel(0.5 - value * 0.25); }
-  void SetParam2(T value) override { mReverb.SetDamping(value * 0.2);  }
+  void SetParam1(T value) override { mReverb.SetDiffusion(value * 0.6); mReverb.SetEarlyReflectionsLevel(0.05 + value * 0.1); }
+  void SetParam2(T value) override { mReverb.SetDamping(value * value * 0.2);  }
   void SetParam3(T value) override { mReverb.SetColor(value * 0.7); }
   void SetParam4(T value) override { mReverb.SetMixLevel(value); }
 
