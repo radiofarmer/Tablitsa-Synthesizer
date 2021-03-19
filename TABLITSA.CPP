@@ -1341,6 +1341,11 @@ int Tablitsa::UnserializeState(const IByteChunk& chunk, int startPos)
   return UnserializeParams(chunk, startPos);
 }
 
+void LoadDefaultState()
+{
+  
+}
+
 void Tablitsa::OnUIOpen()
 {
   UpdateUIControls();
