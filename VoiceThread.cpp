@@ -20,13 +20,13 @@ void VoiceThreadPool::FinishBlock()
 
 void VoiceThreadPool::thread_loop()
 {
-  while (true)
+  while (!mStop.load())
   {
     ThreadTask task;
 
     {
       std::unique_lock<std::mutex> lk(mQueueMutex);
-      mBlockCV.wait(lk, [this]() { return !mTaskQueue.empty() || mStop.load(); });
+      mBlockCV.wait(lk, [this]() { return !mTaskQueue.empty(); });
       task = mTaskQueue.front();
       mTaskQueue.pop();
     }
@@ -43,11 +43,19 @@ void VoiceThreadPool::thread_loop()
 
 void VoiceThreadPool::Stop()
 {
-  std::unique_lock<std::mutex> lk(mQueueMutex);
-  mStop.store(true);
-  mBlockCV.notify_all();
+  {
+    std::unique_lock<std::mutex> lk(mQueueMutex);
+    mStop.store(true);
+
+    // Empty queue
+    while (!mTaskQueue.empty())
+      mTaskQueue.pop();
+
+    for (int i{ 0 }; i < mNumThreads; ++i)
+      mTaskQueue.push(mExitTask);
+
+    mBlockCV.notify_all();
+  }
   for (std::thread& t : mThreads)
     t.join();
-
-  mThreads.clear();
 }

@@ -51,4 +51,6 @@ protected:
 
   std::queue<ThreadTask> mTaskQueue;
   std::vector<std::thread> mThreads;
+
+  ThreadTask mExitTask = [](void) {return;};
 };
