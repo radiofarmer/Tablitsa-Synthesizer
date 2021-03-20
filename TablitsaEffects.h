@@ -396,8 +396,8 @@ public:
   void SetContinuousParams(const T p1, const T p2, const T p3, const T p4, const T pitch) override
   {
     mGain = std::pow(10., p1 * 2.);
-    mFilterMod = p2 * 0.1;
-    mColorFilter.SetCutoff(0.5 * p3);
+    mFilterMod = p2 * 0.25;
+    mColorFilter.SetCutoff(0.25 * p3);
     mMix = p4;
   }
 
@@ -429,7 +429,7 @@ public:
 
   void ProcessBlock(T* inputs, T* outputs, const int nFrames) override
   {
-    mNoiseFilter.SetCutoff(0.1 + mFilterMod * static_cast<T>(std::rand() % 1000) * 0.001);
+    mNoiseFilter.SetCutoff(0.05 + mFilterMod * static_cast<T>(std::rand() % 1000) * 0.001);
     for (int i{ 0 }; i < nFrames; ++i)
     {
       const T ipt_filtered = mColorFilter.ProcessBP(inputs[i]);

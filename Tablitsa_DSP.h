@@ -653,6 +653,9 @@ public:
       mFilters[0]->SetSampleRate(sampleRate);
       mFilters[1]->SetSampleRate(sampleRate);
 
+      for (int i{ 0 }; i < TABLITSA_MAX_VOICE_EFFECTS; ++i)
+        mEffects[i]->SetSampleRate(sampleRate * (T)EFFECT_OS_FACTOR);
+
       // Modulation buffers
       mVModulationsData.Resize(blockSize * kNumModulations);
       mVModulations.Empty();
