@@ -343,10 +343,17 @@ enum EDistortion
 template<typename T, class V = Vec4d>
 class DistortionEffect final : public Effect<T, V>
 {
+private:
   static constexpr int BufferLength{ 1024 };
   static constexpr T BufferScale{ 1. / BufferLength };
 
   inline T FuzzDistortion(T x) const
+  {
+    const T x_abs = std::abs(x);
+    return x * (x_abs + mGain) / (x_abs * (x_abs + mGain - 1.) + 1.);
+  }
+
+  inline T ExpDistortion(T x) const
   {
     return std::copysign(1. - std::exp(-1. * (std::abs(x) * mGain)), x);
   }
@@ -388,9 +395,17 @@ public:
 
   void SetContinuousParams(const T p1, const T p2, const T p3, const T p4, const T pitch) override
   {
-    mType = static_cast<int>(p1 + 0.01);
-    mGain = std::pow(10., p2 * 1.5) * (1. + p3 * (static_cast<double>(std::rand() % 1000) * 0.001 - 0.5));
+    mGain = std::pow(10., p1 * 2.);
+    mFilterMod = p2 * 0.1;
+    mColorFilter.SetCutoff(0.5 * p3);
     mMix = p4;
+  }
+
+  void SetSampleRate(T sampleRate) override
+  {
+    Effect<T, V>::SetSampleRate(sampleRate);
+    mNoiseFilter.SetSampleRate(sampleRate);
+    mColorFilter.SetSampleRate(sampleRate);
   }
 
   inline T DoProcess(T s, const int type)
@@ -414,18 +429,21 @@ public:
 
   void ProcessBlock(T* inputs, T* outputs, const int nFrames) override
   {
+    mNoiseFilter.SetCutoff(0.1 + mFilterMod * static_cast<T>(std::rand() % 1000) * 0.001);
     for (int i{ 0 }; i < nFrames; ++i)
     {
+      const T ipt_filtered = mColorFilter.ProcessBP(inputs[i]);
+
       // Update average input volume
-      mAvgIn += BufferScale * (std::abs(inputs[i]) - mInHist.last());
-      mInHist.push(std::abs(inputs[i]));
+      /* mAvgIn += BufferScale * (std::abs(inputs[i]) - mInHist.last());
+      mInHist.push(std::abs(inputs[i])); */
 
-      // Calculate output and update average output volume
-      T out = DoProcess(inputs[i], mType);
-      mAvgOut += BufferScale * (std::abs(out) - mOutHist.last());
-      mOutHist.push(std::abs(out));
+      // Calculate output (and update average output volume)
+      const T out = FuzzDistortion(mNoiseFilter.ProcessAP(inputs[i] + ipt_filtered));
+      /* mAvgOut += BufferScale * (std::abs(out) - mOutHist.last());
+      //mOutHist.push(std::abs(out)); */
 
-      outputs[i] = inputs[i] + mMix * (out * (mAvgIn / mAvgOut) - inputs[i]);
+      outputs[i] = inputs[i] + mMix * (out - inputs[i]);
 
     }
   }
@@ -437,6 +455,11 @@ private:
   int mType{ EDistortion::kFuzz };
   DelayLine<BufferLength> mInHist;
   DelayLine<BufferLength> mOutHist;
+
+  TwoPoleTPTFilter mNoiseFilter{ DEFAULT_SAMPLE_RATE, 0.25, 0.5 };
+  TwoPoleTPTFilter mColorFilter{ DEFAULT_SAMPLE_RATE, 0.25 };
+
+  T mFilterMod{ 0. };
 };
 
 
@@ -556,6 +579,87 @@ private:
   DelayLine<4> mZ0;
   DelayLine<4> mZ1;
 };
+
+template<typename T, class V=Vec4d>
+class ReverbEffect final : public Effect<T, V>
+{
+  static constexpr T MaxDelayMS = 100.;
+  static constexpr T MinDelayMS = 5.;
+  static constexpr T MinFeedback = 0.25;
+  static constexpr T FeedbackRange = 0.99 - MinFeedback;
+
+public:
+  ReverbEffect(T sampleRate, T maxDelayMS = 50., T minDelayMS = 10., T maxFeedback = 0.75, T minFeedback = 0.65, T gain = 0.5) :
+    Effect<T, V>(sampleRate),
+    mReverb(sampleRate, maxDelayMS, minDelayMS, maxFeedback, minFeedback, gain)
+  {}
+
+  void SetSampleRate(T sampleRate) override
+  {
+    Effect<T, V>::SetSampleRate(sampleRate);
+    mReverb.SetSampleRate(mSampleRate);
+  }
+
+  void SetParam1(T value) override
+  {
+    mReverb.SetDelay((MinDelayMS + 20.) + value * (MaxDelayMS - MinDelayMS), MinDelayMS, true);
+  }
+  void SetParam2(T value) override
+  {
+    mReverb.SetFeedback(MinFeedback + (1. - value) * FeedbackRange, MinFeedback, true);
+  }
+  void SetParam3(T value) override
+  {
+    mReverb.SetGain((1. - value) * 0.95);
+  }
+  void SetParam4(T value) override
+  {
+    mReverb.SetMix(value);
+  }
+
+  T Process(T s) override
+  {
+    return mReverb.Process(s);
+  }
+
+  void ProcessStereo(T* s) override
+  {
+    StereoSample<T> s2{ s[0], s[1] };
+    mReverb.ProcessStereo(s2);
+    s[0] = s2.l; s[1] = s2.r;
+  }
+
+  void ProcessStereo(StereoSample<T>& s) override
+  {
+    mReverb.ProcessStereo(s);
+  }
+
+private:
+  CascadeReverb<6, 2> mReverb;
+};
+
+template<typename T, class V=Vec4d>
+class Reverb2Effect final : public Effect<T, V>
+{
+public:
+  Reverb2Effect(T sampleRate) : Effect<T, V>(sampleRate), mReverb(sampleRate)
+  {
+  }
+
+  void SetParam1(T value) override { mReverb.SetDiffusion(value * 0.6); mReverb.SetEarlyReflectionsLevel(0.05 + value * 0.1); }
+  void SetParam2(T value) override { mReverb.SetDamping(value * value * 0.2);  }
+  void SetParam3(T value) override { mReverb.SetColor(value * 0.7); }
+  void SetParam4(T value) override { mReverb.SetMixLevel(value); }
+
+  void ProcessStereo(StereoSample<T>& s)
+  {
+    mReverb.ProcessStereo(s);
+  }
+
+private:
+  UFDNReverb mReverb;
+};
+
 
 template<typename T, class V = Vec4d>
 class SampleAndHold final : public Effect<T, V>
@@ -693,86 +797,6 @@ private:
 
   V* mSampleCounter_v;
   StereoSample<V>* mHold_v;
-};
-
-template<typename T, class V=Vec4d>
-class ReverbEffect final : public Effect<T, V>
-{
-  static constexpr T MaxDelayMS = 100.;
-  static constexpr T MinDelayMS = 5.;
-  static constexpr T MinFeedback = 0.25;
-  static constexpr T FeedbackRange = 0.99 - MinFeedback;
-
-public:
-  ReverbEffect(T sampleRate, T maxDelayMS = 50., T minDelayMS = 10., T maxFeedback = 0.75, T minFeedback = 0.65, T gain = 0.5) :
-    Effect<T, V>(sampleRate),
-    mReverb(sampleRate, maxDelayMS, minDelayMS, maxFeedback, minFeedback, gain)
-  {}
-
-  void SetSampleRate(T sampleRate) override
-  {
-    Effect<T, V>::SetSampleRate(sampleRate);
-    mReverb.SetSampleRate(mSampleRate);
-  }
-
-  void SetParam1(T value) override
-  {
-    mReverb.SetDelay((MinDelayMS + 20.) + value * (MaxDelayMS - MinDelayMS), MinDelayMS, true);
-  }
-  void SetParam2(T value) override
-  {
-    mReverb.SetFeedback(MinFeedback + (1. - value) * FeedbackRange, MinFeedback, true);
-  }
-  void SetParam3(T value) override
-  {
-    mReverb.SetGain((1. - value) * 0.95);
-  }
-  void SetParam4(T value) override
-  {
-    mReverb.SetMix(value);
-  }
-
-  T Process(T s) override
-  {
-    return mReverb.Process(s);
-  }
-
-  void ProcessStereo(T* s) override
-  {
-    StereoSample<T> s2{ s[0], s[1] };
-    mReverb.ProcessStereo(s2);
-    s[0] = s2.l; s[1] = s2.r;
-  }
-
-  void ProcessStereo(StereoSample<T>& s) override
-  {
-    mReverb.ProcessStereo(s);
-  }
-
-private:
-  CascadeReverb<6, 2> mReverb;
-};
-
-template<typename T, class V=Vec4d>
-class Reverb2Effect final : public Effect<T, V>
-{
-public:
-  Reverb2Effect(T sampleRate) : Effect<T, V>(sampleRate), mReverb(sampleRate)
-  {
-  }
-
-  void SetParam1(T value) override { mReverb.SetDiffusion(value * 0.6); mReverb.SetEarlyReflectionsLevel(0.05 + value * 0.1); }
-  void SetParam2(T value) override { mReverb.SetDamping(value * value * 0.2);  }
-  void SetParam3(T value) override { mReverb.SetColor(value * 0.7); }
-  void SetParam4(T value) override { mReverb.SetMixLevel(value); }
-
-  void ProcessStereo(StereoSample<T>& s)
-  {
-    mReverb.ProcessStereo(s);
-  }
-
-private:
-  UFDNReverb mReverb;
 };
 
 template<typename T, class V = Vec4d>

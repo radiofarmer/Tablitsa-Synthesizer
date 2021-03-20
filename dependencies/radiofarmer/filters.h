@@ -6,6 +6,38 @@
 
 BEGIN_DSP_NAMESPACE
 
+static constexpr sample_t pi = 3.1415926;
+
+struct Integrator
+{
+  sample_t g;
+  sample_t gp1_recip;
+  sample_t z{ 0. };
+
+  Integrator(sample_t cutoffNorm = 0.)
+  {
+    Recalculate(cutoffNorm);
+  }
+
+  inline void Recalculate(sample_t cutoffNorm)
+  {
+    g = cutoffNorm * pi * 0.5;
+    Recalculate();
+  }
+
+  inline void Recalculate()
+  {
+    gp1_recip = 1. / (1 + g);
+  }
+
+  inline sample_t Process(const sample_t x)
+  {
+    const sample_t out = (g * x + z) * gp1_recip;
+    z = out - x;
+    return out;
+  }
+};
+
 enum EOnePoleModes
 {
   kLowpass1P,
@@ -127,6 +159,7 @@ public:
 
   sample_t Process(sample_t x);
   void Process4(sample_t* x);
+  sample_v __vectorcall Process4(sample_v x);
 
 protected:
   sample_t mFcMax;
@@ -151,6 +184,101 @@ public:
 
 private:
   sample_t mPeakGain{ 1. };
+};
+
+class TwoPoleTPTFilter
+{
+private:
+  static constexpr sample_t piOver2{ 1.57079632679 };
+
+  inline void Process(const sample_t x)
+  {
+    m_hp = m_denom * (x - m_g1 * m_z1 - m_z2);
+    sample_t u1 = m_g * m_hp;
+
+    m_bp = u1 + m_z1;
+    sample_t u2 = m_g * m_bp;
+
+    m_lp = u2 + m_z2;
+
+    // Set delays
+    m_z1 = m_bp + u1;
+    m_z2 = m_lp + u2;
+  }
+
+public:
+  TwoPoleTPTFilter(sample_t sampleRate = DEFAULT_SRATE, sample_t cutoffNorm = 0., sample_t res = 1.) :
+    mSampleRate(sampleRate), mFc(cutoffNorm), mQ(res)
+  {}
+
+  inline void SetSampleRate(const sample_t sampleRate)
+  {
+    mFc *= mSampleRate / sampleRate;
+    mSampleRate = sampleRate;
+    CalculateCoefficients();
+  }
+
+  inline void SetCutoff(const sample_t cutoffNorm)
+  {
+    mFc = cutoffNorm;
+    CalculateCoefficients();
+  }
+
+  inline void SetResonance(const sample_t q)
+  {
+    mQ = 1. - q;
+    CalculateCoefficients();
+  }
+
+  inline void SetCutoffAndResonance(const sample_t cutoffNorm, const sample_t q)
+  {
+    mFc = piOver2 * cutoffNorm;
+    mQ = 1. - q;
+    CalculateCoefficients();
+  }
+
+  inline void CalculateCoefficients()
+  {
+    m_g = mFc * 0.5 * pi;
+    m_g1 = mQ * 2. + m_g;
+    m_denom = 1. / (1. + 2 * mQ * m_g + m_g * m_g);
+  }
+
+  inline sample_t ProcessHP(const sample_t x)
+  {
+    Process(x);
+    return m_hp;
+  }
+  inline sample_t ProcessBP(const sample_t x)
+  {
+    Process(x);
+    return m_bp * mQ * 2.;
+  }
+  inline sample_t ProcessLP(const sample_t x)
+  {
+    Process(x);
+    return m_lp;
+  }
+  inline sample_t ProcessAP(const sample_t x)
+  {
+    return x - 2. * ProcessBP(x);
+  }
+
+protected:
+  sample_t mSampleRate;
+  sample_t mFc;
+  sample_t mQ;
+
+  sample_t m_g{ 0. };
+  sample_t m_g1{ 0. };
+  sample_t m_denom{ 1. };
+
+  sample_t m_hp{ 0. };
+  sample_t m_bp{ 0. };
+  sample_t m_lp{ 0. };
+
+  sample_t m_z1{ 0. };
+  sample_t m_z2{ 0. };
 };
 
 END_DSP_NAMESPACE

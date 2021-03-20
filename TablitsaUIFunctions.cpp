@@ -185,7 +185,7 @@ void InitDistortionUI(Plugin* pPlugin, IGraphics* pGraphics, std::vector<IContro
   for (auto* knob : allKnobs)
     knob->SetDisabled(false);
 
-  pPlugin->GetParam(params[0])->InitEnum(paramNames[0], reset ? EWaveshaperMode::kWaveshapeSine : pPlugin->GetParam(params[0])->Value(), { DISTORTION_TYPES });
+  pPlugin->GetParam(params[0])->InitDouble(paramNames[0], reset ? 0. : pPlugin->GetParam(params[0])->Value(), 0., 1., 0.01);
   pPlugin->GetParam(params[1])->InitDouble(paramNames[1], reset ? 0. : pPlugin->GetParam(params[1])->Value(), 0., 1., 0.01);
   pPlugin->GetParam(params[2])->InitDouble(paramNames[2], reset ? 0. : pPlugin->GetParam(params[3])->Value(), 0.01, 1., 0.01);
   pPlugin->GetParam(params[3])->InitDouble(paramNames[3], reset ? 0. : pPlugin->GetParam(params[3])->Value(), 0., 1., 0.01);
@@ -193,9 +193,9 @@ void InitDistortionUI(Plugin* pPlugin, IGraphics* pGraphics, std::vector<IContro
   pGraphics->HideControl(params[5], true);
 
 
-  pPlugin->GetParam(params[0])->SetDisplayFunc(nullptr);
+  pPlugin->GetParam(params[0])->SetDisplayFunc(PercentDisplayFunc);
   pPlugin->GetParam(params[1])->SetDisplayFunc(PercentDisplayFunc);
-  pPlugin->GetParam(params[2])->SetDisplayFunc(PercentDisplayFunc);
+  pPlugin->GetParam(params[2])->SetDisplayFunc(nullptr);
   pPlugin->GetParam(params[3])->SetDisplayFunc(PercentDisplayFunc);
 
   for (int i{ 0 }; i < TABLITSA_EFFECT_PARAMS; ++i)
@@ -204,9 +204,9 @@ void InitDistortionUI(Plugin* pPlugin, IGraphics* pGraphics, std::vector<IContro
   controls[1]->SetDisabled(false);
   controls[2]->SetDisabled(false);
   // Labels
-  dynamic_cast<IVKnobControl*>(controls[0])->SetLabelStr("Type");
-  dynamic_cast<IVKnobControl*>(controls[1])->SetLabelStr("Gain");
-  dynamic_cast<IVKnobControl*>(controls[2])->SetLabelStr("Noise");
+  dynamic_cast<IVKnobControl*>(controls[0])->SetLabelStr("Gain");
+  dynamic_cast<IVKnobControl*>(controls[1])->SetLabelStr("Fuzz");
+  dynamic_cast<IVKnobControl*>(controls[2])->SetLabelStr("Color");
   dynamic_cast<IVKnobControl*>(controls[3])->SetLabelStr("Mix");
   // Modulation off for knob 1
   dynamic_cast<TablitsaIVModKnobControl*>(controls[0])->EnableModulation(false);

@@ -1244,26 +1244,26 @@ int Tablitsa::UnserializeState(const IByteChunk& chunk, int startPos)
     {
     case kDistortionEffect:
     {
-      GetParam(kParamVoiceEffect1Param1 + kNumVoiceEffectParams * i)->InitEnum("Distortion Type", EDistortion::kFuzz, { DISTORTION_TYPES });
-      GetParam(kParamVoiceEffect1Param2 + kNumVoiceEffectParams * i)->InitPercentage("Distortion Gain", 0.);
-      GetParam(kParamVoiceEffect1Param2 + kNumVoiceEffectParams * i)->InitPercentage("Distortion Noise", 0.);
-      GetParam(kParamVoiceEffect1Param2 + kNumVoiceEffectParams * i)->InitPercentage("Distortion Mix", 0.);
+      GetParam(kParamVoiceEffect1Param1 + kNumVoiceEffectParams * i)->InitDouble("Distortion Param 1", 0., 0., 1., 0.01);
+      GetParam(kParamVoiceEffect1Param2 + kNumVoiceEffectParams * i)->InitDouble("Distortion Param 2", 0., 0., 1., 0.01);
+      GetParam(kParamVoiceEffect1Param2 + kNumVoiceEffectParams * i)->InitDouble("Distortion Param 3", 0., 0., 1., 0.01);
+      GetParam(kParamVoiceEffect1Param2 + kNumVoiceEffectParams * i)->InitDouble("Distortion Param 4", 0., 0., 1., 0.01);
       break;
     }
     case kSampleAndHoldEffect:
     {
       GetParam(kParamVoiceEffect1Param1 + kNumVoiceEffectParams * i)->InitDouble("Sample & Hold Rate", 10., TABLITSA_SAH_MIN_MS, TABLITSA_SAH_MAX_MS, 0.01, "ms", IParam::kFlagsNone, "Effect", IParam::ShapePowCurve(3.));
-      GetParam(kParamVoiceEffect1Param2 + kNumVoiceEffectParams * i)->InitPercentage("Sample & Hold Decay", 0.);
-      GetParam(kParamVoiceEffect1Param3 + kNumVoiceEffectParams * i)->InitPercentage("Sample & Hold Noise", 0.);
-      GetParam(kParamVoiceEffect1Param4 + kNumVoiceEffectParams * i)->InitPercentage("Sample & Hold Mix", 0.);
+      GetParam(kParamVoiceEffect1Param2 + kNumVoiceEffectParams * i)->InitDouble("Sample & Hold Decay", 0., 0., 1., 0.01);
+      GetParam(kParamVoiceEffect1Param3 + kNumVoiceEffectParams * i)->InitDouble("Sample & Hold Noise", 0., 0., 1., 0.01);
+      GetParam(kParamVoiceEffect1Param4 + kNumVoiceEffectParams * i)->InitDouble("Sample & Hold Mix", 0., 0., 1., 0.01);
       break;
     }
     case kTexturizerEffect:
     {
-      GetParam(kParamVoiceEffect1Param1 + kNumVoiceEffectParams * i)->InitPercentage("Texturizer Cutoff", 0.);
-      GetParam(kParamVoiceEffect1Param2 + kNumVoiceEffectParams * i)->InitPercentage("Texturizer Drive", 0.);
-      GetParam(kParamVoiceEffect1Param3 + kNumVoiceEffectParams * i)->InitPercentage("Texturizer Res. Freq.", 0.);
-      GetParam(kParamVoiceEffect1Param4 + kNumVoiceEffectParams * i)->InitPercentage("Texturizer Res. Amt.", 0.);
+      GetParam(kParamVoiceEffect1Param1 + kNumVoiceEffectParams * i)->InitDouble("Texturizer Cutoff", 0., 0., 1., 0.01);
+      GetParam(kParamVoiceEffect1Param2 + kNumVoiceEffectParams * i)->InitDouble("Texturizer Drive", 0., 0., 1., 0.01);
+      GetParam(kParamVoiceEffect1Param3 + kNumVoiceEffectParams * i)->InitDouble("Texturizer Res. Freq.", 0., 0., 1., 0.01);
+      GetParam(kParamVoiceEffect1Param4 + kNumVoiceEffectParams * i)->InitDouble("Texturizer Res. Amt.", 0., 0., 1., 0.01);
       break;
     }
     }
