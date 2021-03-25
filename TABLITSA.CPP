@@ -391,7 +391,7 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
   // Comb-specific parameters with different ranges (the modulation parameters are common between all filter types, as these always between -1 and 1)
   GetParam(kParamFilter1FF)->InitPercentage("Filter 1 FF");
   GetParam(kParamFilter1FB)->InitPercentage("Filter 1 FB");
-  GetParam(kParamFilter1Delay)->InitDouble("Filter 1 Delay", 0.1, 0.1, 10., 0.01, "ms");
+  GetParam(kParamFilter1Delay)->InitDouble("Filter 1 Delay", 0.1, 0.1, 20., 0.01, "ms");
   // Oscillator sends
   GetParam(kParamFilter1Osc1Send)->InitPercentage("Filter 1 Osc 1 Send", 100.);
   GetParam(kParamFilter1Osc2Send)->InitPercentage("Filter 1 Osc 2 Send", 0.);
@@ -434,7 +434,7 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
   // Comb-specific parameters with different ranges (the modulation parameters are common between all filter types, as these always between -1 and 1)
   GetParam(kParamFilter2FF)->InitPercentage("Filter 2 FF");
   GetParam(kParamFilter2FB)->InitPercentage("Filter 2 FB");
-  GetParam(kParamFilter2Delay)->InitDouble("Filter 2 Delay", 0.1, 0.1, 10., 0.01, "ms");
+  GetParam(kParamFilter2Delay)->InitDouble("Filter 2 Delay", 0.1, 0.1, 20., 0.01, "ms");
   // Oscillator sends
   GetParam(kParamFilter2Osc1Send)->InitPercentage("Filter 2 Osc 1 Send", 0.);
   GetParam(kParamFilter2Osc2Send)->InitPercentage("Filter 2 Osc 2 Send", 100.);

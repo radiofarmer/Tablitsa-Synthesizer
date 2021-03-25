@@ -383,25 +383,32 @@ public:
 
   inline void SetDrive(T delayLength) override
   {
-    SetDelay(std::min(static_cast<int>(delayLength * mMaxDelay), mMaxDelay));
+    SetDelay(std::min(delayLength * mMaxDelay, mMaxDelay));
   }
 
-  inline void SetDelay(int samples)
+  inline void SetDelay(double samples)
   {
     mDelayLength = samples;
   }
 
   inline T Process(T s) override
   {
-    T out = s + mFF * mDelayIn[mDelayLength] - mFB * mDelayOut[mDelayLength / 2];
+    int intDelay = static_cast<int>(mDelayLength);
+    int intDelayP1 = (intDelay + 1) & (COMB_MAX_DELAY - 1);
+    const double fracDelay = mDelayLength - intDelay;
+    const T delayIn = mDelayIn[intDelay] + fracDelay * (mDelayIn[intDelayP1] - mDelayIn[intDelay]);
+    intDelay >>= 1;
+    intDelayP1 >>= 1;
+    const T delayOut = mDelayOut[intDelay] + fracDelay * (mDelayOut[intDelayP1] - mDelayOut[intDelay]);
+    T out = s + mFF * delayIn - mFB * delayOut;
     mDelayIn.push(s);
     mDelayOut.push(out);
     return out;
   }
 
 private:
-  const int mMaxDelay{ COMB_MAX_DELAY };
-  int mDelayLength;
+  const T mMaxDelay{ COMB_MAX_DELAY }; // NB: Must be a power of 2
+  double mDelayLength;
   T& mFF{ mFc }; // Feedforward used as alias for cutoff
   T& mFB{ mQ }; // Feedback used as alias for resonance
   DelayLine<COMB_MAX_DELAY> mDelayIn;

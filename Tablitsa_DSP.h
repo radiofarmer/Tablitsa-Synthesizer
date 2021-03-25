@@ -708,7 +708,7 @@ public:
         mVoiceModParams[filter ? kVFilter2Cutoff : kVFilter1Cutoff].SetMinMax(0.001, 0.49);
         mVoiceModParams[filter ? kVFilter2Resonance : kVFilter1Resonance].SetMinMax(0., 1.);
         mVoiceModParams[filter ? kVFilter2Drive : kVFilter1Drive].SetMinMax(0., 1.);
-        mFilters.at(filter) = new SVF2<T>(mOsc1.GetSampleRate());
+        mFilters.at(filter) = new SVF2<T>(mMaster->mSampleRate);
         break;
       }
       case kMoog:
@@ -716,7 +716,7 @@ public:
         mVoiceModParams[filter ? kVFilter2Cutoff : kVFilter1Cutoff].SetMinMax(0.001, 0.49);
         mVoiceModParams[filter ? kVFilter2Resonance : kVFilter1Resonance].SetMinMax(0., 1.);
         mVoiceModParams[filter ? kVFilter2Drive : kVFilter1Drive].SetMinMax(0., 1.);
-        mFilters.at(filter) = new MoogLadder<T>(mOsc1.GetSampleRate());
+        mFilters.at(filter) = new MoogLadder<T>(mMaster->mSampleRate);
         break;
       }
       case kComb:
@@ -724,11 +724,11 @@ public:
         mVoiceModParams[filter ? kVFilter2Cutoff : kVFilter1Cutoff].SetMinMax(0., 1.);
         mVoiceModParams[filter ? kVFilter2Resonance : kVFilter1Resonance].SetMinMax(0., 1.);
         mVoiceModParams[filter ? kVFilter2Drive : kVFilter1Drive].SetMinMax(0., 1.);
-        mFilters.at(filter) = new CombFilter<T>(mOsc1.GetSampleRate());
+        mFilters.at(filter) = new CombFilter<T>(mMaster->mSampleRate);
         break;
       }
       default:
-        mFilters.at(filter) = new NullFilter<T>(mOsc1.GetSampleRate());
+        mFilters.at(filter) = new NullFilter<T>(mMaster->mSampleRate);
         break;
 
       }
