@@ -353,6 +353,8 @@ class DistortionEffect final : public Effect<T, V>
 private:
   static constexpr int BufferLength{ 1024 };
   static constexpr T BufferScale{ 1. / BufferLength };
+  static constexpr T FilterModCenterFreqHz{ 600. };
+  static constexpr T MaxFilterModHz{ 100. };
 
   inline T FuzzDistortion(T x) const
   {
@@ -403,17 +405,19 @@ public:
   void SetContinuousParams(const T p1, const T p2, const T p3, const T p4, const T pitch) override
   {
     mGain = std::pow(10., p1 * 2.);
-    mFilterMod = p2 * 0.09;
+    mFilterMod = p2 * mMaxFilterMod;
     mColorFilter.SetCutoff(p3 * 0.1 * mOsFreqScalar);
     mMix = p4;
   }
 
   void SetSampleRate(T sampleRate, int oversampling=1) override
   {
-    Effect<T, V>::SetSampleRate(sampleRate, oversampling);
+    Effect<T, V>::SetSampleRate(sampleRate, oversampling); // Sets `mOversampling` and `mOsFreqScalar`
     mNoiseFilter.SetSampleRate(sampleRate * oversampling);
     mColorFilter.SetSampleRate(sampleRate * oversampling);
     mFilterOsc.SetSampleRate(sampleRate * oversampling);
+    mFilterModCenterFreqNorm = FilterModCenterFreqHz / sampleRate;
+    mMaxFilterMod = std::min(mFilterModCenterFreqNorm * 0.95, MaxFilterModHz / sampleRate);
   }
 
   inline T DoProcess(T s, const int type)
@@ -437,8 +441,7 @@ public:
 
   void ProcessBlock(T* inputs, T* outputs, const int nFrames) override
   {
-    //mNoiseFilter.SetCutoff(0.05 * mOsFreqScalar + mFilterMod * static_cast<T>(std::rand() % 1000) * 0.001);
-    mNoiseFilter.SetCutoff(0.1 + mFilterMod * mFilterOsc.x);
+    mNoiseFilter.SetCutoff(mFilterModCenterFreqNorm + mFilterMod * mFilterOsc.x * ((T)(std::rand() / RAND_MAX) * 0.1 + 1.));
     for (int i{ 0 }; i < nFrames; ++i)
     {
 #ifdef DISTORTION_GAIN_NORM
@@ -476,8 +479,11 @@ private:
   TwoPoleTPTFilter mNoiseFilter{ DEFAULT_SAMPLE_RATE, 0.25, 0.5 };
   TwoPoleTPTFilter mColorFilter{ DEFAULT_SAMPLE_RATE, 0.25 };
 
+  // Noise/fuzz filter controls
   T mFilterMod{ 0. };
   sine_osc_nd mFilterOsc{ 100., DEFAULT_SAMPLE_RATE };
+  T mFilterModCenterFreqNorm{ 600. / DEFAULT_SAMPLE_RATE };
+  T mMaxFilterMod{ std::min(mFilterModCenterFreqNorm * 0.9, MaxFilterModHz / DEFAULT_SAMPLE_RATE) };
 };
 
 
@@ -828,20 +834,20 @@ public:
     mPk[1].SetPeakGain(4.);
   }
 
-  void SetSampleRate(T sampleRate)
+  void SetSampleRate(T sampleRate, int oversampling=1) override
   {
-    Effect<T, V>::SetSampleRate(sampleRate);
+    Effect<T, V>::SetSampleRate(sampleRate, oversampling);
     for (int i{ 0 }; i < 2; ++i)
       mAP[i].SetSampleRate(sampleRate);
   }
 
   void SetContinuousParams(const T p1, const T p2, const T p3, const T p4, const T pitch) override
   {
-    mFc = p1;
+    mFc = p1 * mOsFreqScalar;
     mQ = p2;
     for (int i{ 0 }; i < 2; ++i)
     {
-      mPk[i].SetCutoff(p3);
+      mPk[i].SetCutoff(p3 * mOsFreqScalar);
     }
     for (int i{ 0 }; i < 2; ++i)
     {
@@ -864,7 +870,7 @@ public:
 
   V __vectorcall Process(V s) override
   {
-    return mAP[0].Process4(s) + 0.1 * sin(mPk[0].Process4(s) * 6.28 * mQ);
+    return mAP[0].Process4(s) + 0.1 * sin(mPk[0].Process4(s) * 63. * mQ);
   }
 
   void ProcessStereo(StereoSample<T>& s)
