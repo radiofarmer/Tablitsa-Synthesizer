@@ -206,14 +206,14 @@ BEGIN
     BEGIN
         BLOCK "040004e4"
         BEGIN
-            VALUE "FileVersion", "0.0.1"
-            VALUE "ProductVersion", "0.0.1"
-            VALUE "FileDescription", "Tablitsa"
-            VALUE "InternalName", "Tablitsa"
-            VALUE "ProductName", "Tablitsa"
             VALUE "CompanyName", "RadioFarmer"
-            VALUE "LegalCopyright", "Copyright 2020 Acme Inc"
+            VALUE "FileDescription", "Tablitsa"
+            VALUE "FileVersion", "0.0.1"
+            VALUE "InternalName", "Tablitsa"
+            VALUE "LegalCopyright", "Copyright 2021 Bram Osterhout"
             VALUE "LegalTrademarks", "VST is a trademark of Steinberg Media Technologies GmbH, Audio Unit is a trademark of Apple, Inc."
+            VALUE "ProductName", "Tablitsa"
+            VALUE "ProductVersion", "0.0.1"
         END
     END
     BLOCK "VarFileInfo"

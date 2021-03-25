@@ -110,16 +110,16 @@ public:
     mID(id), IOscillator<T>(startPhase), mPrevFreq(static_cast<int>(startFreq))
   {
     WtFile table(tableName);
-    LoadNewTable(table, mID);
-    SetWavetable(WavetableOscillator<T>::LoadedTables[mID]);
+    LoadNewTable(table);
+    SetWavetable(mLoadedTable);
     mWtReady = true;
   }
 
   WavetableOscillator(const int id, const WtFile& table, double startPhase = 0., double startFreq = 1.)
     : mID(id), IOscillator<T>(startPhase, startFreq), mPrevFreq(static_cast<int>(startFreq))
   {
-    LoadNewTable(table, mID);
-    SetWavetable(WavetableOscillator<T>::LoadedTables[mID]);
+    LoadNewTable(table);
+    SetWavetable(mLoadedTable);
     mWtReady = true;
   }
 
@@ -132,20 +132,15 @@ public:
   }
 
   /* Load a new wavetable as a static variable */
-  void LoadNewTable(WtFile& wt, int idx)
+  void LoadNewTable(WtFile& wt)
   {
     if (wt.Success())
     {
       std::unique_lock<std::mutex> lock(mMasterMutex);
       mWtReady = false;
-      delete LoadedTables[idx];
-      LoadedTables[idx] = new Wavetable<T>(wt);
+      delete mLoadedTable;
+      mLoadedTable = new Wavetable<T>(wt);
     }
-  }
-
-  void SetWavetable(int idx)
-  {
-    SetWavetable(LoadedTables[idx]);
   }
 
   void SetWavetable(Wavetable<T>* tab)
@@ -600,7 +595,7 @@ private:
   static inline constexpr double twoPi{ 6.28318530718 };
 
 public:
-  Wavetable<T>* LoadedTables[2]{ nullptr, nullptr };
+  Wavetable<T>* mLoadedTable{ nullptr };
 #ifndef VECTOR
   iplug::FastSinOscillator<T> mPhaseModulator;
   iplug::FastSinOscillator<T> mRingModulator{ 0.5 }; // Offset start phase by half a cycle

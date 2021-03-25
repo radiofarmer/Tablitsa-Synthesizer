@@ -668,22 +668,13 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
       SendArbitraryMsgFromUI(kMsgLoadPreset, kNoTag, sizeof(bool), reinterpret_cast<const void*>(&loadBackup));
       });
     IActionFunction resetToDefaultFunction = IActionFunction([this](IControl* pControl) {
-      // Save current state
-      std::string backupPath = GetDataPath("\\Tablitsa\\presets\\") + "_backup.TPST";
       IByteChunk currentState;
       SerializeState(currentState);
-      SavePreset(currentState, backupPath.c_str(), true);
-      // Load default state
-      std::string defaultPath = GetDataPath("\\Tablitsa\\presets\\") + "_Tablitsa_Default.TPST";
-      IByteChunk presetData = LoadPreset(defaultPath.c_str(), false);
-      if (presetData.Size() == 0)
-        return;
-      UnserializeState(presetData, 0);
-      UpdateUIControls();
+      SavePreset(currentState, "", true);
+      LoadDefaultState();
       });
     IActionFunction loadBackupFunction = IActionFunction([this](IControl* pControl) {
-      std::string defaultPath = GetDataPath("\\Tablitsa\\presets\\") + "_backup.TPST";
-      IByteChunk presetData = LoadPreset(defaultPath.c_str(), false);
+      IByteChunk presetData = LoadPreset("", true);
       if (presetData.Size() == 0)
         return;
       UnserializeState(presetData, 0);
@@ -1341,9 +1332,29 @@ int Tablitsa::UnserializeState(const IByteChunk& chunk, int startPos)
   return UnserializeParams(chunk, startPos);
 }
 
-void LoadDefaultState()
+void Tablitsa::LoadDefaultState()
 {
-  
+  // unserialize the steps state before unserializing the regular params
+  for (int i = 0; i < kNumSeqSteps; i++)
+  {
+    mDSP.mSeqSteps[i] = 0.;
+  }
+  // Wavetable 1
+  mDSP.mLoadedWavetables[0] = 1.;
+  // Wavetable 2
+  mDSP.mLoadedWavetables[1] = 2.;
+  // Sequencer quantization
+  mSequencerIsQuantized = 0.;
+
+  for (int i{ 0 }; i < TABLITSA_MAX_VOICE_EFFECTS; ++i)
+    SetVoiceFXSlot(i, kNoVoiceEffect);
+  for (int i{ 0 }; i < TABLITSA_MAX_MASTER_EFFECTS; ++i)
+    SetMasterFXSlot(i, kNoMasterEffect);
+
+  DefaultParamValues();
+  OnParamReset(kDelegate);
+
+  UpdateUIControls();
 }
 
 void Tablitsa::OnUIOpen()
@@ -1720,10 +1731,9 @@ void Tablitsa::SetActiveModIdx(int idx)
 void Tablitsa::SavePreset(IByteChunk& byteData, const char* filename, bool isBackup)
 {
   assert(byteData.Size() != 0);
-
-  if (!strcmp(filename, "_Tablitsa_Default.TPST"))
+  if (isBackup)
   {
-    GetUI()->ShowMessageBox("Cannot overwrite default preset", "Error", EMsgBoxType::kMB_OK);
+    mStateBackup = byteData;
     return;
   }
 
@@ -1731,10 +1741,7 @@ void Tablitsa::SavePreset(IByteChunk& byteData, const char* filename, bool isBac
 
   if (!presetFile.is_open())
   {
-    if (isBackup)
-      GetUI()->ShowMessageBox("Could not open backup file. Check directory and try again.", "Error", EMsgBoxType::kMB_OK);
-    else
-      GetUI()->ShowMessageBox("Cannot access selected file path.", "Error", EMsgBoxType::kMB_OK);
+    GetUI()->ShowMessageBox("Cannot access selected file path.", "Error", EMsgBoxType::kMB_OK);
     presetFile.close();
     return;
   }
@@ -1746,16 +1753,16 @@ void Tablitsa::SavePreset(IByteChunk& byteData, const char* filename, bool isBac
 
 IByteChunk Tablitsa::LoadPreset(const char* filename, bool isBackup)
 {
+  if (isBackup)
+    return mStateBackup;
+
   IByteChunk presetData;
 
   std::vector<char> fileData = ReadAllBytes(filename);
 
   if (fileData.size() == 0)
   {
-    if (isBackup)
-      GetUI()->ShowMessageBox("Backup file not found", "Error", EMsgBoxType::kMB_OK);
-    else
-      GetUI()->ShowMessageBox("Preset file not found or invalid format", "Error", EMsgBoxType::kMB_OK);
+    GetUI()->ShowMessageBox("Preset file not found or invalid format", "Error", EMsgBoxType::kMB_OK);
     return presetData;
   }
 

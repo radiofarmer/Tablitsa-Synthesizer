@@ -752,6 +752,7 @@ private:
   TablitsaDSP<sample> mDSP {kNumVoices}; // sample is an alias for double
   IPeakSender<2> mMeterSender;
   IControl* mActiveControl{};
+  IByteChunk mStateBackup; // Stores the last user state before reseting, so that it may be restored
 
   // UI Status variables not stored as parameters
   EVoiceEffectTypes mVoiceEffectSlots[TABLITSA_MAX_VOICE_EFFECTS]{}; // Holds the ID number of the effect in each slot for the voice effects

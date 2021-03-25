@@ -18,8 +18,19 @@ template<typename T, class V=Vec4d>
 class Effect
 {
 public:
-  Effect(T sampleRate) : mSampleRate(sampleRate), mVectorSize(V().size())
+  Effect(T sampleRate, int oversampling=1) :
+    mSampleRate(sampleRate),
+    mOversampling(oversampling),
+    mOsFreqScalar(1. / static_cast<T>(oversampling)),
+    mVectorSize(V().size())
   {
+  }
+
+  virtual void SetSampleRate(T sampleRate, int oversampling=1)
+  {
+    mSampleRate = sampleRate;
+    mOversampling = oversampling;
+    mOsFreqScalar = 1. / static_cast<T>(oversampling);
   }
 
   virtual T Process(T s) { return s; }
@@ -43,12 +54,6 @@ public:
     }
   }
 
-  // Parameters
-  virtual void SetSampleRate(T sampleRate)
-  {
-    mSampleRate = sampleRate;
-  }
-
   virtual void SetMix(T wet) { mMix = wet; }
 
   virtual void SetParam1(T value) {}
@@ -70,6 +75,8 @@ public:
 
 protected:
   T mSampleRate;
+  int mOversampling;
+  T mOsFreqScalar;
   T mMix{ 0. };
   const int mVectorSize;
 };
@@ -219,9 +226,9 @@ public:
     CalculateDelaySamples();
   }
 
-  void SetSampleRate(T sampleRate) override
+  void SetSampleRate(T sampleRate, int oversampling=1) override
   {
-    Effect<T, V>::SetSampleRate(sampleRate);
+    Effect<T, V>::SetSampleRate(sampleRate, oversampling);
     CalculateDelaySamples();
   }
 
@@ -396,16 +403,17 @@ public:
   void SetContinuousParams(const T p1, const T p2, const T p3, const T p4, const T pitch) override
   {
     mGain = std::pow(10., p1 * 2.);
-    mFilterMod = p2 * 0.25;
-    mColorFilter.SetCutoff(0.25 * p3);
+    mFilterMod = p2 * 0.09;
+    mColorFilter.SetCutoff(p3 * 0.1 * mOsFreqScalar);
     mMix = p4;
   }
 
-  void SetSampleRate(T sampleRate) override
+  void SetSampleRate(T sampleRate, int oversampling=1) override
   {
-    Effect<T, V>::SetSampleRate(sampleRate);
-    mNoiseFilter.SetSampleRate(sampleRate);
-    mColorFilter.SetSampleRate(sampleRate);
+    Effect<T, V>::SetSampleRate(sampleRate, oversampling);
+    mNoiseFilter.SetSampleRate(sampleRate * oversampling);
+    mColorFilter.SetSampleRate(sampleRate * oversampling);
+    mFilterOsc.SetSampleRate(sampleRate * oversampling);
   }
 
   inline T DoProcess(T s, const int type)
@@ -429,22 +437,31 @@ public:
 
   void ProcessBlock(T* inputs, T* outputs, const int nFrames) override
   {
-    mNoiseFilter.SetCutoff(0.05 + mFilterMod * static_cast<T>(std::rand() % 1000) * 0.001);
+    //mNoiseFilter.SetCutoff(0.05 * mOsFreqScalar + mFilterMod * static_cast<T>(std::rand() % 1000) * 0.001);
+    mNoiseFilter.SetCutoff(0.1 + mFilterMod * mFilterOsc.x);
     for (int i{ 0 }; i < nFrames; ++i)
     {
+#ifdef DISTORTION_GAIN_NORM
       const T ipt_filtered = mColorFilter.ProcessBP(inputs[i]);
 
       // Update average input volume
-      /* mAvgIn += BufferScale * (std::abs(inputs[i]) - mInHist.last());
-      mInHist.push(std::abs(inputs[i])); */
+      mAvgIn += BufferScale * (std::abs(inputs[i]) - mInHist.last());
+      mInHist.push(std::abs(inputs[i]));
 
       // Calculate output (and update average output volume)
       const T out = FuzzDistortion(mNoiseFilter.ProcessAP(inputs[i] + ipt_filtered));
-      /* mAvgOut += BufferScale * (std::abs(out) - mOutHist.last());
-      //mOutHist.push(std::abs(out)); */
+      mAvgOut += BufferScale * (std::abs(out) - mOutHist.last());
+      mOutHist.push(std::abs(out));
 
+      mFilterOsc.Step();
       outputs[i] = inputs[i] + mMix * (out - inputs[i]);
-
+#else
+      const T ipt_filtered = mColorFilter.ProcessBP(inputs[i]);
+      // Calculate output
+      const T out = FuzzDistortion(mNoiseFilter.ProcessAP(inputs[i] + ipt_filtered));
+      mFilterOsc.Step();
+      outputs[i] = inputs[i] + mMix * (out - inputs[i]);
+#endif
     }
   }
 
@@ -460,6 +477,7 @@ private:
   TwoPoleTPTFilter mColorFilter{ DEFAULT_SAMPLE_RATE, 0.25 };
 
   T mFilterMod{ 0. };
+  sine_osc_nd mFilterOsc{ 100., DEFAULT_SAMPLE_RATE };
 };
 
 
@@ -501,10 +519,10 @@ public:
     SetMidFreq(0.25);
   }
 
-  void SetSampleRate(T sampleRate) override
+  void SetSampleRate(T sampleRate, int oversampling) override
   {
     SetMidFreq(std::min(mMidFreq * mSampleRate / sampleRate, 0.99));
-    Effect<T, V>::SetSampleRate(sampleRate);
+    Effect<T, V>::SetSampleRate(sampleRate * oversampling);
   }
 
   void SetParam1(T value) override { SetLowGain(value); }
@@ -594,10 +612,10 @@ public:
     mReverb(sampleRate, maxDelayMS, minDelayMS, maxFeedback, minFeedback, gain)
   {}
 
-  void SetSampleRate(T sampleRate) override
+  void SetSampleRate(T sampleRate, int oversampling) override
   {
-    Effect<T, V>::SetSampleRate(sampleRate);
-    mReverb.SetSampleRate(mSampleRate);
+    Effect<T, V>::SetSampleRate(sampleRate, oversampling);
+    mReverb.SetSampleRate(mSampleRate * oversampling);
   }
 
   void SetParam1(T value) override

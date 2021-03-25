@@ -654,7 +654,7 @@ public:
       mFilters[1]->SetSampleRate(sampleRate);
 
       for (int i{ 0 }; i < TABLITSA_MAX_VOICE_EFFECTS; ++i)
-        mEffects[i]->SetSampleRate(sampleRate * (T)EFFECT_OS_FACTOR);
+        mEffects[i]->SetSampleRate(sampleRate, (int)EFFECT_OS_FACTOR);
 
       // Modulation buffers
       mVModulationsData.Resize(blockSize * kNumModulations);
@@ -1064,9 +1064,6 @@ public:
 
     if (oscIdx == 0)
     {
-      /*mSynth.ForEachVoice([&wtFile, oscIdx](SynthVoice& voice) {
-        dynamic_cast<Voice&>(voice).mOsc1.LoadNewTable(wtFile, oscIdx);
-        });*/
       ForEachVoice([this, oscIdx, pWT](Voice& voice) {
         voice.mOsc1.SetWavetable(pWT);
         voice.mOsc1.ReloadLUT();
@@ -1077,9 +1074,6 @@ public:
     }
     else
     {
-      /*mSynth.ForEachVoice([&wtFile, oscIdx](SynthVoice& voice) {
-        dynamic_cast<Voice&>(voice).mOsc2.LoadNewTable(wtFile, oscIdx);
-        });*/
       ForEachVoice([this, oscIdx, pWT](Voice& voice) {
         voice.mOsc2.SetWavetable(pWT);
         voice.mOsc2.ReloadLUT();
@@ -2414,13 +2408,14 @@ public:
   
 public:
   MidiSynth mSynth { VoiceAllocator::kPolyModePoly, MidiSynth::kDefaultBlockSize };
+
   WDL_TypedBuf<T> mModulationsData; // Sample data for global modulations (e.g. smoothed sustain)
   WDL_PtrList<T> mModulations; // Ptrlist for global modulations
   LogParamSmooth<T, kNumModulations> mParamSmoother;
   sample mParamsToSmooth[kNumModulations];
   std::vector<std::string> mWavetableNames{ ELEMENT_NAMES };
   std::vector<Voice*> mSynthVoices;
-  Wavetable<T>* mWavetables[2]{ nullptr };
+  Wavetable<T>* mWavetables[2]{ nullptr }; // Holds the wavetable data for all voices (for wavetable indices, see `mLoadedWavetables` below)
   bool mTableLoading{ false };
 
   // Polyphonic/Monophonic

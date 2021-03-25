@@ -3,6 +3,8 @@
 #include "radiofarmer_config.h"
 #include "fastmath_tables.h"
 
+#include <cmath>
+
 BEGIN_DSP_NAMESPACE
 
 #define FAST_MATH_MACROS
@@ -61,5 +63,44 @@ inline sample_t fast_tanh(sample_t x)
 {
   return x / (1. + std::abs(2 * x));
 }
+
+/* Non-deterministic sine oscillator */
+struct sine_osc_nd
+{
+  double k; // omega = sqrt(k/m), m=1
+  double x;
+  double dxdt;
+  double d2xdt2;
+  double dt;
+  double omega;
+
+  sine_osc_nd(double freqHz, double sampleRate=DEFAULT_SRATE) :
+    x(1.), dxdt(std::cos(x)), d2xdt2(-std::sin(dxdt)),
+    k(std::pow(6.28318530718 * freqHz, 2.)),
+    dt(1. / sampleRate),
+    omega(6.28318530718 * freqHz)
+  {
+  }
+
+  inline void SetFreq(double freqHz)
+  {
+    omega = 6.28318530718 * freqHz;
+    k = omega * omega;
+  }
+
+  inline void SetSampleRate(double sampleRate)
+  {
+    dt = 1. / sampleRate;
+  }
+
+  inline double Step()
+  {
+    d2xdt2 = -k * (x + dxdt * dt);
+    double dxdt_new = dxdt + d2xdt2 * dt;
+    x += dxdt * dt;
+    dxdt = dxdt_new;
+    return x;
+  }
+};
 
 END_DSP_NAMESPACE
