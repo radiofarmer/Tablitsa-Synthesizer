@@ -315,4 +315,8 @@
     </None>
     <None Include="packages.config" />
   </ItemGroup>
+  <ItemGroup>
+    <Image Include="..\resources\img\Tablitsa.ico" />
+    <Image Include="..\resources\Tablitsa.ico" />
+  </ItemGroup>
 </Project>

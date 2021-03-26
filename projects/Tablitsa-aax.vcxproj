@@ -556,6 +556,10 @@
     <None Include="..\config\Tablitsa-win.props" />
     <None Include="packages.config" />
   </ItemGroup>
+  <ItemGroup>
+    <Image Include="..\resources\img\Tablitsa.ico" />
+    <Image Include="..\resources\Tablitsa.ico" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
