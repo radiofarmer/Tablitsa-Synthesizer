@@ -260,7 +260,6 @@ public:
   private:
     const double mCoeff1{ 1. / 1.3 };
     const double mCoeff2{ 0.3 / 1.3 };
-    Vec4d mCoeffsV{ 1. / 1.3, 0.3 / 1.3, 0., 0. };
     double mFF{ 0 };
     double mFB{ 0 };
   };
@@ -282,7 +281,7 @@ public:
 
   inline void SetDrive(double drive) override
   {
-    mGComp = drive;
+    mGComp = drive * 10.;
   }
 
   void SetMode(int mode)
@@ -306,14 +305,17 @@ public:
     case kLowpass24db:
       mA = mB = mC = mD = 0.;
       mE = 1.;
+      break;
     case kHighpass24db:
       mA = mE = 1.;
       mB = mD = -4.;
       mC = 6.;
+      break;
     case kBandpass24db:
       mA = mB = 0.;
       mC = mE = 4.;
       mD = -8.;
+      break;
     default:
       break;
     }
@@ -331,6 +333,7 @@ public:
     const double g{ 0.9892 * mFc - 0.4342 * fcSquared + 0.1381 * fcCubed - 0.0202 * fcCubed * mFc };
 
     // Set g of each one-pole filter
+#pragma clang loop unroll(full)
     for (int i{ 0 }; i < 4; ++i)
     {
       mLadder[i]->mG = g;
