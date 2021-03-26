@@ -1237,7 +1237,7 @@ int Tablitsa::UnserializeState(const IByteChunk& chunk, int startPos)
     {
       GetParam(kParamVoiceEffect1Param1 + kNumVoiceEffectParams * i)->InitDouble("Distortion Param 1", 0., 0., 1., 0.01);
       GetParam(kParamVoiceEffect1Param2 + kNumVoiceEffectParams * i)->InitDouble("Distortion Param 2", 0., 0., 1., 0.01);
-      GetParam(kParamVoiceEffect1Param2 + kNumVoiceEffectParams * i)->InitDouble("Distortion Param 3", 0., 0., 1., 0.01);
+      GetParam(kParamVoiceEffect1Param2 + kNumVoiceEffectParams * i)->InitDouble("Distortion Param 3", 0.01, 0.01, 1., 0.01);
       GetParam(kParamVoiceEffect1Param2 + kNumVoiceEffectParams * i)->InitDouble("Distortion Param 4", 0., 0., 1., 0.01);
       break;
     }

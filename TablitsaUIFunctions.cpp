@@ -187,7 +187,7 @@ void InitDistortionUI(Plugin* pPlugin, IGraphics* pGraphics, std::vector<IContro
 
   pPlugin->GetParam(params[0])->InitDouble(paramNames[0], reset ? 0. : pPlugin->GetParam(params[0])->Value(), 0., 1., 0.01);
   pPlugin->GetParam(params[1])->InitDouble(paramNames[1], reset ? 0. : pPlugin->GetParam(params[1])->Value(), 0., 1., 0.01);
-  pPlugin->GetParam(params[2])->InitDouble(paramNames[2], reset ? 0. : pPlugin->GetParam(params[3])->Value(), 0.01, 1., 0.01);
+  pPlugin->GetParam(params[2])->InitDouble(paramNames[2], reset ? 0. : pPlugin->GetParam(params[2])->Value(), 0.01, 1., 0.01);
   pPlugin->GetParam(params[3])->InitDouble(paramNames[3], reset ? 0. : pPlugin->GetParam(params[3])->Value(), 0., 1., 0.01);
   pGraphics->HideControl(params[4], true);
   pGraphics->HideControl(params[5], true);
