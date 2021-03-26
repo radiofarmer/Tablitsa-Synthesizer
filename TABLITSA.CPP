@@ -1257,6 +1257,14 @@ int Tablitsa::UnserializeState(const IByteChunk& chunk, int startPos)
       GetParam(kParamVoiceEffect1Param4 + kNumVoiceEffectParams * i)->InitDouble("Texturizer Res. Amt.", 0., 0., 1., 0.01);
       break;
     }
+    case kCMEffect:
+    {
+      GetParam(kParamVoiceEffect1Param1 + kNumVoiceEffectParams * i)->InitDouble("SuperRing Mod Amount", 0., 0., 1., 0.01);
+      GetParam(kParamVoiceEffect1Param2 + kNumVoiceEffectParams * i)->InitDouble("SuperRing Pitch", 0., -2., 2., 0.01, "8v.");
+      GetParam(kParamVoiceEffect1Param3 + kNumVoiceEffectParams * i)->InitDouble("SuperRing Phase", 0., 0., 1., 0.01, "Cycles");
+      GetParam(kParamVoiceEffect1Param4 + kNumVoiceEffectParams * i)->InitDouble("SuperRing Mix", 0., 0., 1., 0.01);
+      break;
+    }
     }
     // Send message to change effect BEFORE parameters are loaded, so that the effect receives the proper parameter values
     SendArbitraryMsgFromUI(kMsgVoiceEffect1Changed + i, kNoTag, sizeof(mVoiceEffectSlots[i]), reinterpret_cast<void*>(&mVoiceEffectSlots[i]));
@@ -1347,9 +1355,15 @@ void Tablitsa::LoadDefaultState()
   mSequencerIsQuantized = 0.;
 
   for (int i{ 0 }; i < TABLITSA_MAX_VOICE_EFFECTS; ++i)
+  {
     SetVoiceFXSlot(i, kNoVoiceEffect);
+    SendArbitraryMsgFromUI(kMsgVoiceEffect1Changed + i, kNoTag, sizeof(mVoiceEffectSlots[i]), reinterpret_cast<void*>(&mVoiceEffectSlots[i]));
+  }
   for (int i{ 0 }; i < TABLITSA_MAX_MASTER_EFFECTS; ++i)
+  {
     SetMasterFXSlot(i, kNoMasterEffect);
+    SendArbitraryMsgFromUI(kMsgMasterEffect1Changed + i, kNoTag, sizeof(mMasterEffectSlots[i]), reinterpret_cast<void*>(&mMasterEffectSlots[i]));
+  }
 
   DefaultParamValues();
   OnParamReset(kDelegate);

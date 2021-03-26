@@ -209,7 +209,7 @@ void InitDistortionUI(Plugin* pPlugin, IGraphics* pGraphics, std::vector<IContro
   dynamic_cast<IVKnobControl*>(controls[2])->SetLabelStr("Color");
   dynamic_cast<IVKnobControl*>(controls[3])->SetLabelStr("Mix");
   // Modulation off for knob 1
-  dynamic_cast<TablitsaIVModKnobControl*>(controls[0])->EnableModulation(false);
+  dynamic_cast<TablitsaIVModKnobControl*>(controls[0])->EnableModulation(true);
   // Toggle action functions
   controls[4]->SetActionFunction(nullptr);
   controls[5]->SetActionFunction(nullptr);
@@ -258,7 +258,7 @@ void InitReverbUI(Plugin* pPlugin, IGraphics* pGraphics, std::vector<IControl*> 
   pPlugin->GetParam(params[2])->InitDouble(paramNames[2], reset ? 0.5 : pPlugin->GetParam(params[2])->Value(), 0., 1., 0.01);
   pPlugin->GetParam(params[3])->InitDouble(paramNames[3], reset ? 0. : pPlugin->GetParam(params[3])->Value(), 0., 1., 0.01);
 
-  pPlugin->GetParam(params[0])->SetDisplayFunc(nullptr);
+  pPlugin->GetParam(params[0])->SetDisplayFunc(PercentDisplayFunc);
   pPlugin->GetParam(params[1])->SetDisplayFunc(PercentDisplayFunc);
   pPlugin->GetParam(params[2])->SetDisplayFunc(PercentDisplayFunc);
   pPlugin->GetParam(params[3])->SetDisplayFunc(PercentDisplayFunc);
