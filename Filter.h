@@ -281,7 +281,7 @@ public:
 
   inline void SetDrive(double drive) override
   {
-    mGComp = drive * 10.;
+    mGComp = 0.5 + drive * 9.5;
   }
 
   void SetMode(int mode)

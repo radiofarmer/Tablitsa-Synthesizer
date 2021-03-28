@@ -408,6 +408,7 @@ public:
     mFilterMod = p2 * mMaxFilterMod;
     mColorFilter.SetCutoff(p3 * 0.1 * mOsFreqScalar);
     mMix = p4;
+    mFilterOsc.SetFreq(440. * std::pow(2., pitch * 0.1666666));
   }
 
   void SetSampleRate(T sampleRate, int oversampling=1) override
@@ -416,8 +417,8 @@ public:
     mNoiseFilter.SetSampleRate(sampleRate * oversampling);
     mColorFilter.SetSampleRate(sampleRate * oversampling);
     mFilterOsc.SetSampleRate(sampleRate * oversampling);
-    mFilterModCenterFreqNorm = FilterModCenterFreqHz / sampleRate;
-    mMaxFilterMod = std::min(mFilterModCenterFreqNorm * 0.95, MaxFilterModHz / sampleRate);
+    mFilterModCenterFreqNorm = FilterModCenterFreqHz / (sampleRate * oversampling);
+    mMaxFilterMod = std::min(mFilterModCenterFreqNorm * 0.95, MaxFilterModHz / (sampleRate * oversampling));
   }
 
   inline T DoProcess(T s, const int type)
@@ -527,7 +528,7 @@ public:
 
   void SetSampleRate(T sampleRate, int oversampling) override
   {
-    SetMidFreq(std::min(mMidFreq * mSampleRate / sampleRate, 0.99));
+    SetMidFreq(std::min(mMidFreq * mSampleRate / (sampleRate * oversampling), 0.99));
     Effect<T, V>::SetSampleRate(sampleRate * oversampling);
   }
 
