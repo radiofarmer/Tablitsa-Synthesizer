@@ -1145,7 +1145,7 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
 
     
 #ifndef VST3_API
-    pGraphics->AttachControl(new IVButtonControl(b.GetFromBottom(KEYBOARD_HEIGHT + 15.f).GetFromRight(170.f).GetFromTop(30.), SplashClickActionFunc,
+    pGraphics->AttachControl(new IVButtonControl(b.GetFromBottom(KEYBOARD_HEIGHT + 15.f).GetFromRight(170.f).GetFromTop(30.).GetVPadded(-10.f), SplashClickActionFunc,
       "Show/Hide Keyboard", TABLITSA_STYLE.WithColor(kFG, COLOR_WHITE).WithLabelText({15.f, EVAlign::Middle})))->SetAnimationEndActionFunction(
       [pGraphics, globalControls](IControl* pCaller) {
         static bool hide = false;

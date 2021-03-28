@@ -161,7 +161,7 @@ public:
     // Select by Index
     const double tableFact{ std::log2(mWT->GetMaxSize() / (samplesPerCycle * mTableOS)) }; // Factors of two by which the largest mipmap (at index 0) is larger than the required mipmap
     mTableInterp = tableFact - std::floor(tableFact); // Nearest integer lower than the value calculated above
-    mWtIdx = static_cast<unsigned int>(std::floor(tableFact * mFormant)) & 0xFF;
+    mWtIdx = std::max(static_cast<int>(std::floor(tableFact * mFormant)), 0);
     SetMipmapLevel_ByIndex(mWtIdx);
   }
 
