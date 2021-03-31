@@ -1182,27 +1182,28 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
 
 bool Tablitsa::SerializeState(IByteChunk& chunk) const
 {
+  bool savedOK = true;
   // serialize the multislider state before serializing the regular params
   for (int i = 0; i < kNumSeqSteps; i++)
   {
-    chunk.Put(&mDSP.mSeqSteps[i]);
+    savedOK &= chunk.Put(&mDSP.mSeqSteps[i]);
   }
-  chunk.Put(&mDSP.mLoadedWavetables[0]);
-  chunk.Put(&mDSP.mLoadedWavetables[1]);
-  chunk.Put(&mSequencerIsQuantized);
+  savedOK &= chunk.Put(&mDSP.mLoadedWavetables[0]) > 0;
+  savedOK &= chunk.Put(&mDSP.mLoadedWavetables[1]) > 0;
+  savedOK &= chunk.Put(&mSequencerIsQuantized) > 0;
 
   // Save effect panel states
   for (int i{ 0 }; i < TABLITSA_MAX_VOICE_EFFECTS; ++i)
   {
-    chunk.Put(&mVoiceEffectSlots[i]);
+    savedOK &= chunk.Put(&mVoiceEffectSlots[i]) > 0;
   }
   for (int i{ 0 }; i < TABLITSA_MAX_MASTER_EFFECTS; ++i)
   {
-    chunk.Put(&mMasterEffectSlots[i]);
-    chunk.Put(&mDelayTempoSync[i]);
+    savedOK &= chunk.Put(&mMasterEffectSlots[i]) > 0;
+    savedOK &= chunk.Put(&mDelayTempoSync[i]) > 0;
   }
-
-  return SerializeParams(chunk); // must remember to call SerializeParams at the end
+  savedOK &= SerializeParams(chunk);
+  return savedOK; // must remember to call SerializeParams at the end
 }
 
 // this over-ridden method is called when the host is trying to load the plug-in state and you need to unpack the data into your algorithm
@@ -1237,8 +1238,8 @@ int Tablitsa::UnserializeState(const IByteChunk& chunk, int startPos)
     {
       GetParam(kParamVoiceEffect1Param1 + kNumVoiceEffectParams * i)->InitDouble("Distortion Param 1", 0., 0., 1., 0.01);
       GetParam(kParamVoiceEffect1Param2 + kNumVoiceEffectParams * i)->InitDouble("Distortion Param 2", 0., 0., 1., 0.01);
-      GetParam(kParamVoiceEffect1Param2 + kNumVoiceEffectParams * i)->InitDouble("Distortion Param 3", 0.01, 0.01, 1., 0.01);
-      GetParam(kParamVoiceEffect1Param2 + kNumVoiceEffectParams * i)->InitDouble("Distortion Param 4", 0., 0., 1., 0.01);
+      GetParam(kParamVoiceEffect1Param3 + kNumVoiceEffectParams * i)->InitDouble("Distortion Param 3", 0.01, 0.01, 1., 0.01);
+      GetParam(kParamVoiceEffect1Param4 + kNumVoiceEffectParams * i)->InitDouble("Distortion Param 4", 0., 0., 1., 0.01);
       break;
     }
     case kSampleAndHoldEffect:
@@ -1289,38 +1290,40 @@ int Tablitsa::UnserializeState(const IByteChunk& chunk, int startPos)
         GetParam(kParamMasterEffect1Param1 + kNumMasterEffectParams * i)->InitDouble("Delay L (ms)", 100., 1., TABLITSA_MAX_DELAY_MS, 1., "ms", IParam::kFlagsNone, "Effect", IParam::ShapePowCurve(3.));
         GetParam(kParamMasterEffect1Param2 + kNumMasterEffectParams * i)->InitDouble("Delay R (ms)", 100., 1., TABLITSA_MAX_DELAY_MS, 1., "ms", IParam::kFlagsNone, "Effect", IParam::ShapePowCurve(3.));
       }
+      GetParam(kParamMasterEffect1Param3 + kNumMasterEffectParams * i)->InitDouble("Delay Feedback", 0., 0., 1., 0.01);
+      GetParam(kParamMasterEffect1Param4 + kNumMasterEffectParams * i)->InitDouble("Delay Mix", 0., 0., 1., 0.01);
       break;
     }
     case kEQEffect:
     {
-      GetParam(kParamMasterEffect1Param1 + kNumMasterEffectParams * i)->InitDouble("EQ Low Gain ", 1., 0., 2., 0.1);
-      GetParam(kParamMasterEffect1Param2 + kNumMasterEffectParams * i)->InitDouble("EQ Mid Gain", 1., 0., 2., 0.1);
-      GetParam(kParamMasterEffect1Param3 + kNumMasterEffectParams * i)->InitDouble("EQ Mid Freq", 0.5, 0., 1., 0.1);
-      GetParam(kParamMasterEffect1Param4 + kNumMasterEffectParams * i)->InitDouble("EQ High Gain", 1., 0., 2., 0.1);
+      GetParam(kParamMasterEffect1Param1 + kNumMasterEffectParams * i)->InitDouble("EQ Low Gain ", 1., 0., 2., 0.01);
+      GetParam(kParamMasterEffect1Param2 + kNumMasterEffectParams * i)->InitDouble("EQ Mid Gain", 1., 0., 2., 0.01);
+      GetParam(kParamMasterEffect1Param3 + kNumMasterEffectParams * i)->InitDouble("EQ Mid Freq", 0.5, 0., 1., 0.01);
+      GetParam(kParamMasterEffect1Param4 + kNumMasterEffectParams * i)->InitDouble("EQ High Gain", 1., 0., 2., 0.01);
       break;
     }
     case kReverbEffect:
     {
-      GetParam(kParamMasterEffect1Param1 + kNumMasterEffectParams * i)->InitDouble("Master Effect Parameter 1", 0., 0., 1., 0.1);
-      GetParam(kParamMasterEffect1Param2 + kNumMasterEffectParams * i)->InitDouble("Master Effect Parameter 2", 0., 0., 1., 0.1);
-      GetParam(kParamMasterEffect1Param3 + kNumMasterEffectParams * i)->InitDouble("Master Effect Parameter 3", 0., 0., 1., 0.1);
-      GetParam(kParamMasterEffect1Param4 + kNumMasterEffectParams * i)->InitDouble("Master Effect Parameter 4", 0., 0., 1., 0.1);
+      GetParam(kParamMasterEffect1Param1 + kNumMasterEffectParams * i)->InitDouble("Master Effect Parameter 1", 0., 0., 1., 0.01);
+      GetParam(kParamMasterEffect1Param2 + kNumMasterEffectParams * i)->InitDouble("Master Effect Parameter 2", 0., 0., 1., 0.01);
+      GetParam(kParamMasterEffect1Param3 + kNumMasterEffectParams * i)->InitDouble("Master Effect Parameter 3", 0., 0., 1., 0.01);
+      GetParam(kParamMasterEffect1Param4 + kNumMasterEffectParams * i)->InitDouble("Master Effect Parameter 4", 0., 0., 1., 0.01);
       break;
     }
     case kReverb2Effect:
     {
-      GetParam(kParamMasterEffect1Param1 + kNumMasterEffectParams * i)->InitDouble("Master Effect Parameter 1", 0., 0., 1., 0.1);
-      GetParam(kParamMasterEffect1Param2 + kNumMasterEffectParams * i)->InitDouble("Master Effect Parameter 2", 0., 0., 1., 0.1);
-      GetParam(kParamMasterEffect1Param3 + kNumMasterEffectParams * i)->InitDouble("Master Effect Parameter 3", 0., 0., 1., 0.1);
-      GetParam(kParamMasterEffect1Param4 + kNumMasterEffectParams * i)->InitDouble("Master Effect Parameter 4", 0., 0., 1., 0.1);
+      GetParam(kParamMasterEffect1Param1 + kNumMasterEffectParams * i)->InitDouble("Master Effect Parameter 1", 0., 0., 1., 0.01);
+      GetParam(kParamMasterEffect1Param2 + kNumMasterEffectParams * i)->InitDouble("Master Effect Parameter 2", 0., 0., 1., 0.01);
+      GetParam(kParamMasterEffect1Param3 + kNumMasterEffectParams * i)->InitDouble("Master Effect Parameter 3", 0., 0., 1., 0.01);
+      GetParam(kParamMasterEffect1Param4 + kNumMasterEffectParams * i)->InitDouble("Master Effect Parameter 4", 0., 0., 1., 0.01);
       break;
     }
     default:
     {
-      GetParam(kParamMasterEffect1Param1 + kNumMasterEffectParams * i)->InitDouble("Master Effect Parameter 1", 0., 0., 1., 0.1);
-      GetParam(kParamMasterEffect1Param2 + kNumMasterEffectParams * i)->InitDouble("Master Effect Parameter 2", 0., 0., 1., 0.1);
-      GetParam(kParamMasterEffect1Param3 + kNumMasterEffectParams * i)->InitDouble("Master Effect Parameter 3", 0., 0., 1., 0.1);
-      GetParam(kParamMasterEffect1Param4 + kNumMasterEffectParams * i)->InitDouble("Master Effect Parameter 4", 0., 0., 1., 0.1);
+      GetParam(kParamMasterEffect1Param1 + kNumMasterEffectParams * i)->InitDouble("Master Effect Parameter 1", 0., 0., 1., 0.01);
+      GetParam(kParamMasterEffect1Param2 + kNumMasterEffectParams * i)->InitDouble("Master Effect Parameter 2", 0., 0., 1., 0.01);
+      GetParam(kParamMasterEffect1Param3 + kNumMasterEffectParams * i)->InitDouble("Master Effect Parameter 3", 0., 0., 1., 0.01);
+      GetParam(kParamMasterEffect1Param4 + kNumMasterEffectParams * i)->InitDouble("Master Effect Parameter 4", 0., 0., 1., 0.01);
       break;
     }
     }
@@ -1681,7 +1684,6 @@ bool Tablitsa::OnMessage(int msgTag, int ctrlTag, int dataSize, const void* pDat
           voice.SetEffect(msgTag - kMsgVoiceEffect1Changed, kNoVoiceEffect);
           });
         break;
-        break;
       }
       SendCurrentParamValuesFromDelegate();
       break;
@@ -1751,7 +1753,7 @@ void Tablitsa::SavePreset(IByteChunk& byteData, const char* filename, bool isBac
     return;
   }
 
-  std::ofstream presetFile(filename);
+  std::ofstream presetFile(filename, std::ios::binary | std::ios::trunc);
 
   if (!presetFile.is_open())
   {
@@ -1760,9 +1762,12 @@ void Tablitsa::SavePreset(IByteChunk& byteData, const char* filename, bool isBac
     return;
   }
 
-  unsigned char* allBytes = static_cast<unsigned char*>(byteData.GetData());
-  presetFile.write(reinterpret_cast<char*>(allBytes), byteData.Size());
+  //char* allBytes = new char[byteData.Size()];
+  std::vector<char> allBytes(byteData.Size());
+  byteData.GetBytes(&allBytes[0], byteData.Size(), 0);
+  presetFile.write(&allBytes[0], byteData.Size());
   presetFile.close();
+  //delete[] allBytes;
 }
 
 IByteChunk Tablitsa::LoadPreset(const char* filename, bool isBackup)
@@ -1779,9 +1784,8 @@ IByteChunk Tablitsa::LoadPreset(const char* filename, bool isBackup)
     GetUI()->ShowMessageBox("Preset file not found or invalid format", "Error", EMsgBoxType::kMB_OK);
     return presetData;
   }
-
-  for (auto b : fileData)
-    presetData.Put(&b);
+  // Why is fileData two bytes longer than the data written to the file???
+  presetData.PutBytes(&fileData[0], fileData.size());
 
   return presetData;
 }

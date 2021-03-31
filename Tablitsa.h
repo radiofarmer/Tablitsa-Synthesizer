@@ -736,8 +736,8 @@ public:
   void SavePreset(IByteChunk& byteData, const char* filename = "UserPreset", bool isBackup=false);
   void LoadDefaultState();
 
-  void SetMasterFXSlot(int slotIdx, EMasterEffectTypes effectIdx) { mCurrentMasterFXSlot = slotIdx; mMasterEffectSlots[slotIdx] = effectIdx; }
-  void SetVoiceFXSlot(int slotIdx, EVoiceEffectTypes effectIdx) { mCurrentVoiceFXSlot = slotIdx; mVoiceEffectSlots[slotIdx] = effectIdx; }
+  void SetMasterFXSlot(int slotIdx, int masterEffectIdx) { mCurrentMasterFXSlot = slotIdx; mMasterEffectSlots[slotIdx] = masterEffectIdx; }
+  void SetVoiceFXSlot(int slotIdx, int voiceEffectIdx) { mCurrentVoiceFXSlot = slotIdx; mVoiceEffectSlots[slotIdx] = voiceEffectIdx; }
 
   // Store the status of the tempo sync control, required for setting the correct parameter range during preset loading
   void SetDelayTempoSync(int slotIdx, bool tempoSync) { mDelayTempoSync[slotIdx] = tempoSync; }
@@ -755,8 +755,8 @@ private:
   IByteChunk mStateBackup; // Stores the last user state before reseting, so that it may be restored
 
   // UI Status variables not stored as parameters
-  EVoiceEffectTypes mVoiceEffectSlots[TABLITSA_MAX_VOICE_EFFECTS]{}; // Holds the ID number of the effect in each slot for the voice effects
-  EMasterEffectTypes mMasterEffectSlots[TABLITSA_MAX_MASTER_EFFECTS]{}; // Holds the ID number of the effect in each slot for the master effects
+  int mVoiceEffectSlots[TABLITSA_MAX_VOICE_EFFECTS]{}; // Holds the ID number of the effect in each slot for the voice effects
+  int mMasterEffectSlots[TABLITSA_MAX_MASTER_EFFECTS]{}; // Holds the ID number of the effect in each slot for the master effects
   int mCurrentVoiceFXSlot{ 0 }; // The effect slot current open for editing. Controled by the Slide-Switch controls
   int mCurrentMasterFXSlot{ 0 };
   int mCurrentEffectsTab{ 1 };
