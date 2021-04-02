@@ -1133,7 +1133,7 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
       });
     pGraphics->AttachControl(new IVToggleControl(sequencerParamsPanel.GetGridCell(5, 2, 7, 3).GetPadded(-15.f, -2.f, -15.f, -2.f), kParamSequencerRestart, "", toggleStyle, "Free Run", "Restart"), kNoTag, "SequencerParams");
     pGraphics->AttachControl(new ModSliderControl(sequencerDisplayPanel.GetGridCell(0, 5, 1, 6).GetVPadded(-18.f).GetVShifted(-5.f).GetMidHPadded(20.f), kNoParameter, "Depth"), kCtrlTagSequencerDepth, "Sequencer");
-    pGraphics->AttachControl(new IVRadioButtonControl(sequencerParamsPanel.SubRectVertical(2, 1).SubRectHorizontal(3, 1).GetReducedFromBottom(sequencerParamsPanel.H() / 7.f).GetHPadded(-15.f), kParamSequencerStepMode, { "Auto", "Gate", "Trig." }, "Step Mode", TABLITSA_STYLE.WithLabelText(TABLITSA_TEXT.WithSize(13.f)).WithColor(EVColor::kSH, IColor(150, 55, 55, 55))), kNoTag, "SequencerParams");
+    pGraphics->AttachControl(new IVRadioButtonControl(sequencerParamsPanel.SubRectVertical(2, 1).SubRectHorizontal(3, 1).GetReducedFromBottom(sequencerParamsPanel.H() / 7.f).GetHPadded(-15.f), kParamSequencerStepMode, { "Auto", "Gate", "Trig." }, "Step Mode", TABLITSA_STYLE.WithLabelText(TABLITSA_TEXT.WithSize(13.f)).WithColor(EVColor::kX1, IColor(150, 155, 155, 155))), kNoTag, "SequencerParams");
     pGraphics->AttachControl(new IVToggleControl(sequencerParamsPanel.GetGridCell(6, 1, 7, 3).GetPadded(-15.f, -2.f, -15.f, -2.f), kNoParameter, "", toggleStyle, "Cont.", "Quant."), kCtrlTagSequencerQuant, "SequencerParams")->SetActionFunction(
       [pGraphics, this](IControl* pControl) {
         mSequencerIsQuantized = pControl->GetValue();

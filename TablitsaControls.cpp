@@ -553,8 +553,8 @@ void PeriodicTable::Draw(IGraphics& g)
   };
 
   // Draw current wavetable icons
-  const IRECT activeElem1 = mRECT.GetFromRight(80.f).GetGridCell(0, 0, 2, 1).GetCentredInside(70.f, 90.f);
-  const IRECT activeElem2 = mRECT.GetFromRight(80.f).GetGridCell(1, 0, 2, 1).GetCentredInside(70.f, 90.f);
+  const IRECT activeElem1 = mRECT.GetFromRight(80.f).GetGridCell(0, 0, 2, 1).GetCentredInside(70.f, 95.f);
+  const IRECT activeElem2 = mRECT.GetFromRight(80.f).GetGridCell(1, 0, 2, 1).GetCentredInside(70.f, 95.f);
   DrawElement(g, activeElem1, mSelectedElements[0], 0);
   DrawElement(g, activeElem2, mSelectedElements[1], 1);
 
