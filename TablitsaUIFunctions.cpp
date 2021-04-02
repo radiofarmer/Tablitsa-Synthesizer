@@ -37,10 +37,23 @@ void InitCoefModUI(Plugin* pPlugin, IGraphics* pGraphics, std::vector<IControl*>
 {
   std::vector<IControl*> allKnobs;
   allKnobs.insert(allKnobs.begin(), controls.begin(), controls.begin() + 4);
-  pPlugin->GetParam(params[0])->InitDouble(paramNames[0], reset ? 0. : pPlugin->GetParam(params[0])->Value(), 0., 1., 0.01);
-  pPlugin->GetParam(params[1])->InitDouble(paramNames[1], reset ? 0. : pPlugin->GetParam(params[1])->Value(), -2., 2., 0.01, "8va.");
-  pPlugin->GetParam(params[2])->InitDouble(paramNames[2], reset ? 0. : pPlugin->GetParam(params[2])->Value(), 0., 1., 0.01, "Cycles");
-  pPlugin->GetParam(params[3])->InitDouble(paramNames[3], reset ? 0. : pPlugin->GetParam(params[3])->Value(), 0., 1., 0.01);
+  // Save current values
+  double paramVals[4]{};
+  if (!reset)
+  {
+    for (int i{0}; i < 4; ++i)
+      paramVals[i] = pPlugin->GetParam(params[i])->Value();
+  }
+  pPlugin->GetParam(params[0])->InitDouble(paramNames[0], 0., 0., 1., 0.01);
+  pPlugin->GetParam(params[1])->InitDouble(paramNames[1], 0., -2., 2., 0.01, "8va.");
+  pPlugin->GetParam(params[2])->InitDouble(paramNames[2], 0., 0., 1., 0.01, "Cycles");
+  pPlugin->GetParam(params[3])->InitDouble(paramNames[3], 0., 0., 1., 0.01);
+  // Reload original values if not resetting
+  if (!reset)
+  {
+    for (int i{ 0 }; i < 4; ++i)
+      pPlugin->GetParam(params[i])->Set(paramVals[i]);
+  }
 
   pPlugin->GetParam(params[0])->SetDisplayFunc(PercentDisplayFunc);
   pPlugin->GetParam(params[1])->SetDisplayFunc(nullptr);
@@ -123,22 +136,35 @@ void DelayStereoToggle(IGraphics* pGraphics, const std::vector<IControl*>& contr
 
 void InitDelayUI(Plugin* pPlugin, IGraphics* pGraphics, std::vector<IControl*> controls, const std::vector<int>& params, const std::vector<char*>& paramNames, const bool reset)
 {
+  // Save current values
+  double paramVals[4]{};
+  if (!reset)
+  {
+    for (int i{ 0 }; i < 4; ++i)
+      paramVals[i] = pPlugin->GetParam(params[i])->Value();
+  }
   // Adjust param ranges
   pPlugin->GetParam(params[4])->InitBool(paramNames[2], reset ? false : pPlugin->GetParam(params[4])->Value() > 0.5);
   pPlugin->GetParam(params[5])->InitBool(paramNames[3], reset ? false : pPlugin->GetParam(params[5])->Value() > 0.5);
   bool tempoSync = pPlugin->GetParam(params[4])->Value();
   if (tempoSync)
   {
-    pPlugin->GetParam(params[0])->InitEnum(pPlugin->GetParam(params[0])->GetName(), reset ? DelayEffect<sample>::k8th : pPlugin->GetParam(params[0])->Value(), { DELAY_TEMPODIV_VALIST });
-    pPlugin->GetParam(params[1])->InitEnum(pPlugin->GetParam(params[1])->GetName(), reset ? DelayEffect<sample>::k8th : pPlugin->GetParam(params[1])->Value(), { DELAY_TEMPODIV_VALIST });
+    pPlugin->GetParam(params[0])->InitEnum(paramNames[0], DelayEffect<sample>::k8th, { DELAY_TEMPODIV_VALIST });
+    pPlugin->GetParam(params[1])->InitEnum(paramNames[1], DelayEffect<sample>::k8th, { DELAY_TEMPODIV_VALIST });
   }
   else
   {
-    pPlugin->GetParam(params[0])->InitDouble(paramNames[0], reset ? 100. : pPlugin->GetParam(params[0])->Value(), 1., TABLITSA_MAX_DELAY_MS, 1., "ms", IParam::kFlagsNone, "Effect", IParam::ShapePowCurve(3.));
-    pPlugin->GetParam(params[1])->InitDouble(paramNames[1], reset ? 100. : pPlugin->GetParam(params[1])->Value(), 1., TABLITSA_MAX_DELAY_MS, 1., "ms", IParam::kFlagsNone, "Effect", IParam::ShapePowCurve(3.));
+    pPlugin->GetParam(params[0])->InitDouble(paramNames[0], 100., 1., TABLITSA_MAX_DELAY_MS, 1., "ms", IParam::kFlagsNone, "Effect", IParam::ShapePowCurve(3.));
+    pPlugin->GetParam(params[1])->InitDouble(paramNames[1], 100., 1., TABLITSA_MAX_DELAY_MS, 1., "ms", IParam::kFlagsNone, "Effect", IParam::ShapePowCurve(3.));
   }
-  pPlugin->GetParam(params[2])->InitDouble(paramNames[2], reset ? 0. : pPlugin->GetParam(params[2])->Value(), 0., 1., 0.01);
-  pPlugin->GetParam(params[3])->InitDouble(paramNames[3], reset ? 0. : pPlugin->GetParam(params[3])->Value(), 0., 1., 0.01);
+  pPlugin->GetParam(params[2])->InitDouble(paramNames[2], 0., 0., 1., 0.01);
+  pPlugin->GetParam(params[3])->InitDouble(paramNames[3], 0., 0., 1., 0.01);
+  // Reload original values if not resetting
+  if (!reset)
+  {
+    for (int i{ 0 }; i < 4; ++i)
+      pPlugin->GetParam(params[i])->Set(paramVals[i]);
+  }
 
   pPlugin->GetParam(params[2])->SetDisplayFunc(PercentDisplayFunc);
   pPlugin->GetParam(params[3])->SetDisplayFunc(PercentDisplayFunc);
@@ -184,14 +210,26 @@ void InitDistortionUI(Plugin* pPlugin, IGraphics* pGraphics, std::vector<IContro
   allKnobs.insert(allKnobs.begin(), controls.begin(), controls.begin() + 4);
   for (auto* knob : allKnobs)
     knob->SetDisabled(false);
+  // Save current values
+  double paramVals[4]{};
+  if (!reset)
+  {
+    for (int i{ 0 }; i < 4; ++i)
+      paramVals[i] = pPlugin->GetParam(params[i])->Value();
+  }
+  pPlugin->GetParam(params[0])->InitDouble(paramNames[0], 0., 0., 1., 0.01);
+  pPlugin->GetParam(params[1])->InitDouble(paramNames[1], 0., 0., 1., 0.01);
+  pPlugin->GetParam(params[2])->InitDouble(paramNames[2], 0., 0.01, 0.1, 0.01, "", 0, "", IParam::ShapeExp());
+  pPlugin->GetParam(params[3])->InitDouble(paramNames[3], 0., 0., 1., 0.01);
+  // Reload original values if not resetting
+  if (!reset)
+  {
+    for (int i{ 0 }; i < 4; ++i)
+      pPlugin->GetParam(params[i])->Set(paramVals[i]);
+  }
 
-  pPlugin->GetParam(params[0])->InitDouble(paramNames[0], reset ? 0. : pPlugin->GetParam(params[0])->Value(), 0., 1., 0.01);
-  pPlugin->GetParam(params[1])->InitDouble(paramNames[1], reset ? 0. : pPlugin->GetParam(params[1])->Value(), 0., 1., 0.01);
-  pPlugin->GetParam(params[2])->InitDouble(paramNames[2], reset ? 0. : pPlugin->GetParam(params[2])->Value(), 0.01, 0.1, 0.01, "", 0, "", IParam::ShapeExp());
-  pPlugin->GetParam(params[3])->InitDouble(paramNames[3], reset ? 0. : pPlugin->GetParam(params[3])->Value(), 0., 1., 0.01);
   pGraphics->HideControl(params[4], true);
   pGraphics->HideControl(params[5], true);
-
 
   pPlugin->GetParam(params[0])->SetDisplayFunc(PercentDisplayFunc);
   pPlugin->GetParam(params[1])->SetDisplayFunc(PercentDisplayFunc);
@@ -224,10 +262,23 @@ void InitDistortionUI(Plugin* pPlugin, IGraphics* pGraphics, std::vector<IContro
 
 void InitEqualizerUI(Plugin* pPlugin, IGraphics* pGraphics, std::vector<IControl*> controls, const std::vector<int>& params, const std::vector<char*>& paramNames, const bool reset)
 {
-  pPlugin->GetParam(params[0])->InitDouble(paramNames[0], reset ? 1. : pPlugin->GetParam(params[0])->Value(), 0., 2., 0.01);
-  pPlugin->GetParam(params[1])->InitDouble(paramNames[1], reset ? 1. : pPlugin->GetParam(params[1])->Value(), 0., 2., 0.01);
-  pPlugin->GetParam(params[2])->InitDouble(paramNames[2], reset ? 0.5 : pPlugin->GetParam(params[2])->Value(), 0., 1., 0.01);
-  pPlugin->GetParam(params[3])->InitDouble(paramNames[3], reset ? 1. : pPlugin->GetParam(params[3])->Value(), 0., 2., 0.01);
+  // Save current values
+  double paramVals[4]{};
+  if (!reset)
+  {
+    for (int i{ 0 }; i < 4; ++i)
+      paramVals[i] = pPlugin->GetParam(params[i])->Value();
+  }
+  pPlugin->GetParam(params[0])->InitDouble(paramNames[0], 1., 0., 2., 0.01);
+  pPlugin->GetParam(params[1])->InitDouble(paramNames[1], 1., 0., 2., 0.01);
+  pPlugin->GetParam(params[2])->InitDouble(paramNames[2], 0.5, 0., 1., 0.01);
+  pPlugin->GetParam(params[3])->InitDouble(paramNames[3], 1., 0., 2., 0.01);
+  // Reload original values if not resetting
+  if (!reset)
+  {
+    for (int i{ 0 }; i < 4; ++i)
+      pPlugin->GetParam(params[i])->Set(paramVals[i]);
+  }
 
   pPlugin->GetParam(params[2])->SetDisplayFunc(PercentDisplayFunc);
 
@@ -256,10 +307,23 @@ void InitEqualizerUI(Plugin* pPlugin, IGraphics* pGraphics, std::vector<IControl
 
 void InitReverbUI(Plugin* pPlugin, IGraphics* pGraphics, std::vector<IControl*> controls, const std::vector<int>& params, const std::vector<char*>& paramNames, const bool reset)
 {
-  pPlugin->GetParam(params[0])->InitDouble(paramNames[0], reset ? 0.5 : pPlugin->GetParam(params[0])->Value(), 0., 1., 0.01);
-  pPlugin->GetParam(params[1])->InitDouble(paramNames[1], reset ? 0.5 : pPlugin->GetParam(params[1])->Value(), 0., 1., 0.01);
-  pPlugin->GetParam(params[2])->InitDouble(paramNames[2], reset ? 0.5 : pPlugin->GetParam(params[2])->Value(), 0., 1., 0.01);
-  pPlugin->GetParam(params[3])->InitDouble(paramNames[3], reset ? 0. : pPlugin->GetParam(params[3])->Value(), 0., 1., 0.01);
+  // Save current values
+  double paramVals[4]{};
+  if (!reset)
+  {
+    for (int i{ 0 }; i < 4; ++i)
+      paramVals[i] = pPlugin->GetParam(params[i])->Value();
+  }
+  pPlugin->GetParam(params[0])->InitDouble(paramNames[0], 0.5, 0., 1., 0.01);
+  pPlugin->GetParam(params[1])->InitDouble(paramNames[1], 0.5, 0., 1., 0.01);
+  pPlugin->GetParam(params[2])->InitDouble(paramNames[2], 0.5, 0., 1., 0.01);
+  pPlugin->GetParam(params[3])->InitDouble(paramNames[3], 0., 0., 1., 0.01);
+  // Reload original values if not resetting
+  if (!reset)
+  {
+    for (int i{ 0 }; i < 4; ++i)
+      pPlugin->GetParam(params[i])->Set(paramVals[i]);
+  }
 
   pPlugin->GetParam(params[0])->SetDisplayFunc(PercentDisplayFunc);
   pPlugin->GetParam(params[1])->SetDisplayFunc(PercentDisplayFunc);
@@ -289,10 +353,22 @@ void InitReverbUI(Plugin* pPlugin, IGraphics* pGraphics, std::vector<IControl*> 
 
 void InitReverb2UI(Plugin* pPlugin, IGraphics* pGraphics, std::vector<IControl*> controls, const std::vector<int>& params, const std::vector<char*>& paramNames, const bool reset)
 {
-  pPlugin->GetParam(params[0])->InitDouble(paramNames[0], reset ? 0.5 : pPlugin->GetParam(params[0])->Value(), 0., 1., 0.01);
-  pPlugin->GetParam(params[1])->InitDouble(paramNames[1], reset ? 0.5 : pPlugin->GetParam(params[1])->Value(), 0., 1., 0.01);
-  pPlugin->GetParam(params[2])->InitDouble(paramNames[2], reset ? 1. : pPlugin->GetParam(params[2])->Value(), 0., 1., 0.01);
-  pPlugin->GetParam(params[3])->InitDouble(paramNames[3], reset ? 0. : pPlugin->GetParam(params[3])->Value(), 0., 1., 0.01);
+  double paramVals[4]{};
+  if (!reset)
+  {
+    for (int i{ 0 }; i < 4; ++i)
+      paramVals[i] = pPlugin->GetParam(params[i])->Value();
+  }
+  pPlugin->GetParam(params[0])->InitDouble(paramNames[0], 0.5, 0., 1., 0.01);
+  pPlugin->GetParam(params[1])->InitDouble(paramNames[1], 0.5, 0., 1., 0.01);
+  pPlugin->GetParam(params[2])->InitDouble(paramNames[2], 1., 0., 1., 0.01);
+  pPlugin->GetParam(params[3])->InitDouble(paramNames[3], 0., 0., 1., 0.01);
+  // Reload original values if not resetting
+  if (!reset)
+  {
+    for (int i{ 0 }; i < 4; ++i)
+      pPlugin->GetParam(params[i])->Set(paramVals[i]);
+  }
 
   // Display funcs
   pPlugin->GetParam(params[0])->SetDisplayFunc(PercentDisplayFunc);
@@ -324,13 +400,25 @@ void InitReverb2UI(Plugin* pPlugin, IGraphics* pGraphics, std::vector<IControl*>
 
 void InitSampleAndHoldUI(Plugin* pPlugin, IGraphics* pGraphics, std::vector<IControl*> controls, const std::vector<int>& params, const std::vector<char*>& paramNames, const bool reset)
 {
-
   std::vector<IControl*> allKnobs;
   allKnobs.insert(allKnobs.begin(), controls.begin(), controls.begin() + 4);
-  pPlugin->GetParam(params[0])->InitDouble(paramNames[0], reset ? 10. : pPlugin->GetParam(params[0])->Value(), TABLITSA_SAH_MIN_MS, TABLITSA_SAH_MAX_MS, 0.01, "ms", IParam::kFlagsNone, "Effect", IParam::ShapePowCurve(3.));
-  pPlugin->GetParam(params[1])->InitDouble(paramNames[1], reset ? 0. : pPlugin->GetParam(params[1])->Value(), 0., 1., 0.01);
-  pPlugin->GetParam(params[2])->InitDouble(paramNames[2], reset ? 0. : pPlugin->GetParam(params[2])->Value(), 0., 1., 0.01);
-  pPlugin->GetParam(params[3])->InitDouble(paramNames[3], reset ? 0. : pPlugin->GetParam(params[3])->Value(), 0., 1., 0.01);
+  // Save current values
+  double paramVals[4]{};
+  if (!reset)
+  {
+    for (int i{ 0 }; i < 4; ++i)
+      paramVals[i] = pPlugin->GetParam(params[i])->Value();
+  }
+  pPlugin->GetParam(params[0])->InitDouble(paramNames[0], 10., TABLITSA_SAH_MIN_MS, TABLITSA_SAH_MAX_MS, 0.01, "ms", IParam::kFlagsNone, "Effect", IParam::ShapePowCurve(3.));
+  pPlugin->GetParam(params[1])->InitDouble(paramNames[1], 0., 0., 1., 0.01);
+  pPlugin->GetParam(params[2])->InitDouble(paramNames[2], 0., 0., 1., 0.01);
+  pPlugin->GetParam(params[3])->InitDouble(paramNames[3], 0., 0., 1., 0.01);
+  // Reload original values if not resetting
+  if (!reset)
+  {
+    for (int i{ 0 }; i < 4; ++i)
+      pPlugin->GetParam(params[i])->Set(paramVals[i]);
+  }
 
   pPlugin->GetParam(params[0])->SetDisplayFunc(nullptr);
   pPlugin->GetParam(params[1])->SetDisplayFunc(PercentDisplayFunc);
@@ -373,13 +461,26 @@ void InitTexturizerUI(Plugin* pPlugin, IGraphics* pGraphics, std::vector<IContro
   const double minResFreq = 100. / pPlugin->GetSampleRate();
   const double maxResFreq = 10000. / pPlugin->GetSampleRate();
 
-  pPlugin->GetParam(params[0])->InitDouble(paramNames[0], reset ? 0. : pPlugin->GetParam(params[0])->Value(), 0., 1., 0.01);
-  pPlugin->GetParam(params[1])->InitDouble(paramNames[1], reset ? 0. : pPlugin->GetParam(params[1])->Value(), 0., 1., 0.01);
-  pPlugin->GetParam(params[2])->InitDouble(paramNames[2], reset ? 0. : pPlugin->GetParam(params[3])->Value(), minResFreq, maxResFreq, 0.01, "", 0, "", IParam::ShapeExp());
-  pPlugin->GetParam(params[3])->InitDouble(paramNames[3], reset ? 0. : pPlugin->GetParam(params[3])->Value(), 0., 1., 0.01);
+  // Save current values
+  double paramVals[4]{};
+  if (!reset)
+  {
+    for (int i{ 0 }; i < 4; ++i)
+      paramVals[i] = pPlugin->GetParam(params[i])->Value();
+  }
+  pPlugin->GetParam(params[0])->InitDouble(paramNames[0], 0., 0., 1., 0.01);
+  pPlugin->GetParam(params[1])->InitDouble(paramNames[1], 0., 0., 1., 0.01);
+  pPlugin->GetParam(params[2])->InitDouble(paramNames[2], 0., minResFreq, maxResFreq, 0.01, "", 0, "", IParam::ShapeExp());
+  pPlugin->GetParam(params[3])->InitDouble(paramNames[3], 0., 0., 1., 0.01);
+  // Reload original values if not resetting
+  if (!reset)
+  {
+    for (int i{ 0 }; i < 4; ++i)
+      pPlugin->GetParam(params[i])->Set(paramVals[i]);
+  }
+
   pGraphics->HideControl(params[4], true);
   pGraphics->HideControl(params[5], true);
-
 
   pPlugin->GetParam(params[0])->SetDisplayFunc(PercentDisplayFunc);
   pPlugin->GetParam(params[1])->SetDisplayFunc(PercentDisplayFunc);
@@ -404,46 +505,6 @@ void InitTexturizerUI(Plugin* pPlugin, IGraphics* pGraphics, std::vector<IContro
   dynamic_cast<IVKnobControl*>(controls[3])->SetLabelStr("Res Amt");
   // Modulation on for knob 1
   dynamic_cast<TablitsaIVModKnobControl*>(controls[0])->EnableModulation(true);
-  // Toggle action functions
-  controls[4]->SetActionFunction(nullptr);
-  controls[5]->SetActionFunction(nullptr);
-  controls[4]->Hide(true);
-  controls[5]->Hide(true);
-}
-
-/* WAVESHAERP (Voice) */
-
-void InitWaveshaperUI(Plugin* pPlugin, IGraphics* pGraphics, std::vector<IControl*> controls, const std::vector<int>& params, const std::vector<char*>& paramNames, const bool reset)
-{
-  std::vector<IControl*> allKnobs;
-  allKnobs.insert(allKnobs.begin(), controls.begin(), controls.begin() + 4);
-  for (auto* knob : allKnobs)
-    knob->SetDisabled(false);
-
-  pPlugin->GetParam(params[0])->InitEnum(paramNames[0], reset ? EWaveshaperMode::kWaveshapeSine : pPlugin->GetParam(params[0])->Value(), { WAVESHAPE_TYPES });
-  pPlugin->GetParam(params[1])->InitDouble(paramNames[1], reset ? 0. : pPlugin->GetParam(params[1])->Value(), 0., 1., 0.01);
-  pPlugin->GetParam(params[3])->InitDouble(paramNames[3], reset ? 0. : pPlugin->GetParam(params[3])->Value(), 0., 1., 0.01);
-  pGraphics->HideControl(params[4], true);
-  pGraphics->HideControl(params[5], true);
-
-
-  pPlugin->GetParam(params[0])->SetDisplayFunc(nullptr);
-  pPlugin->GetParam(params[1])->SetDisplayFunc(PercentDisplayFunc);
-  pPlugin->GetParam(params[2])->SetDisplayFunc(nullptr);
-  pPlugin->GetParam(params[3])->SetDisplayFunc(PercentDisplayFunc);
-
-  for (int i{ 0 }; i < TABLITSA_EFFECT_PARAMS; ++i)
-    controls[i]->SetValue(pPlugin->GetParam(params[i])->Value());
-
-  // Knob 3 is not used
-  controls[2]->SetDisabled(true);
-  // Labels
-  dynamic_cast<IVKnobControl*>(controls[0])->SetLabelStr("Type");
-  dynamic_cast<IVKnobControl*>(controls[1])->SetLabelStr("Gain");
-  dynamic_cast<IVKnobControl*>(controls[2])->SetLabelStr("");
-  dynamic_cast<IVKnobControl*>(controls[3])->SetLabelStr("Mix");
-  // Modulation off for knob 1
-  dynamic_cast<TablitsaIVModKnobControl*>(controls[0])->EnableModulation(false);
   // Toggle action functions
   controls[4]->SetActionFunction(nullptr);
   controls[5]->SetActionFunction(nullptr);
