@@ -90,10 +90,11 @@ public:
 
   void SetContinuousParams(const T p1, const T p2, const T p3, const T p4, const T pitch)
   {
-    mModDepth = p1;
+    mModDepth = p1 * 0.5;
     mModRate = 440. * std::pow(2., pitch + p2); // p2 is scaled in octaves
     mOsc.SetFreqCPS(mModRate);
     mOsc.SetPhaseOffset(p3);
+    mCutoff = p3;
     mMix = p4;
   }
 
@@ -107,20 +108,22 @@ public:
     T oscVals[4];
     for (int i{ 0 }; i < nFrames; i += 4)
     {
-      mOsc.Process_Vector().store(oscVals);
+      (mOsc.Process_Vector() * mModDepth * 0.999).store(oscVals);
 #pragma clang loop unroll(full)
       for (int ii{ 0 }; ii < 4; ++ii)
       {
-        outputs[i + ii] = inputs[i + ii] + mMix * (mCMFilters.Process(inputs[i + ii], mModDepth * oscVals[ii]) - inputs[i + ii]);
+        outputs[i + ii] = inputs[i + ii] + mMix * (mCMFilters.Process(inputs[i + ii], 0.5 + oscVals[ii]) - inputs[i + ii]);
       }
     }
   }
 
 private:
+  T mCutoff{ 0.5 };
+  T mPhaseOffset{ 0. };
   T mModDepth{ 0. };
   T mModRate;
   VectorOscillator<T> mOsc;
-  ModulatedAllpass<5> mCMFilters;
+  ModulatedAllpass<7> mCMFilters;
 };
 
 #define DELAY_TEMPODIV_VALIST "1/64", "1/32", "1/16T", "1/16", "1/16D", "1/8T", "1/8", "1/8D", "1/4", "1/4D", "1/2", "1/1"
@@ -831,61 +834,54 @@ class Texturizer final : public Effect<T, V>
 public:
   Texturizer(T sampleRate) : Effect<T, V>(sampleRate)
   {
-    mPk[0].SetPeakGain(4.);
-    mPk[1].SetPeakGain(4.);
   }
 
   void SetSampleRate(T sampleRate, int oversampling=1) override
   {
     Effect<T, V>::SetSampleRate(sampleRate, oversampling);
     for (int i{ 0 }; i < 2; ++i)
-      mAP[i].SetSampleRate(sampleRate);
+    {
+      mAP[i].SetSampleRate(mSampleRate * oversampling);
+    }
+    mBp.SetSampleRate(mSampleRate * oversampling);
   }
 
   void SetContinuousParams(const T p1, const T p2, const T p3, const T p4, const T pitch) override
   {
     mFc = p1 * mOsFreqScalar;
-    mQ = p2;
-    for (int i{ 0 }; i < 2; ++i)
-    {
-      mPk[i].SetCutoff(p3 * mOsFreqScalar);
-    }
-    for (int i{ 0 }; i < 2; ++i)
-    {
-      mPk[i].SetPeakGain(p4);
-    }
+    mG = p2;
+    mQ = p4;
+    mBp.SetCutoffAndResonance(p3 * mOsFreqScalar, mQ);
     SetFilterCoefs();
-
-    mMix = p4;
   }
 
-  void SetFilterCoefs() {
+  inline void SetFilterCoefs() {
     mAP[0].SetCoefs(mFc, mG);
     mAP[1].SetCoefs(mFc, mG);
   }
 
   T Process(T s) override
   {
-    return mAP[0].Process(s) + 0.1 * std::sin(mPk[0].Process(s) * 63. * mQ);
+    return mAP[0].Process(s) + mG * 0.5 * std::sin(mBp.ProcessBP(s) * 63. * mQ);
   }
 
   V __vectorcall Process(V s) override
   {
-    return mAP[0].Process4(s) + 0.1 * sin(mPk[0].Process4(s) * 63. * mQ);
+    return mAP[0].Process4(s);// +mG * 0.5 * sin(mBp.ProcessBP(s) * 63. * mQ);
   }
 
   void ProcessStereo(StereoSample<T>& s)
   {
-    s.l = mAP[0].Process(s.l) + 0.2 * std::sin(mPk[0].Process(s.l) * 63. * mQ);
-    s.r = mAP[1].Process(s.r) + 0.2 * std::sin(mPk[1].Process(s.r) * 63. * mQ);
+    T res = mBp.ProcessBP((s.l + s.r) * 0.75);
+    s.l = mAP[0].Process(s.l) + mG * 0.5 * std::sin(res * 63. * mQ);
+    s.r = mAP[1].Process(s.r) + mG * 0.5 * std::sin(res * 63. * mQ);
   }
 
   void ProcessBlock(T* inputs, T* outputs, const int nFrames) override
   {
-    for (int i{ 0 }; i < nFrames; i += 4)
+    for (int i{ 0 }; i < nFrames; ++i)
     {
-      V s4 = Process(V().load(inputs + i));
-      s4.store(outputs + i);
+      outputs[i] = mAP[0].Process(inputs[i]) + mG * 0.5 * std::sin(mBp.ProcessBP(inputs[i]) * 63. * mQ);
     }
   }
 
@@ -895,7 +891,7 @@ private:
   T mQ{ 0. };
   T mG{ 1. };
   AllpassLadder<4> mAP[2];
-  PeakOnePole mPk[2];
+  TwoPoleTPTFilter mBp;
 };
 
 #define WAVESHAPE_TYPES "Sine", "Parabolic", "Hyp. Tan.", "Soft Clip"

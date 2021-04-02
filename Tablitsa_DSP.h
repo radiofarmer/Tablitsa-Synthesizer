@@ -2467,7 +2467,7 @@ public:
 
   // Effects
   std::vector<Effect<T>*> mEffects{
-    new DelayEffect<T, TABLITSA_MAX_DELAY_SAMP>(DEFAULT_SAMPLE_RATE, &mGlobalMetronome),
+    new Effect<T>(DEFAULT_SAMPLE_RATE),
     new Effect<T>(DEFAULT_SAMPLE_RATE),
     new Effect<T>(DEFAULT_SAMPLE_RATE)
   };

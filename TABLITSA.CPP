@@ -1186,7 +1186,7 @@ bool Tablitsa::SerializeState(IByteChunk& chunk) const
   // serialize the multislider state before serializing the regular params
   for (int i = 0; i < kNumSeqSteps; i++)
   {
-    savedOK &= chunk.Put(&mDSP.mSeqSteps[i]);
+    savedOK &= chunk.Put(&mDSP.mSeqSteps[i]) > 0;
   }
   savedOK &= chunk.Put(&mDSP.mLoadedWavetables[0]) > 0;
   savedOK &= chunk.Put(&mDSP.mLoadedWavetables[1]) > 0;
@@ -1262,7 +1262,7 @@ int Tablitsa::UnserializeState(const IByteChunk& chunk, int startPos)
     {
       GetParam(kParamVoiceEffect1Param1 + kNumVoiceEffectParams * i)->InitDouble("SuperRing Mod Amount", 0., 0., 1., 0.01);
       GetParam(kParamVoiceEffect1Param2 + kNumVoiceEffectParams * i)->InitDouble("SuperRing Pitch", 0., -2., 2., 0.01, "8v.");
-      GetParam(kParamVoiceEffect1Param3 + kNumVoiceEffectParams * i)->InitDouble("SuperRing Phase", 0., 0., 1., 0.01, "Cycles");
+      GetParam(kParamVoiceEffect1Param3 + kNumVoiceEffectParams * i)->InitDouble("SuperRing Cutoff", 0., 0., 1., 0.01);
       GetParam(kParamVoiceEffect1Param4 + kNumVoiceEffectParams * i)->InitDouble("SuperRing Mix", 0., 0., 1., 0.01);
       break;
     }

@@ -38,8 +38,8 @@ void InitCoefModUI(Plugin* pPlugin, IGraphics* pGraphics, std::vector<IControl*>
   std::vector<IControl*> allKnobs;
   allKnobs.insert(allKnobs.begin(), controls.begin(), controls.begin() + 4);
   pPlugin->GetParam(params[0])->InitDouble(paramNames[0], reset ? 0. : pPlugin->GetParam(params[0])->Value(), 0., 1., 0.01);
-  pPlugin->GetParam(params[1])->InitDouble(paramNames[1], reset ? 0. : pPlugin->GetParam(params[1])->Value(), -2., 2., 0.01, " 8v.");
-  pPlugin->GetParam(params[2])->InitDouble(paramNames[2], reset ? 0. : pPlugin->GetParam(params[2])->Value(), 0., 1., 0.01, " Cycles");
+  pPlugin->GetParam(params[1])->InitDouble(paramNames[1], reset ? 0. : pPlugin->GetParam(params[1])->Value(), -2., 2., 0.01, "8va.");
+  pPlugin->GetParam(params[2])->InitDouble(paramNames[2], reset ? 0. : pPlugin->GetParam(params[2])->Value(), 0., 1., 0.01, "Cycles");
   pPlugin->GetParam(params[3])->InitDouble(paramNames[3], reset ? 0. : pPlugin->GetParam(params[3])->Value(), 0., 1., 0.01);
 
   pPlugin->GetParam(params[0])->SetDisplayFunc(PercentDisplayFunc);

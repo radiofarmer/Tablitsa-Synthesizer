@@ -302,24 +302,24 @@ void TablitsaVTabBox::SetActive(bool active)
 {
   mActive = active;
   // Show/hide controls in this tab view
-  GetUI()->ForControlInGroup(mGroupName.Get(), [active](IControl& control) {
-      control.Hide(!active);
+  GetUI()->ForControlInGroup(mGroupName.Get(), [active](IControl* control) {
+      control->Hide(!active);
     });
 }
 
 void TablitsaVTabBox::SetGroupName(const char* newGroupName)
 {
   // Hide old group
-  GetUI()->ForControlInGroup(mGroupName.Get(), [](IControl& control) {
-    if (!control.IsHidden())
-      control.Hide(true);
+  GetUI()->ForControlInGroup(mGroupName.Get(), [](IControl* control) {
+    if (!control->IsHidden())
+      control->Hide(true);
     });
   mGroupName.Set(newGroupName);
   // show new group
-  GetUI()->ForControlInGroup(mGroupName.Get(), [](IControl& control) {
-    if (control.IsHidden())
-      control.Hide(false);
-    control.SetDirty(true); // Trigger control show/hide functions
+  GetUI()->ForControlInGroup(mGroupName.Get(), [](IControl* control) {
+    if (control->IsHidden())
+      control->Hide(false);
+    control->SetDirty(true); // Trigger control show/hide functions
     });
 }
 
