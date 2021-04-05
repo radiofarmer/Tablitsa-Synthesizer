@@ -1,0 +1,3 @@
+#define PRESET_NAMES {"Crust", "Cyanide", "Exotic Metals 1", "Free Radical", "Halogens 1", "Hydrochloric Acid", "Hydrofluoric Acid", "Isotonic", "Light Metals 1", "Meltdown", "Methane", "Nitrate", "Noble Metals", "Phosphate", "P Type", "Radon Leak", "Rare Earth Chimes", "Reductant", "Red Earth", "Spontaneous Decay", "Water", "White Paint", "Xenon Hexafluoride"}
+
+constexpr char* PRESET_ID_LIST[]{"Crust", "Cyanide", "Exotic_Metals_1", "Free_Radical", "Halogens_1", "Hydrochloric_Acid", "Hydrofluoric_Acid", "Isotonic", "Light_Metals_1", "Meltdown", "Methane", "Nitrate", "Noble_Metals", "Phosphate", "P_Type", "Radon_Leak", "Rare_Earth_Chimes", "Reductant", "Red_Earth", "Spontaneous_Decay", "Water", "White_Paint", "Xenon_Hexafluoride"};

@@ -639,6 +639,7 @@ enum EControlTags
   kCtrlTagMasterEffectsKnob4,
   kCtrlTagMasterEffectsToggle1,
   kCtrlTagMasterEffectsToggle2,
+  kCtrlTagDefaultPresetList,
   kNumCtrlTags
 };
 
@@ -652,6 +653,7 @@ enum EMsgTags
   kMsgRandomizeSequencer,
   kMsgSavePreset,
   kMsgLoadPreset,
+  kMsgLoadDefaultPreset,
   kMsgVoiceEffect1Changed,
   kMsgVoiceEffect2Changed,
   kMsgVoiceEffect3Changed,

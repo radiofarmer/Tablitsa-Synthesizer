@@ -314,6 +314,7 @@ public:
       // Increment total length and index of the current level
       mLevelIndices.push_back(pos);
       mLevelSizes.push_back(nextLevelSize);
+      mLevelMasks.push_back(1 << (static_cast<int>(std::log2(static_cast<double>(nextLevelSize / 2))))); // GCD of the table size and the next-highest power of two
 
       // Calculate the next level size and index
       pos += nextLevelSize;
@@ -350,6 +351,14 @@ public:
     return mValues + mLevelIndices[idx];
   }
 
+  T* GetLevelAt(int idx, int& tableSize, int& tableMask)
+  {
+    idx = std::min(idx, (int)mLevelIndices.size() - 2);
+    tableSize = mLevelSizes[idx];
+    tableMask = mLevelMasks[idx];
+    return mValues + mLevelIndices[idx];
+  }
+
   const int Size()
   {
     return mSize;
@@ -372,6 +381,7 @@ protected:
   const int mFactor;
   std::vector<int> mLevelSizes;
   std::vector<int> mLevelIndices;
+  std::vector<int> mLevelMasks;
   T* mValues{ nullptr };
 };
 
@@ -528,9 +538,14 @@ public:
     }
   }
 
-  inline T* GetMipmapLevel_ByIndex(const std::size_t tableIdx, const int idx, int& tableSize)
+  inline T* GetMipmapLevel_ByIndex(const std::size_t tableIdx, int idx, int& tableSize)
   {
     return mWaveforms.at(tableIdx).GetLevelAt(idx, tableSize);
+  }
+
+  inline T* GetMipmapLevel_ByIndex(const std::size_t tableIdx, int idx, int& tableSize, int& tableMask)
+  {
+    return mWaveforms.at(tableIdx).GetLevelAt(idx, tableSize, tableMask);
   }
 
   inline T* GetMipmapLevel_BySize(std::size_t tableIdx, int length, int& tableSize)

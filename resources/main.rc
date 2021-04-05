@@ -153,7 +153,31 @@ BEGIN
     "PERIODIC_TABLE_FN SVG PERIODIC_TABLE_FN\r\n"
     "LOGO_FN PNG LOGO_FN\r\n"
     "BG_FN PNG BG_FN\r\n"
-    "ROUTING_FN SVG ROUTING_FN\0"
+    "ROUTING_FN SVG ROUTING_FN\r\n"
+    "Crust RCDATA ""../resources/data/presets\\Crust.TPST""\r\n"
+    "Cyanide RCDATA ""../resources/data/presets\\Cyanide.TPST""\r\n"
+    "Exotic_Metals_1 RCDATA ""../resources/data/presets\\Exotic_Metals_1.TPST""\r\n"
+    "Free_Radical RCDATA ""../resources/data/presets\\Free_Radical.TPST""\r\n"
+    "Halogens_1 RCDATA ""../resources/data/presets\\Halogens_1.TPST""\r\n"
+    "Hydrochloric_Acid RCDATA ""../resources/data/presets\\Hydrochloric_Acid.TPST""\r\n"
+    "Hydrofluoric_Acid RCDATA ""../resources/data/presets\\Hydrofluoric_Acid.TPST""\r\n"
+    "Isotonic RCDATA ""../resources/data/presets\\Isotonic.TPST""\r\n"
+    "Light_Metals_1 RCDATA ""../resources/data/presets\\Light_Metals_1.TPST""\r\n"
+    "Meltdown RCDATA ""../resources/data/presets\\Meltdown.TPST""\r\n"
+    "Methane RCDATA ""../resources/data/presets\\Methane.TPST""\r\n"
+    "Nitrate RCDATA ""../resources/data/presets\\Nitrate.TPST""\r\n"
+    "Noble_Metals RCDATA ""../resources/data/presets\\Noble_Metals.TPST""\r\n"
+    "Phosphate RCDATA ""../resources/data/presets\\Phosphate.TPST""\r\n"
+    "P_Type RCDATA ""../resources/data/presets\\P_Type.TPST""\r\n"
+    "Radon_Leak RCDATA ""../resources/data/presets\\Radon_Leak.TPST""\r\n"
+    "Rare_Earth_Chimes RCDATA ""../resources/data/presets\\Rare_Earth_Chimes.TPST""\r\n"
+    "Reductant RCDATA ""../resources/data/presets\\Reductant.TPST""\r\n"
+    "Red_Earth RCDATA ""../resources/data/presets\\Red_Earth.TPST""\r\n"
+    "Spontaneous_Decay RCDATA ""../resources/data/presets\\Spontaneous_Decay.TPST""\r\n"
+    "Water RCDATA ""../resources/data/presets\\Water.TPST""\r\n"
+    "White_Paint RCDATA ""../resources/data/presets\\White_Paint.TPST""\r\n"
+    "Xenon_Hexafluoride RCDATA ""../resources/data/presets\\Xenon_Hexafluoride.TPST""\r\n"
+    "\0"
 END
 
 #endif    // APSTUDIO_INVOKED
@@ -238,6 +262,30 @@ PERIODIC_TABLE_FN SVG PERIODIC_TABLE_FN
 LOGO_FN PNG LOGO_FN
 BG_FN PNG BG_FN
 ROUTING_FN SVG ROUTING_FN
+Crust RCDATA "../resources/data/presets/Crust.TPST"
+Cyanide RCDATA "../resources/data/presets/Cyanide.TPST"
+Exotic_Metals_1 RCDATA "../resources/data/presets/Exotic_Metals_1.TPST"
+Free_Radical RCDATA "../resources/data/presets/Free_Radical.TPST"
+Halogens_1 RCDATA "../resources/data/presets/Halogens_1.TPST"
+Hydrochloric_Acid RCDATA "../resources/data/presets/Hydrochloric_Acid.TPST"
+Hydrofluoric_Acid RCDATA "../resources/data/presets/Hydrofluoric_Acid.TPST"
+Isotonic RCDATA "../resources/data/presets/Isotonic.TPST"
+Light_Metals_1 RCDATA "../resources/data/presets/Light_Metals_1.TPST"
+Meltdown RCDATA "../resources/data/presets/Meltdown.TPST"
+Methane RCDATA "../resources/data/presets/Methane.TPST"
+Nitrate RCDATA "../resources/data/presets/Nitrate.TPST"
+Noble_Metals RCDATA "../resources/data/presets/Noble_Metals.TPST"
+Phosphate RCDATA "../resources/data/presets/Phosphate.TPST"
+P_Type RCDATA "../resources/data/presets/P_Type.TPST"
+Radon_Leak RCDATA "../resources/data/presets/Radon_Leak.TPST"
+Rare_Earth_Chimes RCDATA "../resources/data/presets/Rare_Earth_Chimes.TPST"
+Reductant RCDATA "../resources/data/presets/Reductant.TPST"
+Red_Earth RCDATA "../resources/data/presets/Red_Earth.TPST"
+Spontaneous_Decay RCDATA "../resources/data/presets/Spontaneous_Decay.TPST"
+Water RCDATA "../resources/data/presets/Water.TPST"
+White_Paint RCDATA "../resources/data/presets/White_Paint.TPST"
+Xenon_Hexafluoride RCDATA "../resources/data/presets/Xenon_Hexafluoride.TPST"
+
 /////////////////////////////////////////////////////////////////////////////
 #endif    // not APSTUDIO_INVOKED
 

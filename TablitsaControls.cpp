@@ -385,7 +385,6 @@ DropdownListControl::DropdownListControl(const IRECT& bounds, std::initializer_l
   {
     mOptions.push_back(std::string(s));
   }
-
   mPopupMenu.SetFunction([this](IPopupMenu* pControl) {
     if (pControl->GetChosenItemIdx() >= 0)
       mCurrentIdx = pControl->GetChosenItemIdx();
@@ -397,6 +396,7 @@ DropdownListControl::DropdownListControl(const IRECT& bounds, std::initializer_l
 void DropdownListControl::AttachPopupMenu()
 {
   mMenu = new IPopupMenuControl();
+  //mMenu->SetMaxColumnItems(10);
   GetUI()->AttachControl(mMenu);
 }
 

@@ -482,6 +482,7 @@
       <SubType>Designer</SubType>
     </None>
     <None Include="..\config\Tablitsa-mac.xcconfig" />
+    <None Include="..\resources\preset1.bin" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

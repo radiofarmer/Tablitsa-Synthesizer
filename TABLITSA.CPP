@@ -2,6 +2,7 @@
 #include "Tablitsa.h"
 #include "IPlug_include_in_plug_src.h"
 #include "TablitsaUIFunctions.h"
+#include "Presets.h"
 
 #include <atlstr.h>
 
@@ -681,11 +682,28 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
       UpdateUIControls();
       });
     const IVStyle ioButtonStyle = pushButtonStyle.WithColor(EVColor::kFG, COLOR_WHITE.WithOpacity(0.2));
-    pGraphics->AttachControl(new IVButtonControl(presetPanel.GetGridCell(0, 0, 2, 8).GetPadded(-2.f), SplashClickActionFunc, "Save", ioButtonStyle), kNoTag, "Presets")->SetAnimationEndActionFunction(savePresetFunction);
-    pGraphics->AttachControl(new IVButtonControl(presetPanel.GetGridCell(0, 1, 2, 8).GetPadded(-2.f), SplashClickActionFunc, "Load", ioButtonStyle), kNoTag, "Presets")->SetAnimationEndActionFunction(loadPresetFunction);
-    pGraphics->AttachControl(new IVButtonControl(presetPanel.GetGridCell(1, 0, 2, 8).GetPadded(-2.f), SplashClickActionFunc, "Reset", ioButtonStyle), kNoTag, "Presets")->SetAnimationEndActionFunction(resetToDefaultFunction);
-    pGraphics->AttachControl(new IVButtonControl(presetPanel.GetGridCell(1, 1, 2, 8).GetPadded(-2.f), SplashClickActionFunc, "Backup", ioButtonStyle), kNoTag, "Presets")->SetAnimationEndActionFunction(loadBackupFunction);
+    pGraphics->AttachControl(new IVButtonControl(presetPanel.GetGridCell(0, 1, 2, 8).GetPadded(-2.f).GetHShifted(25.f), SplashClickActionFunc, "Save", ioButtonStyle), kNoTag, "Presets")->SetAnimationEndActionFunction(savePresetFunction);
+    pGraphics->AttachControl(new IVButtonControl(presetPanel.GetGridCell(0, 2, 2, 8).GetPadded(-2.f).GetHShifted(25.f), SplashClickActionFunc, "Load", ioButtonStyle), kNoTag, "Presets")->SetAnimationEndActionFunction(loadPresetFunction);
+    pGraphics->AttachControl(new IVButtonControl(presetPanel.GetGridCell(1, 1, 2, 8).GetPadded(-2.f).GetHShifted(25.f), SplashClickActionFunc, "Reset", ioButtonStyle), kNoTag, "Presets")->SetAnimationEndActionFunction(resetToDefaultFunction);
+    pGraphics->AttachControl(new IVButtonControl(presetPanel.GetGridCell(1, 2, 2, 8).GetPadded(-2.f).GetHShifted(25.f), SplashClickActionFunc, "Backup", ioButtonStyle), kNoTag, "Presets")->SetAnimationEndActionFunction(loadBackupFunction);
     // Built-in file selection
+    pGraphics->AttachControl(new ITextControl(presetPanel.SubRectVertical(2, 0).GetFromLeft(110.f).GetPadded(-2.f), "Default Presets:", TABLITSA_TEXT), kNoTag, "Presets");
+    pGraphics->AttachControl(new DropdownListControl(presetPanel.SubRectVertical(2, 1).GetFromLeft(110.f).GetPadded(-2.f), PRESET_NAMES), kCtrlTagDefaultPresetList, "Presets")->SetActionFunction(
+      [this, pGraphics](IControl* pControl) {
+        std::string presetName = PRESET_ID_LIST[dynamic_cast<DropdownListControl*>(pControl)->GetCurrentIndex()];
+        HRSRC hRes{ FindResource(static_cast<HMODULE>(pGraphics->GetWinModuleHandle()), presetName.c_str(), RT_RCDATA) };
+        HGLOBAL pData{ LoadResource(NULL, hRes) };
+        if (!pData)
+          return;
+        char* resLock{ static_cast<char*>(LockResource(pData)) };
+        const int byteLen = SizeofResource(NULL, hRes);
+        IByteChunk preset;
+        preset.PutBytes(pData, byteLen);
+        UnserializeState(preset, 0);
+        UpdateUIControls();
+        FreeResource(pData);
+      }
+    );
 #if !LOAD_WITH_DIALOG
     const IRECT presetMenuBounds = presetPanel.GetGridCell(1, 1, 2, 4).GetVShifted(presetPanel.GetGridCell(1, 1, 2, 5).H()).GetPadded(0.f, 0.f, 100.f, 100.f);
     IPopupMenuControl* presetSelectionMenu = new IPopupMenuControl(kNoParameter, TABLITSA_TEXT);
@@ -876,7 +894,7 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
         int filterModeParam{ kParamFilter1ModeVSF + std::max(static_cast<int>(pControl->GetValue() * (kNumFilters - 1.) - 1), 0) };
         // Get range of possible modes
         filterModeControl->SetParamIdx(filterModeParam);
-        filterModeControl->SetValue(std::min(filterModeControl->GetValue(), GetParam(filterModeParam)->GetMax()));
+        filterModeControl->SetValue(GetParam(filterModeParam)->Value());
         // Update Controls
         if (pControl->GetValue() == kNoFilter)
           filterModeControl->SetDisabled(true);
@@ -1167,6 +1185,7 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
 #endif
 
     // Popup Menus
+    dynamic_cast<DropdownListControl*>(pGraphics->GetControlWithTag(kCtrlTagDefaultPresetList))->AttachPopupMenu();
     dynamic_cast<DropdownListControl*>(pGraphics->GetControlWithTag(kCtrlTagVoiceEffectsList))->AttachPopupMenu();
     dynamic_cast<DropdownListControl*>(pGraphics->GetControlWithTag(kCtrlTagMasterEffectsList))->AttachPopupMenu();
     pGraphics->AttachPopupMenuControl();

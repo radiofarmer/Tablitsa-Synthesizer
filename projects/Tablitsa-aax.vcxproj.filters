@@ -314,6 +314,9 @@
       <Filter>config</Filter>
     </None>
     <None Include="packages.config" />
+    <None Include="..\..\..\..\..\AppData\Roaming\Tablitsa\presets\User\Exotic Metals 1.TPST">
+      <Filter>resources</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <Image Include="..\resources\img\Tablitsa.ico" />

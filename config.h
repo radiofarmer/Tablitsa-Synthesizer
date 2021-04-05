@@ -6,7 +6,7 @@
 #define PLUG_MFR_ID 'RdFm'
 #define PLUG_URL_STR "https://github.com/radiofarmer/Tablitsa-Synthesizer"
 #define PLUG_EMAIL_STR ""
-#define PLUG_COPYRIGHT_STR "Licensed under GNU General Public License 2.0"
+#define PLUG_COPYRIGHT_STR "Copyright Bram Osterhout 2021, MIT License"
 #define PLUG_CLASS_NAME Tablitsa
 
 #define BUNDLE_NAME "Tablitsa"

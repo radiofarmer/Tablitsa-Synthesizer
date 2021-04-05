@@ -890,7 +890,7 @@ private:
   T mFc{ 1. };
   T mQ{ 0. };
   T mG{ 1. };
-  AllpassLadder<4> mAP[2];
+  AllpassLadder<16> mAP[2];
   TwoPoleTPTFilter mBp;
 };
 

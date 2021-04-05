@@ -438,6 +438,9 @@
     <Filter Include="dsp">
       <UniqueIdentifier>{94d5e761-9f8d-41b7-a565-d04e0fa0aa11}</UniqueIdentifier>
     </Filter>
+    <Filter Include="resources\presets">
+      <UniqueIdentifier>{a5db7f5b-1130-4e7f-9f09-7727fea149dd}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="..\resources\main.rc">
@@ -457,6 +460,7 @@
     <None Include="..\config\Tablitsa-win.props">
       <Filter>config</Filter>
     </None>
+    <None Include="..\resources\preset1.bin" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="..\resources\Tablitsa.ico">

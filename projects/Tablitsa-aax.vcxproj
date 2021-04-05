@@ -550,6 +550,7 @@
     <ResourceCompile Include="..\resources\main.rc" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="..\..\..\..\..\AppData\Roaming\Tablitsa\presets\User\Exotic Metals 1.TPST" />
     <None Include="..\config\Tablitsa-ios.xcconfig" />
     <None Include="..\config\Tablitsa-mac.xcconfig" />
     <None Include="..\config\Tablitsa-web.mk" />
