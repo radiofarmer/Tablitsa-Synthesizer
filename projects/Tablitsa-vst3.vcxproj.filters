@@ -559,4 +559,7 @@
       <Filter>config</Filter>
     </None>
   </ItemGroup>
+  <ItemGroup>
+    <Image Include="..\resources\Tablitsa.ico" />
+  </ItemGroup>
 </Project>

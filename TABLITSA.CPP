@@ -21,8 +21,8 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
 {
   /*Master Controls*/
   GetParam(kParamGain)->InitGain("Gain", -24., -72., 0.);
-  GetParam(kParamNoteGlideTime)->InitMilliseconds("Note Glide Time", 0., 0.0, 3000.);
-  GetParam(kParamNoteGlideRate)->InitDouble("Note Glide Rate", 12., 0.5, 128., 0.1, "St/s");
+  GetParam(kParamNoteGlideTime)->InitDouble("Note Glide Time", 0., 0.0, 3000., 5., "ms", 0, "Portamento", IParam::ShapePowCurve(3.));
+  GetParam(kParamNoteGlideRate)->InitDouble("Note Glide Rate", 12., 0.5, 128., 0.1, "St/s", 0, "Portamento", IParam::ShapePowCurve(3.));
   GetParam(kParamPortamentoMode)->InitBool("Equal Glide Time", true);
   GetParam(kParamMonophonic)->InitBool("Monophonic", false);
   GetParam(kParamUnisonVoices)->InitInt("Unison Voices", 1, 1, 8);
@@ -690,13 +690,22 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
     pGraphics->AttachControl(new ITextControl(presetPanel.SubRectVertical(2, 0).GetFromLeft(110.f).GetPadded(-2.f), "Default Presets:", TABLITSA_TEXT), kNoTag, "Presets");
     pGraphics->AttachControl(new DropdownListControl(presetPanel.SubRectVertical(2, 1).GetFromLeft(110.f).GetPadded(-2.f), PRESET_NAMES), kCtrlTagDefaultPresetList, "Presets")->SetActionFunction(
       [this, pGraphics](IControl* pControl) {
+        // Load Resource
+        HMODULE hInstance = static_cast<HMODULE>(pGraphics->GetWinModuleHandle());
+#ifdef VST3_API
+        std::wstring presetName = PRESET_ID_LIST_W[dynamic_cast<DropdownListControl*>(pControl)->GetCurrentIndex()];
+        HRSRC hRes{ FindResource(hInstance, presetName.c_str(), (LPWSTR)RT_RCDATA) };
+        HGLOBAL pData{ LoadResource(hInstance, hRes) };
+#else
         std::string presetName = PRESET_ID_LIST[dynamic_cast<DropdownListControl*>(pControl)->GetCurrentIndex()];
-        HRSRC hRes{ FindResource(static_cast<HMODULE>(pGraphics->GetWinModuleHandle()), presetName.c_str(), RT_RCDATA) };
-        HGLOBAL pData{ LoadResource(NULL, hRes) };
+        HRSRC hRes{ FindResource(hInstance, presetName.c_str(), RT_RCDATA) };
+        HGLOBAL pData{ LoadResource(hInstance, hRes) };
+#endif
         if (!pData)
           return;
         char* resLock{ static_cast<char*>(LockResource(pData)) };
-        const int byteLen = SizeofResource(NULL, hRes);
+        const int byteLen = SizeofResource(hInstance, hRes);
+        // Set State
         IByteChunk preset;
         preset.PutBytes(pData, byteLen);
         UnserializeState(preset, 0);
@@ -704,6 +713,7 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
         FreeResource(pData);
       }
     );
+    dynamic_cast<DropdownListControl*>(pGraphics->GetControlWithTag(kCtrlTagDefaultPresetList))->SetCurrentIdx(std::find(PRESET_ID_LIST, PRESET_ID_LIST + N_PRESETS, "Default") - PRESET_ID_LIST, false);
 #if !LOAD_WITH_DIALOG
     const IRECT presetMenuBounds = presetPanel.GetGridCell(1, 1, 2, 4).GetVShifted(presetPanel.GetGridCell(1, 1, 2, 5).H()).GetPadded(0.f, 0.f, 100.f, 100.f);
     IPopupMenuControl* presetSelectionMenu = new IPopupMenuControl(kNoParameter, TABLITSA_TEXT);
@@ -1391,6 +1401,7 @@ void Tablitsa::LoadDefaultState()
   OnParamReset(kDelegate);
 
   UpdateUIControls();
+  dynamic_cast<DropdownListControl*>(GetUI()->GetControlWithTag(kCtrlTagDefaultPresetList))->SetCurrentIdx(std::find(PRESET_ID_LIST, PRESET_ID_LIST + N_PRESETS, "Default") - PRESET_ID_LIST, false);
 }
 
 void Tablitsa::OnUIOpen()
