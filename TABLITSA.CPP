@@ -1580,7 +1580,7 @@ bool Tablitsa::OnMessage(int msgTag, int ctrlTag, int dataSize, const void* pDat
       if (useSystemDialog)
       {
         WDL_String fileStr("NewPreset");
-        WDL_String pathStr(GetDataPath("\\Tablitsa\\presets\\User\\").c_str());
+        WDL_String pathStr(GetDataPath("\\Tablitsa\\presets\\").c_str());
         GetUI()->PromptForFile(fileStr, pathStr, EFileAction::Save, "TPST");
         filePath = fileStr.Get();
         if (filePath == "\0")
@@ -1588,7 +1588,7 @@ bool Tablitsa::OnMessage(int msgTag, int ctrlTag, int dataSize, const void* pDat
       }
       else
       {
-        filePath = GetDataPath("\\Tablitsa\\presets\\User\\") + "TEST.TPST";
+        filePath = GetDataPath("\\Tablitsa\\presets\\") + "TEST.TPST";
       }
 
       SavePreset(newPreset, filePath.c_str(), *backup);
@@ -1606,14 +1606,14 @@ bool Tablitsa::OnMessage(int msgTag, int ctrlTag, int dataSize, const void* pDat
       else if ((bool)LOAD_WITH_DIALOG)
       {
         WDL_String fileStr("UserPreset");
-        WDL_String pathStr(GetDataPath("\\Tablitsa\\presets\\User\\").c_str());
+        WDL_String pathStr(GetDataPath("\\Tablitsa\\presets\\").c_str());
         GetUI()->PromptForFile(fileStr, pathStr, EFileAction::Open, "TPST");
         filePath = fileStr.Get();
         if (filePath == "\0")
           break;
       }
       else
-        filePath = GetDataPath("\\Tablitsa\\presets\\User\\") + "TEST.TPST";
+        filePath = GetDataPath("\\Tablitsa\\presets\\") + "TEST.TPST";
 
       IByteChunk presetData = LoadPreset(filePath.c_str(), *backup);
       if (presetData.Size() == 0)
