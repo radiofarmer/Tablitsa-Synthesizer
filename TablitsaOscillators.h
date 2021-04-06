@@ -149,8 +149,8 @@ public:
     mWtReady = false;
     if (tab != nullptr) // TODO: Check for nan's in the wavetable. They appear to break everything (including after new tables are loaded)
       mWT = tab;
-    mPhaseIncrFactor = (1. / (mWT->mCyclesPerLevel * mProcessOS));
     mCyclesPerLevelRecip = 1. / mWT->mCyclesPerLevel;
+    mPhaseIncrFactor = mCyclesPerLevelRecip / mProcessOS;
   }
 
   // Chooses the proper mipmap for the current note frequency (Hz) and sample rate
@@ -537,6 +537,8 @@ public:
   void Reset()
   {
     IOscillator<T>::Reset();
+    mPhaseModulator.SetPhase(0.);
+    mRingModulator.SetPhase(0.5);
     mCycle = 0;
   }
 
