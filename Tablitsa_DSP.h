@@ -616,6 +616,7 @@ public:
       // Process Effects
       UpsampleBlock<EFFECT_OS_FACTOR>(mOversampler, mEffectInputs.Get(), nFrames);
       constexpr int nEffectParams = kVEffect2Param1 - kVEffect1Param1;
+#pragma clang loop unroll(full)
       for (int e{ 0 }, p{ 0 }; e < TABLITSA_MAX_VOICE_EFFECTS; e++, p += nEffectParams)
       {
         mEffects[e]->SetContinuousParams(mVModulations.GetList()[kVEffect1Param1 + p][0],

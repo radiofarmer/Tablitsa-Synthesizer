@@ -333,7 +333,7 @@ void InitReverbUI(Plugin* pPlugin, IGraphics* pGraphics, std::vector<IControl*> 
   for (int i{ 0 }; i < TABLITSA_EFFECT_PARAMS; ++i)
     controls[i]->SetValue(pPlugin->GetParam(params[i])->GetNormalized());
 
-  dynamic_cast<IVKnobControl*>(controls[0])->SetLabelStr("Decay Time");
+  dynamic_cast<IVKnobControl*>(controls[0])->SetLabelStr("Echo Time");
   dynamic_cast<IVKnobControl*>(controls[1])->SetLabelStr("Room Size");
   dynamic_cast<IVKnobControl*>(controls[2])->SetLabelStr("Damping");
   dynamic_cast<IVKnobControl*>(controls[3])->SetLabelStr("Mix");

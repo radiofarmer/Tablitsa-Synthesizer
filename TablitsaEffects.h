@@ -83,7 +83,7 @@ protected:
 
 /* Coefficient Modulation ("Super Ring") */
 template<typename T, class V=Vec4d>
-class CMEffect : public Effect<T, V>
+class CMEffect final : public Effect<T, V>
 {
 public:
   CMEffect(T sampleRate) : Effect<T, V>(sampleRate) {}

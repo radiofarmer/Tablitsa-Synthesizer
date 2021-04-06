@@ -290,10 +290,10 @@ public:
     {
       double phaseShift = WrapPhase(SamplePhaseShift(IOscillator<T>::mPhase) + PhaseMod()); // Adjusted phase (double between zero and one)
       frac = modf(phaseShift * mTableSize, &phase); // Split phase into integer and fractional parts
-      const int offset{ static_cast<int>(phase) };
+      const int offset{ static_cast<int>(phase) + mCycle * mTableSize };
       // Higher-frequency wavetable offset
       frac2 = modf(phaseShift * mNextTableSize, &phase);
-      const int halfOffset{ static_cast<int>(phase) };
+      const int halfOffset{ static_cast<int>(phase) + mCycle * mNextTableSize };
       // Get two samples from each waveform
       const T* addr[4] = {
         mLUTLo[0] + offset,
@@ -321,6 +321,8 @@ public:
       // Increment Phase
       IOscillator<T>::mPhase += mPhaseIncr * mPhaseIncrFactor;
       IOscillator<T>::mPhase -= std::floor(IOscillator<T>::mPhase);
+      mCycle = (mCycle + (mPhase < mPrevPhase)) % mWT->mCyclesPerLevel;
+      mPrevPhase = mPhase;
     }
 #if OVERSAMPLING > 1
     for (auto s = 0; s < nFrames / mProcessOS; ++s)
@@ -346,14 +348,13 @@ public:
 
     // Read 4 doubles as 8 integers (signed ints are used, but the AND operations later make this irrelevant)
     Vec8i viPhase = reinterpret_i(vPhase);
-    // Upper 32 bits of 3*2^19 in ______ indices, 0xFFFF in _____: i.e. 0xFFFF, 0x18, 0xFFFF, ...
+    Vec4q cycleIncr = select(reinterpret_i(permute8<HIOFFSET_V, -1, HIOFFSET_V + 2, -1, HIOFFSET_V + 4, -1, HIOFFSET_V + 6, -1>(viPhase & (mTableSize * 2 - 1))) > mTableSize, Vec4q(1), Vec4q(0));
+    // Upper 32 bits of 3*2^19 in upper indices, 0xFFFF (32 bits of ones) in lower: i.e. 0xFFFF, 0x18, 0xFFFF, ...
     Vec8i normhipart = blend8<8, HIOFFSET_V, 8, HIOFFSET_V, 8, HIOFFSET_V, 8, HIOFFSET_V>(reinterpret_i(Vec4d((double)UNITBIT32)), Vec8i(0xFFFF));
     // Mask the 8-item vector of 32-bit ints with one less than the table size, pad the upper bits (lower indices) with zeros, and reinterpret as a 4-item vector of 64-bit ints
     Vec8i offsets32 = viPhase & mTableSizeM1;
     Vec4q offsets = reinterpret_i(permute8<HIOFFSET_V, -1, HIOFFSET_V + 2, -1, HIOFFSET_V + 4, -1, HIOFFSET_V + 6, -1>(offsets32));
     Vec4q phaseMod = to_int64_in_range(PhaseMod(), mTableSize);
-    Vec4q cycleIncr = select(offsets < mPrevPhase, Vec4q(1), Vec4q(0)); // For some reason, calculating this after the phase mod causes a clicking noise
-//    Vec4q cycleIncr1 = select(((offsets + 1) & mTableSizeM1) < mPrevPhase, Vec4q(1), Vec4q(0));
     offsets = (offsets + phaseMod) & mTableSizeM1;
     Vec4q offsets1 = (offsets + 1) & mTableSizeM1;
     // Force the double to wrap. (AND the upper bits with the upper 32 bits of UNITBIT32)
@@ -419,12 +420,11 @@ public:
     return mixed;
   }
 
-  /* Returns a new phase as a power function of the current phase in the wavetable (i.e. always between 0. and 1., regardless of the number of cycles in the table).
-  Also sets mPhaseInCycle to the unshifted value. */
+  /* Returns a new phase as a power function of the current phase in the wavetable (i.e. always between 0. and 1., regardless of the number of cycles in the table). */
   inline double SamplePhaseShift(double phase)
   {
-    const double formantPhase = mFormant * phase * static_cast<T>(phase <= mFormantRecip); // TODO: check this - inharmonic frequencies may cause adverse effects here
-    return std::pow(formantPhase, 1. + (mWtBend >= 0. ? mWtBend : mWtBend / 2.));
+    const double formantPhase = mFormant * phase * static_cast<double>(phase <= mFormantRecip); // TODO: check this - inharmonic frequencies may cause adverse effects here
+    return std::pow(formantPhase, 1. + (mWtBend >= 0. ? mWtBend : mWtBend * 0.5));
   }
 
   inline double WrapPhase(double phase)
