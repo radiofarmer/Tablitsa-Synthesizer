@@ -2414,7 +2414,7 @@ public:
   WDL_PtrList<T> mModulations; // Ptrlist for global modulations
   LogParamSmooth<T, kNumModulations> mParamSmoother;
   sample mParamsToSmooth[kNumModulations];
-  std::vector<std::string> mWavetableNames{ ELEMENT_NAMES };
+  const std::vector<std::string> mWavetableNames{ ELEMENT_NAMES };
   std::vector<Voice*> mSynthVoices;
   Wavetable<T>* mWavetables[2]{ nullptr }; // Holds the wavetable data for all voices (for wavetable indices, see `mLoadedWavetables` below)
   bool mTableLoading{ false };
@@ -2423,8 +2423,8 @@ public:
   bool mMono{ false };
   int mUnisonVoices{ 1 };
   float mUnisonDetune{ 0.f };
-  UnisonVoiceManager mDetuner{ kMaxUnisonVoices };
   double mStereoWidth{ 0. };
+  UnisonVoiceManager mDetuner{ kMaxUnisonVoices };
 
   // Portamento Parameters
   bool mConstantGlideTime{ true };

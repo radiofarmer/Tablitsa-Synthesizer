@@ -1214,7 +1214,7 @@ bool Tablitsa::SerializeState(IByteChunk& chunk) const
   bool savedOK = true;
   int version{ GetPluginVersion(false) };
   savedOK &= chunk.Put(&version) > 0;
-  // serialize the multislider state before serializing the regular params
+  
   for (int i = 0; i < kNumSeqSteps; i++)
   {
     savedOK &= chunk.Put(&mDSP.mSeqSteps[i]) > 0;
@@ -1255,6 +1255,30 @@ int Tablitsa::UnserializeState(const IByteChunk& chunk, int startPos)
   // Wavetable 2
   startPos = chunk.Get(&v, startPos);
   mDSP.mLoadedWavetables[1] = v;
+
+  // Notify user if improper wavetable values are loaded
+  if (mDSP.mLoadedWavetables[0] != static_cast<int>(mDSP.mLoadedWavetables[0]) || mDSP.mLoadedWavetables[1] != static_cast<int>(mDSP.mLoadedWavetables[1]))
+  {
+    mDSP.mLoadedWavetables[0] = 1.;
+    mDSP.mLoadedWavetables[1] = 2.;
+    bool abort{ false };
+    GetUI()->ShowMessageBox("Invalid wavetable codes. Preset file may be corrupted or incompatible with the plugin version. Continue loading preset?", "Warning", EMsgBoxType::kMB_YESNO,
+      [&abort](EMsgBoxResult result) {
+        abort = (result == EMsgBoxResult::kNO);
+      });
+    if (abort)
+    {
+      if (mStateBackup.Size() == 0)
+      {
+        LoadDefaultState();
+        return -1;
+      }
+      else
+        return UnserializeState(mStateBackup, 0);
+    }
+      
+  }
+
   // Sequencer quantization
   startPos = chunk.Get(&v, startPos);
   mSequencerIsQuantized = v;
@@ -1367,9 +1391,6 @@ int Tablitsa::UnserializeState(const IByteChunk& chunk, int startPos)
     OnParamChange(kParamMasterEffect1Param5 + kNumMasterEffectParams * i);
     LEAVE_PARAMS_MUTEX;
   }
-
-  assert(mDSP.mLoadedWavetables[0] == static_cast<int>(mDSP.mLoadedWavetables[0]));
-  assert(mDSP.mLoadedWavetables[1] == static_cast<int>(mDSP.mLoadedWavetables[1]));
 
   // must remember to call UnserializeParams at the end
   return UnserializeParams(chunk, startPos);
@@ -1817,6 +1838,11 @@ IByteChunk Tablitsa::LoadPreset(const char* filename, bool isBackup)
 {
   if (isBackup)
     return mStateBackup;
+  else
+  {
+    mStateBackup.Clear();
+    SerializeState(mStateBackup);
+  }
 
   IByteChunk presetData;
 
@@ -1827,7 +1853,7 @@ IByteChunk Tablitsa::LoadPreset(const char* filename, bool isBackup)
     GetUI()->ShowMessageBox("Preset file not found or invalid format", "Error", EMsgBoxType::kMB_OK);
     return presetData;
   }
-  // Why is fileData two bytes longer than the data written to the file???
+  
   presetData.PutBytes(&fileData[0], fileData.size());
 
   return presetData;
