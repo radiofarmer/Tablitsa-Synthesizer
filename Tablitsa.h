@@ -737,6 +737,7 @@ public:
   IByteChunk LoadPreset(const char* filename="UserPreset", bool isBackup=false);
   void SavePreset(IByteChunk& byteData, const char* filename = "UserPreset", bool isBackup=false);
   void LoadDefaultState();
+  int CheckVersion(const IByteChunk& presetData);
 
   void SetMasterFXSlot(int slotIdx, int masterEffectIdx) { mCurrentMasterFXSlot = slotIdx; mMasterEffectSlots[slotIdx] = masterEffectIdx; }
   void SetVoiceFXSlot(int slotIdx, int voiceEffectIdx) { mCurrentVoiceFXSlot = slotIdx; mVoiceEffectSlots[slotIdx] = voiceEffectIdx; }

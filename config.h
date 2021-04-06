@@ -1,7 +1,7 @@
 #define PLUG_NAME "Tablitsa"
 #define PLUG_MFR "RadioFarmer"
-#define PLUG_VERSION_HEX 0x00010002
-#define PLUG_VERSION_STR "0.1.0.2"
+#define PLUG_VERSION_HEX 0x00010100
+#define PLUG_VERSION_STR "0.1.1.0"
 #define PLUG_UNIQUE_ID 'BWcP'
 #define PLUG_MFR_ID 'RdFm'
 #define PLUG_URL_STR "https://github.com/radiofarmer/Tablitsa-Synthesizer"

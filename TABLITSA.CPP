@@ -1212,6 +1212,8 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
 bool Tablitsa::SerializeState(IByteChunk& chunk) const
 {
   bool savedOK = true;
+  int version{ GetPluginVersion(false) };
+  savedOK &= chunk.Put(&version) > 0;
   // serialize the multislider state before serializing the regular params
   for (int i = 0; i < kNumSeqSteps; i++)
   {
@@ -1238,8 +1240,9 @@ bool Tablitsa::SerializeState(IByteChunk& chunk) const
 // this over-ridden method is called when the host is trying to load the plug-in state and you need to unpack the data into your algorithm
 int Tablitsa::UnserializeState(const IByteChunk& chunk, int startPos)
 {
+  startPos = CheckVersion(chunk);
+
   double v = 0.;
-  
   // unserialize the steps state before unserializing the regular params
   for (int i = 0; i < kNumSeqSteps; i++)
   {
@@ -1255,7 +1258,7 @@ int Tablitsa::UnserializeState(const IByteChunk& chunk, int startPos)
   // Sequencer quantization
   startPos = chunk.Get(&v, startPos);
   mSequencerIsQuantized = v;
-
+  
   // Load effect panel states
   for (int i{ 0 }; i < TABLITSA_MAX_VOICE_EFFECTS; ++i)
   {
@@ -1402,6 +1405,16 @@ void Tablitsa::LoadDefaultState()
 
   UpdateUIControls();
   dynamic_cast<DropdownListControl*>(GetUI()->GetControlWithTag(kCtrlTagDefaultPresetList))->SetCurrentIdx(std::find(PRESET_ID_LIST, PRESET_ID_LIST + N_PRESETS, "Default") - PRESET_ID_LIST, false);
+}
+
+int Tablitsa::CheckVersion(const IByteChunk& presetData)
+{
+  int presetVersion{};
+  int bytePos = presetData.Get(&presetVersion, 0);
+  if (presetVersion == GetPluginVersion(false))
+    return bytePos;
+  else
+    return 0;
 }
 
 void Tablitsa::OnUIOpen()
