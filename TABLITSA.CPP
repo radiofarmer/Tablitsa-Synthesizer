@@ -1284,27 +1284,8 @@ int Tablitsa::UnserializeState(const IByteChunk& chunk, int startPos)
     }
       
   }
-  // Load wavetables
-  for (int i{ 0 }; i < 2; ++i)
-  {
-    try
-    {
-      mDSP.UpdateOscillatorWavetable(static_cast<int>(mDSP.mLoadedWavetables[i]) - 1, i);
-    }
-    catch (const std::out_of_range& e)
-    {
-      mDSP.mLoadedWavetables[i] = static_cast<double>(i + 1);
-      dynamic_cast<PeriodicTable*>(GetUI()->GetControlWithTag(kCtrlTagPeriodicTable))->SetSelectedElement(static_cast<int>(mDSP.mLoadedWavetables[i]), i);
-      mDSP.UpdateOscillatorWavetable(static_cast<int>(mDSP.mLoadedWavetables[i]) - 1, i);
-
-      bool abort{ ShowLoadErrorMessageBox() };
-      if (abort)
-      {
-        LoadDefaultState();
-        return -1;
-      }
-    }
-  }
+  if (!LoadWavetables())
+    return -1;
 
   // Sequencer quantization
   startPos = chunk.Get(&v, startPos);
@@ -1434,6 +1415,7 @@ void Tablitsa::LoadDefaultState()
   mDSP.mLoadedWavetables[0] = 1.;
   // Wavetable 2
   mDSP.mLoadedWavetables[1] = 2.;
+  LoadWavetables();
   // Sequencer quantization
   mSequencerIsQuantized = 0.;
 
@@ -1530,6 +1512,17 @@ void Tablitsa::UpdateUIControls()
   slotSwitch = GetUI()->GetControlWithTag(kCtrlTagVoiceEffectsSwitch);
   slotSwitch->SetValueToDefault();
   slotSwitch->SetDirty(true);
+}
+
+/* implement this and return true to trigger your custom about box, when someone clicks about in the menu of a standalone app or VST3 plugin */
+bool Tablitsa::OnHostRequestingAboutBox() { return false; } // See IPlugAPP_dialog.cpp
+
+/* implement this and return true to trigger your custom help info, when someone clicks help in the menu of a standalone app or VST3 plugin */
+bool Tablitsa::OnHostRequestingProductHelp() { return false; }
+
+int Tablitsa::GetActiveModIdx() const
+{
+  return mActiveModIdx;
 }
 
 #if IPLUG_DSP
@@ -1819,17 +1812,6 @@ bool Tablitsa::OnMessage(int msgTag, int ctrlTag, int dataSize, const void* pDat
   return false;
 }
 
-/* implement this and return true to trigger your custom about box, when someone clicks about in the menu of a standalone app or VST3 plugin */
-bool Tablitsa::OnHostRequestingAboutBox() { return false; } // See IPlugAPP_dialog.cpp
-
-/* implement this and return true to trigger your custom help info, when someone clicks help in the menu of a standalone app or VST3 plugin */
-bool Tablitsa::OnHostRequestingProductHelp() { return false; }
-
-int Tablitsa::GetActiveModIdx() const
-{
-  return mActiveModIdx;
-}
-
 void Tablitsa::SetActiveModIdx(int idx)
 {
   int prev = mActiveModIdx;
@@ -1838,6 +1820,31 @@ void Tablitsa::SetActiveModIdx(int idx)
     dynamic_cast<TablitsaIVModKnobControl*>(GetUI()->GetControl(idx))->ColorSwap();
   if (prev > -1)
     dynamic_cast<TablitsaIVModKnobControl*>(GetUI()->GetControl(prev))->ColorSwap();
+}
+
+bool Tablitsa::LoadWavetables()
+{
+  for (int i{ 0 }; i < 2; ++i)
+  {
+    try
+    {
+      mDSP.UpdateOscillatorWavetable(static_cast<int>(mDSP.mLoadedWavetables[i]) - 1, i);
+    }
+    catch (const std::out_of_range& e)
+    {
+      mDSP.mLoadedWavetables[i] = static_cast<double>(i + 1);
+      dynamic_cast<PeriodicTable*>(GetUI()->GetControlWithTag(kCtrlTagPeriodicTable))->SetSelectedElement(static_cast<int>(mDSP.mLoadedWavetables[i]), i);
+      mDSP.UpdateOscillatorWavetable(static_cast<int>(mDSP.mLoadedWavetables[i]) - 1, i);
+
+      bool abort{ ShowLoadErrorMessageBox() };
+      if (abort)
+      {
+        LoadDefaultState();
+        return false;
+      }
+    }
+  }
+  return true;
 }
 
 void Tablitsa::SavePreset(IByteChunk& byteData, const char* filename, bool isBackup)

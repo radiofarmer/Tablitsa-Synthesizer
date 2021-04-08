@@ -730,6 +730,7 @@ public:
   bool SerializeState(IByteChunk& chunk) const override;
   int UnserializeState(const IByteChunk& chunk, int startPos) override;
   void UpdateUIControls();
+  bool LoadWavetables();
   /* implement this and return true to trigger your custom about box, when someone clicks about in the menu of a standalone app or VST3 plugin */
   bool OnHostRequestingAboutBox() override; // See IPlugAPP_dialog.cpp
   /* implement this and return true to trigger your custom help info, when someone clicks help in the menu of a standalone app or VST3 plugin */
