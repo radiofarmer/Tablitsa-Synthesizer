@@ -65,7 +65,7 @@ void InitCoefModUI(Plugin* pPlugin, IGraphics* pGraphics, std::vector<IControl*>
   p1->SetDisplayPrecision(2);
 
   for (int i{ 0 }; i < TABLITSA_EFFECT_PARAMS; ++i)
-    controls[i]->SetValue(pPlugin->GetParam(params[i])->Value());
+    controls[i]->SetValue(pPlugin->GetParam(params[i])->GetNormalized());
 
   controls[0]->SetDisabled(false);
   controls[1]->SetDisabled(false);
@@ -410,7 +410,7 @@ void InitSampleAndHoldUI(Plugin* pPlugin, IGraphics* pGraphics, std::vector<ICon
       paramVals[i] = pPlugin->GetParam(params[i])->Value();
   }
   pPlugin->GetParam(params[0])->InitDouble(paramNames[0], 10., TABLITSA_SAH_MIN_MS, TABLITSA_SAH_MAX_MS, 0.01, "ms", IParam::kFlagsNone, "Effect", IParam::ShapePowCurve(3.));
-  pPlugin->GetParam(params[1])->InitDouble(paramNames[1], 0., 0., 1., 0.01);
+  pPlugin->GetParam(params[1])->InitDouble(paramNames[1], 0., 0., 1., 0.01, "", 0, "", IParam::ShapePowCurve(2.));
   pPlugin->GetParam(params[2])->InitDouble(paramNames[2], 0., 0., 1., 0.01);
   pPlugin->GetParam(params[3])->InitDouble(paramNames[3], 0., 0., 1., 0.01);
   // Reload original values if not resetting
@@ -430,12 +430,12 @@ void InitSampleAndHoldUI(Plugin* pPlugin, IGraphics* pGraphics, std::vector<ICon
   p1->SetDisplayPrecision(2);
 
   for (int i{ 0 }; i < TABLITSA_EFFECT_PARAMS; ++i)
-    controls[i]->SetValue(pPlugin->GetParam(params[i])->Value());
+    controls[i]->SetValue(pPlugin->GetParam(params[i])->GetNormalized());
 
   pGraphics->HideControl(params[4], true);
   pGraphics->HideControl(params[5], true);
   dynamic_cast<IVKnobControl*>(controls[0])->SetLabelStr("Rate");
-  dynamic_cast<IVKnobControl*>(controls[1])->SetLabelStr("Decay");
+  dynamic_cast<IVKnobControl*>(controls[1])->SetLabelStr("Bit Crush");
   dynamic_cast<IVKnobControl*>(controls[2])->SetLabelStr("Noise");
   dynamic_cast<IVKnobControl*>(controls[3])->SetLabelStr("Mix");
   // Modulation ON for knob 1
@@ -491,7 +491,7 @@ void InitTexturizerUI(Plugin* pPlugin, IGraphics* pGraphics, std::vector<IContro
   pPlugin->GetParam(params[3])->SetDisplayFunc(PercentDisplayFunc);
 
   for (int i{ 0 }; i < TABLITSA_EFFECT_PARAMS; ++i)
-    controls[i]->SetValue(pPlugin->GetParam(params[i])->Value());
+    controls[i]->SetValue(pPlugin->GetParam(params[i])->GetNormalized());
 
   // All knobs used
   controls[0]->SetDisabled(false);
@@ -635,7 +635,7 @@ void SwapVoiceEffectsUI(int effectSlot, IControl* pEffectsList, IGraphics* pGrap
   }
   case kSampleAndHoldEffect:
   {
-    std::vector<char*> paramNames{ "Sample & Hold Rate", "Sample & Hold Decay" , "Sample & Hold Noise", "Sample & Hold Wet Mix" };
+    std::vector<char*> paramNames{ "Sample & Hold Rate", "Sample & Hold Bit Crush" , "Sample & Hold Noise", "Sample & Hold Wet Mix" };
     InitSampleAndHoldUI(pPlugin, pGraphics, controls, params, paramNames, reset);
     break;
   }

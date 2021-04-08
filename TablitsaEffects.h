@@ -692,6 +692,7 @@ private:
 template<typename T, class V = Vec4d>
 class SampleAndHold final : public Effect<T, V>
 {
+  static const int HiOffset = sizeof(T) > 4;
   typedef typename deduce_vector_from<V>::int_vec Vi;
 
   struct xor128
@@ -720,13 +721,13 @@ public:
   }
 
   void SetParam1(T value) override { SetRateMS(value); }
-  void SetParam2(T value) override { SetDecay(value); }
+  void SetParam2(T value) override { mBitCrush = value; }
   void SetParam3(T value) override { SetJitter(value); }
 
   void SetContinousParams(const T p1, const T p2, const T p3, const T p4, const T pitch)
   {
     SetRateMS(param1);
-    SetDecay(param2);
+    mBitCrush = param2;
     SetJitter(param3);
 
     mMix = param4;
@@ -734,22 +735,24 @@ public:
 
   T Process(T s) override
   {
+    int* bits{ reinterpret_cast<int*>(&s) };
+    const unsigned int bitMask{ 0xffffffff - ((1 << static_cast<int>(mBitCrush * 20.)) - 1) };
+    *(bits + 1) &= bitMask;
+
     T out = mHold;
-    mHold += mDecay * (s - mHold);
     if (mSampleCounter++ >= mRateAdj)
     {
       out = mHold = s;
       mSampleCounter = 0;
       mRateAdj = mRate + (XOR_Shift(mRandGen) >> mJitter);
     }
-    out = mMix * (out - s);
-    return s + out;
+
+    return s + mMix * (out - s);
   }
 
   void ProcessStereo(T* s) override
   {
     T out = mHold;
-    mHold += mDecay * (s[0] - mHold);
     if (mSampleCounter++ >= mRateAdj)
     {
       out = mHold = (s[0] + s[1]) / (T)2;
@@ -763,7 +766,7 @@ public:
   void ProcessStereo(StereoSample<T>& s) override
   {
     StereoSample<T> out = mStereoHold;
-    mStereoHold += (s - mStereoHold) * mDecay;
+    mStereoHold += (s - mStereoHold) * mBitCrush;
     if (mSampleCounter++ >= mRateAdj)
     {
       out = mStereoHold = s;
@@ -776,8 +779,8 @@ public:
   void ProcessStereo_Vector(StereoSample<V>& s) override
   {
     StereoSample<V> out{ mHold_v->l, mHold_v->r };
-    mHold_v->l += mDecay * (s.l - mHold_v->l);
-    mHold_v->r += mDecay * (s.r - mHold_v->r);
+    mHold_v->l += mBitCrush * (s.l - mHold_v->l);
+    mHold_v->r += mBitCrush * (s.r - mHold_v->r);
     if (mSampleCounter >= mRateAdj)
     {
       out.l = mHold_v->l = s.l;
@@ -797,11 +800,6 @@ public:
     mRateAdj = mRate + (XOR_Shift(mRandGen) >> mJitter);
   }
 
-  void SetDecay(T decay)
-  {
-    mDecay = decay / mRate;
-  }
-
   void SetJitter(T noise)
   {
     mJitter = static_cast<int>((T)31 * ((T)1 - noise * 0.25));
@@ -815,7 +813,7 @@ public:
 
 private:
   T mHold{ 0. };
-  T mDecay{ 0. };
+  T mBitCrush{ 0. };
   StereoSample<T> mStereoHold{ 0., 0. };
   unsigned int mRate{ 1 }; // samples
   unsigned int mSampleCounter{ 0 };
