@@ -219,7 +219,7 @@ void InitDistortionUI(Plugin* pPlugin, IGraphics* pGraphics, std::vector<IContro
   }
   pPlugin->GetParam(params[0])->InitDouble(paramNames[0], 0., 0., 1., 0.01);
   pPlugin->GetParam(params[1])->InitDouble(paramNames[1], 0., 0., 1., 0.01);
-  pPlugin->GetParam(params[2])->InitDouble(paramNames[2], 0., 0.01, 0.1, 0.01, "", 0, "", IParam::ShapeExp());
+  pPlugin->GetParam(params[2])->InitDouble(paramNames[2], 0., TABLITSA_DISTORTION_FREQ_LOW, TABLITSA_DISTORTION_FREQ_HIGH, 0.01, "", 0, "", IParam::ShapeExp());
   pPlugin->GetParam(params[3])->InitDouble(paramNames[3], 0., 0., 1., 0.01);
   // Reload original values if not resetting
   if (!reset)
@@ -240,7 +240,7 @@ void InitDistortionUI(Plugin* pPlugin, IGraphics* pGraphics, std::vector<IContro
   pPlugin->GetParam(params[3])->SetDisplayFunc(PercentDisplayFunc);
 
   for (int i{ 0 }; i < TABLITSA_EFFECT_PARAMS; ++i)
-    controls[i]->SetValue(pPlugin->GetParam(params[i])->Value());
+    controls[i]->SetValue(pPlugin->GetParam(params[i])->GetNormalized());
 
   controls[1]->SetDisabled(false);
   controls[2]->SetDisabled(false);
