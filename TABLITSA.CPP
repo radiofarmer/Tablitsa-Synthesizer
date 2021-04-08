@@ -1284,6 +1284,27 @@ int Tablitsa::UnserializeState(const IByteChunk& chunk, int startPos)
     }
       
   }
+  // Load wavetables
+  for (int i{ 0 }; i < 2; ++i)
+  {
+    try
+    {
+      mDSP.UpdateOscillatorWavetable(static_cast<int>(mDSP.mLoadedWavetables[i]) - 1, i);
+    }
+    catch (const std::out_of_range& e)
+    {
+      mDSP.mLoadedWavetables[i] = static_cast<double>(i + 1);
+      dynamic_cast<PeriodicTable*>(GetUI()->GetControlWithTag(kCtrlTagPeriodicTable))->SetSelectedElement(static_cast<int>(mDSP.mLoadedWavetables[i]), i);
+      mDSP.UpdateOscillatorWavetable(static_cast<int>(mDSP.mLoadedWavetables[i]) - 1, i);
+
+      bool abort{ ShowLoadErrorMessageBox() };
+      if (abort)
+      {
+        LoadDefaultState();
+        return -1;
+      }
+    }
+  }
 
   // Sequencer quantization
   startPos = chunk.Get(&v, startPos);
@@ -1465,26 +1486,6 @@ void Tablitsa::UpdateUIControls()
   auto* pPeriodicTable = dynamic_cast<PeriodicTable*>(GetUI()->GetControlWithTag(kCtrlTagPeriodicTable));
   pPeriodicTable->SetSelectedElement(static_cast<int>(mDSP.mLoadedWavetables[0]), 0);
   pPeriodicTable->SetSelectedElement(static_cast<int>(mDSP.mLoadedWavetables[1]), 1);
-  for (int i{ 0 }; i < 2; ++i)
-  {
-    try
-    {
-      mDSP.UpdateOscillatorWavetable(static_cast<int>(mDSP.mLoadedWavetables[i]) - 1, i);
-    }
-    catch (const std::out_of_range& e)
-    {
-      mDSP.mLoadedWavetables[i] = static_cast<double>(i + 1);
-      pPeriodicTable->SetSelectedElement(static_cast<int>(mDSP.mLoadedWavetables[i]), i);
-      mDSP.UpdateOscillatorWavetable(static_cast<int>(mDSP.mLoadedWavetables[i]) - 1, i);
-
-      bool abort{ ShowLoadErrorMessageBox() };
-      if (abort)
-      {
-        LoadDefaultState();
-        return;
-      }
-    }
-  }
   GetUI()->GetControlWithTag(kCtrlTagSequencerQuant)->SetValue(mSequencerIsQuantized);
 
   // LFOPlots
