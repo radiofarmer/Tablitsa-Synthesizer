@@ -394,8 +394,8 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
   GetParam(kParamFilter1FB)->InitPercentage("Filter 1 FB");
   GetParam(kParamFilter1Delay)->InitDouble("Filter 1 Delay", 0.1, 0.1, 20., 0.01, "ms");
   // Oscillator sends
-  GetParam(kParamFilter1Osc1Send)->InitPercentage("Filter 1 Osc 1 Send", 100.);
-  GetParam(kParamFilter1Osc2Send)->InitPercentage("Filter 1 Osc 2 Send", 0.);
+  GetParam(kParamFilter1Osc1Send)->InitGain("Filter 1 Osc 1 Send", 0., -60., 0.);
+  GetParam(kParamFilter1Osc2Send)->InitGain("Filter 1 Osc 2 Send", -60., -60., 0.);
 
   // Filter 2
   GetParam(kParamFilter2Type)->InitEnum("Filter 2 Type", kNoFilter, { FILTER_TYPE_LIST });
@@ -437,8 +437,8 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
   GetParam(kParamFilter2FB)->InitPercentage("Filter 2 FB");
   GetParam(kParamFilter2Delay)->InitDouble("Filter 2 Delay", 0.1, 0.1, 20., 0.01, "ms");
   // Oscillator sends
-  GetParam(kParamFilter2Osc1Send)->InitPercentage("Filter 2 Osc 1 Send", 0.);
-  GetParam(kParamFilter2Osc2Send)->InitPercentage("Filter 2 Osc 2 Send", 100.);
+  GetParam(kParamFilter2Osc1Send)->InitGain("Filter 2 Osc 1 Send", -60., -60., 0.);
+  GetParam(kParamFilter2Osc2Send)->InitGain("Filter 2 Osc 2 Send", 0., -60., 0.);
 
   // Effect Parameters
   // Voice Effects
@@ -604,10 +604,10 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
   GetParam(kParamMasterEffect3Param5)->InitBool("Master Effect 3 Parameter 5", false);
   GetParam(kParamMasterEffect3Param6)->InitBool("Master Effect 3 Parameter 6", false);
 
-  GetParam(kParamOsc1FilterBypass)->InitDouble("Osc 1 Filter Bypass", 0., 0., 1., 0.01);
-  GetParam(kParamOsc2FilterBypass)->InitDouble("Osc 2 Filter Bypass", 0., 0., 1., 0.01);
-  GetParam(kParamOsc1EffectBypass)->InitDouble("Osc 1 Effect Bypass", 0., 0., 1., 0.01);
-  GetParam(kParamOsc2EffectBypass)->InitDouble("Osc 2 Effect Bypass", 0., 0., 1., 0.01);
+  GetParam(kParamOsc1FilterBypass)->InitDouble("Osc 1 Filter Bypass", 0., 0., 1., 0.01, "", 0, "Bypass", IParam::ShapePowCurve(0.5));
+  GetParam(kParamOsc2FilterBypass)->InitDouble("Osc 2 Filter Bypass", 0., 0., 1., 0.01, "", 0, "Bypass", IParam::ShapePowCurve(0.5));
+  GetParam(kParamOsc1EffectBypass)->InitDouble("Osc 1 Effect Bypass", 0., 0., 1., 0.01, "", 0, "Bypass", IParam::ShapePowCurve(0.5));
+  GetParam(kParamOsc2EffectBypass)->InitDouble("Osc 2 Effect Bypass", 0., 0., 1., 0.01, "", 0, "Bypass", IParam::ShapePowCurve(0.5));
 
 #if VST3_API
 #define KEYBOARD_HEIGHT 0.f

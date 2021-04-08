@@ -1853,7 +1853,7 @@ public:
       case kParamFilter1Osc1Send:
       case kParamFilter1Osc2Send:
         ForEachVoice([paramIdx, value](Voice& voice) {
-          voice.mFilterSends[0][paramIdx - kParamFilter1Osc1Send] = value / (T)100;
+          voice.mFilterSends[0][paramIdx - kParamFilter1Osc1Send] = std::pow(10., value / 6.);
           });
         break;
       case kParamFilter1Cutoff:
@@ -1945,7 +1945,7 @@ public:
       case kParamFilter2Osc1Send:
       case kParamFilter2Osc2Send:
         ForEachVoice([paramIdx, value](Voice& voice) {
-          voice.mFilterSends[1][paramIdx - kParamFilter2Osc1Send] = value / (T)100;
+          voice.mFilterSends[1][paramIdx - kParamFilter2Osc1Send] = std::pow(10., value / 6.);
           });
         break;
       case kParamFilter2Cutoff:
