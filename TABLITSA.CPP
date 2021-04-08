@@ -690,17 +690,20 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
     pGraphics->AttachControl(new ITextControl(presetPanel.SubRectVertical(2, 0).GetFromLeft(110.f).GetPadded(-2.f), "Default Presets:", TABLITSA_TEXT), kNoTag, "Presets");
     pGraphics->AttachControl(new DropdownListControl(presetPanel.SubRectVertical(2, 1).GetFromLeft(110.f).GetPadded(-2.f), PRESET_NAMES), kCtrlTagDefaultPresetList, "Presets")->SetActionFunction(
       [this, pGraphics](IControl* pControl) {
+        mPresetID = dynamic_cast<DropdownListControl*>(pControl)->GetCurrentIndex();
+        dynamic_cast<DropdownListControl*>(pControl)->SetCustomStr("");
         // Load Resource
         HMODULE hInstance = static_cast<HMODULE>(pGraphics->GetWinModuleHandle());
 #ifdef VST3_API
-        std::wstring presetName = PRESET_ID_LIST_W[dynamic_cast<DropdownListControl*>(pControl)->GetCurrentIndex()];
+        std::wstring presetName = PRESET_ID_LIST_W[mPresetID];
         HRSRC hRes{ FindResource(hInstance, presetName.c_str(), (LPWSTR)RT_RCDATA) };
         HGLOBAL pData{ LoadResource(hInstance, hRes) };
 #else
-        std::string presetName = PRESET_ID_LIST[dynamic_cast<DropdownListControl*>(pControl)->GetCurrentIndex()];
+        std::string presetName = PRESET_ID_LIST[mPresetID];
         HRSRC hRes{ FindResource(hInstance, presetName.c_str(), RT_RCDATA) };
         HGLOBAL pData{ LoadResource(hInstance, hRes) };
 #endif
+        memcpy(mPresetName, PRESET_ID_LIST[mPresetID], PRESET_NAME_CHAR_LENGTH);
         if (!pData)
           return;
         char* resLock{ static_cast<char*>(LockResource(pData)) };
@@ -822,9 +825,10 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
 
     /* Effects Tab Control */
     pGraphics->AttachControl(new TablitsaEffectBankControl(effectsPanel, { "Voice FX", "Master FX", "Routing" }, { "E1", "E2", "E3" }), kCtrlTagEffectBank, "Effects")->SetActionFunction(
-      [pGraphics](IControl* pControl) {
+      [this, pGraphics](IControl* pControl) {
         dynamic_cast<DropdownListControl*>(pGraphics->GetControlWithTag(kCtrlTagVoiceEffectsList))->Collapse();
         dynamic_cast<DropdownListControl*>(pGraphics->GetControlWithTag(kCtrlTagMasterEffectsList))->Collapse();
+        mCurrentEffectsTab = dynamic_cast<TablitsaEffectBankControl*>(pControl)->GetActiveTabIdx();
       });
     
     /* Voice Effects */
@@ -1214,6 +1218,9 @@ bool Tablitsa::SerializeState(IByteChunk& chunk) const
   bool savedOK = true;
   int version{ GetPluginVersion(false) };
   savedOK &= chunk.Put(&version) > 0;
+  savedOK &= chunk.Put(&mPresetID) > 0;
+  for (int i{ 0 }; i < PRESET_NAME_CHAR_LENGTH; ++i)
+    savedOK &= chunk.Put(mPresetName + i) > 0;
   
   for (int i = 0; i < kNumSeqSteps; i++)
   {
@@ -1241,6 +1248,9 @@ bool Tablitsa::SerializeState(IByteChunk& chunk) const
 int Tablitsa::UnserializeState(const IByteChunk& chunk, int startPos)
 {
   startPos = CheckVersion(chunk);
+  startPos = chunk.Get(&mPresetID, startPos);
+  for (int i{ 0 }; i < PRESET_NAME_CHAR_LENGTH; ++i)
+    startPos = chunk.Get(mPresetName + i, startPos);
 
   double v = 0.;
   // unserialize the steps state before unserializing the regular params
@@ -1257,15 +1267,11 @@ int Tablitsa::UnserializeState(const IByteChunk& chunk, int startPos)
   mDSP.mLoadedWavetables[1] = v;
 
   // Notify user if improper wavetable values are loaded
-  if (mDSP.mLoadedWavetables[0] != static_cast<int>(mDSP.mLoadedWavetables[0]) || mDSP.mLoadedWavetables[1] != static_cast<int>(mDSP.mLoadedWavetables[1]))
+  if (mDSP.mLoadedWavetables[0] - static_cast<int>(mDSP.mLoadedWavetables[0]) > 0.01 || mDSP.mLoadedWavetables[1] - static_cast<int>(mDSP.mLoadedWavetables[1]) > 0.01)
   {
     mDSP.mLoadedWavetables[0] = 1.;
     mDSP.mLoadedWavetables[1] = 2.;
-    bool abort{ false };
-    GetUI()->ShowMessageBox("Invalid wavetable codes. Preset file may be corrupted or incompatible with the plugin version. Continue loading preset?", "Warning", EMsgBoxType::kMB_YESNO,
-      [&abort](EMsgBoxResult result) {
-        abort = (result == EMsgBoxResult::kNO);
-      });
+    bool abort{ ShowLoadErrorMessageBox() };
     if (abort)
     {
       if (mStateBackup.Size() == 0)
@@ -1446,6 +1452,7 @@ void Tablitsa::OnUIOpen()
 void Tablitsa::UpdateUIControls()
 {
   //SendCurrentParamValuesFromDelegate();
+  dynamic_cast<DropdownListControl*>(GetUI()->GetControlWithTag(kCtrlTagDefaultPresetList))->SetCustomStr(mPresetName);
   // Sequencer
   auto* pSequencer = GetUI()->GetControlWithTag(kCtrlTagSequencer);
 
@@ -1458,8 +1465,26 @@ void Tablitsa::UpdateUIControls()
   auto* pPeriodicTable = dynamic_cast<PeriodicTable*>(GetUI()->GetControlWithTag(kCtrlTagPeriodicTable));
   pPeriodicTable->SetSelectedElement(static_cast<int>(mDSP.mLoadedWavetables[0]), 0);
   pPeriodicTable->SetSelectedElement(static_cast<int>(mDSP.mLoadedWavetables[1]), 1);
-  mDSP.UpdateOscillatorWavetable(static_cast<int>(mDSP.mLoadedWavetables[0]) - 1, 0);
-  mDSP.UpdateOscillatorWavetable(static_cast<int>(mDSP.mLoadedWavetables[1]) - 1, 1);
+  for (int i{ 0 }; i < 2; ++i)
+  {
+    try
+    {
+      mDSP.UpdateOscillatorWavetable(static_cast<int>(mDSP.mLoadedWavetables[i]) - 1, i);
+    }
+    catch (const std::out_of_range& e)
+    {
+      mDSP.mLoadedWavetables[i] = static_cast<double>(i + 1);
+      pPeriodicTable->SetSelectedElement(static_cast<int>(mDSP.mLoadedWavetables[i]), i);
+      mDSP.UpdateOscillatorWavetable(static_cast<int>(mDSP.mLoadedWavetables[i]) - 1, i);
+
+      bool abort{ ShowLoadErrorMessageBox() };
+      if (abort)
+      {
+        LoadDefaultState();
+        return;
+      }
+    }
+  }
   GetUI()->GetControlWithTag(kCtrlTagSequencerQuant)->SetValue(mSequencerIsQuantized);
 
   // LFOPlots
@@ -1618,15 +1643,20 @@ bool Tablitsa::OnMessage(int msgTag, int ctrlTag, int dataSize, const void* pDat
     {
       auto* backup = reinterpret_cast<const bool*>(pData);
       std::string filePath;
-      IByteChunk newPreset;
-      SerializeState(newPreset);
 
       bool useSystemDialog{ (bool)LOAD_WITH_DIALOG };
       if (useSystemDialog)
       {
+#pragma mark - Windows
         WDL_String fileStr("NewPreset");
         WDL_String pathStr(GetDataPath("\\Tablitsa\\presets\\").c_str());
         GetUI()->PromptForFile(fileStr, pathStr, EFileAction::Save, "TPST");
+        // Get and store preset name
+        std::string path = fileStr.Get();
+        size_t nameStart{ path.find_last_of("\\") + 1 };
+        size_t nameEnd{ path.find_last_of(".") };
+        strcpy(mPresetName, path.substr(nameStart, nameEnd - nameStart).c_str());
+        // Abort if no filename was submitted
         filePath = fileStr.Get();
         if (filePath == "\0")
           break;
@@ -1635,7 +1665,8 @@ bool Tablitsa::OnMessage(int msgTag, int ctrlTag, int dataSize, const void* pDat
       {
         filePath = GetDataPath("\\Tablitsa\\presets\\") + "TEST.TPST";
       }
-
+      IByteChunk newPreset;
+      SerializeState(newPreset);
       SavePreset(newPreset, filePath.c_str(), *backup);
 
       break;
@@ -1857,6 +1888,16 @@ IByteChunk Tablitsa::LoadPreset(const char* filename, bool isBackup)
   presetData.PutBytes(&fileData[0], fileData.size());
 
   return presetData;
+}
+
+bool Tablitsa::ShowLoadErrorMessageBox()
+{
+  bool abort;
+  GetUI()->ShowMessageBox("Invalid wavetable codes. Preset file may be corrupted or incompatible with the plugin version. Continue loading preset?", "Warning", EMsgBoxType::kMB_YESNO,
+    [&abort](EMsgBoxResult result) {
+      abort = (result == EMsgBoxResult::kNO);
+    });
+  return abort;
 }
 #endif
 

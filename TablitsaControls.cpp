@@ -362,6 +362,16 @@ TablitsaEffectBankControl::TablitsaEffectBankControl(const IRECT& bounds, std::i
   }
 }
 
+int TablitsaEffectBankControl::GetActiveTabIdx()
+{
+  for (int i{ 0 }; i < mMaxTabs; ++i)
+  {
+    if (dynamic_cast<TablitsaVTabBox*>(mTabs[i])->IsActive())
+      return i;
+  }
+  return -1;
+}
+
 void TablitsaEffectBankControl::TabChanged(int newIdx)
 {
   for (int i{ 0 }; i < mMaxTabs; ++i)
@@ -408,8 +418,11 @@ void DropdownListControl::SetCurrentIdx(const int newIdx, const bool triggerActi
 
 void DropdownListControl::Draw(IGraphics& g)
 {
-  if (mCurrentIdx >= 0)
+  if (mCurrentIdx >= 0 && !strcmp(mCustomStr.c_str(), ""))
     mStr.Set(mOptions[mCurrentIdx].c_str());
+  else
+    mStr.Set(mCustomStr.c_str());
+
 
   ITextControl::Draw(g);
 
@@ -445,6 +458,11 @@ void DropdownListControl::OnResize()
   {
     mTri = mRECT.FracRectHorizontal(0.2f, true).GetCentredInside(IRECT(0, 0, 8, 5)); //TODO: This seems rubbish
   }
+}
+
+void DropdownListControl::SetCustomStr(const char* str)
+{
+  mCustomStr = str;
 }
 
 /* Preset Selection Control */

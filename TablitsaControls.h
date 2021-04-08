@@ -285,8 +285,8 @@ public:
 
   void SetSelectedElement(int atomicNumber, int elemIdx)
   {
-    assert(atomicNumber >= 1 && atomicNumber <= 118);
-    mSelectedElements[elemIdx] = atomicNumber;
+    //assert(atomicNumber >= 1 && atomicNumber <= 118);
+    mSelectedElements[elemIdx] = std::clamp(atomicNumber, 1, 118);
   }
   
   void Draw(IGraphics& g);
@@ -498,6 +498,8 @@ class TablitsaEffectBankControl : public IControl
 public:
   TablitsaEffectBankControl(const IRECT& bounds, std::initializer_list<char*> labels, std::initializer_list<char*> groupNames = { "" }, const IVStyle& style = TABLITSA_GROUPBOX_STYLE, const int maxTabs = 10);
 
+  int GetActiveTabIdx();
+
   void OnMouseDown(float x, float y, const IMouseMod& mod) override
   {
     for (int i{ 0 }; i < mMaxTabs; ++i)
@@ -589,6 +591,7 @@ public:
   void Draw(IGraphics& g) override;
   void OnResize() override;
   void OnMouseDown(float x, float y, const IMouseMod& mod) override;
+  void SetCustomStr(const char* str);
 
   /* DropdownList Control */
   int GetCurrentIndex() { return mCurrentIdx; }
@@ -602,6 +605,7 @@ protected:
   IPopupMenuControl* mMenu;
   int mCurrentIdx{ 0 };
   bool mMenuOpen{ false };
+  std::string mCustomStr{ "" };
 };
 
 class PresetSelector : public ICaptionControl

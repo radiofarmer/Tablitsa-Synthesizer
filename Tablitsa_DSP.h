@@ -1060,7 +1060,8 @@ public:
   {
     mTableLoading = true; // Used in plugin's midi message function to block new notes while loading a new wavetable
     ResetAllVoices();
-    WtFile wtFile{ mWavetableNames.at(wtIdx) };
+    std::string wtName = mWavetableNames.at(wtIdx);
+    WtFile wtFile{ wtName };
     Wavetable<T>* pWT = new Wavetable<T>(wtFile);
 
     if (oscIdx == 0)
@@ -1083,7 +1084,7 @@ public:
         voice.mOsc2.NotifyLoaded();
         });
     }
-
+    // check for invalid indices
     if (mWavetables[oscIdx])
       delete mWavetables[oscIdx];
     mWavetables[oscIdx] = pWT;

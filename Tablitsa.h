@@ -11,6 +11,7 @@
 #include "IPlug_include_in_plug_hdr.h"
 #include "IControls.h"
 
+#define PRESET_NAME_CHAR_LENGTH 32
 #define TABLITSA_MAX_VOICE_EFFECTS 3
 #define TABLITSA_MAX_MASTER_EFFECTS 3
 #define TABLITSA_VOICE_EFFECTS_LIST {"None", "Sample & Hold", "Texturizer", "Distortion", "Super Ring"}
@@ -738,6 +739,7 @@ public:
   void SavePreset(IByteChunk& byteData, const char* filename = "UserPreset", bool isBackup=false);
   void LoadDefaultState();
   int CheckVersion(const IByteChunk& presetData);
+  bool ShowLoadErrorMessageBox();
 
   void SetMasterFXSlot(int slotIdx, int masterEffectIdx) { mCurrentMasterFXSlot = slotIdx; mMasterEffectSlots[slotIdx] = masterEffectIdx; }
   void SetVoiceFXSlot(int slotIdx, int voiceEffectIdx) { mCurrentVoiceFXSlot = slotIdx; mVoiceEffectSlots[slotIdx] = voiceEffectIdx; }
@@ -758,6 +760,8 @@ private:
   IByteChunk mStateBackup; // Stores the last user state before reseting, so that it may be restored
 
   // UI Status variables not stored as parameters
+  char mPresetName[PRESET_NAME_CHAR_LENGTH]{};
+  int mPresetID{};
   int mVoiceEffectSlots[TABLITSA_MAX_VOICE_EFFECTS]{}; // Holds the ID number of the effect in each slot for the voice effects
   int mMasterEffectSlots[TABLITSA_MAX_MASTER_EFFECTS]{}; // Holds the ID number of the effect in each slot for the master effects
   int mCurrentVoiceFXSlot{ 0 }; // The effect slot current open for editing. Controled by the Slide-Switch controls
