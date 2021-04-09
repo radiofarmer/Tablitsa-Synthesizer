@@ -536,7 +536,7 @@ public:
 
   void Draw(IGraphics& g) override {}
 
-  void TabChanged(int newIdx);
+  void TabChanged(int newIdx, bool triggerAction = true);
 
   void OnAttached() override
   {

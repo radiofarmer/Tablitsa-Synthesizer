@@ -1528,7 +1528,7 @@ int Tablitsa::GetActiveModIdx() const
 
 void Tablitsa::RefreshEffectBankControl()
 {
-  dynamic_cast<TablitsaEffectBankControl*>(GetUI()->GetControlWithTag(kCtrlTagEffectBank))->TabChanged(mCurrentEffectsTab); // Prevent controls in hidden panels from being shown
+  dynamic_cast<TablitsaEffectBankControl*>(GetUI()->GetControlWithTag(kCtrlTagEffectBank))->TabChanged(mCurrentEffectsTab, false); // Prevent controls in hidden panels from being shown
 }
 
 #if IPLUG_DSP

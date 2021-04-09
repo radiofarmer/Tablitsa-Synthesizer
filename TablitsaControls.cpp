@@ -387,7 +387,7 @@ int TablitsaEffectBankControl::GetActiveTabIdx()
   return -1;
 }
 
-void TablitsaEffectBankControl::TabChanged(int newIdx)
+void TablitsaEffectBankControl::TabChanged(int newIdx, bool triggerAction)
 {
   for (int i{ 0 }; i < mMaxTabs; ++i)
   {
@@ -397,7 +397,7 @@ void TablitsaEffectBankControl::TabChanged(int newIdx)
       tab->SetActive(i == newIdx);
     }
   }
-  if (GetActionFunction())
+  if (triggerAction && GetActionFunction())
     (GetActionFunction())(this);
 }
 
