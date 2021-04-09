@@ -613,7 +613,7 @@ class ReverbEffect final : public Effect<T, V>
 {
   static constexpr T MaxDelayMS = 100.;
   static constexpr T MinDelayMS = 5.;
-  static constexpr T MinFeedback = 0.25;
+  static constexpr T MinFeedback = 0.5;
   static constexpr T FeedbackRange = 0.99 - MinFeedback;
 
 public:
