@@ -674,7 +674,7 @@ public:
   {
   }
 
-  void SetParam1(T value) override { mReverb.SetDiffusion(value * 0.6); mReverb.SetEarlyReflectionsLevel(0.05 + value * 0.1); }
+  void SetParam1(T value) override { mReverb.SetDiffusion(value * 0.6); mReverb.SetEarlyReflectionsLevel(0.05 + (1. - value) * 0.1); }
   void SetParam2(T value) override { mReverb.SetDamping(value * value * 0.2);  }
   void SetParam3(T value) override { mReverb.SetColor(value * 0.7); }
   void SetParam4(T value) override { mReverb.SetMixLevel(value); }
