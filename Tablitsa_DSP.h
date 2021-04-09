@@ -29,7 +29,7 @@
 #endif
 
 // Minimum dB value for filter sends, to be set to -inf dB (i.e. 0.)
-#define SEND_DB_FLOOR -12.
+#define SEND_DB_FLOOR -36.
 
 constexpr double kMaxEnvTimeScalar = 0.5;
 
@@ -1854,9 +1854,9 @@ public:
       case kParamFilter1Osc1Send:
       case kParamFilter1Osc2Send:
       {
-        bool minVal = value < SEND_DB_FLOOR + 0.01;
-        ForEachVoice([paramIdx, value, minVal](Voice& voice) {
-          voice.mFilterSends[0][paramIdx - kParamFilter1Osc1Send] = minVal ? 0. : std::pow(10., value / 6.);
+        value = value < SEND_DB_FLOOR + 0.01 ? 0. : std::pow(10., value / 20.);
+        ForEachVoice([paramIdx, value](Voice& voice) {
+          voice.mFilterSends[0][paramIdx - kParamFilter1Osc1Send] = value;
           });
         break;
       }
@@ -1948,10 +1948,13 @@ public:
         break;
       case kParamFilter2Osc1Send:
       case kParamFilter2Osc2Send:
+      {
+        value = value < SEND_DB_FLOOR + 0.01 ? 0. : std::pow(10., value / 20.);
         ForEachVoice([paramIdx, value](Voice& voice) {
-          voice.mFilterSends[1][paramIdx - kParamFilter2Osc1Send] = std::pow(10., value / 6.);
+          voice.mFilterSends[1][paramIdx - kParamFilter2Osc1Send] = value;
           });
         break;
+      }
       case kParamFilter2Cutoff:
         mParamsToSmooth[kModFilter2CutoffSmoother] = value / (mFilter2Comb ? 100. : mSampleRate);
         break;
