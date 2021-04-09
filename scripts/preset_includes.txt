@@ -5,7 +5,7 @@ Exotic_Metals_1 RCDATA "C:/Users/bramc/VST-Development/iPlug2/Examples/Tablitsa/
 Free_Radical RCDATA "C:/Users/bramc/VST-Development/iPlug2/Examples/Tablitsa/resources/data/presets/Free_Radical.TPST"
 Halogens_1 RCDATA "C:/Users/bramc/VST-Development/iPlug2/Examples/Tablitsa/resources/data/presets/Halogens_1.TPST"
 Hydrochloric_Acid RCDATA "C:/Users/bramc/VST-Development/iPlug2/Examples/Tablitsa/resources/data/presets/Hydrochloric_Acid.TPST"
-Hydrofluoric_Acid RCDATA "C:/Users/bramc/VST-Development/iPlug2/Examples/Tablitsa/resources/data/presets/Hydrofluoric_Acid.TPST"
+Hydrofluoric_Acid RCDATA "C:/Users/bramc/VST-Development/iPlug2/Examples/Tablitsa/resources/data/presets/Hydrofluoric Acid.TPST"
 Isotonic RCDATA "C:/Users/bramc/VST-Development/iPlug2/Examples/Tablitsa/resources/data/presets/Isotonic.TPST"
 Light_Metals_1 RCDATA "C:/Users/bramc/VST-Development/iPlug2/Examples/Tablitsa/resources/data/presets/Light_Metals_1.TPST"
 Meltdown RCDATA "C:/Users/bramc/VST-Development/iPlug2/Examples/Tablitsa/resources/data/presets/Meltdown.TPST"

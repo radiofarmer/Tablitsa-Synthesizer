@@ -68,7 +68,7 @@ protected:
   // Conditional Variable flags
   std::atomic<bool> mStop{ false };
   bool mBlockFinished{ false };
-  int mActiveVoices;
+  int mActiveVoices{ 0 };
 
   std::mutex mQueueMutex;
   std::condition_variable mBlockCV;

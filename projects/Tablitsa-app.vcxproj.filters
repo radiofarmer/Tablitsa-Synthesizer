@@ -460,7 +460,6 @@
     <None Include="..\config\Tablitsa-win.props">
       <Filter>config</Filter>
     </None>
-    <None Include="..\resources\preset1.bin" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="..\resources\Tablitsa.ico">
