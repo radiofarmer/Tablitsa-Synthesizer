@@ -187,9 +187,6 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
   /*
   Wavetables
   */
-  // Wavetable selection
-//  GetParam(kParamWavetable1)->InitEnum("Wavetable 1", 1, { ELEMENT_NAMES });
-//  GetParam(kParamWavetable2)->InitEnum("Wavetable 2", 2, { ELEMENT_NAMES });
   // Wavetable 1 Pitch
   GetParam(kParamWavetable1Pitch)->InitDouble("WT1 Pitch", 0., -24., 24., 0.1);
   GetParam(kParamWavetable1PitchEnv1)->InitDouble("WT1 Pitch Env1 Mod", 0., -1., 1., 0.01);
@@ -670,11 +667,13 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
       bool loadBackup = false;
       SendArbitraryMsgFromUI(kMsgLoadPreset, kNoTag, sizeof(bool), reinterpret_cast<const void*>(&loadBackup));
       });
-    IActionFunction resetToDefaultFunction = IActionFunction([this](IControl* pControl) {
+    IActionFunction resetToDefaultFunction = IActionFunction([this, pGraphics](IControl* pControl) {
       IByteChunk currentState;
       SerializeState(currentState);
       SavePreset(currentState, "", true);
       LoadDefaultState();
+      strcpy(mPresetName, "Default");
+      dynamic_cast<DropdownListControl*>(pGraphics->GetControlWithTag(kCtrlTagDefaultPresetList))->SetCustomStr(mPresetName);
       });
     IActionFunction loadBackupFunction = IActionFunction([this](IControl* pControl) {
       IByteChunk presetData = LoadPreset("", true);
@@ -910,7 +909,7 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
         int filterModeParam{ kParamFilter1ModeVSF + std::max(static_cast<int>(pControl->GetValue() * (kNumFilters - 1.) - 1), 0) };
         // Get range of possible modes
         filterModeControl->SetParamIdx(filterModeParam);
-        filterModeControl->SetValue(GetParam(filterModeParam)->Value());
+        filterModeControl->SetValue(GetParam(filterModeParam)->GetNormalized()); // NB this is different in the other filter mode selector's ActionFunction. Maybe fix this?
         // Update Controls
         if (pControl->GetValue() == kNoFilter)
           filterModeControl->SetDisabled(true);

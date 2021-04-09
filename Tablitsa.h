@@ -702,6 +702,8 @@ constexpr EControlTags kStartupTriggerControls[]{
   kCtrlTagLFO2RateMode,
   kCtrlTagSequencerRateMode,
   kCtrlTagSequencerQuant,
+  kCtrlTagFilter1Mode,
+  kCtrlTagFilter2Mode,
   kCtrlTagFilter1Type,
   kCtrlTagFilter2Type,
   kCtrlTagGlideMode
