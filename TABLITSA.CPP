@@ -663,9 +663,10 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
 
     // Preset controls
     const IRECT presetPanel = globalControls.GetFromTop(50.f).GetFromLeft(720.f).GetHPadded(-20.f);
-    IActionFunction savePresetFunction = IActionFunction([this](IControl* pControl) {
+    IActionFunction savePresetFunction = IActionFunction([this, pGraphics](IControl* pControl) {
       bool saveBackup = false;
       SendArbitraryMsgFromUI(kMsgSavePreset, kNoTag, sizeof(bool), reinterpret_cast<const void*>(&saveBackup));
+      dynamic_cast<DropdownListControl*>(pGraphics->GetControlWithTag(kCtrlTagDefaultPresetList))->SetCustomStr(mPresetName);
       });
     IActionFunction loadPresetFunction = IActionFunction([this](IControl* pControl) {
       bool loadBackup = false;
