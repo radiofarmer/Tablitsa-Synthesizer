@@ -14,8 +14,8 @@ void VoiceThreadPool::FinishBlock()
 {
   std::unique_lock<std::mutex> lk(mQueueMutex);
   mBlockCV.wait(lk, [this]() { return mActiveVoices <= 0 || mStop.load(); });
-  mBlockCV.notify_all();
   mActiveVoices = 0;
+  mBlockCV.notify_all();
 }
 
 void VoiceThreadPool::thread_loop()

@@ -21,6 +21,7 @@ public:
 
   void Start()
   {
+    std::unique_lock<std::mutex> lk(mQueueMutex);
     for (int i{ 0 }; i < mNumThreads; ++i)
     {
       mThreads.push_back(std::thread(std::bind(&VoiceThreadPool::thread_loop, this)));
