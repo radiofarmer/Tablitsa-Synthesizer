@@ -362,6 +362,21 @@ TablitsaEffectBankControl::TablitsaEffectBankControl(const IRECT& bounds, std::i
   }
 }
 
+void TablitsaEffectBankControl::OnMouseDown(float x, float y, const IMouseMod& mod)
+{
+  for (int i{ 0 }; i < mMaxTabs; ++i)
+  {
+    if (mTabs[i])
+    {
+      TablitsaVTabBox* tab = dynamic_cast<TablitsaVTabBox*>(mTabs[i]);
+      if (!tab->IsActive() && tab->GetLabelBounds().Contains(x, y))
+      {
+        TabChanged(i);
+      }
+    }
+  }
+}
+
 int TablitsaEffectBankControl::GetActiveTabIdx()
 {
   for (int i{ 0 }; i < mMaxTabs; ++i)

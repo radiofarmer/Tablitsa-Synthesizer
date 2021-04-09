@@ -500,20 +500,7 @@ public:
 
   int GetActiveTabIdx();
 
-  void OnMouseDown(float x, float y, const IMouseMod& mod) override
-  {
-    for (int i{ 0 }; i < mMaxTabs; ++i)
-    {
-      if (mTabs[i])
-      {
-        TablitsaVTabBox* tab = dynamic_cast<TablitsaVTabBox*>(mTabs[i]);
-        if (!tab->IsActive() && tab->GetLabelBounds().Contains(x, y))
-        {
-          TabChanged(i);
-        }
-      }
-    }
-  }
+  void OnMouseDown(float x, float y, const IMouseMod& mod) override;
 
   void OnMouseOver(float x, float y, const IMouseMod& mod) override
   {

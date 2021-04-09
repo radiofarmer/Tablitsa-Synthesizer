@@ -752,6 +752,8 @@ public:
   int GetFirstModCtrlTag() const { return kCtrlTagEnv1Depth; }
   int GetLastModCtrlTag() const { return kCtrlTagRndDepth; }
 
+  void RefreshEffectBankControl();
+
 private:
   TablitsaDSP<sample> mDSP {kNumVoices}; // sample is an alias for double
   IPeakSender<2> mMeterSender;

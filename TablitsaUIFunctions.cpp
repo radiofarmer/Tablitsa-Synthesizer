@@ -385,6 +385,7 @@ void InitReverb2UI(Plugin* pPlugin, IGraphics* pGraphics, std::vector<IControl*>
 
   controls[2]->Hide(false);
   controls[3]->Hide(false);
+
   controls[0]->SetDisabled(false);
   controls[1]->SetDisabled(false);
   controls[2]->SetDisabled(false);
@@ -588,6 +589,7 @@ void SwapMasterEffectsUI(int effectSlot, IControl* pEffectsList, IGraphics* pGra
     pPlugin->SendArbitraryMsgFromUI(msg, kNoTag, sizeof(effectIdx), reinterpret_cast<void*>(&effectIdx)); // Effects must be swapped before OnParamChange is called
   for (auto* knob : allKnobs)
     knob->SetDirty(true);
+  dynamic_cast<Tablitsa*>(pPlugin)->RefreshEffectBankControl();
 }
 
 void SwapMasterEffectsUI(IControl* pEffectsList, IGraphics* pGraphics, Plugin* pPlugin, const bool reset)
@@ -662,6 +664,7 @@ void SwapVoiceEffectsUI(int effectSlot, IControl* pEffectsList, IGraphics* pGrap
     pPlugin->SendArbitraryMsgFromUI(msg, kNoTag, sizeof(effectIdx), reinterpret_cast<void*>(&effectIdx)); // Effects must be swapped before OnParamChange is called
   for (auto* knob : allKnobs)
     knob->SetDirty(true);
+  dynamic_cast<Tablitsa*>(pPlugin)->RefreshEffectBankControl();
 }
 
 void SwapVoiceEffectsUI(IControl* pEffectsList, IGraphics* pGraphics, Plugin* pPlugin, const bool reset)

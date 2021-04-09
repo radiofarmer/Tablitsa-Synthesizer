@@ -1487,9 +1487,6 @@ void Tablitsa::UpdateUIControls()
       pControl->SetDirty(true);
   }
 
-  // Set initial tab
-  dynamic_cast<TablitsaEffectBankControl*>(GetUI()->GetControlWithTag(kCtrlTagEffectBank))->TabChanged(mCurrentEffectsTab);
-
   // Set up master effect controls
   DropdownListControl* effectList = dynamic_cast<DropdownListControl*>(GetUI()->GetControlWithTag(kCtrlTagMasterEffectsList));
   // Set up effect slots (without reseting the parameters!)
@@ -1526,6 +1523,11 @@ bool Tablitsa::OnHostRequestingProductHelp() { return false; }
 int Tablitsa::GetActiveModIdx() const
 {
   return mActiveModIdx;
+}
+
+void Tablitsa::RefreshEffectBankControl()
+{
+  dynamic_cast<TablitsaEffectBankControl*>(GetUI()->GetControlWithTag(kCtrlTagEffectBank))->TabChanged(mCurrentEffectsTab); // Prevent controls in hidden panels from being shown
 }
 
 #if IPLUG_DSP
