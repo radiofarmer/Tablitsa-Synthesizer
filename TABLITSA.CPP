@@ -6,8 +6,6 @@
 
 #include <atlstr.h>
 
-#define SEND_DB_FLOOR -30.
-
 #define UI_NROWS 4
 #define UI_NCOLS 3
 #define KEYBOARD

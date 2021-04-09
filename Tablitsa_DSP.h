@@ -28,6 +28,9 @@
 #define EFFECT_OS_FACTOR 4
 #endif
 
+// Minimum dB value for filter sends, to be set to -inf dB (i.e. 0.)
+#define SEND_DB_FLOOR -12.
+
 constexpr double kMaxEnvTimeScalar = 0.5;
 
 using namespace iplug;
@@ -1850,10 +1853,13 @@ public:
         break;
       case kParamFilter1Osc1Send:
       case kParamFilter1Osc2Send:
-        ForEachVoice([paramIdx, value](Voice& voice) {
-          voice.mFilterSends[0][paramIdx - kParamFilter1Osc1Send] = std::pow(10., value / 6.);
+      {
+        bool minVal = value < SEND_DB_FLOOR + 0.01;
+        ForEachVoice([paramIdx, value, minVal](Voice& voice) {
+          voice.mFilterSends[0][paramIdx - kParamFilter1Osc1Send] = minVal ? 0. : std::pow(10., value / 6.);
           });
         break;
+      }
       case kParamFilter1Cutoff:
         mParamsToSmooth[kModFilter1CutoffSmoother] = value / mSampleRate;
         break;

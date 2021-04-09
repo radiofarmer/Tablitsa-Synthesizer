@@ -534,7 +534,7 @@ void PeriodicTable::OnMouseUp(float x, float y, const IMouseMod& mod)
   if (mIsDragging > -1)
   {
     // Send new wavetable value (param method)
-    SetValue(static_cast<double>(mSelectedElements[mIsDragging]) / 118., mIsDragging);
+    // SetValue(static_cast<double>(mSelectedElements[mIsDragging]) / 118., mIsDragging);
 
     // Send new wavetable value (hidden param method)
     double newTableIdx = static_cast<double>(mSelectedElements[mIsDragging]) / 118.;
