@@ -6,6 +6,7 @@ void VoiceThreadPool::AddTask(ThreadTask newTask)
     std::unique_lock<std::mutex> lk(mQueueMutex);
     mTaskQueue.push(newTask);
     mActiveVoices++;
+    mActiveVoices &= 0x1f; // Stop counter from going out of range and causing a lockout (not yet sure what causes this)
   }
   mBlockCV.notify_one();
 }
@@ -13,32 +14,9 @@ void VoiceThreadPool::AddTask(ThreadTask newTask)
 void VoiceThreadPool::FinishBlock()
 {
   std::unique_lock<std::mutex> lk(mQueueMutex);
-  mBlockCV.wait(lk, [this]() { return mActiveVoices <= 0 || mStop.load(); });
+  mBlockCV.wait(lk, [this]() { return mActiveVoices <= 0 || mActiveVoices > 16 || mStop.load(); });
   mActiveVoices = 0;
   mBlockCV.notify_all();
-}
-
-void VoiceThreadPool::thread_loop()
-{
-  while (!mStop.load())
-  {
-    ThreadTask task;
-
-    {
-      std::unique_lock<std::mutex> lk(mQueueMutex);
-      mBlockCV.wait(lk, [this]() { return !mTaskQueue.empty(); });
-      task = mTaskQueue.front();
-      mTaskQueue.pop();
-    }
-
-    task();
-
-    {
-      std::unique_lock<std::mutex> lk(mQueueMutex);
-      mActiveVoices--;
-      mBlockCV.notify_all();
-    }
-  }
 }
 
 void VoiceThreadPool::Stop()
