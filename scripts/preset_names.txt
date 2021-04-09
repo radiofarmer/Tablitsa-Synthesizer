@@ -1,3 +1,6 @@
+C14
+Carbon Dioxide
+Carbon Monoxide
 Crust
 Cyanide
 Default
@@ -12,6 +15,7 @@ Meltdown
 Methane
 Nitrate
 Noble Metals
+N-Type
 Phosphate
 P-Type
 Radon Leak

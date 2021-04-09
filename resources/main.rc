@@ -154,6 +154,9 @@ BEGIN
     "LOGO_FN PNG LOGO_FN\r\n"
     "BG_FN PNG BG_FN\r\n"
     "ROUTING_FN SVG ROUTING_FN\r\n"
+    "C14 RCDATA ""./data/presets/C14.TPST""\r\n"
+    "Carbon_Dioxide RCDATA ""./data/presets/Carbon_Dioxide.TPST""\r\n"
+    "Carbon_Monoxide RCDATA ""./data/presets/Carbon_Monoxide.TPST""\r\n"
     "Crust RCDATA ""./data/presets/Crust.TPST""\r\n"
     "Cyanide RCDATA ""./data/presets/Cyanide.TPST""\r\n"
     "Default RCDATA ""./data/presets/Default.TPST""\r\n"
@@ -168,6 +171,7 @@ BEGIN
     "Methane RCDATA ""./data/presets/Methane.TPST""\r\n"
     "Nitrate RCDATA ""./data/presets/Nitrate.TPST""\r\n"
     "Noble_Metals RCDATA ""./data/presets/Noble_Metals.TPST""\r\n"
+    "N_Type RCDATA ""./data/presets/N_Type.TPST""\r\n"
     "Phosphate RCDATA ""./data/presets/Phosphate.TPST""\r\n"
     "P_Type RCDATA ""./data/presets/P_Type.TPST""\r\n"
     "Radon_Leak RCDATA ""./data/presets/Radon_Leak.TPST""\r\n"
@@ -178,6 +182,7 @@ BEGIN
     "Water RCDATA ""./data/presets/Water.TPST""\r\n"
     "White_Paint RCDATA ""./data/presets/White_Paint.TPST""\r\n"
     "Xenon_Hexafluoride RCDATA ""./data/presets/Xenon_Hexafluoride.TPST""\r\n"
+    "\r\n"
     "\0"
 END
 
@@ -263,6 +268,9 @@ PERIODIC_TABLE_FN SVG PERIODIC_TABLE_FN
 LOGO_FN PNG LOGO_FN
 BG_FN PNG BG_FN
 ROUTING_FN SVG ROUTING_FN
+C14 RCDATA "./data/presets/C14.TPST"
+Carbon_Dioxide RCDATA "./data/presets/Carbon_Dioxide.TPST"
+Carbon_Monoxide RCDATA "./data/presets/Carbon_Monoxide.TPST"
 Crust RCDATA "./data/presets/Crust.TPST"
 Cyanide RCDATA "./data/presets/Cyanide.TPST"
 Default RCDATA "./data/presets/Default.TPST"
@@ -277,6 +285,7 @@ Meltdown RCDATA "./data/presets/Meltdown.TPST"
 Methane RCDATA "./data/presets/Methane.TPST"
 Nitrate RCDATA "./data/presets/Nitrate.TPST"
 Noble_Metals RCDATA "./data/presets/Noble_Metals.TPST"
+N_Type RCDATA "./data/presets/N_Type.TPST"
 Phosphate RCDATA "./data/presets/Phosphate.TPST"
 P_Type RCDATA "./data/presets/P_Type.TPST"
 Radon_Leak RCDATA "./data/presets/Radon_Leak.TPST"
@@ -287,6 +296,7 @@ Spontaneous_Decay RCDATA "./data/presets/Spontaneous_Decay.TPST"
 Water RCDATA "./data/presets/Water.TPST"
 White_Paint RCDATA "./data/presets/White_Paint.TPST"
 Xenon_Hexafluoride RCDATA "./data/presets/Xenon_Hexafluoride.TPST"
+
 
 /////////////////////////////////////////////////////////////////////////////
 #endif    // not APSTUDIO_INVOKED
