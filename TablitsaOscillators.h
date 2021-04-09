@@ -151,6 +151,7 @@ public:
       mWT = tab;
     mCyclesPerLevelRecip = 1. / mWT->mCyclesPerLevel;
     mPhaseIncrFactor = mCyclesPerLevelRecip / mProcessOS;
+    mCycle = 0; // Must reset the cycle to avoid reading garbage memory when switching to wavetables with fewer cycles than the previous one
   }
 
   // Chooses the proper mipmap for the current note frequency (Hz) and sample rate

@@ -170,8 +170,6 @@ enum EParams
   kParamSequencerAmpVel,
   kParamSequencerAmpKTk,
   kParamSequencerAmpRnd,
-  kParamWavetable1,
-  kParamWavetable2,
   kParamWavetable1Pitch, // Voice-specific (polyphonic) parameters
   kParamWavetable1PitchEnv1,
   kParamWavetable1PitchEnv2,
