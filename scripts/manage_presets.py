@@ -90,7 +90,7 @@ versions = {
                "MasterEffect2DelayTempoSync": BOOL,
                "MasterEffect3": INT32,
                "MasterEffect3DelayTempoSync": BOOL,
-               "VstParams": [DOUBLE for _ in range(537)]}
+               "VstParams": [DOUBLE for _ in range(535)]}
 }
 
 
@@ -141,15 +141,50 @@ def run(file_in, version, actions, file_out=None, **cmdargs):
   # Default version information
   v_hex = version_string_to_hex(version)
   v_int = int("0x" + v_hex, 0)
+  # Get VST Parameter info
+  param_filename = "v" + version
+  with open(param_filename, "rb") as f:
+    param_list = pickle.load(f)
   data = ReadPresetData(file_in, v_int)
   # Serialize the format specification as a list containing items of the form [PARAM_VALUE, NUM_BYTES]
   v_serial = Serialize(versions[v_int], data)
 
   # Actual actions:
   byte_index = 0  # Byte index for insertion actions
-  if "print" in actions:
+  if "print" in actions:  # Print all values
     print(data)
-  if "update" in actions:
+  if "modify" in actions:  # Change a value
+    template = versions[v_int]
+    data_bytes = bytes()
+    for k in template.keys():
+      param = template[k]
+      if k == "VstParams":
+        for p_name in param_list:
+          if p_name == actions['modify']:
+            data_bytes += convert_to_bytes[cmdargs['dtype']](cmdargs['value'])
+          else:
+            data_bytes += convert_to_bytes[DOUBLE](data[p_name])
+      elif type(param) == list:
+        byte_list = bytes()
+        if k == actions['modify']:
+          new_bytes = convert_to_bytes[cmdargs['dtype']](cmdargs['value'])
+          for b in new_bytes:
+            byte_list += b
+          byte_list += bytes(len(param) - len(new_bytes))
+        else:
+          for nbytes in param:
+            byte_list += convert_to_bytes[nbytes](data[k])
+        data_bytes += byte_list
+      else:
+        if k == actions['modify']:
+          data_bytes += convert_to_bytes[cmdargs['dtype']](cmdargs['value'])
+        else:
+          data_bytes += convert_to_bytes[param](data[k])
+    file_out = cmdargs['output'] if 'output' in cmdargs else file_in
+    with open(file_out, 'wb') as f:
+      f.write(data_bytes)
+
+  if "update" in actions:  # Change a preset to match a new format specification
     v_target = int("0x" + version_string_to_hex(actions["update"]), 0)
     data_bytes = bytes()
     for k_target in versions[v_target]:
@@ -163,10 +198,11 @@ def run(file_in, version, actions, file_out=None, **cmdargs):
         else:
           data_bytes += convert_to_bytes[param](0)
       elif k_target == "VstParams":
-        param_filename = "v" + version
-        with open(param_filename, "rb") as f:
-          param_list = pickle.load(f)
-        for param_name in param_list:
+        # Get VST Parameter info for TARGET version
+        param_filename_new = "v" + actions['update']
+        with open(param_filename_new, "rb") as f:
+          param_list_target = pickle.load(f)
+        for param_name in param_list_target:
           data_bytes += convert_to_bytes[DOUBLE](data[param_name])
       else:
         param = versions[v_target][k_target]
@@ -181,7 +217,7 @@ def run(file_in, version, actions, file_out=None, **cmdargs):
       with open(file_out, "wb") as f:
         f.write(data_bytes)
     return
-  if "insert-before" in actions:
+  if "insert-before" in actions:  # Insert a new parameter before a parameter specified by name
     # Get byte index
     for k in versions[v_int].keys():
       # Break once the chosen key has been found
@@ -194,7 +230,7 @@ def run(file_in, version, actions, file_out=None, **cmdargs):
         byte_index += versions[v_int][k]
   elif "insert" in actions:
     byte_index = actions["insert"]
-  if "insert" in actions or "insert-before" in actions:
+  if "insert" in actions or "insert-before" in actions:  # Insert a parameter before a specified byte index
     if cmdargs["value"] is None:
       print("Error: No value to be inserted was supplied.\nSpecify a value with: --value VALUE or -v VALUE")
     # Get the size and type of the data to be inserted
