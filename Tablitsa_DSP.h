@@ -785,6 +785,8 @@ public:
         break;
 
       }
+
+      SetSampleRateAndBlockSize(mMaster->mSampleRate, mMaster->mBlockSize); // Set oversampled sample rate, since this isn't accounted for in effect constructors
     }
 
     /* Update polyphonic modulation depths */
@@ -1735,10 +1737,6 @@ public:
         mSynth.ForEachVoice([paramIdx, modIdx, value](SynthVoice& voice) {
           dynamic_cast<TablitsaDSP::Voice&>(voice).UpdateVoiceParam(kVWavetable1Formant, modIdx, value);
           });
-        break;
-      }
-      case kParamWavetable2:
-      {
         break;
       }
       case kParamWavetable2Pitch:

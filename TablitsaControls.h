@@ -275,11 +275,11 @@ public:
     mLaAcBounds = IRECT(mLaTLHC[0], mLaTLHC[1], mLaTLHC[0] + mLaAcWidth, mLaTLHC[1] + mLaAcHeight);
   }
 
-  void LoadValues()
+  void LoadValues(int elems[2])
   {
     // TODO: Make the number of elements a template parameter to make it easier to add an oscillator in the future
     for (auto i{0}; i < 2; ++i)
-      mSelectedElements[i] = GetParam(i)->Value();
+      mSelectedElements[i] = elems[i];
     SetDirty(false);
   }
 

@@ -161,26 +161,29 @@ def run(file_in, version, actions, file_out=None, **cmdargs):
       if k == "VstParams":
         for p_name in param_list:
           if p_name == actions['modify']:
-            data_bytes += convert_to_bytes[cmdargs['dtype']](cmdargs['value'])
+            data_bytes += convert_to_bytes[DOUBLE](cmdargs['value'])
           else:
             data_bytes += convert_to_bytes[DOUBLE](data[p_name])
       elif type(param) == list:
         byte_list = bytes()
         if k == actions['modify']:
-          new_bytes = convert_to_bytes[cmdargs['dtype']](cmdargs['value'])
-          for b in new_bytes:
-            byte_list += b
+          # Check data type
+          if cmdargs['dtype'] == 'string':
+            new_bytes = cmdargs['value'].encode('utf-8')
+          else:
+            vals = convert_from_string[cmdargs['dtype']](cmdargs['value'].split(''))
+            new_bytes = b''.join([convert_to_bytes[cmdargs['dtype']](v) for v in vals])
+          byte_list += new_bytes
           byte_list += bytes(len(param) - len(new_bytes))
         else:
-          for nbytes in param:
-            byte_list += convert_to_bytes[nbytes](data[k])
+          for nbytes, val in zip(param, data[k]):
+            byte_list += convert_to_bytes[nbytes](val)
         data_bytes += byte_list
       else:
         if k == actions['modify']:
           data_bytes += convert_to_bytes[cmdargs['dtype']](cmdargs['value'])
         else:
           data_bytes += convert_to_bytes[param](data[k])
-    file_out = cmdargs['output'] if 'output' in cmdargs else file_in
     with open(file_out, 'wb') as f:
       f.write(data_bytes)
 
@@ -271,6 +274,7 @@ parser.add_argument("-p", "--print", action="store_true")
 parser.add_argument("-i", "--insert", type=int)
 parser.add_argument("--insert-before", type=str)
 parser.add_argument("--update", type=str)
+parser.add_argument("--modify", type=str)
 parser.add_argument("-v", "--value", type=str)
 parser.add_argument("-d", "--dtype", type=str)
 parser.add_argument("-l", "--length", type=int)
@@ -282,6 +286,12 @@ if __name__ == "__main__":
   args_to_pass = dict()
   if args.update is not None:
     actions_to_pass.update({"update": args.update})
+  elif args.modify is not None:
+    actions_to_pass.update({"modify": args.modify})
+    args_to_pass.update({
+      "value": args.value,
+      "dtype": args.dtype
+    })
   elif args.insert is not None:
     actions_to_pass.update({"insert": args.insert})
     args_to_pass.update({

@@ -6,6 +6,8 @@
 
 #include <atlstr.h>
 
+#define SEND_DB_FLOOR -30.
+
 #define UI_NROWS 4
 #define UI_NCOLS 3
 #define KEYBOARD
@@ -188,8 +190,8 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
   Wavetables
   */
   // Wavetable selection
-  GetParam(kParamWavetable1)->InitEnum("Wavetable 1", 1, { ELEMENT_NAMES });
-  GetParam(kParamWavetable2)->InitEnum("Wavetable 2", 2, { ELEMENT_NAMES });
+//  GetParam(kParamWavetable1)->InitEnum("Wavetable 1", 1, { ELEMENT_NAMES });
+//  GetParam(kParamWavetable2)->InitEnum("Wavetable 2", 2, { ELEMENT_NAMES });
   // Wavetable 1 Pitch
   GetParam(kParamWavetable1Pitch)->InitDouble("WT1 Pitch", 0., -24., 24., 0.1);
   GetParam(kParamWavetable1PitchEnv1)->InitDouble("WT1 Pitch Env1 Mod", 0., -1., 1., 0.01);
@@ -394,8 +396,8 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
   GetParam(kParamFilter1FB)->InitPercentage("Filter 1 FB");
   GetParam(kParamFilter1Delay)->InitDouble("Filter 1 Delay", 0.1, 0.1, 20., 0.01, "ms");
   // Oscillator sends
-  GetParam(kParamFilter1Osc1Send)->InitGain("Filter 1 Osc 1 Send", 0., -60., 0.);
-  GetParam(kParamFilter1Osc2Send)->InitGain("Filter 1 Osc 2 Send", -60., -60., 0.);
+  GetParam(kParamFilter1Osc1Send)->InitGain("Filter 1 Osc 1 Send", 0., SEND_DB_FLOOR, 0.);
+  GetParam(kParamFilter1Osc2Send)->InitGain("Filter 1 Osc 2 Send", SEND_DB_FLOOR, SEND_DB_FLOOR, 0.);
 
   // Filter 2
   GetParam(kParamFilter2Type)->InitEnum("Filter 2 Type", kNoFilter, { FILTER_TYPE_LIST });
@@ -437,8 +439,8 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
   GetParam(kParamFilter2FB)->InitPercentage("Filter 2 FB");
   GetParam(kParamFilter2Delay)->InitDouble("Filter 2 Delay", 0.1, 0.1, 20., 0.01, "ms");
   // Oscillator sends
-  GetParam(kParamFilter2Osc1Send)->InitGain("Filter 2 Osc 1 Send", -60., -60., 0.);
-  GetParam(kParamFilter2Osc2Send)->InitGain("Filter 2 Osc 2 Send", 0., -60., 0.);
+  GetParam(kParamFilter2Osc1Send)->InitGain("Filter 2 Osc 1 Send", SEND_DB_FLOOR, SEND_DB_FLOOR, 0.);
+  GetParam(kParamFilter2Osc2Send)->InitGain("Filter 2 Osc 2 Send", 0., SEND_DB_FLOOR, 0.);
 
   // Effect Parameters
   // Voice Effects
@@ -653,9 +655,10 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
     const IBitmap logoImg = pGraphics->LoadBitmap(LOGO_FN);
 
     // Periodic table
-    pGraphics->AttachControl(new PeriodicTable(globalControls.GetReducedFromBottom(globalControls.H() * 0.5f).GetFromLeft(720.f).GetPadded(-30.f).GetVShifted(20.f), tableImg, { kParamWavetable1, kParamWavetable2 }),
+    pGraphics->AttachControl(new PeriodicTable(globalControls.GetReducedFromBottom(globalControls.H() * 0.5f).GetFromLeft(720.f).GetPadded(-30.f).GetVShifted(20.f), tableImg, { kNoParameter }),
       kCtrlTagPeriodicTable);
-    dynamic_cast<PeriodicTable*>(pGraphics->GetControlWithTag(kCtrlTagPeriodicTable))->LoadValues();
+    int default_elements[]{ 1, 2 };
+    dynamic_cast<PeriodicTable*>(pGraphics->GetControlWithTag(kCtrlTagPeriodicTable))->LoadValues(default_elements);
     pGraphics->AttachControl(new IBitmapControl(globalControls.GetReducedFromTop(90.f).GetReducedFromLeft(110.f).GetFromTLHC(280.f, 80.), logoImg));
 
     // Preset controls
