@@ -674,6 +674,7 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
       LoadDefaultState();
       strcpy(mPresetName, "Default");
       dynamic_cast<DropdownListControl*>(pGraphics->GetControlWithTag(kCtrlTagDefaultPresetList))->SetCustomStr(mPresetName);
+      ResetFilterControls(pGraphics, 3);
       });
     IActionFunction loadBackupFunction = IActionFunction([this](IControl* pControl) {
       IByteChunk presetData = LoadPreset("", true);
@@ -839,8 +840,8 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
     pGraphics->AttachControl(new TablitsaIVModKnobControl(effectsControlsPanel.FracRectVertical(2.f / 3, true).GetGridCell(0, 1, 1, 4).GetCentredInside(dialSize), kParamVoiceEffect1Param2, "Right", modKnobStyle), kCtrlTagVoiceEffectsKnob2, "E1");
     pGraphics->AttachControl(new TablitsaIVModKnobControl(effectsControlsPanel.FracRectVertical(2.f / 3, true).GetGridCell(0, 2, 1, 4).GetCentredInside(dialSize), kParamVoiceEffect1Param3, "Feedback", modKnobStyle), kCtrlTagVoiceEffectsKnob3, "E1");
     pGraphics->AttachControl(new TablitsaIVModKnobControl(effectsControlsPanel.FracRectVertical(2.f / 3, true).GetGridCell(0, 3, 1, 4).GetCentredInside(dialSize), kParamVoiceEffect1Param4, "Mix", modKnobStyle), kCtrlTagVoiceEffectsKnob4, "E1");
-    pGraphics->AttachControl(new IVToggleControl(effectsControlsPanel.FracRectVertical(1.f / 3).GetGridCell(0, 1, 1, 4).GetPadded(-10.f), kParamVoiceEffect1Param5, "", toggleStyle, "Time", "Tempo"), kCtrlTagVoiceEffectsToggle1, "E1");
-    pGraphics->AttachControl(new IVToggleControl(effectsControlsPanel.FracRectVertical(1.f / 3).GetGridCell(0, 2, 1, 4).GetPadded(-10.f), kNoParameter, "", toggleStyle, "Stereo", "Mono"), kCtrlTagVoiceEffectsToggle2, "E1");
+    pGraphics->AttachControl(new IVToggleControl(effectsControlsPanel.FracRectVertical(1.f / 3).GetGridCell(0, 1, 1, 4).GetPadded(-10.f), kParamVoiceEffect1Param5, "", toggleStyle, "", ""), kCtrlTagVoiceEffectsToggle1, "E1");
+    pGraphics->AttachControl(new IVToggleControl(effectsControlsPanel.FracRectVertical(1.f / 3).GetGridCell(0, 2, 1, 4).GetPadded(-10.f), kNoParameter, "", toggleStyle, "", ""), kCtrlTagVoiceEffectsToggle2, "E1");
     // Selector list
     pGraphics->AttachControl(new DropdownListControl(effectsPanel.FracRectHorizontal(0.4f, false).GetFromTop(50.f).GetReducedFromTop(20.f).GetPadded(-2.f), TABLITSA_VOICE_EFFECTS_LIST), kCtrlTagVoiceEffectsList, "E1")->SetActionFunction(
       [pGraphics, this](IControl* pControl) {
@@ -912,8 +913,8 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
         filterModeControl->SetValue(GetParam(filterModeParam)->GetNormalized()); // NB this is different in the other filter mode selector's ActionFunction. Maybe fix this?
         // Update Controls
         if (pControl->GetValue() == kNoFilter)
-          filterModeControl->SetDisabled(true);
-        else if (pControl->GetValue() * (kNumFilters - 1) == kComb)
+          ResetFilterControls(pGraphics, 1);
+        else if (pControl->GetValue() * ((int)kNumFilters - 1) == kComb)
         {
           filterModeControl->SetDisabled(true);
           // Swap Cutoff/Res/Drive for FF/FB/Delay
@@ -967,9 +968,9 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
         int filterModeParam{ kParamFilter2ModeVSF + std::max(static_cast<int>(pControl->GetValue() * (kNumFilters - 1.) - 1), 0) };
         filterModeControl->SetParamIdx(filterModeParam);
         filterModeControl->SetValue(std::min(filterModeControl->GetValue(), GetParam(filterModeParam)->GetMax()));
-        if (pControl->GetValue() == kNoFilter || pControl->GetValue() == kComb)
-          filterModeControl->SetDisabled(true);
-        else if (pControl->GetValue() * (kNumFilters - 1) == kComb)
+        if (pControl->GetValue() == kNoFilter)
+          ResetFilterControls(pGraphics, 2);
+        else if (pControl->GetValue() * ((int)kNumFilters - 1) == kComb)
         {
           filterModeControl->SetDisabled(true);
           // Swap Cutoff/Res/Drive for FF/FB/Delay

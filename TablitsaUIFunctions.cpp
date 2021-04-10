@@ -677,3 +677,33 @@ void SwapVoiceEffectsUI(IControl* pEffectsList, IGraphics* pGraphics, Plugin* pP
   dynamic_cast<Tablitsa*>(pPlugin)->SetVoiceFXSlot(effectSlot, static_cast<EVoiceEffectTypes>(effectIdx));
   SwapVoiceEffectsUI(effectSlot, pEffectsList, pGraphics, pPlugin, reset);
 }
+
+/* Other functions */
+
+void ResetFilterControls(IGraphics* pGraphics, const int fltFlags)
+{
+  if (fltFlags & 1)
+  {
+    // Filter 1
+    pGraphics->GetControlWithTag(kCtrlTagFilter1Mode)->SetDisabled(true);
+    pGraphics->HideControl(kParamFilter1Cutoff, false);
+    pGraphics->HideControl(kParamFilter1FF, true);
+    pGraphics->HideControl(kParamFilter1Resonance, false);
+    pGraphics->HideControl(kParamFilter1FB, true);
+    // Drive/delay switch
+    pGraphics->HideControl(kParamFilter1Drive, false);
+    pGraphics->HideControl(kParamFilter1Delay, true);
+  }
+  if (fltFlags & 2)
+  {
+    // Filter 2
+    pGraphics->GetControlWithTag(kCtrlTagFilter2Mode)->SetDisabled(true);
+    pGraphics->HideControl(kParamFilter2Cutoff, false);
+    pGraphics->HideControl(kParamFilter2FF, true);
+    pGraphics->HideControl(kParamFilter2Resonance, false);
+    pGraphics->HideControl(kParamFilter2FB, true);
+    // Drive/delay switch
+    pGraphics->HideControl(kParamFilter2Drive, false);
+    pGraphics->HideControl(kParamFilter2Delay, true);
+  }
+}

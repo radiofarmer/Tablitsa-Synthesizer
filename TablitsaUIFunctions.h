@@ -64,3 +64,7 @@ void SwapMasterEffectsUI(IControl* pEffectsList, IGraphics* pGraphics, Plugin* p
 void SwapVoiceEffectsUI(int effectSlot, IControl* pEffectsList, IGraphics* pGraphics, Plugin* pPlugin, const bool reset);
 
 void SwapVoiceEffectsUI(IControl* pEffectsList, IGraphics* pGraphics, Plugin* pPlugin, const bool reset);
+
+/* Other functions */
+
+void ResetFilterControls(IGraphics* pGraphics, const int fltFlags=3);
