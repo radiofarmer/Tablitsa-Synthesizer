@@ -721,7 +721,7 @@ public:
   }
 
   void SetParam1(T value) override { SetRateMS(value); }
-  void SetParam2(T value) override { mBitCrush = value; }
+  void SetParam2(T value) override { mDecimate = mRateAdj * value; }
   void SetParam3(T value) override { SetJitter(value); }
 
   void SetContinousParams(const T p1, const T p2, const T p3, const T p4, const T pitch)
@@ -735,17 +735,20 @@ public:
 
   T Process(T s) override
   {
-    int* bits{ reinterpret_cast<int*>(&s) };
-    const unsigned int bitMask{ 0xffffffff - ((1 << static_cast<int>(mBitCrush * 20.)) - 1) };
-    *(bits + 1) &= bitMask;
-
-    T out = mHold;
+    T out = mSampleCounter < mDecimate ? 0 : mHold;
     if (mSampleCounter++ >= mRateAdj)
     {
       out = mHold = s;
       mSampleCounter = 0;
       mRateAdj = mRate + (XOR_Shift(mRandGen) >> mJitter);
     }
+
+    /* // Bit Crush
+    T crushSize{ mBitCrush * 21. };
+    int crushSizeInt{ static_cast<int>(crushSize) };
+    int* bits{ reinterpret_cast<int*>(&out) };
+    const unsigned int bitMask{ 0xffffffff - ((1 << crushSizeInt) - 1) };
+    *(bits + 1) &= bitMask;*/
 
     return s + mMix * (out - s);
   }
@@ -765,8 +768,7 @@ public:
 
   void ProcessStereo(StereoSample<T>& s) override
   {
-    StereoSample<T> out = mStereoHold;
-    mStereoHold += (s - mStereoHold) * mBitCrush;
+    StereoSample<T> out = mStereoHold * (mSampleCounter >= mDecimate);
     if (mSampleCounter++ >= mRateAdj)
     {
       out = mStereoHold = s;
@@ -779,8 +781,6 @@ public:
   void ProcessStereo_Vector(StereoSample<V>& s) override
   {
     StereoSample<V> out{ mHold_v->l, mHold_v->r };
-    mHold_v->l += mBitCrush * (s.l - mHold_v->l);
-    mHold_v->r += mBitCrush * (s.r - mHold_v->r);
     if (mSampleCounter >= mRateAdj)
     {
       out.l = mHold_v->l = s.l;
@@ -813,10 +813,11 @@ public:
 
 private:
   T mHold{ 0. };
-  T mBitCrush{ 0. };
+//  T mBitCrush{ 0. };
   StereoSample<T> mStereoHold{ 0., 0. };
-  unsigned int mRate{ 1 }; // samples
+  unsigned int mRate{ 1 }; // unit: samples
   unsigned int mSampleCounter{ 0 };
+  unsigned int mDecimate{ 0 };
   unsigned int mJitter{ 0 };
   unsigned int mRateAdj{ 1 };
   xor128 mRandGen{ 0xAF31, 0x1234, 0xFF2E, 0xDCBA };
