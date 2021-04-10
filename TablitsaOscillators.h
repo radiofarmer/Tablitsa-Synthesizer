@@ -43,9 +43,9 @@ public:
   
   inline Vec4d __vectorcall ProcessBlock4_Vector()
   {
-    double phase = (IOscillator<T>::mPhase + mPhaseOffset) + (double)UNITBIT32;
+    double phase = IOscillator<T>::mPhase + (double)UNITBIT32;
     const double phaseIncr = IOscillator<T>::mPhaseIncr * FastSinOscillator<T>::tableSize;
-    Vec4d vPhase = phase + phaseIncr * *mIncrVector;
+    Vec4d vPhase = phase + mPhaseOffset + phaseIncr * (*mIncrVector);
 
     // Read 4 doubles as 8 integers (signed ints are used, but the AND operations later make this irrelevant)
     Vec8i viPhase = reinterpret_i(vPhase);

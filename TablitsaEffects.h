@@ -123,7 +123,7 @@ private:
   T mModDepth{ 0. };
   T mModRate;
   VectorOscillator<T> mOsc;
-  ModulatedAllpass<7> mCMFilters;
+  ModulatedAllpass<12> mCMFilters;
 };
 
 #define DELAY_TEMPODIV_VALIST "1/64", "1/32", "1/16T", "1/16", "1/16D", "1/8T", "1/8", "1/8D", "1/4", "1/4D", "1/2", "1/1"

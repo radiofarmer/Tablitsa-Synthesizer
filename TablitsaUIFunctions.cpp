@@ -436,7 +436,7 @@ void InitSampleAndHoldUI(Plugin* pPlugin, IGraphics* pGraphics, std::vector<ICon
   pGraphics->HideControl(params[4], true);
   pGraphics->HideControl(params[5], true);
   dynamic_cast<IVKnobControl*>(controls[0])->SetLabelStr("Rate");
-  dynamic_cast<IVKnobControl*>(controls[1])->SetLabelStr("Bit Crush");
+  dynamic_cast<IVKnobControl*>(controls[1])->SetLabelStr("Decimate");
   dynamic_cast<IVKnobControl*>(controls[2])->SetLabelStr("Noise");
   dynamic_cast<IVKnobControl*>(controls[3])->SetLabelStr("Mix");
   // Modulation ON for knob 1
