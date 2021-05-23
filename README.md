@@ -23,3 +23,8 @@ The stand-alone app is built for Windows has only been tested on Windows 10---iP
 You are free to build upon this project according to the MIT license. (Though fair warning, the code is kind of a mess as this is my first real C++ project.) In order to build the solution, first install *my fork of IPlug2* and the third-party dependencies for IPlug2 per the instructions on the [Wiki](https://github.com/iPlug2/iPlug2/wiki). You will also need to download [Agner Fog's `vectorclass` library](https://github.com/vcoda/vectorclass). Place these libraries in a folder within the *Tablitsa* directory called "dependencies". The include directory is specified as `$(ProjectDir)..\dependencies\vectorclass` - this is where the header files should be located. The WDL FFT function, included with iPlug2, is also used (see top of `Wavetable.h`). Both `WDL\fft.h` and `WDL\fft.c` should be included in the projects already, but if this somehow doesn't work, you can find them in the `iPlug2\WDL\` directory. A library of my own implementations of common DSP systems is also included in `$(ProjectDir)..\dependencies\radiofarmer`.
 
 For tips on modifying the application to better suit your needs (e.g. making new wavetables or adjusting quality-performance tradeoffs) see the wiki (still in progress). The Python script used to generate the wavetables, including an explanation of the `.wt` format and the methodology used to generate and read wavetables, is available in my WavetableEditor repository.
+
+## Support Tablitsa!
+If you enjoy using Tablitsa or its source code and would like to support me, you can donate via PayPal:
+
+[![paypal](https://www.paypalobjects.com/en_US/i/btn/btn_donateCC_LG.gif)](https://www.paypal.com/donate?business=NUFQNKX9ET4VL&currency_code=USD)
