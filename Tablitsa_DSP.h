@@ -1067,6 +1067,12 @@ public:
     ResetAllVoices();
     std::string wtName = mWavetableNames.at(wtIdx);
     WtFile wtFile{ wtName };
+    // Check for invalid file
+    if (!wtFile.Success())
+    {
+      throw std::ifstream::failure(std::string(wtName));
+    }
+
     Wavetable<T>* pWT = new Wavetable<T>(wtFile);
 
     if (oscIdx == 0)

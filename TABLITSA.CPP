@@ -1702,7 +1702,14 @@ bool Tablitsa::OnMessage(int msgTag, int ctrlTag, int dataSize, const void* pDat
       pTableControl->SetTableLoading(true, 0);
       const double wtIdx = *static_cast<const double*>(pData); //Semi-Normalized value (between 1/118 and 1)
       mDSP.mLoadedWavetables[0] = wtIdx * 118.; // Corresponds to the atomic number (not the 0-indexed vector item)
-      mDSP.UpdateOscillatorWavetable(static_cast<int>(mDSP.mLoadedWavetables[0]) - 1, 0);
+      try
+      {
+        mDSP.UpdateOscillatorWavetable(static_cast<int>(mDSP.mLoadedWavetables[0]) - 1, 0);
+      }
+      catch (...)
+      {
+        GetUI()->ShowMessageBox("Wavetable file not found. Check AppData directory.", "Error", EMsgBoxType::kMB_OK);
+      }
       pTableControl->SetTableLoading(false, 0);
       break;
     }
