@@ -349,7 +349,11 @@ public:
 
     // Read 4 doubles as 8 integers (signed ints are used, but the AND operations later make this irrelevant)
     Vec8i viPhase = reinterpret_i(vPhase);
+#if INSTRSET < 8
     Vec4q cycleIncr = select(reinterpret_i(permute8<HIOFFSET_V, -1, HIOFFSET_V + 2, -1, HIOFFSET_V + 4, -1, HIOFFSET_V + 6, -1>(viPhase & (mTableSize * 2 - 1))) > Vec4q(mTableSize), Vec4q(1), Vec4q(0));
+#else
+    Vec4q cycleIncr = select(reinterpret_i(permute8<HIOFFSET_V, -1, HIOFFSET_V + 2, -1, HIOFFSET_V + 4, -1, HIOFFSET_V + 6, -1>(viPhase & (mTableSize * 2 - 1))) > mTableSize, Vec4q(1), Vec4q(0));
+#endif
     // Upper 32 bits of 3*2^19 in upper indices, 0xFFFF (32 bits of ones) in lower: i.e. 0xFFFF, 0x18, 0xFFFF, ...
     Vec8i normhipart = blend8<8, HIOFFSET_V, 8, HIOFFSET_V, 8, HIOFFSET_V, 8, HIOFFSET_V>(reinterpret_i(Vec4d((double)UNITBIT32)), Vec8i(0xFFFF));
     // Mask the 8-item vector of 32-bit ints with one less than the table size, pad the upper bits (lower indices) with zeros, and reinterpret as a 4-item vector of 64-bit ints
