@@ -1,3 +1,4 @@
+Arsenate
 C14
 Carbon Dioxide
 Carbon Monoxide
@@ -7,6 +8,7 @@ Default
 Exotic Metals 1
 Free Radical
 Halogens 1
+Halogens 2
 Hydrochloric Acid
 Hydrofluoric Acid
 Isotonic
@@ -20,6 +22,7 @@ Phosphate
 P-Type
 Radon Leak
 Rare Earth Chimes
+Rare Earth Echo
 Reductant
 Red Earth
 Spontaneous Decay

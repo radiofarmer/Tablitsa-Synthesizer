@@ -154,6 +154,7 @@ BEGIN
     "LOGO_FN PNG LOGO_FN\r\n"
     "BG_FN PNG BG_FN\r\n"
     "ROUTING_FN SVG ROUTING_FN\r\n"
+    "Arsenate RCDATA ""./data/presets/Arsenate.TPST""\r\n"
     "C14 RCDATA ""./data/presets/C14.TPST""\r\n"
     "Carbon_Dioxide RCDATA ""./data/presets/Carbon_Dioxide.TPST""\r\n"
     "Carbon_Monoxide RCDATA ""./data/presets/Carbon_Monoxide.TPST""\r\n"
@@ -163,6 +164,7 @@ BEGIN
     "Exotic_Metals_1 RCDATA ""./data/presets/Exotic_Metals_1.TPST""\r\n"
     "Free_Radical RCDATA ""./data/presets/Free_Radical.TPST""\r\n"
     "Halogens_1 RCDATA ""./data/presets/Halogens_1.TPST""\r\n"
+    "Halogens_2 RCDATA ""./data/presets/Halogens_2.TPST""\r\n"
     "Hydrochloric_Acid RCDATA ""./data/presets/Hydrochloric_Acid.TPST""\r\n"
     "Hydrofluoric_Acid RCDATA ""./data/presets/Hydrofluoric_Acid.TPST""\r\n"
     "Isotonic RCDATA ""./data/presets/Isotonic.TPST""\r\n"
@@ -176,13 +178,13 @@ BEGIN
     "P_Type RCDATA ""./data/presets/P_Type.TPST""\r\n"
     "Radon_Leak RCDATA ""./data/presets/Radon_Leak.TPST""\r\n"
     "Rare_Earth_Chimes RCDATA ""./data/presets/Rare_Earth_Chimes.TPST""\r\n"
+    "Rare_Earth_Echo RCDATA ""./data/presets/Rare_Earth_Echo.TPST""\r\n"
     "Reductant RCDATA ""./data/presets/Reductant.TPST""\r\n"
     "Red_Earth RCDATA ""./data/presets/Red_Earth.TPST""\r\n"
     "Spontaneous_Decay RCDATA ""./data/presets/Spontaneous_Decay.TPST""\r\n"
     "Water RCDATA ""./data/presets/Water.TPST""\r\n"
     "White_Paint RCDATA ""./data/presets/White_Paint.TPST""\r\n"
     "Xenon_Hexafluoride RCDATA ""./data/presets/Xenon_Hexafluoride.TPST""\r\n"
-    "\r\n"
     "\0"
 END
 
@@ -268,6 +270,7 @@ PERIODIC_TABLE_FN SVG PERIODIC_TABLE_FN
 LOGO_FN PNG LOGO_FN
 BG_FN PNG BG_FN
 ROUTING_FN SVG ROUTING_FN
+Arsenate RCDATA "./data/presets/Arsenate.TPST"
 C14 RCDATA "./data/presets/C14.TPST"
 Carbon_Dioxide RCDATA "./data/presets/Carbon_Dioxide.TPST"
 Carbon_Monoxide RCDATA "./data/presets/Carbon_Monoxide.TPST"
@@ -277,6 +280,7 @@ Default RCDATA "./data/presets/Default.TPST"
 Exotic_Metals_1 RCDATA "./data/presets/Exotic_Metals_1.TPST"
 Free_Radical RCDATA "./data/presets/Free_Radical.TPST"
 Halogens_1 RCDATA "./data/presets/Halogens_1.TPST"
+Halogens_2 RCDATA "./data/presets/Halogens_2.TPST"
 Hydrochloric_Acid RCDATA "./data/presets/Hydrochloric_Acid.TPST"
 Hydrofluoric_Acid RCDATA "./data/presets/Hydrofluoric_Acid.TPST"
 Isotonic RCDATA "./data/presets/Isotonic.TPST"
@@ -290,13 +294,13 @@ Phosphate RCDATA "./data/presets/Phosphate.TPST"
 P_Type RCDATA "./data/presets/P_Type.TPST"
 Radon_Leak RCDATA "./data/presets/Radon_Leak.TPST"
 Rare_Earth_Chimes RCDATA "./data/presets/Rare_Earth_Chimes.TPST"
+Rare_Earth_Echo RCDATA "./data/presets/Rare_Earth_Echo.TPST"
 Reductant RCDATA "./data/presets/Reductant.TPST"
 Red_Earth RCDATA "./data/presets/Red_Earth.TPST"
 Spontaneous_Decay RCDATA "./data/presets/Spontaneous_Decay.TPST"
 Water RCDATA "./data/presets/Water.TPST"
 White_Paint RCDATA "./data/presets/White_Paint.TPST"
 Xenon_Hexafluoride RCDATA "./data/presets/Xenon_Hexafluoride.TPST"
-
 
 /////////////////////////////////////////////////////////////////////////////
 #endif    // not APSTUDIO_INVOKED
