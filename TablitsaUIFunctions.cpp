@@ -514,6 +514,62 @@ void InitTexturizerUI(Plugin* pPlugin, IGraphics* pGraphics, std::vector<IContro
   controls[5]->Hide(true);
 }
 
+/* WAVEFOLDER (VOICE) */
+
+void InitWaveFolderUI(Plugin* pPlugin, IGraphics* pGraphics, std::vector<IControl*> controls, const std::vector<int>& params, const std::vector<char*>& paramNames, const bool reset)
+{
+  std::vector<IControl*> allKnobs;
+  allKnobs.insert(allKnobs.begin(), controls.begin(), controls.begin() + 4);
+  for (auto* knob : allKnobs)
+    knob->SetDisabled(false);
+  // Save current values
+  double paramVals[4]{};
+  if (!reset)
+  {
+    for (int i{ 0 }; i < 4; ++i)
+      paramVals[i] = pPlugin->GetParam(params[i])->Value();
+  }
+  pPlugin->GetParam(params[0])->InitDouble(paramNames[0], 1., 0., 1., 0.01);
+  pPlugin->GetParam(params[1])->InitDouble(paramNames[1], 0., 0., 1., 0.01);
+  pPlugin->GetParam(params[2])->InitDouble(paramNames[2], 0., 0., 1., 0.01, "", 0, "", IParam::ShapeExp());
+  pPlugin->GetParam(params[3])->InitDouble(paramNames[3], 0., 0., 1., 0.01);
+  // Reload original values if not resetting
+  if (!reset)
+  {
+    for (int i{ 0 }; i < 4; ++i)
+      pPlugin->GetParam(params[i])->Set(paramVals[i]);
+  }
+  // Hide toggle buttons
+  pGraphics->HideControl(params[4], true);
+  pGraphics->HideControl(params[5], true);
+
+  pPlugin->GetParam(params[0])->SetDisplayFunc(PercentDisplayFunc);
+  pPlugin->GetParam(params[1])->SetDisplayFunc(PercentDisplayFunc);
+  pPlugin->GetParam(params[2])->SetDisplayFunc([pPlugin](double value, WDL_String& str) {
+    str.SetFormatted(MAX_PARAM_DISPLAY_LEN, "%.0f", pPlugin->GetSampleRate() * value);
+    str.Append(" Hz");
+    });
+  pPlugin->GetParam(params[3])->SetDisplayFunc(PercentDisplayFunc);
+
+  for (int i{ 0 }; i < TABLITSA_EFFECT_PARAMS; ++i)
+    controls[i]->SetValue(pPlugin->GetParam(params[i])->GetNormalized());
+
+  controls[1]->SetDisabled(false);
+  controls[2]->SetDisabled(false);
+  // Labels
+  dynamic_cast<IVKnobControl*>(controls[0])->SetLabelStr("Threshold");
+  dynamic_cast<IVKnobControl*>(controls[1])->SetLabelStr("Fold");
+  dynamic_cast<IVKnobControl*>(controls[2])->SetLabelStr("???");
+  dynamic_cast<IVKnobControl*>(controls[3])->SetLabelStr("Mix");
+  // Modulation off for knob 1
+  dynamic_cast<TablitsaIVModKnobControl*>(controls[0])->EnableModulation(true);
+  // Toggle action functions
+  controls[4]->SetActionFunction(nullptr);
+  controls[5]->SetActionFunction(nullptr);
+  controls[4]->Hide(true);
+  controls[5]->Hide(true);
+}
+
 /* DEFAULT (BOTH) */
 
 void InitDefaultUI(Plugin* pPlugin, IGraphics* pGraphics, std::vector<IControl*> controls, const std::vector<int>& params, const std::vector<char*>& paramNames)
@@ -652,6 +708,12 @@ void SwapVoiceEffectsUI(int effectSlot, IControl* pEffectsList, IGraphics* pGrap
   {
     std::vector<char*> paramNames{ "SuperRing Depth", "Voice Effect Param 2" , "Voice Effect Param 3", "SuperRing Mix" };
     InitCoefModUI(pPlugin, pGraphics, controls, params, paramNames, reset);
+    break;
+  }
+  case kWaveFolderEffect:
+  {
+    std::vector<char*> paramNames{ "WaveFolder Threshold", "WaveFolder Amount" , "Voice Effect Param 3", "WaveFolder Mix" };
+    InitWaveFolderUI(pPlugin, pGraphics, controls, params, paramNames, reset);
     break;
   }
   default:
