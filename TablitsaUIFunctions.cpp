@@ -103,7 +103,8 @@ void DelayTempoSyncToggle(Plugin* pPlugin, IGraphics* pGraphics, const std::vect
     pPlugin->GetParam(params[0])->InitDouble(oldParams[0]->GetName(), reset ? 100. : oldParams[0]->Value(), 1., TABLITSA_MAX_EFFECT_DELAY_MS, 1., "ms", IParam::kFlagsNone, "Effect", IParam::ShapePowCurve(3.));
     pPlugin->GetParam(params[1])->InitDouble(oldParams[1]->GetName(), reset ? 100. : oldParams[1]->Value(), 1., TABLITSA_MAX_EFFECT_DELAY_MS, 1., "ms", IParam::kFlagsNone, "Effect", IParam::ShapePowCurve(3.));
   }
-  pGraphics->SetAllControlsDirty();
+  pGraphics->GetControlWithTag(kCtrlTagMasterEffectsKnob1)->SetDirty(true);
+  pGraphics->GetControlWithTag(kCtrlTagMasterEffectsKnob2)->SetDirty(true);
 }
 
 void DelayStereoToggle(IGraphics* pGraphics, const std::vector<IControl*>& controls, const bool mono)

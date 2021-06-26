@@ -584,7 +584,11 @@ public:
   int GetCurrentIndex() { return mCurrentIdx; }
   const char* GetSelectedString() { return mOptions[mCurrentIdx].c_str(); }
   const bool MenuIsOpen() const { return mMenuOpen; }
-  void Collapse() { if (mMenu->GetExpanded()) mMenu->CollapseEverything(); }
+  void Collapse()
+  {
+    if (mMenu->GetExpanded())
+      mMenu->CollapseEverything();
+  }
 
 protected:
   std::vector<std::string> mOptions;

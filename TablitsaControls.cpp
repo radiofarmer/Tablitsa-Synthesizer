@@ -449,6 +449,7 @@ void DropdownListControl::Draw(IGraphics& g)
 
 void DropdownListControl::OnMouseDown(float x, float y, const IMouseMod& mod)
 {
+  GetUI()->ReleaseMouseCapture();
   mPopupMenu.Clear();
   int nDisplayTexts = mOptions.size();
   // Fill the menu
