@@ -844,8 +844,8 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
     pGraphics->AttachControl(new TablitsaIVModKnobControl(effectsControlsPanel.FracRectVertical(2.f / 3, true).GetGridCell(0, 1, 1, 4).GetCentredInside(dialSize), kParamVoiceEffect1Param2, "Right", modKnobStyle), kCtrlTagVoiceEffectsKnob2, "E1");
     pGraphics->AttachControl(new TablitsaIVModKnobControl(effectsControlsPanel.FracRectVertical(2.f / 3, true).GetGridCell(0, 2, 1, 4).GetCentredInside(dialSize), kParamVoiceEffect1Param3, "Feedback", modKnobStyle), kCtrlTagVoiceEffectsKnob3, "E1");
     pGraphics->AttachControl(new TablitsaIVModKnobControl(effectsControlsPanel.FracRectVertical(2.f / 3, true).GetGridCell(0, 3, 1, 4).GetCentredInside(dialSize), kParamVoiceEffect1Param4, "Mix", modKnobStyle), kCtrlTagVoiceEffectsKnob4, "E1");
-    pGraphics->AttachControl(new IVToggleControl(effectsControlsPanel.FracRectVertical(1.f / 3).GetGridCell(0, 1, 1, 4).GetPadded(-10.f), kParamVoiceEffect1Param5, "", toggleStyle, "", ""), kCtrlTagVoiceEffectsToggle1, "E1");
-    pGraphics->AttachControl(new IVToggleControl(effectsControlsPanel.FracRectVertical(1.f / 3).GetGridCell(0, 2, 1, 4).GetPadded(-10.f), kNoParameter, "", toggleStyle, "", ""), kCtrlTagVoiceEffectsToggle2, "E1");
+    pGraphics->AttachControl(new TablitsaVToggleButton(effectsControlsPanel.FracRectVertical(1.f / 3).GetGridCell(0, 1, 1, 4).GetPadded(-10.f), kParamVoiceEffect1Param5, "", toggleStyle), kCtrlTagVoiceEffectsToggle1, "E1");
+    pGraphics->AttachControl(new TablitsaVToggleButton(effectsControlsPanel.FracRectVertical(1.f / 3).GetGridCell(0, 2, 1, 4).GetPadded(-10.f), kParamVoiceEffect1Param6, "", toggleStyle), kCtrlTagVoiceEffectsToggle2, "E1");
     // Selector list
     pGraphics->AttachControl(new DropdownListControl(effectsPanel.FracRectHorizontal(0.4f, false).GetFromTop(50.f).GetReducedFromTop(20.f).GetPadded(-2.f), TABLITSA_VOICE_EFFECTS_LIST), kCtrlTagVoiceEffectsList, "E1")->SetActionFunction(
       [pGraphics, this](IControl* pControl) {
@@ -859,8 +859,8 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
     pGraphics->AttachControl(new TablitsaIVKnobControl(effectsControlsPanel.FracRectVertical(2.f / 3, true).GetGridCell(0, 1, 1, 4).GetCentredInside(dialSize), kParamMasterEffect1Param2, "Right", modKnobStyle), kCtrlTagMasterEffectsKnob2, "E2");
     pGraphics->AttachControl(new TablitsaIVKnobControl(effectsControlsPanel.FracRectVertical(2.f / 3, true).GetGridCell(0, 2, 1, 4).GetCentredInside(dialSize), kParamMasterEffect1Param3, "Feedback", modKnobStyle), kCtrlTagMasterEffectsKnob3, "E2");
     pGraphics->AttachControl(new TablitsaIVKnobControl(effectsControlsPanel.FracRectVertical(2.f / 3, true).GetGridCell(0, 3, 1, 4).GetCentredInside(dialSize), kParamMasterEffect1Param4, "Mix", modKnobStyle), kCtrlTagMasterEffectsKnob4, "E2");
-    pGraphics->AttachControl(new IVToggleControl(effectsControlsPanel.FracRectVertical(1.f / 3).GetGridCell(0, 1, 1, 4).GetPadded(-10.f), kParamMasterEffect1Param5, "", toggleStyle, "Time", "Tempo"), kCtrlTagMasterEffectsToggle1, "E2");
-    pGraphics->AttachControl(new IVToggleControl(effectsControlsPanel.FracRectVertical(1.f / 3).GetGridCell(0, 2, 1, 4).GetPadded(-10.f), kNoParameter, "", toggleStyle, "Stereo", "Mono"), kCtrlTagMasterEffectsToggle2, "E2");
+    pGraphics->AttachControl(new TablitsaVToggleButton(effectsControlsPanel.FracRectVertical(1.f / 3).GetGridCell(0, 1, 1, 4).GetPadded(-10.f), kParamMasterEffect1Param5, "", toggleStyle), kCtrlTagMasterEffectsToggle1, "E2");
+    pGraphics->AttachControl(new TablitsaVToggleButton(effectsControlsPanel.FracRectVertical(1.f / 3).GetGridCell(0, 2, 1, 4).GetPadded(-10.f), kNoParameter, "", toggleStyle), kCtrlTagMasterEffectsToggle2, "E2");
     // Selector List
     pGraphics->AttachControl(new DropdownListControl(effectsPanel.FracRectHorizontal(0.4f, false).GetFromTop(50.f).GetReducedFromTop(20.f).GetPadded(-2.f), TABLITSA_MASTER_EFFECTS_LIST), kCtrlTagMasterEffectsList, "E2")->SetActionFunction(
       [pGraphics, this](IControl* pControl) {

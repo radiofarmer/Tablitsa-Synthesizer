@@ -2227,6 +2227,11 @@ public:
           });
         break;
       }
+      case kParamVoiceEffect1Param5:
+        ForEachVoice([value](Voice& voice) {
+          voice.mEffects[0]->SetParam5(value);
+          });
+        break;
       case kParamVoiceEffect2Param1: // Voice Effects
         mParamsToSmooth[kModVoiceEffect2Param1Smoother] = value;
         break;
@@ -2303,6 +2308,11 @@ public:
           });
         break;
       }
+      case kParamVoiceEffect2Param5:
+        ForEachVoice([value](Voice& voice) {
+          voice.mEffects[1]->SetParam5(value);
+          });
+        break;
       case kParamVoiceEffect3Param1: // Voice Effects
         mParamsToSmooth[kModVoiceEffect3Param1Smoother] = value;
         break;
@@ -2379,6 +2389,11 @@ public:
           });
         break;
       }
+      case kParamVoiceEffect3Param5:
+        ForEachVoice([value](Voice& voice) {
+          voice.mEffects[2]->SetParam5(value);
+          });
+        break;
       case kParamMasterEffect1Param1: // Master Effects
       case kParamMasterEffect2Param1:
       case kParamMasterEffect3Param1:

@@ -321,13 +321,22 @@ protected:
 class TablitsaVToggleButton : public IVToggleControl
 {
 public:
-  TablitsaVToggleButton(const IRECT& bounds, int paramIdx, const char* text = "", const IVStyle& style = TABLITSA_STYLE.WithDrawShadows(false)) :
-    TablitsaVToggleButton(bounds, paramIdx, "", style, text, text) {}
-
-  TablitsaVToggleButton(const IRECT& bounds, int paramIdx = kNoParameter, const char* label = "", const IVStyle& style = TABLITSA_STYLE.WithDrawShadows(false), const char* offText = "OFF", const char* onText = "ON") :
+  TablitsaVToggleButton(const IRECT& bounds, int paramIdx=kNoParameter, const char* label="", const IVStyle& style = TABLITSA_STYLE.WithDrawShadows(false), const char* offText = "OFF", const char* onText = "ON") :
     IVToggleControl(bounds, paramIdx, label, style, offText, onText)
   {
 
+  }
+
+  void SetText(const char* str)
+  {
+    mOnText.Set(str);
+    mOffText.Set(str);
+  }
+
+  void SetText(const char* on, const char* off)
+  {
+    mOnText.Set(on);
+    mOffText.Set(off);
   }
 
 protected:

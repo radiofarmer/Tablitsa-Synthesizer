@@ -177,6 +177,8 @@ void InitDelayUI(Plugin* pPlugin, IGraphics* pGraphics, std::vector<IControl*> c
   dynamic_cast<IVKnobControl*>(controls[1])->SetLabelStr("Right");
   dynamic_cast<IVKnobControl*>(controls[2])->SetLabelStr("Feedback");
   dynamic_cast<IVKnobControl*>(controls[3])->SetLabelStr("Mix");
+  dynamic_cast<TablitsaVToggleButton*>(controls[4])->SetText("Time", "Tempo");
+  dynamic_cast<TablitsaVToggleButton*>(controls[4])->SetText("Stereo", "Mono");
 
   // Toggle Control Action Functions
   controls[4]->SetActionFunction(
@@ -531,23 +533,21 @@ void InitWaveFolderUI(Plugin* pPlugin, IGraphics* pGraphics, std::vector<IContro
   }
   pPlugin->GetParam(params[0])->InitDouble(paramNames[0], 1., 0., 1., 0.01);
   pPlugin->GetParam(params[1])->InitDouble(paramNames[1], 0., 0., 1., 0.01);
-  pPlugin->GetParam(params[2])->InitDouble(paramNames[2], 0., 0., 1., 0.01, "", 0, "", IParam::ShapeExp());
+  pPlugin->GetParam(params[2])->InitDouble(paramNames[2], 0., 0.005, 1., 0.01, "", 0, "", IParam::ShapePowCurve(3.));
   pPlugin->GetParam(params[3])->InitDouble(paramNames[3], 0., 0., 1., 0.01);
+  pPlugin->GetParam(params[4])->InitBool("VE1 WaveFolder Peak Track", false);
   // Reload original values if not resetting
   if (!reset)
   {
-    for (int i{ 0 }; i < 4; ++i)
+    for (int i{ 0 }; i < 5; ++i)
       pPlugin->GetParam(params[i])->Set(paramVals[i]);
   }
-  // Hide toggle buttons
-  pGraphics->HideControl(params[4], true);
-  pGraphics->HideControl(params[5], true);
 
   pPlugin->GetParam(params[0])->SetDisplayFunc(PercentDisplayFunc);
   pPlugin->GetParam(params[1])->SetDisplayFunc(PercentDisplayFunc);
   pPlugin->GetParam(params[2])->SetDisplayFunc([pPlugin](double value, WDL_String& str) {
-    str.SetFormatted(MAX_PARAM_DISPLAY_LEN, "%.0f", pPlugin->GetSampleRate() * value);
-    str.Append(" Hz");
+    str.SetFormatted(MAX_PARAM_DISPLAY_LEN, "%d", static_cast<int>(value * 250.), 0);
+    str.Append(" ms");
     });
   pPlugin->GetParam(params[3])->SetDisplayFunc(PercentDisplayFunc);
 
@@ -559,15 +559,20 @@ void InitWaveFolderUI(Plugin* pPlugin, IGraphics* pGraphics, std::vector<IContro
   // Labels
   dynamic_cast<IVKnobControl*>(controls[0])->SetLabelStr("Threshold");
   dynamic_cast<IVKnobControl*>(controls[1])->SetLabelStr("Fold");
-  dynamic_cast<IVKnobControl*>(controls[2])->SetLabelStr("???");
+  dynamic_cast<IVKnobControl*>(controls[2])->SetLabelStr("Trk Prd");
   dynamic_cast<IVKnobControl*>(controls[3])->SetLabelStr("Mix");
-  // Modulation off for knob 1
-  dynamic_cast<TablitsaIVModKnobControl*>(controls[0])->EnableModulation(true);
-  // Toggle action functions
-  controls[4]->SetActionFunction(nullptr);
+  dynamic_cast<TablitsaVToggleButton*>(controls[4])->SetText("Stat. Thr.", "Peak Trk");
+  // Toggle buttons
+  controls[4]->SetActionFunction([pGraphics](IControl* pControl) {
+    bool on{ pControl->GetValue() > 0.5 };
+    pGraphics->GetControlWithTag(kCtrlTagVoiceEffectsKnob3)->SetDisabled(!on);
+    });
   controls[5]->SetActionFunction(nullptr);
-  controls[4]->Hide(true);
+
+  controls[4]->Hide(false);
   controls[5]->Hide(true);
+  controls[4]->SetDisabled(false);
+  controls[5]->SetDisabled(true);
 }
 
 /* DEFAULT (BOTH) */
@@ -679,6 +684,11 @@ void SwapVoiceEffectsUI(int effectSlot, IControl* pEffectsList, IGraphics* pGrap
   IControl* knob4 = pGraphics->GetControlWithTag(kCtrlTagVoiceEffectsKnob4);
   IControl* toggle1 = pGraphics->GetControlWithTag(kCtrlTagVoiceEffectsToggle1);
   IControl* toggle2 = pGraphics->GetControlWithTag(kCtrlTagVoiceEffectsToggle2);
+
+  // Clear labels
+  dynamic_cast<TablitsaVToggleButton*>(toggle1)->SetText("");
+  dynamic_cast<TablitsaVToggleButton*>(toggle2)->SetText("");
+
   std::vector<IControl*> allKnobs{ knob1, knob2, knob3, knob4 };
   std::vector<IControl*> controls{ knob1, knob2, knob3, knob4, toggle1, toggle2 };
 
@@ -725,8 +735,8 @@ void SwapVoiceEffectsUI(int effectSlot, IControl* pEffectsList, IGraphics* pGrap
   }
   if (reset)
     pPlugin->SendArbitraryMsgFromUI(msg, kNoTag, sizeof(effectIdx), reinterpret_cast<void*>(&effectIdx)); // Effects must be swapped before OnParamChange is called
-  for (auto* knob : allKnobs)
-    knob->SetDirty(true);
+  for (auto* c : controls)
+    c->SetDirty(true);
   dynamic_cast<Tablitsa*>(pPlugin)->RefreshEffectBankControl();
 }
 
