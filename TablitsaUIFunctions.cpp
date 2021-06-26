@@ -178,7 +178,7 @@ void InitDelayUI(Plugin* pPlugin, IGraphics* pGraphics, std::vector<IControl*> c
   dynamic_cast<IVKnobControl*>(controls[2])->SetLabelStr("Feedback");
   dynamic_cast<IVKnobControl*>(controls[3])->SetLabelStr("Mix");
   dynamic_cast<TablitsaVToggleButton*>(controls[4])->SetText("Time", "Tempo");
-  dynamic_cast<TablitsaVToggleButton*>(controls[4])->SetText("Stereo", "Mono");
+  dynamic_cast<TablitsaVToggleButton*>(controls[5])->SetText("Stereo", "Mono");
 
   // Toggle Control Action Functions
   controls[4]->SetActionFunction(
