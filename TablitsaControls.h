@@ -569,9 +569,7 @@ private:
 class DropdownListControl : public ICaptionControl
 {
 public:
-  DropdownListControl(const IRECT& bounds, std::initializer_list<char*> options, const IText& text = TABLITSA_TEXT, const IColor& bgColor = DEFAULT_BGCOLOR, bool showLabel = false);
-
-  void AttachPopupMenu();
+  DropdownListControl(const IRECT& bounds, std::initializer_list<const char*> options, const IText& text = TABLITSA_TEXT, const IColor& bgColor = DEFAULT_BGCOLOR, bool showLabel = false);
 
   void SetCurrentIdx(const int newIdx, const bool triggerAction = false);
 
@@ -586,14 +584,11 @@ public:
   const bool MenuIsOpen() const { return mMenuOpen; }
   void Collapse()
   {
-    if (mMenu->GetExpanded())
-      mMenu->CollapseEverything();
   }
 
 protected:
   std::vector<std::string> mOptions;
-  IPopupMenu mPopupMenu;
-  IPopupMenuControl* mMenu;
+  IPopupMenu* mMenu;
   int mCurrentIdx{ 0 };
   bool mMenuOpen{ false };
   std::string mCustomStr{ "" };

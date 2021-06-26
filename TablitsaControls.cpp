@@ -403,26 +403,17 @@ void TablitsaEffectBankControl::TabChanged(int newIdx, bool triggerAction)
 
 /* Generic Dropdown List */
 
-DropdownListControl::DropdownListControl(const IRECT& bounds, std::initializer_list<char*> options, const IText& text, const IColor& bgColor, bool showLabel) :
+DropdownListControl::DropdownListControl(const IRECT& bounds, std::initializer_list<const char*> options, const IText& text, const IColor& bgColor, bool showLabel) :
   ICaptionControl(bounds, kNoParameter, text, bgColor, showLabel)
 {
   for (auto s : options)
   {
     mOptions.push_back(std::string(s));
   }
-  mPopupMenu.SetFunction([this](IPopupMenu* pControl) {
-    if (pControl->GetChosenItemIdx() >= 0)
-      mCurrentIdx = pControl->GetChosenItemIdx();
-    mMenuOpen = false;
-    this->SetDirty(true); // Tablitsa: Trigger action function to update the tab control
-    });
-}
 
-void DropdownListControl::AttachPopupMenu()
-{
-  mMenu = new IPopupMenuControl();
-  //mMenu->SetMaxColumnItems(10);
-  GetUI()->AttachControl(mMenu);
+  mMenu = new IPopupMenu("Menu", options, [this](IPopupMenu* pMenu) {
+      SetCurrentIdx(pMenu->GetChosenItemIdx(), true);
+    });
 }
 
 void DropdownListControl::SetCurrentIdx(const int newIdx, const bool triggerAction)
@@ -449,8 +440,10 @@ void DropdownListControl::Draw(IGraphics& g)
 
 void DropdownListControl::OnMouseDown(float x, float y, const IMouseMod& mod)
 {
-  GetUI()->ReleaseMouseCapture();
-  mPopupMenu.Clear();
+  IGraphics* pGraphics{ dynamic_cast<IGraphics*>(GetUI()) };
+  pGraphics->CreatePopupMenu(*this, *mMenu, x, y);
+
+  /*mPopupMenu.Clear();
   int nDisplayTexts = mOptions.size();
   // Fill the menu
   for (int i = 0; i < nDisplayTexts; ++i)
@@ -465,7 +458,7 @@ void DropdownListControl::OnMouseDown(float x, float y, const IMouseMod& mod)
     mPopupMenu.SetRootTitle(mOptions[mCurrentIdx].c_str());
   }
   mMenu->CreatePopupMenu(mPopupMenu, mRECT);
-  mMenuOpen = true;
+  mMenuOpen = true;*/
 }
 
 void DropdownListControl::OnResize()

@@ -1204,10 +1204,6 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
     }
 #endif
 
-    // Popup Menus
-    dynamic_cast<DropdownListControl*>(pGraphics->GetControlWithTag(kCtrlTagDefaultPresetList))->AttachPopupMenu();
-    dynamic_cast<DropdownListControl*>(pGraphics->GetControlWithTag(kCtrlTagVoiceEffectsList))->AttachPopupMenu();
-    dynamic_cast<DropdownListControl*>(pGraphics->GetControlWithTag(kCtrlTagMasterEffectsList))->AttachPopupMenu();
     pGraphics->AttachPopupMenuControl();
 
 #ifndef VST3_API

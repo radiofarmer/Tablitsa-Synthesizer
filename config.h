@@ -9,7 +9,7 @@
 #define PLUG_COPYRIGHT_STR "Copyright Bram Osterhout 2021, MIT License"
 #define PLUG_CLASS_NAME Tablitsa
 
-#define BUNDLE_NAME "Tablitsa"
+#define BUNDLE_NAME "Tablitsa (Beta)"
 #define BUNDLE_MFR "RadioFarmer"
 #define BUNDLE_DOMAIN "com"
 
