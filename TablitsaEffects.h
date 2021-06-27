@@ -129,6 +129,102 @@ private:
 #define DELAY_TEMPODIV_VALIST "1/64", "1/32", "1/16T", "1/16", "1/16D", "1/8T", "1/8", "1/8D", "1/4", "1/4D", "1/2", "1/1"
 #define TABLITSA_MAX_DELAY_SAMP (int)524288
 #define TABLITSA_MAX_DELAY_MS 524288. / 48000. * 1000.
+#define TABLITSA_CHORUS_VOICES 4
+
+
+template<typename T, class V = Vec4d>
+class ChorusEffect final : public Effect<T, V>
+{
+private:
+  static constexpr T AmpNorm = 1. / TABLITSA_CHORUS_VOICES;
+
+  struct ChorusVoice
+  {
+    T pitch_offset{ 0. };
+    T pan_l{ 1. };
+    T pan_r{ 1. };
+  };
+
+  void ResetVoices()
+  {
+    for (int i{ 0 }; i < TABLITSA_CHORUS_VOICES; ++i)
+    {
+      mVoices[i].pitch_offset = mDepth * ((i + 1) / TABLITSA_CHORUS_VOICES - 0.5);
+      T pan = mSpread * ((i + 1) / TABLITSA_CHORUS_VOICES - 0.5) + 0.5;
+      mVoices[i].pan_l = std::sqrt(pan);
+      mVoices[i].pan_r = std::sqrt(1 - pan);
+
+      mAllpassL[i].SetCutoffAndResonance(0.2 + 0.19 * (i / TABLITSA_CHORUS_VOICES) * mSpread, 0.5);
+      mAllpassR[i].SetCutoffAndResonance(0.2 + 0.19 * (i / TABLITSA_CHORUS_VOICE)S * mSpread, 0.5);
+    }
+  }
+
+public:
+  ChorusEffect(T sampleRate, T rate = 0., T depth = 0., T spread = 0.) : Effect<T, V>(sampleRate), mRate(rate), mDepth(depth), mSpread(spread), mRateOsc(0.)
+  {
+    mRateOsc.SetFreqCPS(mRate);
+    ResetVoices();
+  }
+
+  void SetSampleRate(T sampleRate, int oversampling = 1) override
+  {
+    Effect<T, V>::SetSampleRate(sampleRate, oversampling);
+    mRateOsc.SetSampleRate(mSampleRate);
+    ResetVoices();
+  }
+
+  void SetParam1(T value) override
+  {
+    mRate = value;
+    mRateOsc.SetFreqCPS(mRate);
+  }
+  void SetParam2(T value) override
+  {
+    mDepth = value * 0.125;
+    ResetVoices();
+  }
+  void SetParam3(T value) override
+  {
+    mSpread = value;
+    ResetVoices();
+  }
+  void SetParam4(T value) override
+  {
+    mMix = value * AmpNorm;
+  }
+
+  void ProcessStereo(StereoSample<T>& s) override
+  {
+    StereoSample<T> s_in{ s };
+    T osc = mRateOsc.Process();
+
+    for (int i{ 0 }; i < TABLITSA_CHORUS_VOICES; ++i)
+    {
+      s.l += mAllpassL[i].ProcessAP(mDelayL.at(2000 * (1. + mVoices[i].pitch_offset * osc)) * mVoices[i].pan_l) * mMix;
+      s.r += mAllpassR[i].ProcessAP(mDelayR.at(2000 * (1. + mVoices[i].pitch_offset * osc)) * mVoices[i].pan_r) * mMix;
+    }
+
+    mDelayL.push(s_in.l);
+    mDelayR.push(s_in.r);
+
+    mRateOsc.SetFreqCPS(mRate * (1. + 0.01 * (std::rand() % 100)));
+  }
+
+protected:
+  T mRate;
+  T mDepth;
+  T mSpread;
+  T mMix{ 0. };
+
+  ChorusVoice mVoices[TABLITSA_CHORUS_VOICES];
+
+  DelayLine<4096> mDelayL;
+  DelayLine<4096> mDelayR;
+  TwoPoleTPTFilter mAllpassL[TABLITSA_CHORUS_VOICES];
+  TwoPoleTPTFilter mAllpassR[TABLITSA_CHORUS_VOICES];
+
+  FastSinOscillator<T> mRateOsc;
+};
 
 template<typename T, int MaxDelay=TABLITSA_MAX_DELAY_SAMP, class V = Vec4d>
 class DelayEffect final : public Effect<T, V>
@@ -350,6 +446,8 @@ enum EDistortion
   kNumDistortionModes
 };
 
+
+
 template<typename T, class V = Vec4d>
 class DistortionEffect final : public Effect<T, V>
 {
@@ -479,7 +577,6 @@ private:
   // Noise/fuzz filter controls
 //  sine_osc_nd mFilterOsc{ 100., DEFAULT_SAMPLE_RATE };
 };
-
 
 /* 3-Band EQ */
 template<typename T, class V = Vec4d>

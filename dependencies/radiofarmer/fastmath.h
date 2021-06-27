@@ -82,6 +82,13 @@ struct sine_osc_nd
   {
   }
 
+  inline void Reset()
+  {
+    x = 0.;
+    dxdt = 1.;
+    d2xdt2 = -std::sin(dxdt);
+  }
+
   inline void SetFreq(double freqHz)
   {
     omega = 6.28318530718 * freqHz;
