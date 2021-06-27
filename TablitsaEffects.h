@@ -408,20 +408,15 @@ public:
   void SetContinuousParams(const T p1, const T p2, const T p3, const T p4, const T pitch) override
   {
     mGain = std::pow(10., p1 * 2.);
-    mFilterMod = p2 * mMaxFilterMod;
+    mNoise = p2;
     mColorFilter.SetCutoff(p3 * 0.1 * mOsFreqScalar);
     mMix = p4;
-    mFilterOsc.SetFreq(440. * std::pow(2., pitch * 0.1666666));
   }
 
   void SetSampleRate(T sampleRate, int oversampling=1) override
   {
     Effect<T, V>::SetSampleRate(sampleRate, oversampling); // Sets `mOversampling` and `mOsFreqScalar`
-    mNoiseFilter.SetSampleRate(sampleRate * oversampling);
     mColorFilter.SetSampleRate(sampleRate * oversampling);
-    mFilterOsc.SetSampleRate(sampleRate * oversampling);
-    mFilterModCenterFreqNorm = FilterModCenterFreqHz / (sampleRate * oversampling);
-    mMaxFilterMod = std::min(mFilterModCenterFreqNorm * 0.95, MaxFilterModHz / (sampleRate * oversampling));
   }
 
   inline T DoProcess(T s, const int type)
@@ -445,7 +440,6 @@ public:
 
   void ProcessBlock(T* inputs, T* outputs, const int nFrames) override
   {
-    mNoiseFilter.SetCutoff(mFilterModCenterFreqNorm + mFilterMod * mFilterOsc.x * ((T)(std::rand() / RAND_MAX) * 0.1 + 1.));
     for (int i{ 0 }; i < nFrames; ++i)
     {
 #ifdef DISTORTION_GAIN_NORM
@@ -456,7 +450,7 @@ public:
       mInHist.push(std::abs(inputs[i]));
 
       // Calculate output (and update average output volume)
-      const T out = FuzzDistortion(mNoiseFilter.ProcessAP(inputs[i] + ipt_filtered));
+      const T out = FuzzDistortion(inputs[i] + ipt_filtered);
       mAvgOut += BufferScale * (std::abs(out) - mOutHist.last());
       mOutHist.push(std::abs(out));
 
@@ -465,8 +459,7 @@ public:
 #else
       const T ipt_filtered = mColorFilter.ProcessBP(inputs[i]);
       // Calculate output
-      const T out = FuzzDistortion(mNoiseFilter.ProcessAP(inputs[i] + ipt_filtered));
-      mFilterOsc.Step();
+      const T out = FuzzDistortion(inputs[i] + ipt_filtered + mNoise * (std::rand() % 100) / 100);
       outputs[i] = inputs[i] + mMix * (out - inputs[i]);
 #endif
     }
@@ -476,18 +469,15 @@ private:
   T mGain;
   T mAvgIn{ 0.25 };
   T mAvgOut{ 1. };
+  T mNoise{ 0. };
   int mType{ EDistortion::kFuzz };
   DelayLine<BufferLength> mInHist;
   DelayLine<BufferLength> mOutHist;
 
-  TwoPoleTPTFilter mNoiseFilter{ DEFAULT_SAMPLE_RATE, 0.25, 0.5 };
   TwoPoleTPTFilter mColorFilter{ DEFAULT_SAMPLE_RATE, 0.25 };
 
   // Noise/fuzz filter controls
-  T mFilterMod{ 0. };
-  sine_osc_nd mFilterOsc{ 100., DEFAULT_SAMPLE_RATE };
-  T mFilterModCenterFreqNorm{ 600. / DEFAULT_SAMPLE_RATE };
-  T mMaxFilterMod{ std::min(mFilterModCenterFreqNorm * 0.9, MaxFilterModHz / DEFAULT_SAMPLE_RATE) };
+//  sine_osc_nd mFilterOsc{ 100., DEFAULT_SAMPLE_RATE };
 };
 
 
