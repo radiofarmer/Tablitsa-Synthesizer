@@ -418,6 +418,8 @@ DropdownListControl::DropdownListControl(const IRECT& bounds, std::initializer_l
 
 void DropdownListControl::SetCurrentIdx(const int newIdx, const bool triggerAction)
 {
+  if (newIdx == -1)
+    return;
   mCurrentIdx = newIdx;
   SetDirty(triggerAction);
 }
@@ -442,23 +444,6 @@ void DropdownListControl::OnMouseDown(float x, float y, const IMouseMod& mod)
 {
   IGraphics* pGraphics{ dynamic_cast<IGraphics*>(GetUI()) };
   pGraphics->CreatePopupMenu(*this, *mMenu, x, y);
-
-  /*mPopupMenu.Clear();
-  int nDisplayTexts = mOptions.size();
-  // Fill the menu
-  for (int i = 0; i < nDisplayTexts; ++i)
-  {
-    const char* str = &mOptions[i].c_str()[0];
-    // TODO: what if two parameters have the same text?
-    if (!strcmp(str, mOptions[mCurrentIdx].c_str())) // strings are equal
-      mPopupMenu.AddItem(new IPopupMenu::Item(str, IPopupMenu::Item::kChecked), -1);
-    else // not equal
-      mPopupMenu.AddItem(new IPopupMenu::Item(str), -1);
-
-    mPopupMenu.SetRootTitle(mOptions[mCurrentIdx].c_str());
-  }
-  mMenu->CreatePopupMenu(mPopupMenu, mRECT);
-  mMenuOpen = true;*/
 }
 
 void DropdownListControl::OnResize()
