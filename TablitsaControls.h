@@ -42,6 +42,8 @@ const IVStyle modKnobStyle{ TABLITSA_STYLE.WithShowLabel(true).WithColors(knobCo
 
 const IVStyle toggleStyle{ TABLITSA_STYLE.WithDrawFrame(true).WithColor(EVColor::kFG, COLOR_TRANSPARENT).WithColor(EVColor::kHL, IColor(100, 220, 0, 180)).WithShowLabel(false) };
 
+const IVStyle sliderStyle{ TABLITSA_STYLE.WithShowValue(true).WithLabelText(TABLITSA_STYLE.labelText.WithSize(17.f)) };
+
 const IText dropdownText{ DEFAULT_TEXT.WithFGColor(COLOR_WHITE) };
 
 const IVStyle pushButtonStyle{ TABLITSA_STYLE.WithLabelText(TABLITSA_STYLE.labelText.WithVAlign(EVAlign::Middle)).WithColor(EVColor::kHL, TABLITSA_STYLE.colorSpec.GetColor(EVColor::kPR).WithContrast(0.5)) };
@@ -49,7 +51,7 @@ const IVStyle pushButtonStyle{ TABLITSA_STYLE.WithLabelText(TABLITSA_STYLE.label
 class TablitsaSliderControl : public IVSliderControl
 {
 public:
-  TablitsaSliderControl(const IRECT& bounds, int paramIdx = kNoParameter, const char* label = "", const IVStyle& style = TABLITSA_STYLE.WithShowValue(true), bool valueIsEditable = false, EDirection dir = EDirection::Vertical, double gearing = DEFAULT_GEARING, float handleSize = 8.f, float trackSize = 2.f, bool handleInsideTrack = true) :
+  TablitsaSliderControl(const IRECT& bounds, int paramIdx = kNoParameter, const char* label = "", const IVStyle& style = sliderStyle, bool valueIsEditable = false, EDirection dir = EDirection::Vertical, double gearing = DEFAULT_GEARING, float handleSize = 8.f, float trackSize = 2.f, bool handleInsideTrack = true) :
     IVSliderControl(bounds, paramIdx, label, style, valueIsEditable, dir, gearing, handleSize, trackSize, handleInsideTrack)
   {
     mShape = EVShape::Rectangle;

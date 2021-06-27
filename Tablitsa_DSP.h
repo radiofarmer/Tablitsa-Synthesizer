@@ -510,7 +510,7 @@ public:
       mInputs[kVoiceControlTimbre].Write(mTimbreBuffer.Get(), startIdx, nFrames); */
 
       double pitchBend = mInputs[kVoiceControlPitchBend].endValue;
-      double pitch = mInputs[kVoiceControlPitch].endValue + pitchBend + mDetune; // pitch = (MidiKey - 69) / 12
+      double pitch = mInputs[kVoiceControlPitch].endValue + pitchBend + mDetune; // MIDI Pitch = (MidiKey - 69) / 12
 
       // Set the static (note-constant) modulator values
       T keytrack = (pitch * 12. + 69.) / 128.;
@@ -540,14 +540,14 @@ public:
 
         // Oscillator Parameters
         // Osc1
-        T osc1Freq = 440. * pow(2., pitch + mVModulations.GetList()[kVWavetable1PitchOffset][bufferIdx] / 12.);
+        T osc1Freq = 440. * pow(2., pitch + mVModulations.GetList()[kVWavetable1PitchOffset][bufferIdx] / 12. + mMaster->mVibratoDepth * mMaster->mVibratoOsc.Process());
         mOsc1.SetWtPosition(1. - mVModulations.GetList()[kVWavetable1Position][bufferIdx]); // Wavetable 1 Position
         mOsc1.SetWtBend(mVModulations.GetList()[kVWavetable1Bend][bufferIdx]); // Wavetable 1 Bend
         mOsc1.SetFormant(mVModulations.GetList()[kVWavetable1Formant][bufferIdx]);
         T osc1Amp = mVModulations.GetList()[kVWavetable1Amp][bufferIdx];
 
         // Osc2
-        T osc2Freq = 440. * pow(2., pitch + mVModulations.GetList()[kVWavetable2PitchOffset][bufferIdx] / 12.);
+        T osc2Freq = 440. * pow(2., pitch + mVModulations.GetList()[kVWavetable2PitchOffset][bufferIdx] / 12. + mMaster->mVibratoDepth * mMaster->mVibratoOsc.Process());
         mOsc2.SetWtPosition(1. - mVModulations.GetList()[kVWavetable2Position][bufferIdx]); // Wavetable 2 Position
         mOsc2.SetWtBend(mVModulations.GetList()[kVWavetable2Bend][bufferIdx]); // Wavetable 2 Bend
         mOsc2.SetFormant(mVModulations.GetList()[kVWavetable2Formant][bufferIdx]);
@@ -1183,6 +1183,12 @@ public:
           });
         break;
       }
+      case kParamVibratoSpeed:
+        mVibratoOsc.SetFreqCPS(value * FRAME_INTERVAL); // Vibrato osc must be run fast in order to compensate for SIMD processing
+        break;
+      case kParamVibratoDepth:
+        mVibratoDepth = value / 100.;
+        break;
       case kParamEnv1Sustain:
       {
         mParamsToSmooth[kModEnv1SustainSmoother] = (T)value / 100.;
@@ -2461,7 +2467,7 @@ public:
   bool mMono{ false };
   int mUnisonVoices{ 1 };
   float mUnisonDetune{ 0.f };
-  double mStereoWidth{ 0. };
+  T mStereoWidth{ 0. };
   UnisonVoiceManager mDetuner{ kMaxUnisonVoices };
 
   // Portamento Parameters
@@ -2490,6 +2496,9 @@ public:
   int mStepPos{ 0 };
   int mPrevPos{ -1 };
 
+  // Vibrato LFO
+  FastSinOscillator<T> mVibratoOsc;
+  T mVibratoDepth{ 0. };
   // Pointers to master modulators, for free-run and legato modes
   std::vector<Envelope<T>*> Env1Queue;
   std::vector<Envelope<T>*> Env2Queue;

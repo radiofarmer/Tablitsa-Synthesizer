@@ -33,6 +33,8 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
   GetParam(kParamUnisonDetune)->InitDouble("Unison Detune", 0., 0., 12., 0.01, "St.");
   GetParam(kParamUnisonChord)->InitEnum("Chord", 0, { UNISON_CHORD_LIST });
   GetParam(kParamStereoSpread)->InitDouble("Stereo Spread", 0., -180., 180., 0.5, "°");
+  GetParam(kParamVibratoSpeed)->InitDouble("Vibrato Speed", 5., 0., 10., 0.01, "Hz", 0, "Vibrato");
+  GetParam(kParamVibratoDepth)->InitDouble("Vibrato Depth", 0., 0., 50., 0.1, "Cts", 0, "Vibrato", IParam::ShapePowCurve(2.));
   // Pan (modulatable)
   GetParam(kParamPan)->InitDouble("Pan", 0., -90., 90., 0.5, "°");
   GetParam(kParamPanEnv1)->InitDouble("Pan Env1 Mod", 0., -1., 1., 0.01);
@@ -772,9 +774,11 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
     pGraphics->AttachControl(new IVToggleControl(masterPanel.GetGridCell(5, 1, 12, 6).GetVShifted(-15.f).GetVPadded(-2.f), kParamLegato, "", toggleStyle, "Retrigger", "Legato"));
     // Unison and Stereo Width
     const IRECT unisonPanel = masterPanel.GetReducedFromLeft(masterPanel.W() / 3.f).GetReducedFromRight(masterPanel.W() / 6.f).GetGridCell(0, 0, 2, 1).GetVShifted(-12.f).GetHPadded(-10.f).GetHShifted(2.f);
-    pGraphics->AttachControl(new TablitsaIVKnobControl(unisonPanel.GetGridCell(0, 0, 2, 2).GetCentredInside(dialSize), kParamUnisonVoices, "№ Voices", modKnobStyle), kNoTag, "Unison");
+    pGraphics->AttachControl(new TablitsaIVKnobControl(unisonPanel.GetGridCell(0, 0, 2, 3).GetHPadded(-10.f).GetHShifted(5.f), kParamUnisonVoices, "Voices", modKnobStyle), kNoTag, "Unison");
     pGraphics->AttachControl(new TablitsaIVKnobControl(unisonPanel.GetGridCell(1, 0, 2, 2).GetCentredInside(dialSize), kParamUnisonDetune, "Detune", modKnobStyle), kNoTag, "Unison");
-    pGraphics->AttachControl(new TablitsaIVKnobControl(unisonPanel.GetGridCell(0, 1, 2, 2).GetCentredInside(dialSize), kParamUnisonChord, "Chord", modKnobStyle), kNoTag, "Unison");
+    pGraphics->AttachControl(new TablitsaIVKnobControl(unisonPanel.FracRectVertical(0.5f, true).GetGridCell(0, 1, 1, 3).GetHPadded(-10.f).GetHShifted(-10.f), kParamUnisonChord, "Chord", modKnobStyle), kNoTag, "Unison");
+    pGraphics->AttachControl(new TablitsaSliderControl(unisonPanel.FracRectVertical(0.5f, true).FracRectHorizontal(2.f / 3, true).GetGridCell(0, 1, 1, 3), kParamVibratoSpeed, "Rate"), kNoTag, "Unison");
+    pGraphics->AttachControl(new TablitsaSliderControl(unisonPanel.FracRectVertical(0.5f, true).FracRectHorizontal(2.f / 3, true).GetGridCell(0, 2, 1, 3), kParamVibratoDepth, "Depth "), kNoTag, "Unison");
     pGraphics->AttachControl(new TablitsaIVKnobControl(unisonPanel.GetGridCell(1, 1, 2, 2).GetPadded(-5.f).GetCentredInside(dialSize), kParamStereoSpread, "Spread"), kNoTag, "Unison");
     pGraphics->AttachControl(new TablitsaVGroupControl("Unison", "Unison", 0.f, 13.f, 0.f, 0.f));
     pGraphics->AttachControl(new IVLEDMeterControl<2>(masterPanel.GetGridCell(0, 5, 2, 6).GetVShifted(-15.f).GetHShifted(-4.f).GetVPadded(-8.f)), kCtrlTagMeter, "Master");

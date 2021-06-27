@@ -559,6 +559,8 @@ enum EParams
   kParamOsc2FilterBypass,
   kParamOsc1EffectBypass,
   kParamOsc2EffectBypass,
+  kParamVibratoSpeed, // TODO: Move to top of list in next version
+  kParamVibratoDepth,
   kNumParams
 };
 
