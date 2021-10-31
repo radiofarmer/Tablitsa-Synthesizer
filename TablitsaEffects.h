@@ -92,8 +92,7 @@ public:
   {
     mModDepth = p1 * 0.5;
     mModRate = 440. * std::pow(2., pitch + p2); // p2 is scaled in octaves
-    mOsc.SetFreqCPS(mModRate);
-    mOsc.SetPhaseOffset(p3);
+    mFB = p3;
     mCutoff = p3;
     mMix = p4;
   }
@@ -108,7 +107,9 @@ public:
     T oscVals[4];
     for (int i{ 0 }; i < nFrames; i += 4)
     {
+      mOsc.SetFreqCPS(mModRate * (1. + mFB * mDelay));
       (mOsc.Process_Vector() * mModDepth * 0.999).store(oscVals);
+      mDelay = oscVals[3];
 #pragma clang loop unroll(full)
       for (int ii{ 0 }; ii < 4; ++ii)
       {
@@ -119,9 +120,10 @@ public:
 
 private:
   T mCutoff{ 0.5 };
-  T mPhaseOffset{ 0. };
+  T mFB{ 0. };
   T mModDepth{ 0. };
   T mModRate;
+  T mDelay{ 0. };
   VectorOscillator<T> mOsc;
   ModulatedAllpass<12> mCMFilters;
 };
@@ -155,7 +157,7 @@ private:
       mVoices[i].pan_r = std::sqrt(1 - pan);
 
       mAllpassL[i].SetCutoffAndResonance(0.2 + 0.19 * (i / TABLITSA_CHORUS_VOICES) * mSpread, 0.5);
-      mAllpassR[i].SetCutoffAndResonance(0.2 + 0.19 * (i / TABLITSA_CHORUS_VOICE)S * mSpread, 0.5);
+      mAllpassR[i].SetCutoffAndResonance(0.2 + 0.19 * (i / TABLITSA_CHORUS_VOICES) * mSpread, 0.5);
     }
   }
 
