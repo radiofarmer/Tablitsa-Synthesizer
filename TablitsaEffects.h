@@ -92,8 +92,7 @@ public:
   {
     mModDepth = p1 * 0.5;
     mModRate = 440. * std::pow(2., pitch + p2); // p2 is scaled in octaves
-    mOsc.SetFreqCPS(mModRate);
-    mOsc.SetPhaseOffset(p3);
+    mFB = p3;
     mCutoff = p3;
     mMix = p4;
   }
@@ -108,7 +107,9 @@ public:
     T oscVals[4];
     for (int i{ 0 }; i < nFrames; i += 4)
     {
+      mOsc.SetFreqCPS(mModRate * (1. + mFB * mDelay));
       (mOsc.Process_Vector() * mModDepth * 0.999).store(oscVals);
+      mDelay = oscVals[3];
 #pragma clang loop unroll(full)
       for (int ii{ 0 }; ii < 4; ++ii)
       {
@@ -119,9 +120,10 @@ public:
 
 private:
   T mCutoff{ 0.5 };
-  T mPhaseOffset{ 0. };
+  T mFB{ 0. };
   T mModDepth{ 0. };
   T mModRate;
+  T mDelay{ 0. };
   VectorOscillator<T> mOsc;
   ModulatedAllpass<12> mCMFilters;
 };
@@ -129,6 +131,102 @@ private:
 #define DELAY_TEMPODIV_VALIST "1/64", "1/32", "1/16T", "1/16", "1/16D", "1/8T", "1/8", "1/8D", "1/4", "1/4D", "1/2", "1/1"
 #define TABLITSA_MAX_DELAY_SAMP (int)524288
 #define TABLITSA_MAX_DELAY_MS 524288. / 48000. * 1000.
+#define TABLITSA_CHORUS_VOICES 4
+
+
+template<typename T, class V = Vec4d>
+class ChorusEffect final : public Effect<T, V>
+{
+private:
+  static constexpr T AmpNorm = 1. / TABLITSA_CHORUS_VOICES;
+
+  struct ChorusVoice
+  {
+    T pitch_offset{ 0. };
+    T pan_l{ 1. };
+    T pan_r{ 1. };
+  };
+
+  void ResetVoices()
+  {
+    for (int i{ 0 }; i < TABLITSA_CHORUS_VOICES; ++i)
+    {
+      mVoices[i].pitch_offset = mDepth * ((i + 1) / TABLITSA_CHORUS_VOICES - 0.5);
+      T pan = mSpread * ((i + 1) / TABLITSA_CHORUS_VOICES - 0.5) + 0.5;
+      mVoices[i].pan_l = std::sqrt(pan);
+      mVoices[i].pan_r = std::sqrt(1 - pan);
+
+      mAllpassL[i].SetCutoffAndResonance(0.2 + 0.19 * (i / TABLITSA_CHORUS_VOICES) * mSpread, 0.5);
+      mAllpassR[i].SetCutoffAndResonance(0.2 + 0.19 * (i / TABLITSA_CHORUS_VOICES) * mSpread, 0.5);
+    }
+  }
+
+public:
+  ChorusEffect(T sampleRate, T rate = 0., T depth = 0., T spread = 0.) : Effect<T, V>(sampleRate), mRate(rate), mDepth(depth), mSpread(spread), mRateOsc(0.)
+  {
+    mRateOsc.SetFreqCPS(mRate);
+    ResetVoices();
+  }
+
+  void SetSampleRate(T sampleRate, int oversampling = 1) override
+  {
+    Effect<T, V>::SetSampleRate(sampleRate, oversampling);
+    mRateOsc.SetSampleRate(mSampleRate);
+    ResetVoices();
+  }
+
+  void SetParam1(T value) override
+  {
+    mRate = value;
+    mRateOsc.SetFreqCPS(mRate);
+  }
+  void SetParam2(T value) override
+  {
+    mDepth = value * 0.125;
+    ResetVoices();
+  }
+  void SetParam3(T value) override
+  {
+    mSpread = value;
+    ResetVoices();
+  }
+  void SetParam4(T value) override
+  {
+    mMix = value * AmpNorm;
+  }
+
+  void ProcessStereo(StereoSample<T>& s) override
+  {
+    StereoSample<T> s_in{ s };
+    T osc = mRateOsc.Process();
+
+    for (int i{ 0 }; i < TABLITSA_CHORUS_VOICES; ++i)
+    {
+      s.l += mAllpassL[i].ProcessAP(mDelayL.at(2000 * (1. + mVoices[i].pitch_offset * osc)) * mVoices[i].pan_l) * mMix;
+      s.r += mAllpassR[i].ProcessAP(mDelayR.at(2000 * (1. + mVoices[i].pitch_offset * osc)) * mVoices[i].pan_r) * mMix;
+    }
+
+    mDelayL.push(s_in.l);
+    mDelayR.push(s_in.r);
+
+    mRateOsc.SetFreqCPS(mRate * (1. + 0.01 * (std::rand() % 100)));
+  }
+
+protected:
+  T mRate;
+  T mDepth;
+  T mSpread;
+  T mMix{ 0. };
+
+  ChorusVoice mVoices[TABLITSA_CHORUS_VOICES];
+
+  DelayLine<4096> mDelayL;
+  DelayLine<4096> mDelayR;
+  TwoPoleTPTFilter mAllpassL[TABLITSA_CHORUS_VOICES];
+  TwoPoleTPTFilter mAllpassR[TABLITSA_CHORUS_VOICES];
+
+  FastSinOscillator<T> mRateOsc;
+};
 
 template<typename T, int MaxDelay=TABLITSA_MAX_DELAY_SAMP, class V = Vec4d>
 class DelayEffect final : public Effect<T, V>
@@ -350,6 +448,8 @@ enum EDistortion
   kNumDistortionModes
 };
 
+
+
 template<typename T, class V = Vec4d>
 class DistortionEffect final : public Effect<T, V>
 {
@@ -408,20 +508,15 @@ public:
   void SetContinuousParams(const T p1, const T p2, const T p3, const T p4, const T pitch) override
   {
     mGain = std::pow(10., p1 * 2.);
-    mFilterMod = p2 * mMaxFilterMod;
+    mNoise = p2;
     mColorFilter.SetCutoff(p3 * 0.1 * mOsFreqScalar);
     mMix = p4;
-    mFilterOsc.SetFreq(440. * std::pow(2., pitch * 0.1666666));
   }
 
   void SetSampleRate(T sampleRate, int oversampling=1) override
   {
     Effect<T, V>::SetSampleRate(sampleRate, oversampling); // Sets `mOversampling` and `mOsFreqScalar`
-    mNoiseFilter.SetSampleRate(sampleRate * oversampling);
     mColorFilter.SetSampleRate(sampleRate * oversampling);
-    mFilterOsc.SetSampleRate(sampleRate * oversampling);
-    mFilterModCenterFreqNorm = FilterModCenterFreqHz / (sampleRate * oversampling);
-    mMaxFilterMod = std::min(mFilterModCenterFreqNorm * 0.95, MaxFilterModHz / (sampleRate * oversampling));
   }
 
   inline T DoProcess(T s, const int type)
@@ -445,7 +540,6 @@ public:
 
   void ProcessBlock(T* inputs, T* outputs, const int nFrames) override
   {
-    mNoiseFilter.SetCutoff(mFilterModCenterFreqNorm + mFilterMod * mFilterOsc.x * ((T)(std::rand() / RAND_MAX) * 0.1 + 1.));
     for (int i{ 0 }; i < nFrames; ++i)
     {
 #ifdef DISTORTION_GAIN_NORM
@@ -456,7 +550,7 @@ public:
       mInHist.push(std::abs(inputs[i]));
 
       // Calculate output (and update average output volume)
-      const T out = FuzzDistortion(mNoiseFilter.ProcessAP(inputs[i] + ipt_filtered));
+      const T out = FuzzDistortion(inputs[i] + ipt_filtered);
       mAvgOut += BufferScale * (std::abs(out) - mOutHist.last());
       mOutHist.push(std::abs(out));
 
@@ -465,8 +559,7 @@ public:
 #else
       const T ipt_filtered = mColorFilter.ProcessBP(inputs[i]);
       // Calculate output
-      const T out = FuzzDistortion(mNoiseFilter.ProcessAP(inputs[i] + ipt_filtered));
-      mFilterOsc.Step();
+      const T out = FuzzDistortion(inputs[i] + ipt_filtered + mNoise * (std::rand() % 100) / 100);
       outputs[i] = inputs[i] + mMix * (out - inputs[i]);
 #endif
     }
@@ -476,20 +569,16 @@ private:
   T mGain;
   T mAvgIn{ 0.25 };
   T mAvgOut{ 1. };
+  T mNoise{ 0. };
   int mType{ EDistortion::kFuzz };
   DelayLine<BufferLength> mInHist;
   DelayLine<BufferLength> mOutHist;
 
-  TwoPoleTPTFilter mNoiseFilter{ DEFAULT_SAMPLE_RATE, 0.25, 0.5 };
   TwoPoleTPTFilter mColorFilter{ DEFAULT_SAMPLE_RATE, 0.25 };
 
   // Noise/fuzz filter controls
-  T mFilterMod{ 0. };
-  sine_osc_nd mFilterOsc{ 100., DEFAULT_SAMPLE_RATE };
-  T mFilterModCenterFreqNorm{ 600. / DEFAULT_SAMPLE_RATE };
-  T mMaxFilterMod{ std::min(mFilterModCenterFreqNorm * 0.9, MaxFilterModHz / DEFAULT_SAMPLE_RATE) };
+//  sine_osc_nd mFilterOsc{ 100., DEFAULT_SAMPLE_RATE };
 };
-
 
 /* 3-Band EQ */
 template<typename T, class V = Vec4d>

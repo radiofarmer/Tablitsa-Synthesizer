@@ -149,7 +149,7 @@ public:
     mWtReady = false;
     if (tab != nullptr) // TODO: Check for nan's in the wavetable. They appear to break everything (including after new tables are loaded)
       mWT = tab;
-    mCyclesPerLevelRecip = 1. / mWT->mCyclesPerLevel;
+    mCyclesPerLevelRecip = 1. / mWT->mCyclesPerLevel; // TODO: Try-catch block here in case wavetable cannot be found
     mPhaseIncrFactor = mCyclesPerLevelRecip / mProcessOS;
     mCycle = 0; // Must reset the cycle to avoid reading garbage memory when switching to wavetables with fewer cycles than the previous one
   }

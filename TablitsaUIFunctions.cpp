@@ -31,6 +31,51 @@ void SetAllEffectControlsDirty(IGraphics* pGraphics, int idx)
     ctrl->SetDirty(true);
 }
 
+/* CHORUS (MASTER) */
+
+void InitChorusUI(Plugin* pPlugin, IGraphics* pGraphics, std::vector<IControl*> controls, const std::vector<int>& params, const std::vector<char*>& paramNames, const bool reset)
+{
+  // Save current values
+  double paramVals[4]{};
+  if (!reset)
+  {
+    for (int i{ 0 }; i < 4; ++i)
+      paramVals[i] = pPlugin->GetParam(params[i])->Value();
+  }
+  pPlugin->GetParam(params[0])->InitDouble(paramNames[0], 1., 0.1, 10., 0.01, "Hz", 0, "Master Effects");
+  pPlugin->GetParam(params[1])->InitDouble(paramNames[1], 0.5, 0., 1., 0.01);
+  pPlugin->GetParam(params[2])->InitDouble(paramNames[2], 0.5, 0., 1., 0.01);
+  pPlugin->GetParam(params[3])->InitDouble(paramNames[3], 1., 0., 1., 0.01);
+  // Reload original values if not resetting
+  if (!reset)
+  {
+    for (int i{ 0 }; i < 4; ++i)
+      pPlugin->GetParam(params[i])->Set(paramVals[i]);
+  }
+
+  pPlugin->GetParam(params[1])->SetDisplayFunc(PercentDisplayFunc);
+  pPlugin->GetParam(params[2])->SetDisplayFunc(PercentDisplayFunc);
+
+  for (int i{ 0 }; i < TABLITSA_EFFECT_PARAMS; ++i)
+    controls[i]->SetValue(pPlugin->GetParam(params[i])->GetNormalized());
+
+  dynamic_cast<IVKnobControl*>(controls[0])->SetLabelStr("Rate");
+  dynamic_cast<IVKnobControl*>(controls[1])->SetLabelStr("Depth");
+  dynamic_cast<IVKnobControl*>(controls[2])->SetLabelStr("Spread");
+  dynamic_cast<IVKnobControl*>(controls[3])->SetLabelStr("Mix");
+
+  for (int i{ 0 }; i < 4; ++i)
+  {
+    controls[i]->Hide(false);
+    controls[i]->SetDisabled(false);
+  }
+  // Toggles
+  controls[4]->SetDisabled(true);
+  controls[5]->SetDisabled(true);
+  controls[4]->SetActionFunction(nullptr);
+  controls[5]->SetActionFunction(nullptr);
+}
+
 /* COEFICIENT MODULATOR (VOICE) */
 
 void InitCoefModUI(Plugin* pPlugin, IGraphics* pGraphics, std::vector<IControl*> controls, const std::vector<int>& params, const std::vector<char*>& paramNames, const bool reset)
@@ -46,7 +91,7 @@ void InitCoefModUI(Plugin* pPlugin, IGraphics* pGraphics, std::vector<IControl*>
   }
   pPlugin->GetParam(params[0])->InitDouble(paramNames[0], 0., 0., 1., 0.01);
   pPlugin->GetParam(params[1])->InitDouble(paramNames[1], 0., -2., 2., 0.01, "8va.");
-  pPlugin->GetParam(params[2])->InitDouble(paramNames[2], 0., 0., 1., 0.01, "Cycles");
+  pPlugin->GetParam(params[2])->InitDouble(paramNames[2], 0., 0., 1., 0.01);
   pPlugin->GetParam(params[3])->InitDouble(paramNames[3], 0., 0., 1., 0.01);
   // Reload original values if not resetting
   if (!reset)
@@ -57,7 +102,7 @@ void InitCoefModUI(Plugin* pPlugin, IGraphics* pGraphics, std::vector<IControl*>
 
   pPlugin->GetParam(params[0])->SetDisplayFunc(PercentDisplayFunc);
   pPlugin->GetParam(params[1])->SetDisplayFunc(nullptr);
-  pPlugin->GetParam(params[2])->SetDisplayFunc(nullptr);
+  pPlugin->GetParam(params[2])->SetDisplayFunc(PercentDisplayFunc);
   pPlugin->GetParam(params[3])->SetDisplayFunc(PercentDisplayFunc);
 
   // Reset param 1 display texts
@@ -75,7 +120,7 @@ void InitCoefModUI(Plugin* pPlugin, IGraphics* pGraphics, std::vector<IControl*>
   pGraphics->HideControl(params[5], true);
   dynamic_cast<IVKnobControl*>(controls[0])->SetLabelStr("Mod Depth");
   dynamic_cast<IVKnobControl*>(controls[1])->SetLabelStr("Pitch");
-  dynamic_cast<IVKnobControl*>(controls[2])->SetLabelStr("Phase");
+  dynamic_cast<IVKnobControl*>(controls[2])->SetLabelStr("Feedback");
   dynamic_cast<IVKnobControl*>(controls[3])->SetLabelStr("Mix");
   // Modulation ON for knob 1
   dynamic_cast<TablitsaIVModKnobControl*>(controls[0])->EnableModulation(true);
@@ -616,6 +661,12 @@ void SwapMasterEffectsUI(int effectSlot, IControl* pEffectsList, IGraphics* pGra
   int effectIdx = dynamic_cast<DropdownListControl*>(pEffectsList)->GetCurrentIndex(); // ID number of the effect
   switch (effectIdx)
   {
+  case kChorusEffect:
+  {
+    std::vector<char*> paramNames{ "Chorus Rate", "Chorus Depth" , "Chorus Spread", "Chorus Mix" };
+    InitChorusUI(pPlugin, pGraphics, controls, params, paramNames, reset);
+    break;
+  }
   case kDelayEffect:
   {
     std::vector<char*> paramNames{ "Delay L", "Delay R" , "Delay Feedback", "Delay Wet Mix" };
@@ -630,7 +681,7 @@ void SwapMasterEffectsUI(int effectSlot, IControl* pEffectsList, IGraphics* pGra
   }
   case kReverbEffect:
   {
-    std::vector<char*> paramNames{ "Reverb Size", "Reverb Gain" , "Master Effect Parameter 3", "Reverb Mix" };
+    std::vector<char*> paramNames{ "Reverb Size", "Reverb Gain" , "Reverb Damping", "Reverb Mix" };
     InitReverbUI(pPlugin, pGraphics, controls, params, paramNames, reset);
     break;
   }

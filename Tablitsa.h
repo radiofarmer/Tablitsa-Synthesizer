@@ -15,12 +15,37 @@
 #define TABLITSA_MAX_VOICE_EFFECTS 3
 #define TABLITSA_MAX_MASTER_EFFECTS 3
 #define TABLITSA_VOICE_EFFECTS_LIST {"None", "Sample & Hold", "Texturizer", "Distortion", "Super Ring", "WaveFolder"}
-#define TABLITSA_MASTER_EFFECTS_LIST {"None", "Delay", "EQ", "Reverb 1", "Reverb 2"}
+#define TABLITSA_MASTER_EFFECTS_LIST {"None", "Delay", "EQ", "Reverb 1", "Reverb 2", "Chorus"}
 
 const int kNumPresets = 1;
 constexpr int kNumVoices = 16;
 constexpr int kMaxUnisonVoices = 8;
 constexpr int kNumSeqSteps = 16;
+
+// This must be in the same order as the effect labels. (If you change the effect order, this is all you need to modify)
+// TODO: Put all effects in alphabetical order in the next versioin
+enum EVoiceEffectTypes
+{
+  kNoVoiceEffect = 0,
+  kSampleAndHoldEffect,
+  kTexturizerEffect,
+  kDistortionEffect,
+  kCMEffect,
+  kWaveFolderEffect,
+  kLimiterEffect,
+  kNumVoiceEffectTypes
+};
+
+enum EMasterEffectTypes
+{
+  kNoMasterEffect = 0,
+  kDelayEffect,
+  kEQEffect,
+  kReverbEffect,
+  kReverb2Effect,
+  kChorusEffect,
+  kNumMasterEffectTypes
+};
 
 enum EParams
 {
@@ -675,29 +700,6 @@ enum EModulators
   kKeytrack,
   kTriggerRandom,
   kNumMods
-};
-
-// This must be in the same order as the effect labels. (If you change the effect order, this is all you need to modify)
-enum EVoiceEffectTypes
-{
-  kNoVoiceEffect=0,
-  kSampleAndHoldEffect,
-  kTexturizerEffect,
-  kDistortionEffect,
-  kCMEffect,
-  kWaveFolderEffect,
-  kLimiterEffect,
-  kNumVoiceEffectTypes
-};
-
-enum EMasterEffectTypes
-{
-  kNoMasterEffect = 0,
-  kDelayEffect,
-  kEQEffect,
-  kReverbEffect,
-  kReverb2Effect,
-  kNumMasterEffectTypes
 };
 
 constexpr EControlTags kStartupTriggerControls[]{
