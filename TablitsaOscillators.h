@@ -171,6 +171,8 @@ public:
     std::unique_lock<std::mutex> lock(mWtMutex);
     mCV.wait(lock, [this] { return mWtReady; });
 
+    int prevTableSize{ mTableSize };
+
     mWtPositionNorm = 1 - std::modf((1. - mWtPositionAbs) * (mWT->mNumTables - 1), &mWtOffset);
     int tableOffset = std::min(static_cast<int>(mWtOffset), mWT->mNumTables - 2);
     mLUTLo[0] = mWT->GetMipmapLevel_ByIndex(tableOffset, idx, mTableSize);
@@ -181,6 +183,11 @@ public:
     mNextTableSize /= mWT->mCyclesPerLevel;
     mTableSizeM1 = mTableSize - 1;
     mNextTableSizeM1 = mNextTableSize - 1;
+
+    // Bring adjust phase to new range
+    double phaseAdj{ static_cast<double>(mTableSize / prevTableSize) };
+    mPhase *= phaseAdj;
+    mPrevPhase *= phaseAdj;
   }
 
   // Chooses the proper mipmap for a particular frequency (Hz)
