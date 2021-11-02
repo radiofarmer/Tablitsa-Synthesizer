@@ -179,8 +179,8 @@ public:
     mLUTLo[1] = mWT->GetMipmapLevel_ByIndex(static_cast<size_t>(tableOffset) + 1, idx, mTableSize);
     mLUTHi[0] = mWT->GetMipmapLevel_ByIndex(tableOffset, idx + 1, mNextTableSize);
     mLUTHi[1] = mWT->GetMipmapLevel_ByIndex(static_cast<size_t>(tableOffset) + 1, idx + 1, mNextTableSize);
-    mTableSize /= mWT->mCyclesPerLevel;
-    mNextTableSize /= mWT->mCyclesPerLevel;
+    mTableSize *= mCyclesPerLevelRecip;
+    mNextTableSize *= mCyclesPerLevelRecip;
     mTableSizeM1 = mTableSize - 1;
     mNextTableSizeM1 = mNextTableSize - 1;
 
