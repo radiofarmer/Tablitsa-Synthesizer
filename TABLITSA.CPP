@@ -1806,6 +1806,9 @@ bool Tablitsa::OnMessage(int msgTag, int ctrlTag, int dataSize, const void* pDat
       delete mDSP.mEffects[msgTag - kMsgMasterEffect1Changed];
       switch (effectIdx)
       {
+      case kChorusEffect:
+        mDSP.mEffects[msgTag - kMsgMasterEffect1Changed] = new ChorusEffect<iplug::sample>(GetSampleRate());
+        break;
       case kDelayEffect:
         mDSP.mEffects[msgTag - kMsgMasterEffect1Changed] = new DelayEffect<iplug::sample>(GetSampleRate(), &mDSP.mGlobalMetronome);
         break;
