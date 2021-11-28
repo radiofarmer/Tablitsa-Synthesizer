@@ -28,7 +28,7 @@ public:
 
   virtual void SetSampleRate(T sampleRate, int oversampling=1)
   {
-    mSampleRate = sampleRate;
+    mSampleRate = sampleRate * oversampling;
     mOversampling = oversampling;
     mOsFreqScalar = 1. / static_cast<T>(oversampling);
   }

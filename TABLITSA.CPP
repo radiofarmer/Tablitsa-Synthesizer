@@ -918,7 +918,7 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
         int filterModeParam{ kParamFilter1ModeVSF + std::max(static_cast<int>(pControl->GetValue() * (kNumFilters - 1.) - 1), 0) };
         // Get range of possible modes
         filterModeControl->SetParamIdx(filterModeParam);
-        filterModeControl->SetValue(GetParam(filterModeParam)->GetNormalized()); // NB this is different in the other filter mode selector's ActionFunction. Maybe fix this?
+        filterModeControl->SetValue(GetParam(filterModeParam)->GetNormalized());
         // Update Controls
         if (pControl->GetValue() == kNoFilter)
           ResetFilterControls(pGraphics, 1);
@@ -975,7 +975,7 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
         IControl* filterModeControl{ pGraphics->GetControlWithTag(kCtrlTagFilter2Mode) };
         int filterModeParam{ kParamFilter2ModeVSF + std::max(static_cast<int>(pControl->GetValue() * (kNumFilters - 1.) - 1), 0) };
         filterModeControl->SetParamIdx(filterModeParam);
-        filterModeControl->SetValue(std::min(filterModeControl->GetValue(), GetParam(filterModeParam)->GetMax()));
+        filterModeControl->SetValue(GetParam(filterModeParam)->GetNormalized());
         if (pControl->GetValue() == kNoFilter)
           ResetFilterControls(pGraphics, 2);
         else if (pControl->GetValue() * ((int)kNumFilters - 1) == kComb)

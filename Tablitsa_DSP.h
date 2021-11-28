@@ -616,7 +616,7 @@ public:
       }
 #endif
 
-      // Process Effects
+      // Process Effects at 4x oversampling
       UpsampleBlock<EFFECT_OS_FACTOR>(mOversampler, mEffectInputs.Get(), nFrames);
       constexpr int nEffectParams = kVEffect2Param1 - kVEffect1Param1;
 #pragma clang loop unroll(full)
