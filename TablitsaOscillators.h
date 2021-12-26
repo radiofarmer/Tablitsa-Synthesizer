@@ -162,7 +162,7 @@ public:
     // Select by Index
     const double tableFact{ std::log2(mWT->GetMaxSize() / (samplesPerCycle * mTableOS)) }; // Factors of two by which the largest mipmap (at index 0) is larger than the required mipmap
     mTableInterp = tableFact - std::floor(tableFact);
-    mMipmapIdx = std::max(static_cast<int>(std::floor(tableFact * mFormant)), 0); // Nearest integer lower than the value calculated above
+    mMipmapIdx = std::max(static_cast<int>(std::floor(tableFact)), 0); // Nearest integer lower than the value calculated above
     SetMipmapLevel_ByIndex(mMipmapIdx);
   }
 
@@ -201,10 +201,13 @@ public:
 
   inline void AdjustWavetable(double freqCPS, bool reset=true)
   {
-    IOscillator<T>::SetFreqCPS(freqCPS);
-    mMaxFormant = 0.5 * MaxNote / freqCPS;
+    mMaxFormant = 0.25 * (MaxNote / freqCPS);
 
+    // Set Formant
     const double freq_adj{ freqCPS * mFormant };
+    mFormantModulator.SetFreqCPS(freqCPS);
+    IOscillator<T>::SetFreqCPS(freq_adj);
+
     if (std::abs(mPrevFreq - freq_adj) > 0.1)
     {
       SetMipmapLevel();
@@ -410,10 +413,11 @@ public:
     IOscillator<T>::mPhase = tf.d - UNITBIT32 * mTableSize;
     mCycle = (mCycle + (mPhase < mPrevPhase)) % mWT->mCyclesPerLevel;
 
-    // Mix wavtables
+    // Mix wavtables and add ring and formant modulation
     Vec4d mixed = mul_add(tb1 - tb0, 1 - tableOffset, tb0);
-    Vec4d ringMod = RingMod();
-    mixed = mul_add(ringMod - 1., mRM * mRingModAmt * mixed, mixed);
+    Vec4d formantMod = mFormantModulator.Process_Vector();
+    mixed = mul_add(mixed * (formantMod - 1.), mFormantAmt, mixed);;
+    mixed = mul_add(mixed * (RingMod() - 1.), mRM * mRingModAmt, mixed);
 
     return mixed;
   }
@@ -422,8 +426,7 @@ public:
   regardless of the number of fundamental cycles in the table). */
   inline double SamplePhaseShift(double phase)
   {
-    const double formantPhase = mFormant * phase * static_cast<double>(phase <= mFormantRecip); // TODO: check this - inharmonic frequencies may cause adverse effects here
-    return std::pow(formantPhase, 1. + (mWtBend >= 0. ? mWtBend : mWtBend * 0.5));
+    return std::pow(phase, 1. + (mWtBend >= 0. ? mWtBend : mWtBend * 0.5));
   }
 
   inline double WrapPhase(double phase)
@@ -482,6 +485,7 @@ public:
   // Formant: Accepts a value between zero and one
   inline void SetFormant(double fmtNorm)
   {
+    mFormantAmt = fmtNorm;
     mFormant = std::min(1. / (1. - fmtNorm), mMaxFormant);
     mFormantRecip = 1. / mFormant;
   }
@@ -537,7 +541,8 @@ public:
   {
     IOscillator<T>::Reset();
     mPhaseModulator.SetPhase(0.);
-    mRingModulator.SetPhase(0.5);
+    mRingModulator.SetPhase(0.);
+    mFormantModulator.SetPhase(0.);
     mCycle = 0;
   }
 
@@ -583,7 +588,7 @@ private:
   double mWtBend{ 0 };
   double mFormant{ 1. };
   double mFormantRecip{ 1. };
-  double mMaxFormant{ 10. }; // Set according to current pitch
+  double mMaxFormant{ 1. }; // Set according to current pitch
   double mPrevFreq;
 
   // Thread-related members for wavetable updates
@@ -606,6 +611,7 @@ private:
   double mRM{ 0. };
   double mRingModAmt{ 0. };
   double mRingModFreq;
+  double mFormantAmt{ 0. };
 
   static inline constexpr double twoPi{ 6.28318530718 };
 
@@ -616,7 +622,8 @@ public:
   iplug::FastSinOscillator<T> mRingModulator{ 0.5 }; // Offset start phase by half a cycle
 #else
   iplug::VectorOscillator<T> mPhaseModulator;
-  iplug::VectorOscillator<T> mRingModulator{ 0.5 }; // Offset start phase by half a cycle
+  iplug::VectorOscillator<T> mRingModulator;
+  iplug::VectorOscillator<T> mFormantModulator;
 #endif
 
 #ifdef POLYPHASE_FILTER
