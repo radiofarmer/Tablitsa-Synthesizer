@@ -145,7 +145,7 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Tracer|x64'">
     <IntDir>$(SolutionDir)build-win\app\$(Platform)\$(Configuration)\int\</IntDir>
-    <IncludePath>$(ProjectDir)..\dependencies\vectorclass;$(WDL_PATH);C:\Users\bramc\VST-Development\iPlug2\WDL;C:\Users\bramc\VST-Development\vectorclass\vector3d;$(VC_IncludePath);$(WindowsSDK_IncludePath);</IncludePath>
+    <IncludePath>$(ProjectDir)..\dependencies\vectorclass;$(WDL_PATH);C:\Users\bramc\VST-Development\iPlug2\WDL;$(ProjectDir)..\dependencies\radiofarmer;C:\Users\bramc\VST-Development\vectorclass\vector3d;$(VC_IncludePath);$(WindowsSDK_IncludePath)</IncludePath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>

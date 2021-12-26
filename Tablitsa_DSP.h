@@ -572,7 +572,7 @@ public:
 #ifdef VECTOR
         // Oscillators
         Vec4d osc1_v = mOsc1.ProcessMultiple(osc1Freq) * osc1Amp;// * ampEnvVal;
-        Vec4d osc2_v = mOsc2.ProcessMultiple(osc2Freq) * osc2Amp;// * ampEnvVal;
+        Vec4d osc2_v = mOsc2.ProcessMultiple(osc2Freq, bufferIdx == 0) * osc2Amp;// * ampEnvVal;
         osc1_v.store(mOscOutputs.GetList()[0] + bufferIdx);
         osc2_v.store(mOscOutputs.GetList()[1] + bufferIdx);
 

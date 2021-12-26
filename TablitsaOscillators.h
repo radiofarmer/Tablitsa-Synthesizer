@@ -161,9 +161,9 @@ public:
 
     // Select by Index
     const double tableFact{ std::log2(mWT->GetMaxSize() / (samplesPerCycle * mTableOS)) }; // Factors of two by which the largest mipmap (at index 0) is larger than the required mipmap
-    mTableInterp = tableFact - std::floor(tableFact); // Nearest integer lower than the value calculated above
-    mWtIdx = std::max(static_cast<int>(std::floor(tableFact * mFormant)), 0);
-    SetMipmapLevel_ByIndex(mWtIdx);
+    mTableInterp = tableFact - std::floor(tableFact);
+    mMipmapIdx = std::max(static_cast<int>(std::floor(tableFact * mFormant)), 0); // Nearest integer lower than the value calculated above
+    SetMipmapLevel_ByIndex(mMipmapIdx);
   }
 
   inline void SetMipmapLevel_ByIndex(const int idx)
@@ -171,7 +171,7 @@ public:
     std::unique_lock<std::mutex> lock(mWtMutex);
     mCV.wait(lock, [this] { return mWtReady; });
 
-    int prevTableSize{ mTableSize };
+    const int prevTableSize{ mTableSize };
 
     mWtPositionNorm = 1 - std::modf((1. - mWtPositionAbs) * (mWT->mNumTables - 1), &mWtOffset);
     int tableOffset = std::min(static_cast<int>(mWtOffset), mWT->mNumTables - 2);
@@ -179,35 +179,15 @@ public:
     mLUTLo[1] = mWT->GetMipmapLevel_ByIndex(static_cast<size_t>(tableOffset) + 1, idx, mTableSize);
     mLUTHi[0] = mWT->GetMipmapLevel_ByIndex(tableOffset, idx + 1, mNextTableSize);
     mLUTHi[1] = mWT->GetMipmapLevel_ByIndex(static_cast<size_t>(tableOffset) + 1, idx + 1, mNextTableSize);
-    mTableSize *= mCyclesPerLevelRecip;
-    mNextTableSize *= mCyclesPerLevelRecip;
+    mTableSize /= mWT->mCyclesPerLevel;
     mTableSizeM1 = mTableSize - 1;
+    mNextTableSize /= mWT->mCyclesPerLevel;
     mNextTableSizeM1 = mNextTableSize - 1;
 
-    // Bring adjust phase to new range
-    double phaseAdj{ static_cast<double>(mTableSize / prevTableSize) };
-    mPhase *= phaseAdj;
-    mPrevPhase *= phaseAdj;
-  }
-
-  // Chooses the proper mipmap for a particular frequency (Hz)
-  inline void SetMipmapLevel(int size)
-  {
-    std::unique_lock<std::mutex> lock(mWtMutex);
-    mCV.wait(lock, [this] { return TableLoaded; });
-
-    assert(mWT != nullptr);
-    size = std::min(size, mWT->GetMaxSize());
-
-    mWtPositionNorm = 1. - std::modf((1. - mWtPositionAbs) * (mWT->mNumTables - 1), &mWtOffset);
-    int tableOffset = static_cast<int>(mWtOffset);
-    mLUTLo[0] = mWT->GetMipmapLevel_BySize(tableOffset, size, mTableSize);
-    mLUTLo[1] = mWT->GetMipmapLevel_BySize(tableOffset + 1, size, mNextTableSize);
-    mTableSizeM1 = mTableSize - 1;
-    mNextTableSizeM1 = mNextTableSize - 1;
-    // Higher-level (smaller) mipmap locations
-    mLUTHi[0] = mLUTLo[0] + mTableSize;
-    mLUTHi[1] = mLUTLo[1] + mTableSize;
+    // Adjust phase to new range
+    double phaseAdj{ static_cast<double>(mTableSize) / prevTableSize };
+    mPhase = mPhase * phaseAdj;
+    mPrevPhase = mPrevPhase * phaseAdj;
   }
 
   //todo rewrite this
@@ -219,26 +199,26 @@ public:
     return output;
   }
 
-  inline void AdjustWavetable(double freqCPS)
+  inline void AdjustWavetable(double freqCPS, bool reset=true)
   {
     IOscillator<T>::SetFreqCPS(freqCPS);
     mMaxFormant = 0.5 * MaxNote / freqCPS;
 
-    const int freq_adj{ static_cast<int>(freqCPS * mFormant) };
-    if (mPrevFreq != freq_adj)
+    const double freq_adj{ freqCPS * mFormant };
+    if (std::abs(mPrevFreq - freq_adj) > 0.1)
     {
       SetMipmapLevel();
-      mPrevFreq = freq_adj;
     }
     else
     {
-      SetMipmapLevel_ByIndex(mWtIdx);
+      SetMipmapLevel_ByIndex(mMipmapIdx);
     }
+    mPrevFreq = freq_adj;
   }
 #ifdef VECTOR
-  inline Vec4d __vectorcall ProcessMultiple(double freqCPS)
+  inline Vec4d __vectorcall ProcessMultiple(double freqCPS, bool reset=true)
   {
-    AdjustWavetable(freqCPS);
+    AdjustWavetable(freqCPS, reset);
 #ifdef POLYPHASE_FILTER
 #if OVERSAMPLING == 4
     T temp_in[16];
@@ -249,14 +229,16 @@ public:
     const Vec4d output4 = ProcessOversamplingVec4();
     output1.store(temp_in); output2.store(temp_in + 4);
     output3.store(temp_in + 8); output4.store(temp_in + 12);
-    mAAFilter.mDownsampler4x.process_block(temp2, temp2, 8);
-    mAAFilter.mDownsampler2x.process_block(temp, temp2, 4);
+    mAAFilter.mDownsampler4x.process_block(temp_out, temp_in, 8);
+    mAAFilter.mDownsampler2x.process_block(temp_out, temp_in, 4);
 #elif OVERSAMPLING == 2
+    // Generate 8 samples, then resample 4
     T temp_in[8];
     T temp_out[4];
     const Vec4d output1 = ProcessOversamplingVec4();
     const Vec4d output2 = ProcessOversamplingVec4();
-    output1.store(temp_in); output2.store(temp_in + 4);
+    output1.store(temp_in);
+    output2.store(temp_in + 4);
     mAAFilter.mDownsampler2x.process_block(temp_out, temp_in, 4);
 #endif
     Vec4d output{ Vec4d().load(temp_out) };
@@ -347,15 +329,16 @@ public:
     double tableOffset{ mWtPositionAbs * (mWT->mNumTables - 1) };
     tableOffset -= std::max(floor(tableOffset - 0.0001), 0.);
 
-    double phaseNorm = SamplePhaseShift(mPhase / mTableSize); // for phase shift
+    double phaseNormShifted = SamplePhaseShift(mPhase / mTableSize); // for phase shift
     double phaseUnshifted = mPhase + (double)UNITBIT32;
-    double phase = phaseNorm * mTableSize + (double)UNITBIT32;
+    double phase = phaseNormShifted * mTableSize + (double)UNITBIT32;
     const double phaseIncr = mPhaseIncr * mTableSize;
     const double phaseIncr2 = mPhaseIncr * mNextTableSize;
     Vec4d vPhase = phase + phaseIncr * mIncrVec;
 
     // Read 4 doubles as 8 integers (signed ints are used, but the AND operations later make this irrelevant)
     Vec8i viPhase = reinterpret_i(vPhase);
+    // Get an int64 vector of 0's and 1's representing whether any phase values belong to the next cycle.
 #if INSTRSET < 8
     Vec4q cycleIncr = select(reinterpret_i(permute8<HIOFFSET_V, -1, HIOFFSET_V + 2, -1, HIOFFSET_V + 4, -1, HIOFFSET_V + 6, -1>(viPhase & (mTableSize * 2 - 1))) > Vec4q(mTableSize), Vec4q(1), Vec4q(0));
 #else
@@ -363,7 +346,8 @@ public:
 #endif
     // Upper 32 bits of 3*2^19 in upper indices, 0xFFFF (32 bits of ones) in lower: i.e. 0xFFFF, 0x18, 0xFFFF, ...
     Vec8i normhipart = blend8<8, HIOFFSET_V, 8, HIOFFSET_V, 8, HIOFFSET_V, 8, HIOFFSET_V>(reinterpret_i(Vec4d((double)UNITBIT32)), Vec8i(0xFFFF));
-    // Mask the 8-item vector of 32-bit ints with one less than the table size, pad the upper bits (lower indices) with zeros, and reinterpret as a 4-item vector of 64-bit ints
+    // Mask the 8-item vector of 32-bit ints with one less than the table size, pad the upper bits (lower indices) with zeros,
+    // and reinterpret as a 4-item vector of 64-bit ints
     Vec8i offsets32 = viPhase & mTableSizeM1;
     Vec4q offsets = reinterpret_i(permute8<HIOFFSET_V, -1, HIOFFSET_V + 2, -1, HIOFFSET_V + 4, -1, HIOFFSET_V + 6, -1>(offsets32));
     Vec4q phaseMod = to_int64_in_range(PhaseMod(), mTableSize);
@@ -375,7 +359,8 @@ public:
 
     // Larger/lower table
     constexpr int maxTableSize = 16384 * 12;
-    const Vec4q cyclePart = (mCycle + cycleIncr) * mTableSize;
+    Vec4q cyclePart = (mCycle + cycleIncr) * mTableSize;
+    cyclePart -= select(cyclePart >= mWT->mCyclesPerLevel, Vec4q(mWT->mCyclesPerLevel), Vec4q(0)); // if mCycle is at a maximum and cycleIncr has nonzero components
     const Vec4d tb0s0lo = lookup<maxTableSize>(offsets + cyclePart, mLUTLo[0]);
     const Vec4d tb0s1lo = lookup<maxTableSize>(offsets1 + cyclePart, mLUTLo[0]);
     const Vec4d tb1s1lo = lookup<maxTableSize>(offsets1 + cyclePart, mLUTLo[1]);
@@ -384,7 +369,7 @@ public:
     const Vec4d tb1lo = mul_add((tb1s1lo - tb1s0lo), phaseFrac, tb1s0lo);
 
     // Recalculate offsets for the smaller table
-    vPhase = phaseNorm * mNextTableSize + (double)UNITBIT32 + phaseIncr2 * mIncrVec;
+    vPhase = phaseNormShifted * mNextTableSize + (double)UNITBIT32 + phaseIncr2 * mIncrVec;
 
     // Read 4 doubles as 8 integers (signed ints are used, but the AND operations later make this irrelevant)
     viPhase = reinterpret_i(vPhase);
@@ -399,7 +384,8 @@ public:
     phaseFrac = reinterpret_d(viPhase) - (double)UNITBIT32; // get the fractional part
     
     // Smaller/higher table
-    const Vec4q cyclePartHi = (mCycle + cycleIncr) * mNextTableSize;
+    Vec4q cyclePartHi = (mCycle + cycleIncr) * mNextTableSize;
+    cyclePartHi -= select(cyclePartHi >= mWT->mCyclesPerLevel, Vec4q(mWT->mCyclesPerLevel), Vec4q(0)); // if mCycle is at a maximum and cycleIncr has nonzero components
     const Vec4d tb0s0hi = lookup<maxTableSize>(offsets + cyclePartHi, mLUTHi[0]);
     const Vec4d tb0s1hi = lookup<maxTableSize>(offsets1 + cyclePartHi, mLUTHi[0]);
     const Vec4d tb1s1hi = lookup<maxTableSize>(offsets1 + cyclePartHi, mLUTHi[1]);
@@ -414,6 +400,7 @@ public:
     
     // Restore mPhase
     tabfudge tf;
+    mPrevPhase = mPhase;
     phase = phaseUnshifted;
     phase += phaseIncr * (double)VECTOR_SIZE;
     tf.d = UNITBIT32 * mTableSize;
@@ -422,7 +409,6 @@ public:
     tf.i[HIOFFSET] = normhipart2; // Reset the upper 32 bits
     IOscillator<T>::mPhase = tf.d - UNITBIT32 * mTableSize;
     mCycle = (mCycle + (mPhase < mPrevPhase)) % mWT->mCyclesPerLevel;
-    mPrevPhase = mPhase;
 
     // Mix wavtables
     Vec4d mixed = mul_add(tb1 - tb0, 1 - tableOffset, tb0);
@@ -432,7 +418,8 @@ public:
     return mixed;
   }
 
-  /* Returns a new phase as a power function of the current phase in the wavetable (i.e. always between 0. and 1., regardless of the number of cycles in the table). */
+  /* Returns a new phase as a power function of the current phase in the wavetable (i.e. always between 0. and 1.,
+  regardless of the number of fundamental cycles in the table). */
   inline double SamplePhaseShift(double phase)
   {
     const double formantPhase = mFormant * phase * static_cast<double>(phase <= mFormantRecip); // TODO: check this - inharmonic frequencies may cause adverse effects here
@@ -576,7 +563,7 @@ private:
   int mNextTableSizeM1 = WT_SIZE / 2 - 1;
   int mCycle{ 0 };
   int mTableOS{ 8 }; // Wavetable oversampling level (ratio of table size to maximum samples per cycle read from the table)
-  unsigned int mWtIdx{ 0 }; // Mipmap level
+  unsigned int mMipmapIdx{ 0 }; // Mipmap level
   double mPrevPhase{ 0. };
   double mTableInterp{ 1 };
   double mPhaseIncrFactor{ 1. }; // Reciprocal of the product of the number of cycles per wavetable level and the processing oversampling level
