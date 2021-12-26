@@ -14,7 +14,7 @@
 #define PRESET_NAME_CHAR_LENGTH 32
 #define TABLITSA_MAX_VOICE_EFFECTS 3
 #define TABLITSA_MAX_MASTER_EFFECTS 3
-#define TABLITSA_VOICE_EFFECTS_LIST {"None", "Sample & Hold", "Texturizer", "Distortion", "Super Ring", "WaveFolder"}
+#define TABLITSA_VOICE_EFFECTS_LIST {"None", "Sample & Hold", "Texturizer", "Distortion", "Super Ring"}
 #define TABLITSA_MASTER_EFFECTS_LIST {"None", "Delay", "EQ", "Reverb 1", "Reverb 2", "Chorus"}
 
 const int kNumPresets = 1;
@@ -31,7 +31,6 @@ enum EVoiceEffectTypes
   kTexturizerEffect,
   kDistortionEffect,
   kCMEffect,
-  kWaveFolderEffect,
   kLimiterEffect,
   kNumVoiceEffectTypes
 };

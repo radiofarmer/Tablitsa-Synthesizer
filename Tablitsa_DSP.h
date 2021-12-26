@@ -783,15 +783,6 @@ public:
         mEffects[effectSlot] = new CMEffect<T>(mMaster->mSampleRate);
         break;
       }
-      case kWaveFolderEffect:
-      {
-        mVoiceModParams[kVEffect1Param1 + effectSlot * numEffectModParams].SetMinMax(0., 1.);
-        mVoiceModParams[kVEffect1Param2 + effectSlot * numEffectModParams].SetMinMax(0., 1.);
-        mVoiceModParams[kVEffect1Param3 + effectSlot * numEffectModParams].SetMinMax(0., 1.);
-        mVoiceModParams[kVEffect1Param4 + effectSlot * numEffectModParams].SetMinMax(0., 1.);
-        mEffects[effectSlot] = new WaveFolder<T>(mMaster->mSampleRate);
-        break;
-      }
       default:
         mEffects[effectSlot] = new Effect<T>(mMaster->mSampleRate);
         break;

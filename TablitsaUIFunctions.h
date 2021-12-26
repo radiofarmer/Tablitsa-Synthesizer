@@ -49,10 +49,6 @@ void InitSampleAndHoldUI(Plugin* pPlugin, IGraphics* pGraphics, std::vector<ICon
 
 void InitTexturizerUI(Plugin* pPlugin, IGraphics* pGraphics, std::vector<IControl*> controls, const std::vector<int>& params, const std::vector<char*>& paramNames, const bool reset = true);
 
-/* WAVESHAPER (Voice) */
-
-void InitWaveshaperUI(Plugin* pPlugin, IGraphics* pGraphics, std::vector<IControl*> controls, const std::vector<int>& params, const std::vector<char*>& paramNames, const bool reset = true);
-
 /* DEFAULT (BOTH) */
 
 void InitDefaultUI(Plugin* pPlugin, IGraphics* pGraphics, std::vector<IControl*> controls, const std::vector<int>& params, const std::vector<char*>& paramNames);

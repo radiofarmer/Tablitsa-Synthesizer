@@ -982,60 +982,6 @@ private:
   TwoPoleTPTFilter mBp;
 };
 
-template<typename T, class V = Vec4d>
-class WaveFolder final : public Effect<T, V>
-{
-public:
-  WaveFolder(T sampleRate) : Effect<T, V>(sampleRate)
-  {
-  }
-
-  void SetContinuousParams(const T p1, const T p2, const T p3, const T p4, const T pitch) override
-  {
-    mThreshold = p1;
-    mFold = p2;
-    mMix = p4;
-    mBufferLength = mSampleRate * p3;
-  }
-
-  void SetParam5(const T value)
-  {
-    mTrackPeak = value > 0.5;
-  }
-
-  void SetSampleRate(T sampleRate, int oversampling = 1)
-  {
-    Effect<T, V>::SetSampleRate(sampleRate, oversampling);
-    mMaxBufferLength = mSampleRate / 4;
-  }
-
-  void ProcessBlock(T* inputs, T* outputs, const int nFrames) override
-  {
-    T thresh = mTrackPeak ? mThreshold * mPeak : mThreshold;
-    for (int i{ 0 }; i < nFrames; ++i)
-    {
-      outputs[i] = inputs[i] + mMix * ((std::abs(inputs[i]) > thresh ? std::copysign(thresh, inputs[i]) - inputs[i] * mFold : inputs[i]) - inputs[i]);
-      mPeak = std::max(mPeak, std::abs(inputs[i]));
-    }
-    mBufferPos += nFrames;
-    if (mBufferPos > mBufferLength)
-    {
-      mBufferPos = 0;
-      mPeak = 0.;
-    }
-  }
-
-private:
-  T mThreshold{ 1. };
-  T mFold{ 0.5 };
-  T mMix{ 0. };
-  T mPeak;
-  int mBufferLength{ 0 };
-  int mBufferPos{ 0 };
-  int mMaxBufferLength{ 0 };
-  bool mTrackPeak{ false };
-};
-
 #define WAVESHAPE_TYPES "Sine", "Parabolic", "Hyp. Tan.", "Soft Clip"
 
 enum EWaveshaperMode

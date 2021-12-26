@@ -771,12 +771,6 @@ void SwapVoiceEffectsUI(int effectSlot, IControl* pEffectsList, IGraphics* pGrap
     InitCoefModUI(pPlugin, pGraphics, controls, params, paramNames, reset);
     break;
   }
-  case kWaveFolderEffect:
-  {
-    std::vector<char*> paramNames{ "WaveFolder Threshold", "WaveFolder Amount" , "Voice Effect Param 3", "WaveFolder Mix" };
-    InitWaveFolderUI(pPlugin, pGraphics, controls, params, paramNames, reset);
-    break;
-  }
   default:
   {
     std::vector<char*> paramNames{ "Voice Effect 1 Parameter 1", "Voice Effect 1 Parameter 2" , "Voice Effect 1 Parameter 3", "Voice Effect 1 Parameter 4" };
