@@ -227,6 +227,7 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
   GetParam(kParamWavetable1BendKTk)->InitDouble("WT1 Bend KTk Mod", 0., -1., 1., 0.01);
   GetParam(kParamWavetable1BendRnd)->InitDouble("WT1 Bend Rnd Mod", 0., -1., 1., 0.01);
   // Wavetable 1 Formant
+  GetParam(kParamOsc1FormantOn)->InitBool("WT1 Formant On", false);
   GetParam(kParamWavetable1Formant)->InitPercentage("WT1 Formant", 0.);
   GetParam(kParamWavetable1FormantEnv1)->InitDouble("WT1 Formant Env1 Mod", 0., -1., 1., 0.01);
   GetParam(kParamWavetable1FormantEnv2)->InitDouble("WT1 Formant Env2 Mod", 0., -1., 1., 0.01);
@@ -283,6 +284,7 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
   GetParam(kParamWavetable2BendKTk)->InitDouble("WT2 Bend KTk Mod", 0., -1., 1., 0.01);
   GetParam(kParamWavetable2BendRnd)->InitDouble("WT2 Bend Rnd Mod", 0., -1., 1., 0.01);
   // Wavetable 2 Formant
+  GetParam(kParamOsc2FormantOn)->InitBool("WT2 Formant On", false);
   GetParam(kParamWavetable2Formant)->InitPercentage("WT2 Formant", 0.);
   GetParam(kParamWavetable2FormantEnv1)->InitDouble("WT2 Formant Env1 Mod", 0., -1., 1., 0.01);
   GetParam(kParamWavetable2FormantEnv2)->InitDouble("WT2 Formant Env2 Mod", 0., -1., 1., 0.01);
@@ -732,16 +734,30 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
 #endif
     // Wavetable controls
     const IRECT osc1Panel = globalControls.GetReducedFromLeft(720.f).GetReducedFromBottom(globalControls.H() / 2.f).GetGridCell(0, 0, 2, 3).GetPadded(-10.f).GetHPadded(-12.f);
-    pGraphics->AttachControl(new TablitsaIVModKnobControl(osc1Panel.GetGridCell(0, 0, 2, 2).GetCentredInside(dialSize), kParamWavetable1Pitch, "Pitch", modKnobStyle, true), kNoTag, "Osc1");
-    pGraphics->AttachControl(new TablitsaIVModKnobControl(osc1Panel.GetGridCell(0, 1, 2, 2).GetCentredInside(dialSize), kParamWavetable1Amp, "Amp"), kNoTag, "Osc1");
+    pGraphics->AttachControl(new TablitsaIVModKnobControl(osc1Panel.GetGridCell(0, 0, 2, 3).GetCentredInside(dialSize), kParamWavetable1Pitch, "Pitch", modKnobStyle, true), kNoTag, "Osc1");
+    pGraphics->AttachControl(new TablitsaIVModKnobControl(osc1Panel.GetGridCell(0, 1, 2, 3).GetCentredInside(dialSize), kParamWavetable1Amp, "Amp"), kNoTag, "Osc1");
+    pGraphics->AttachControl(new TablitsaVToggleButton(osc1Panel.GetGridCell(0, 2, 2, 3).GetVPadded(-25.f), kParamOsc1FormantOn, "Fmnt. On", modKnobStyle), kNoTag, "Osc1")->SetActionFunction(
+      [pGraphics](IControl* pControl) {
+        IControl* fmntKnob{ pGraphics->GetControlWithTag(kCtrlTagOsc1Formant) };
+        if (fmntKnob)
+          fmntKnob->SetDisabled(pControl->GetValue() < 0.5);
+      }
+    );
     pGraphics->AttachControl(new TablitsaIVModKnobControl(osc1Panel.GetGridCell(1, 0, 2, 3).GetCentredInside(dialSize), kParamWavetable1Pos, "Valency"), kNoTag, "Osc1");
     pGraphics->AttachControl(new TablitsaIVModKnobControl(osc1Panel.GetGridCell(1, 1, 2, 3).GetCentredInside(dialSize), kParamWavetable1Bend, "Isotope"), kNoTag, "Osc1");
     pGraphics->AttachControl(new TablitsaIVModKnobControl(osc1Panel.GetGridCell(1, 2, 2, 3).GetCentredInside(dialSize), kParamWavetable1Formant, "Excitation"), kNoTag, "Osc1");
     pGraphics->AttachControl(new TablitsaVGroupControl("Wavetable 1", "Osc1", -5.f, 15.f, -5.f, 2.f));
 
     const IRECT osc2Panel = globalControls.GetReducedFromLeft(720.f).GetReducedFromBottom(globalControls.H() / 2.f).GetGridCell(1, 0, 2, 3).GetPadded(-10.f).GetHPadded(-12.f);
-    pGraphics->AttachControl(new TablitsaIVModKnobControl(osc2Panel.GetGridCell(0, 0, 2, 2).GetCentredInside(dialSize), kParamWavetable2Pitch, "Pitch", modKnobStyle, true), kNoTag, "Osc2");
-    pGraphics->AttachControl(new TablitsaIVModKnobControl(osc2Panel.GetGridCell(0, 1, 2, 2).GetCentredInside(dialSize), kParamWavetable2Amp, "Amp"), kNoTag, "Osc2");
+    pGraphics->AttachControl(new TablitsaIVModKnobControl(osc2Panel.GetGridCell(0, 0, 2, 3).GetCentredInside(dialSize), kParamWavetable2Pitch, "Pitch", modKnobStyle, true), kNoTag, "Osc2");
+    pGraphics->AttachControl(new TablitsaIVModKnobControl(osc2Panel.GetGridCell(0, 1, 2, 3).GetCentredInside(dialSize), kParamWavetable2Amp, "Amp"), kNoTag, "Osc2");
+    pGraphics->AttachControl(new TablitsaVToggleButton(osc2Panel.GetGridCell(0, 2, 2, 3).GetVPadded(-25.f), kParamOsc2FormantOn, "Fmnt. On", modKnobStyle), kNoTag, "Osc2")->SetActionFunction(
+      [pGraphics](IControl* pControl) {
+        IControl* fmntKnob{ pGraphics->GetControlWithTag(kCtrlTagOsc2Formant) };
+        if (fmntKnob)
+          fmntKnob->SetDisabled(pControl->GetValue() < 0.5);
+      }
+    );;
     pGraphics->AttachControl(new TablitsaIVModKnobControl(osc2Panel.GetGridCell(1, 0, 2, 3).GetCentredInside(dialSize), kParamWavetable2Pos, "Valency"), kNoTag, "Osc2");
     pGraphics->AttachControl(new TablitsaIVModKnobControl(osc2Panel.GetGridCell(1, 1, 2, 3).GetCentredInside(dialSize), kParamWavetable2Bend, "Isotope"), kNoTag, "Osc2");
     pGraphics->AttachControl(new TablitsaIVModKnobControl(osc2Panel.GetGridCell(1, 2, 2, 3).GetCentredInside(dialSize), kParamWavetable2Formant, "Excitation"), kNoTag, "Osc2");

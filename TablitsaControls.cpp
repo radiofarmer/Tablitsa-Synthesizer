@@ -133,6 +133,28 @@ void TablitsaIVModKnobControl::LoadModParams()
   //mActive = !mActive;
 }
 
+void TablitsaIVModKnobControl::OnMouseDown(float x, float y, const IMouseMod& mod) 
+{
+  if (!mod.L || (mod.L && mod.A))
+  {
+    if (mModulationEnabled)
+      LoadModParams();
+    mMouseDown = !mMouseDown;
+    /* By default, center-clicking causes the control to be captured such that it still responds to the mouse wheel when
+    the mouse is not actually over it. ReleaseMouseCapture() empties the captured-control queue. */
+    GetUI()->ReleaseMouseCapture();
+    GetUI()->SetAllControlsDirty();
+  }
+  else
+    IVKnobControl::OnMouseDown(x, y, mod);
+}
+
+void TablitsaIVModKnobControl::OnMouseWheel(float x, float y, const IMouseMod& mod, float d)
+{
+  if (mMouseIsOver)
+    IVKnobControl::OnMouseWheel(x, y, mod, d);
+}
+
 void TablitsaIVModKnobControl::DrawWidget(IGraphics& g)
 {
   float widgetRadius; // The radius out to the indicator track arc

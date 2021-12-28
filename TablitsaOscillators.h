@@ -38,15 +38,13 @@ class VectorOscillator final : public FastSinOscillator<T>
 public:
   VectorOscillator(T startPhase=0.) : FastSinOscillator<T>(startPhase)
   {
-    mIncrVector = new Vec4d(0., 1., 2., 3.);
   }
   
   inline Vec4d __vectorcall ProcessBlock4_Vector()
   {
     double phase = IOscillator<T>::mPhase + (double)UNITBIT32;
     const double phaseIncr = IOscillator<T>::mPhaseIncr * FastSinOscillator<T>::tableSize;
-    Vec4d vPhase = phase + mPhaseOffset + phaseIncr * (*mIncrVector);
-
+    Vec4d vPhase = phase + mPhaseOffset + phaseIncr * Vec4d(0., 1., 2., 3.);
     // Read 4 doubles as 8 integers (signed ints are used, but the AND operations later make this irrelevant)
     Vec8i viPhase = reinterpret_i(vPhase);
     // Upper 32 bits of 3*2^19 in odd indices, 0xFFFF in even ones: i.e. 0xFFFF, 0x18, 0xFFFF, ...
@@ -62,6 +60,7 @@ public:
     Vec4d output = mul_add((f2 - f1), frac, f1);
 
     // Restore mPhase
+    mPrevPhase = mPhase;
     tabfudge tf;
     phase += phaseIncr * 4.;
     tf.d = UNITBIT32 * tableSize;
@@ -70,6 +69,11 @@ public:
     tf.i[HIOFFSET] = normhipart2;
     IOscillator<T>::mPhase = tf.d - UNITBIT32 * tableSize;
     return output;
+  }
+
+  const bool SyncSignal()
+  {
+    return mPrevPhase > mPhase;
   }
 
   void SetPhaseOffset(double offset)
@@ -82,14 +86,9 @@ public:
     return ProcessBlock4_Vector();
   }
 
-  ~VectorOscillator()
-  {
-    delete mIncrVector;
-  }
-
 private:
   double mPhaseOffset{ 0. };
-  const Vec4d* mIncrVector;
+  double mPrevPhase{ 1. };
 } ALIGNED(8);
 
 END_IPLUG_NAMESPACE
@@ -199,12 +198,12 @@ public:
     return output;
   }
 
-  inline void AdjustWavetable(double freqCPS, bool reset=true)
+  inline void AdjustWavetable(double freqCPS)
   {
     mMaxFormant = 0.25 * (MaxNote / freqCPS);
 
     // Set Formant
-    const double freq_adj{ freqCPS * mFormant };
+    const double freq_adj{ mFormantOn ? freqCPS * mFormant : freqCPS };
     mFormantModulator.SetFreqCPS(freqCPS);
     IOscillator<T>::SetFreqCPS(freq_adj);
 
@@ -219,9 +218,9 @@ public:
     mPrevFreq = freq_adj;
   }
 #ifdef VECTOR
-  inline Vec4d __vectorcall ProcessMultiple(double freqCPS, bool reset=true)
+  inline Vec4d __vectorcall ProcessMultiple(double freqCPS)
   {
-    AdjustWavetable(freqCPS, reset);
+    AdjustWavetable(freqCPS);
 #ifdef POLYPHASE_FILTER
 #if OVERSAMPLING == 4
     T temp_in[16];
@@ -410,13 +409,19 @@ public:
     const int normhipart2 = tf.i[HIOFFSET];
     tf.d = phase + (UNITBIT32 * mTableSize - UNITBIT32); // Remove the offset we introduced at the start of UNITBIT32.
     tf.i[HIOFFSET] = normhipart2; // Reset the upper 32 bits
-    IOscillator<T>::mPhase = tf.d - UNITBIT32 * mTableSize;
+    if (!mFormantOn || !mFormantModulator.SyncSignal())
+      IOscillator<T>::mPhase = (tf.d - UNITBIT32 * mTableSize);
+    else
+      Reset();
     mCycle = (mCycle + (mPhase < mPrevPhase)) % mWT->mCyclesPerLevel;
 
     // Mix wavtables and add ring and formant modulation
     Vec4d mixed = mul_add(tb1 - tb0, 1 - tableOffset, tb0);
-    Vec4d formantMod = mFormantModulator.Process_Vector();
-    mixed = mul_add(mixed * (formantMod - 1.), mFormantAmt, mixed);;
+    if (mFormantOn)
+    {
+      Vec4d formantMod = mFormantModulator.Process_Vector();
+      mixed *= formantMod;
+    }
     mixed = mul_add(mixed * (RingMod() - 1.), mRM * mRingModAmt, mixed);
 
     return mixed;
@@ -438,7 +443,6 @@ public:
     return phase;
   }
 
-  /* Returns an adjusted phase increment based on the current (cycle-normalized) phase. */
 #ifndef VECTOR
   inline double PhaseMod()
   {
@@ -477,17 +481,17 @@ public:
   }
 
   // Phase Skew
-  inline void SetWtBend(double wtBend)
+  inline void SetWtBend(const double wtBend)
   {
     mWtBend = wtBend;
   }
 
   // Formant: Accepts a value between zero and one
-  inline void SetFormant(double fmtNorm)
+  inline void SetFormant(const double fmtNorm, const bool formantOn = false)
   {
-    mFormantAmt = fmtNorm;
     mFormant = std::min(1. / (1. - fmtNorm), mMaxFormant);
     mFormantRecip = 1. / mFormant;
+    mFormantOn = formantOn;
   }
 
   inline double SampleWavetablePosition(double phase)
@@ -611,7 +615,7 @@ private:
   double mRM{ 0. };
   double mRingModAmt{ 0. };
   double mRingModFreq;
-  double mFormantAmt{ 0. };
+  bool mFormantOn{ false };
 
   static inline constexpr double twoPi{ 6.28318530718 };
 

@@ -136,27 +136,8 @@ public:
     IVKnobControl::SetParamIdx(paramIdx);
   }
 
-  void OnMouseDown(float x, float y, const IMouseMod& mod) override
-  {
-    if (!mod.L || (mod.L && mod.A))
-    {
-      if(mModulationEnabled)
-        LoadModParams();
-      mMouseDown = !mMouseDown;
-      /* By default, center-clicking causes the control to be captured such that it still responds to the mouse wheel when
-      the mouse is not actually over it. ReleaseMouseCapture() empties the captured-control queue. */
-      GetUI()->ReleaseMouseCapture();
-      GetUI()->SetAllControlsDirty();
-    }
-    else
-      IVKnobControl::OnMouseDown(x, y, mod);
-  }
-
-  void OnMouseWheel(float x, float y, const IMouseMod& mod, float d) override
-  {
-    if (mMouseIsOver)
-      IVKnobControl::OnMouseWheel(x, y, mod, d);
-  }
+  void OnMouseDown(float x, float y, const IMouseMod& mod) override;
+  void OnMouseWheel(float x, float y, const IMouseMod& mod, float d) override;
 
   void Draw(IGraphics& g) override
   {

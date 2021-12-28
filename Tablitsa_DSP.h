@@ -543,14 +543,14 @@ public:
         T osc1Freq = 440. * pow(2., pitch + mVModulations.GetList()[kVWavetable1PitchOffset][bufferIdx] / 12. + mMaster->mVibratoDepth * mMaster->mVibratoOsc.Process());
         mOsc1.SetWtPosition(1. - mVModulations.GetList()[kVWavetable1Position][bufferIdx]); // Wavetable 1 Position
         mOsc1.SetWtBend(mVModulations.GetList()[kVWavetable1Bend][bufferIdx]); // Wavetable 1 Bend
-        mOsc1.SetFormant(mVModulations.GetList()[kVWavetable1Formant][bufferIdx]);
+        mOsc1.SetFormant(mVModulations.GetList()[kVWavetable1Formant][bufferIdx], mOsc1FormantOn);
         T osc1Amp = mVModulations.GetList()[kVWavetable1Amp][bufferIdx];
 
         // Osc2
         T osc2Freq = 440. * pow(2., pitch + mVModulations.GetList()[kVWavetable2PitchOffset][bufferIdx] / 12. + mMaster->mVibratoDepth * mMaster->mVibratoOsc.Process());
         mOsc2.SetWtPosition(1. - mVModulations.GetList()[kVWavetable2Position][bufferIdx]); // Wavetable 2 Position
         mOsc2.SetWtBend(mVModulations.GetList()[kVWavetable2Bend][bufferIdx]); // Wavetable 2 Bend
-        mOsc2.SetFormant(mVModulations.GetList()[kVWavetable2Formant][bufferIdx]);
+        mOsc2.SetFormant(mVModulations.GetList()[kVWavetable2Formant][bufferIdx], mOsc2FormantOn);
         T osc2Amp = mVModulations.GetList()[kVWavetable2Amp][bufferIdx];
 
         // Filters
@@ -572,7 +572,7 @@ public:
 #ifdef VECTOR
         // Oscillators
         Vec4d osc1_v = mOsc1.ProcessMultiple(osc1Freq) * osc1Amp;// * ampEnvVal;
-        Vec4d osc2_v = mOsc2.ProcessMultiple(osc2Freq, bufferIdx == 0) * osc2Amp;// * ampEnvVal;
+        Vec4d osc2_v = mOsc2.ProcessMultiple(osc2Freq) * osc2Amp;// * ampEnvVal;
         osc1_v.store(mOscOutputs.GetList()[0] + bufferIdx);
         osc2_v.store(mOscOutputs.GetList()[1] + bufferIdx);
 
@@ -838,6 +838,8 @@ public:
     bool mSequencerRestart{ false };
     bool mLegato{ false };
     bool mTriggered{ false }; // Set to true to prevent the note being retriggered immediately after the initial trigger
+    bool mOsc1FormantOn{ false };
+    bool mOsc2FormantOn{ false };
 
     // Unison parameters
     double mDetune{ 0. };
@@ -1735,6 +1737,11 @@ public:
           });
         break;
       }
+      case kParamOsc1FormantOn:
+        mSynth.ForEachVoice([paramIdx, value](SynthVoice& voice) {
+          dynamic_cast<TablitsaDSP::Voice&>(voice).mOsc1FormantOn = value > 0.5;
+          });
+        break;
       case kParamWavetable1Formant:
         mParamsToSmooth[kModWavetable1FormantSmoother] = value / (T)100;
         break;
@@ -1830,6 +1837,11 @@ public:
           });
         break;
       }
+      case kParamOsc2FormantOn:
+        mSynth.ForEachVoice([paramIdx, value](SynthVoice& voice) {
+          dynamic_cast<TablitsaDSP::Voice&>(voice).mOsc2FormantOn = value > 0.5;
+          });
+        break;
       case kParamWavetable2Formant:
         mParamsToSmooth[kModWavetable2FormantSmoother] = value / (T)100;
         break;

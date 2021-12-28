@@ -585,6 +585,8 @@ enum EParams
   kParamOsc2EffectBypass,
   kParamVibratoSpeed, // TODO: Move to top of list in next version
   kParamVibratoDepth,
+  kParamOsc1FormantOn,
+  kParamOsc2FormantOn,
   kNumParams
 };
 
@@ -620,6 +622,8 @@ enum EControlTags
   kCtrlTagLFO2RateMode,
   kCtrlTagSequencerRateMode,
   kCtrlTagSequencerQuant,
+  kCtrlTagOsc1Formant,
+  kCtrlTagOsc2Formant,
   kCtrlTagFilter1Cutoff,
   kCtrlTagFilter1Resonance,
   kCtrlTagFilter1Drive,
