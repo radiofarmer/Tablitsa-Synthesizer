@@ -124,6 +124,7 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
   GetParam(kParamLFO1RateHzAmpEnv)->InitDouble("LFO1 Rate (Hz) AmpEnv Depth", 0., -1., 1., 0.01);
   GetParam(kParamLFO1RateHzLFO1)->InitDouble("LFO1 Rate (Hz) LFO1 Depth", 0., -1., 1., 0.01);
   GetParam(kParamLFO1RateHzLFO2)->InitDouble("LFO1 Rate (Hz) LFO2 Depth", 0., -1., 1., 0.01);
+  GetParam(kParamLFO1RateHzSeq)->InitDouble("LFO1 Rate (Hz) Seq Depth", 0., -1., 1., 0.01);
   GetParam(kParamLFO1RateHzVel)->InitDouble("LFO1 Rate (Hz) Velocity Depth", 0., -1., 1., 0.01);
   GetParam(kParamLFO1RateHzKTk)->InitDouble("LFO1 Rate (Hz) Keytrack Depth", 0., -1., 1., 0.01);
   GetParam(kParamLFO1RateHzRnd)->InitDouble("LFO1 Rate (Hz) Random Depth", 0., -1., 1., 0.01);
@@ -132,6 +133,7 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
   GetParam(kParamLFO1AmpAmpEnv)->InitDouble("LFO1 Amp AmpEnv Depth", 0., -1., 1., 0.01);
   GetParam(kParamLFO1AmpLFO1)->InitDouble("LFO1 Amp LFO1 Depth", 0., -1., 1., 0.01);
   GetParam(kParamLFO1AmpLFO2)->InitDouble("LFO1 Amp LFO2 Depth", 0., -1., 1., 0.01);
+  GetParam(kParamLFO1AmpSeq)->InitDouble("LFO1 Seq LFO2 Depth", 0., -1., 1., 0.01);
   GetParam(kParamLFO1AmpVel)->InitDouble("LFO1 Amp Velocity Depth", 0., -1., 1., 0.01);
   GetParam(kParamLFO1AmpKTk)->InitDouble("LFO1 Amp Keytrack Depth", 0., -1., 1., 0.01);
   GetParam(kParamLFO1AmpRnd)->InitDouble("LFO1 Amp Random Depth", 0., -1., 1., 0.01);
@@ -144,19 +146,21 @@ Tablitsa::Tablitsa(const InstanceInfo& info)
   GetParam(kParamLFO2Restart)->InitBool("LFO2 Retrigger", false);
   GetParam(kParamLFO2Amp)->InitDouble("LFO Amp", 1., -1., 1., 0.01, "", IParam::kFlagsNone, "LFO");
   // LFO2 Meta-Modulation
-  GetParam(kParamLFO2RateHzEnv1)->InitDouble("LFO2 Amp Env1 Depth", 0., -1., 1., 0.01);
-  GetParam(kParamLFO2RateHzEnv2)->InitDouble("LFO2 Amp Env2 Depth", 0., -1., 1., 0.01);
-  GetParam(kParamLFO2RateHzAmpEnv)->InitDouble("LFO2 Amp AmpEnv Depth", 0., -1., 1., 0.01);
-  GetParam(kParamLFO2RateHzLFO1)->InitDouble("LFO2 Amp LFO1 Depth", 0., -1., 1., 0.01);
-  GetParam(kParamLFO2RateHzLFO2)->InitDouble("LFO2 Amp LFO2 Depth", 0., -1., 1., 0.01);
-  GetParam(kParamLFO2RateHzVel)->InitDouble("LFO2 Amp Velocity Depth", 0., -1., 1., 0.01);
-  GetParam(kParamLFO2RateHzKTk)->InitDouble("LFO2 Amp Keytrack Depth", 0., -1., 1., 0.01);
-  GetParam(kParamLFO2RateHzRnd)->InitDouble("LFO2 Amp Depth", 0., -1., 1., 0.01);
+  GetParam(kParamLFO2RateHzEnv1)->InitDouble("LFO2 Rate Env1 Depth", 0., -1., 1., 0.01);
+  GetParam(kParamLFO2RateHzEnv2)->InitDouble("LFO2 Rate Env2 Depth", 0., -1., 1., 0.01);
+  GetParam(kParamLFO2RateHzAmpEnv)->InitDouble("LFO2 Rate AmpEnv Depth", 0., -1., 1., 0.01);
+  GetParam(kParamLFO2RateHzLFO1)->InitDouble("LFO2 Rate LFO1 Depth", 0., -1., 1., 0.01);
+  GetParam(kParamLFO2RateHzLFO2)->InitDouble("LFO2 Rate LFO2 Depth", 0., -1., 1., 0.01);
+  GetParam(kParamLFO2RateHzSeq)->InitDouble("LFO2 Rate Seq Depth", 0., -1., 1., 0.01);
+  GetParam(kParamLFO2RateHzVel)->InitDouble("LFO2 Rate Velocity Depth", 0., -1., 1., 0.01);
+  GetParam(kParamLFO2RateHzKTk)->InitDouble("LFO2 Rate Keytrack Depth", 0., -1., 1., 0.01);
+  GetParam(kParamLFO2RateHzRnd)->InitDouble("LFO2 Rate Depth", 0., -1., 1., 0.01);
   GetParam(kParamLFO2AmpEnv1)->InitDouble("LFO2 Amp Env1 Depth", 0., -1., 1., 0.01);
   GetParam(kParamLFO2AmpEnv2)->InitDouble("LFO2 Amp Env2 Depth", 0., -1., 1., 0.01);
   GetParam(kParamLFO2AmpAmpEnv)->InitDouble("LFO2 Amp AmpEnv Depth", 0., -1., 1., 0.01);
   GetParam(kParamLFO2AmpLFO1)->InitDouble("LFO2 Amp LFO1 Depth", 0., -1., 1., 0.01);
   GetParam(kParamLFO2AmpLFO2)->InitDouble("LFO2 Amp LFO2 Depth", 0., -1., 1., 0.01);
+  GetParam(kParamLFO2AmpSeq)->InitDouble("LFO2 Amp Seq Depth", 0., -1., 1., 0.01);
   GetParam(kParamLFO2AmpVel)->InitDouble("LFO2 Amp Velocity Depth", 0., -1., 1., 0.01);
   GetParam(kParamLFO2AmpKTk)->InitDouble("LFO2 Amp Keytrack Depth", 0., -1., 1., 0.01);
   GetParam(kParamLFO2AmpRnd)->InitDouble("LFO2 Amp Random Depth", 0., -1., 1., 0.01);
